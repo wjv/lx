@@ -1,8 +1,8 @@
 use std::iter::Peekable;
 use std::ops::FnMut;
 
-use ansi_term::{Colour, Style};
-use ansi_term::Colour::*;
+use nu_ansi_term::{Color, Style};
+use nu_ansi_term::Color::*;
 
 
 // Parsing the LS_COLORS environment variable into a map of names to Style values.
@@ -41,7 +41,7 @@ impl<'var> LSColors<'var> {
 }
 
 
-fn parse_into_high_colour<'a, I>(iter: &mut Peekable<I>) -> Option<Colour>
+fn parse_into_high_colour<'a, I>(iter: &mut Peekable<I>) -> Option<Color>
 where I: Iterator<Item = &'a str>
 {
     match iter.peek() {
@@ -65,7 +65,7 @@ where I: Iterator<Item = &'a str>
                         return None;
                     }
                     else if let (Ok(r), Ok(g), Ok(b)) = (rgb[0].parse(), rgb[1].parse(), rgb[2].parse()) {
-                        return Some(RGB(r, g, b));
+                        return Some(Rgb(r, g, b));
                     }
                 }*/
 
@@ -73,7 +73,7 @@ where I: Iterator<Item = &'a str>
                                                       iter.next().and_then(|s| s.parse().ok()),
                                                       iter.next().and_then(|s| s.parse().ok()))
                 {
-                    return Some(RGB(r, g, b));
+                    return Some(Rgb(r, g, b));
                 }
             }
         }
@@ -143,7 +143,7 @@ impl<'var> Pair<'var> {
 #[cfg(test)]
 mod ansi_test {
     use super::*;
-    use ansi_term::Style;
+    use nu_ansi_term::Style;
 
     macro_rules! test {
         ($name:ident: $input:expr => $result:expr) => {

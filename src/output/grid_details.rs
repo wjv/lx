@@ -2,8 +2,8 @@
 
 use std::io::{self, Write};
 
-use ansi_term::ANSIStrings;
-use term_grid as grid;
+use nu_ansi_term::AnsiStrings;
+use term_grid as tg;
 
 use crate::fs::{Dir, File};
 use crate::fs::feature::git::GitCache;
@@ -33,11 +33,11 @@ impl Options {
 
 
 /// The grid-details view can be configured to revert to just a details view
-/// (with one column) if it wouldn’t produce enough rows of output.
+/// (with one column) if it wouldn't produce enough rows of output.
 ///
 /// Doing this makes the resulting output look a bit better: when listing a
 /// small directory of four files in four columns, the files just look spaced
-/// out and it’s harder to see what’s going on. So it can be enabled just for
+/// out and it's harder to see what's going on. So it can be enabled just for
 /// larger directory listings.
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub enum RowThreshold {
@@ -53,7 +53,7 @@ pub enum RowThreshold {
 
 pub struct Render<'a> {
 
-    /// The directory that’s being rendered here.
+    /// The directory that's being rendered here.
     /// We need this to know which columns to put in the output.
     pub dir: Option<&'a Dir>,
 
@@ -90,14 +90,22 @@ pub struct Render<'a> {
     pub console_width: usize,
 }
 
+/// A rendered grid ready for display, containing the cell strings and layout
+/// metadata needed to construct the final `uutils_term_grid::Grid`.
+struct RenderedGrid {
+    cells: Vec<String>,
+    column_count: usize,
+    row_count: usize,
+}
+
 impl<'a> Render<'a> {
 
     /// Create a temporary Details render that gets used for the columns of
-    /// the grid-details render that’s being generated.
+    /// the grid-details render that's being generated.
     ///
     /// This includes an empty files vector because the files get added to
     /// the table in *this* file, not in details: we only want to insert every
-    /// *n* files into each column’s table, not all of them.
+    /// *n* files into each column's table, not all of them.
     fn details_for_column(&self) -> DetailsRender<'a> {
         DetailsRender {
             dir:           self.dir,
@@ -112,7 +120,7 @@ impl<'a> Render<'a> {
         }
     }
 
-    /// Create a Details render for when this grid-details render doesn’t fit
+    /// Create a Details render for when this grid-details render doesn't fit
     /// in the terminal (or something has gone wrong) and we have given up, or
     /// when the user asked for a grid-details view but the terminal width is
     /// not available, so we downgrade.
@@ -130,19 +138,28 @@ impl<'a> Render<'a> {
         }
     }
 
-    // This doesn’t take an IgnoreCache even though the details one does
+    // This doesn't take an IgnoreCache even though the details one does
     // because grid-details has no tree view.
 
     pub fn render<W: Write>(mut self, w: &mut W) -> io::Result<()> {
-        if let Some((grid, width)) = self.find_fitting_grid() {
-            write!(w, "{}", grid.fit_into_columns(width))
+        if let Some(rendered) = self.find_fitting_grid() {
+            let direction = if self.grid.across { tg::Direction::LeftToRight }
+                                           else { tg::Direction::TopToBottom };
+
+            let grid = tg::Grid::new(rendered.cells, tg::GridOptions {
+                direction,
+                filling: tg::Filling::Spaces(4),
+                width:   self.console_width,
+            });
+
+            write!(w, "{}", grid)
         }
         else {
             self.give_up().render(w)
         }
     }
 
-    pub fn find_fitting_grid(&mut self) -> Option<(grid::Grid, grid::Width)> {
+    pub fn find_fitting_grid(&mut self) -> Option<RenderedGrid> {
         let options = self.details.table.as_ref().expect("Details table options not given!");
 
         let drender = self.details_for_column();
@@ -157,38 +174,35 @@ impl<'a> Render<'a> {
                              .map(|file| self.file_style.for_file(file, self.theme).paint().promote())
                              .collect::<Vec<_>>();
 
-        let mut last_working_grid = self.make_grid(1, options, &file_names, rows.clone(), &drender);
+        let mut last_working = self.make_rendered_grid(1, options, &file_names, rows.clone(), &drender);
 
         if file_names.len() == 1 {
-            return Some((last_working_grid, 1));
+            return Some(last_working);
         }
 
-        // If we can’t fit everything in a grid 100 columns wide, then
+        // If we can't fit everything in a grid 100 columns wide, then
         // something has gone seriously awry
         for column_count in 2..100 {
-            let grid = self.make_grid(column_count, options, &file_names, rows.clone(), &drender);
+            let rendered = self.make_rendered_grid(column_count, options, &file_names, rows.clone(), &drender);
 
-            let the_grid_fits = {
-                let d = grid.fit_into_columns(column_count);
-                d.width() <= self.console_width
-            };
+            let the_grid_fits = rendered_grid_fits(&rendered, self.console_width);
 
             if the_grid_fits {
-                last_working_grid = grid;
+                last_working = rendered;
             }
 
             if !the_grid_fits || column_count == file_names.len() {
-                let last_column_count = if the_grid_fits { column_count } else { column_count - 1 };
-                // If we’ve figured out how many columns can fit in the user’s terminal,
-                // and it turns out there aren’t enough rows to make it worthwhile
-                // (according to EXA_GRID_ROWS), then just resort to the lines view.
+                // If we've figured out how many columns can fit in the user's
+                // terminal, and it turns out there aren't enough rows to make
+                // it worthwhile (according to EXA_GRID_ROWS), then just resort
+                // to the lines view.
                 if let RowThreshold::MinimumRows(thresh) = self.row_threshold {
-                    if last_working_grid.fit_into_columns(last_column_count).row_count() < thresh {
+                    if last_working.row_count < thresh {
                         return None;
                     }
                 }
 
-                return Some((last_working_grid, last_column_count));
+                return Some(last_working);
             }
         }
 
@@ -214,7 +228,7 @@ impl<'a> Render<'a> {
         (table, rows)
     }
 
-    fn make_grid(&mut self, column_count: usize, options: &'a TableOptions, file_names: &[TextCell], rows: Vec<TableRow>, drender: &DetailsRender<'_>) -> grid::Grid {
+    fn make_rendered_grid(&mut self, column_count: usize, options: &'a TableOptions, file_names: &[TextCell], rows: Vec<TableRow>, drender: &DetailsRender<'_>) -> RenderedGrid {
         let mut tables = Vec::new();
         for _ in 0 .. column_count {
             tables.push(self.make_table(options, drender));
@@ -250,23 +264,16 @@ impl<'a> Render<'a> {
                 })
             .collect::<Vec<_>>();
 
-        let direction = if self.grid.across { grid::Direction::LeftToRight }
-                                       else { grid::Direction::TopToBottom };
-
-        let filling = grid::Filling::Spaces(4);
-        let mut grid = grid::Grid::new(grid::GridOptions { direction, filling });
+        // Build the cell strings in the order expected by the grid.
+        // For LeftToRight (across): iterate rows, then columns within each row.
+        // For TopToBottom: iterate columns, then rows within each column.
+        let mut cells = Vec::new();
 
         if self.grid.across {
             for row in 0 .. height {
                 for column in &columns {
                     if row < column.len() {
-                        let cell = grid::Cell {
-                            contents: ANSIStrings(&column[row].contents).to_string(),
-                            width:    *column[row].width,
-                            alignment: grid::Alignment::Left,
-                        };
-
-                        grid.add(cell);
+                        cells.push(AnsiStrings(&column[row].contents).to_string());
                     }
                 }
             }
@@ -274,19 +281,66 @@ impl<'a> Render<'a> {
         else {
             for column in &columns {
                 for cell in column.iter() {
-                    let cell = grid::Cell {
-                        contents: ANSIStrings(&cell.contents).to_string(),
-                        width:    *cell.width,
-                        alignment: grid::Alignment::Left,
-                    };
-
-                    grid.add(cell);
+                    cells.push(AnsiStrings(&cell.contents).to_string());
                 }
             }
         }
 
-        grid
+        RenderedGrid {
+            cells,
+            column_count,
+            row_count: height,
+        }
     }
+}
+
+
+/// Check whether a rendered grid fits within the given console width by
+/// computing the maximum visual width per column and summing with spacing.
+fn rendered_grid_fits(rendered: &RenderedGrid, console_width: usize) -> bool {
+    if rendered.cells.is_empty() {
+        return true;
+    }
+
+    let mut col_widths = vec![0usize; rendered.column_count];
+    for (i, cell) in rendered.cells.iter().enumerate() {
+        let col = i % rendered.column_count;
+        let w = visual_width(cell);
+        if w > col_widths[col] {
+            col_widths[col] = w;
+        }
+    }
+
+    // Total width = sum of column widths + 4 spaces between each pair
+    let spacing = if rendered.column_count > 1 { 4 * (rendered.column_count - 1) } else { 0 };
+    let total: usize = col_widths.iter().sum::<usize>() + spacing;
+
+    total <= console_width
+}
+
+
+/// Compute the visual width of a string, stripping ANSI escape sequences.
+fn visual_width(s: &str) -> usize {
+    use unicode_width::UnicodeWidthChar;
+
+    let mut width = 0;
+    let mut in_escape = false;
+
+    for c in s.chars() {
+        if in_escape {
+            if c == 'm' {
+                in_escape = false;
+            }
+            continue;
+        }
+        if c == '\x1b' {
+            in_escape = true;
+            continue;
+        }
+        width += c.width().unwrap_or(0);
+    }
+
+    width
 }
 
 

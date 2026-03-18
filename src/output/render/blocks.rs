@@ -1,4 +1,4 @@
-use ansi_term::Style;
+use nu_ansi_term::Style;
 
 use crate::fs::fields as f;
 use crate::output::cell::TextCell;
@@ -22,8 +22,8 @@ pub trait Colours {
 
 #[cfg(test)]
 pub mod test {
-    use ansi_term::Style;
-    use ansi_term::Colour::*;
+    use nu_ansi_term::Style;
+    use nu_ansi_term::Color::*;
 
     use super::Colours;
     use crate::output::cell::TextCell;

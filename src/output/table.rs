@@ -1,16 +1,12 @@
 use std::cmp::max;
-use std::env;
 use std::ops::Deref;
+use std::sync::LazyLock;
 #[cfg(unix)]
 use std::sync::{Mutex, MutexGuard};
 
-use datetime::TimeZone;
-use zoneinfo_compiled::{CompiledData, Result as TZResult};
-
-use lazy_static::lazy_static;
 use log::*;
 #[cfg(unix)]
-use users::UsersCache;
+use uzers::UsersCache;
 
 use crate::fs::{File, fields as f};
 use crate::fs::feature::git::GitCache;
@@ -294,17 +290,13 @@ impl Default for TimeTypes {
 
 
 /// The **environment** struct contains any data that could change between
-/// running instances of exa, depending on the user’s computer’s configuration.
+/// running instances of lx, depending on the user’s computer’s configuration.
 ///
 /// Any environment field should be able to be mocked up for test runs.
 pub struct Environment {
 
     /// Localisation rules for formatting numbers.
     numeric: locale::Numeric,
-
-    /// The computer’s current time zone. This gets used to determine how to
-    /// offset files’ timestamps.
-    tz: Option<TimeZone>,
 
     /// Mapping cache of user IDs to usernames.
     #[cfg(unix)]
@@ -313,80 +305,22 @@ pub struct Environment {
 
 impl Environment {
     #[cfg(unix)]
-    pub fn lock_users(&self) -> MutexGuard<'_, UsersCache> {
+    pub fn lock_users(&self) -> MutexGuard<UsersCache> {
         self.users.lock().unwrap()
     }
 
     fn load_all() -> Self {
-        let tz = match determine_time_zone() {
-            Ok(t) => {
-                Some(t)
-            }
-            Err(ref e) => {
-                println!("Unable to determine time zone: {}", e);
-                None
-            }
-        };
-
         let numeric = locale::Numeric::load_user_locale()
                              .unwrap_or_else(|_| locale::Numeric::english());
 
         #[cfg(unix)]
         let users = Mutex::new(UsersCache::new());
 
-        Self { numeric, tz, #[cfg(unix)] users }
+        Self { numeric, #[cfg(unix)] users }
     }
 }
 
-#[cfg(unix)]
-fn determine_time_zone() -> TZResult<TimeZone> {
-    if let Ok(file) = env::var("TZ") {
-        TimeZone::from_file({
-            if file.starts_with('/') {
-                file
-            } else {
-                format!("/usr/share/zoneinfo/{}", {
-                    if file.starts_with(':') {
-                        file.replacen(':', "", 1)
-                    } else {
-                        file
-                    }
-                })
-            }
-        })
-    } else {
-        TimeZone::from_file("/etc/localtime")
-    }
-}
-
-#[cfg(windows)]
-fn determine_time_zone() -> TZResult<TimeZone> {
-    use datetime::zone::{FixedTimespan, FixedTimespanSet, StaticTimeZone, TimeZoneSource};
-    use std::borrow::Cow;
-
-    Ok(TimeZone(TimeZoneSource::Static(&StaticTimeZone {
-        name: "Unsupported",
-        fixed_timespans: FixedTimespanSet {
-            first: FixedTimespan {
-                offset: 0,
-                is_dst: false,
-                name: Cow::Borrowed("ZONE_A"),
-            },
-            rest: &[(
-                1206838800,
-                FixedTimespan {
-                    offset: 3600,
-                    is_dst: false,
-                    name: Cow::Borrowed("ZONE_B"),
-                },
-            )],
-        },
-    })))
-}
-
-lazy_static! {
-    static ref ENVIRONMENT: Environment = Environment::load_all();
-}
+static ENVIRONMENT: LazyLock<Environment> = LazyLock::new(Environment::load_all);
 
 
 pub struct Table<'a> {
@@ -502,16 +436,16 @@ impl<'a, 'f> Table<'a> {
             }
 
             Column::Timestamp(TimeType::Modified)  => {
-                file.modified_time().render(self.theme.ui.date, &self.env.tz, self.time_format)
+                file.modified_time().render(self.theme.ui.date, self.time_format)
             }
             Column::Timestamp(TimeType::Changed)   => {
-                file.changed_time().render(self.theme.ui.date, &self.env.tz, self.time_format)
+                file.changed_time().render(self.theme.ui.date, self.time_format)
             }
             Column::Timestamp(TimeType::Created)   => {
-                file.created_time().render(self.theme.ui.date, &self.env.tz, self.time_format)
+                file.created_time().render(self.theme.ui.date, self.time_format)
             }
             Column::Timestamp(TimeType::Accessed)  => {
-                file.accessed_time().render(self.theme.ui.date, &self.env.tz, self.time_format)
+                file.accessed_time().render(self.theme.ui.date, self.time_format)
             }
         }
     }

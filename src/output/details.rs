@@ -65,8 +65,8 @@ use std::mem::MaybeUninit;
 use std::path::PathBuf;
 use std::vec::IntoIter as VecIntoIter;
 
-use ansi_term::Style;
-use scoped_threadpool::Pool;
+use nu_ansi_term::Style;
+use rayon;
 
 use crate::fs::{Dir, File};
 use crate::fs::dir_action::RecurseOptions;
@@ -147,11 +147,6 @@ impl<'a> AsRef<File<'a>> for Egg<'a> {
 
 impl<'a> Render<'a> {
     pub fn render<W: Write>(mut self, w: &mut W) -> io::Result<()> {
-        let n_cpus = match num_cpus::get() as u32 {
-            0 => 1,
-            n => n,
-        };
-        let mut pool = Pool::new(n_cpus);
         let mut rows = Vec::new();
 
         if let Some(ref table) = self.opts.table {
@@ -172,14 +167,14 @@ impl<'a> Render<'a> {
             // This is weird, but I can’t find a way around it:
             // https://internals.rust-lang.org/t/should-option-mut-t-implement-copy/3715/6
             let mut table = Some(table);
-            self.add_files_to_table(&mut pool, &mut table, &mut rows, &self.files, TreeDepth::root());
+            self.add_files_to_table(&mut table, &mut rows, &self.files, TreeDepth::root());
 
             for row in self.iterate_with_table(table.unwrap(), rows) {
                 writeln!(w, "{}", row.strings())?
             }
         }
         else {
-            self.add_files_to_table(&mut pool, &mut None, &mut rows, &self.files, TreeDepth::root());
+            self.add_files_to_table(&mut None, &mut rows, &self.files, TreeDepth::root());
 
             for row in self.iterate(rows) {
                 writeln!(w, "{}", row.strings())?
@@ -191,21 +186,21 @@ impl<'a> Render<'a> {
 
     /// Adds files to the table, possibly recursively. This is easily
     /// parallelisable, and uses a pool of threads.
-    fn add_files_to_table<'dir>(&self, pool: &mut Pool, table: &mut Option<Table<'a>>, rows: &mut Vec<Row>, src: &[File<'dir>], depth: TreeDepth) {
+    fn add_files_to_table<'dir>(&self, table: &mut Option<Table<'a>>, rows: &mut Vec<Row>, src: &[File<'dir>], depth: TreeDepth) {
         use std::sync::{Arc, Mutex};
         use log::*;
         use crate::fs::feature::xattr;
 
         let mut file_eggs = (0..src.len()).map(|_| MaybeUninit::uninit()).collect::<Vec<_>>();
 
-        pool.scoped(|scoped| {
+        rayon::scope(|s| {
             let file_eggs = Arc::new(Mutex::new(&mut file_eggs));
             let table = table.as_ref();
 
             for (idx, file) in src.iter().enumerate() {
                 let file_eggs = Arc::clone(&file_eggs);
 
-                scoped.execute(move || {
+                s.spawn(move |_| {
                     let mut errors = Vec::new();
                     let mut xattrs = Vec::new();
 
@@ -322,7 +317,7 @@ impl<'a> Render<'a> {
                         rows.push(self.render_error(&error, TreeParams::new(depth.deeper(), false), path));
                     }
 
-                    self.add_files_to_table(pool, table, rows, &files, depth.deeper());
+                    self.add_files_to_table(table, rows, &files, depth.deeper());
                     continue;
                 }
             }

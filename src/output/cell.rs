@@ -3,7 +3,7 @@
 use std::iter::Sum;
 use std::ops::{Add, Deref, DerefMut};
 
-use ansi_term::{Style, ANSIString, ANSIStrings};
+use nu_ansi_term::{Style, AnsiString, AnsiStrings};
 use unicode_width::UnicodeWidthStr;
 
 
@@ -83,8 +83,8 @@ impl TextCell {
         self.contents.0.push(Style::default().paint(spaces));
     }
 
-    /// Adds the contents of another `ANSIString` to the end of this cell.
-    pub fn push(&mut self, string: ANSIString<'static>, extra_width: usize) {
+    /// Adds the contents of another `AnsiString` to the end of this cell.
+    pub fn push(&mut self, string: AnsiString<'static>, extra_width: usize) {
         self.contents.0.push(string);
         (*self.width) += extra_width;
     }
@@ -118,7 +118,7 @@ impl TextCell {
 // growable, heap-allocated buffer.
 //
 // So it would be nice to abstract the `TextCell` type so instead of a `Vec`,
-// it can use anything of type `T: IntoIterator<Item=ANSIString<’static>>`.
+// it can use anything of type `T: IntoIterator<Item=AnsiString<’static>>`.
 // This would allow us to still hold all the data, but allocate less.
 //
 // But exa still has bugs and I need to fix those first :(
@@ -131,16 +131,16 @@ impl TextCell {
 /// in the final cell of a table or grid and there’s no point padding it. This
 /// happens when dealing with file names.
 #[derive(PartialEq, Debug, Clone, Default)]
-pub struct TextCellContents(Vec<ANSIString<'static>>);
+pub struct TextCellContents(Vec<AnsiString<'static>>);
 
-impl From<Vec<ANSIString<'static>>> for TextCellContents {
-    fn from(strings: Vec<ANSIString<'static>>) -> Self {
+impl From<Vec<AnsiString<'static>>> for TextCellContents {
+    fn from(strings: Vec<AnsiString<'static>>) -> Self {
         Self(strings)
     }
 }
 
 impl Deref for TextCellContents {
-    type Target = [ANSIString<'static>];
+    type Target = [AnsiString<'static>];
 
     fn deref(&self) -> &Self::Target {
         &*self.0
@@ -153,17 +153,17 @@ impl Deref for TextCellContents {
 
 impl TextCellContents {
 
-    /// Produces an `ANSIStrings` value that can be used to print the styled
+    /// Produces an `AnsiStrings` value that can be used to print the styled
     /// values of this cell as an ANSI-terminal-formatted string.
-    pub fn strings(&self) -> ANSIStrings<'_> {
-        ANSIStrings(&self.0)
+    pub fn strings(&self) -> AnsiStrings<'_> {
+        AnsiStrings(&self.0)
     }
 
     /// Calculates the width that a cell with these contents would take up, by
     /// counting the number of characters in each unformatted ANSI string.
     pub fn width(&self) -> DisplayWidth {
         self.0.iter()
-            .map(|anstr| DisplayWidth::from(&**anstr))
+            .map(|anstr| DisplayWidth::from(anstr.as_str()))
             .sum()
     }
 

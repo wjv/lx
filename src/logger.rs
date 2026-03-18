@@ -2,7 +2,7 @@
 
 use std::ffi::OsStr;
 
-use ansi_term::{Colour, ANSIString};
+use nu_ansi_term::{Color, AnsiString};
 
 
 /// Sets the internal logger, changing the log level based on the value of an
@@ -43,9 +43,9 @@ impl log::Log for Logger {
     }
 
     fn log(&self, record: &log::Record<'_>) {
-        let open = Colour::Fixed(243).paint("[");
+        let open = Color::Fixed(243).paint("[");
         let level = level(record.level());
-        let close = Colour::Fixed(243).paint("]");
+        let close = Color::Fixed(243).paint("]");
 
         eprintln!("{}{} {}{} {}", open, level, record.target(), close, record.args());
     }
@@ -55,12 +55,12 @@ impl log::Log for Logger {
     }
 }
 
-fn level(level: log::Level) -> ANSIString<'static> {
+fn level(level: log::Level) -> AnsiString<'static> {
     match level {
-        log::Level::Error  => Colour::Red.paint("ERROR"),
-        log::Level::Warn   => Colour::Yellow.paint("WARN"),
-        log::Level::Info   => Colour::Cyan.paint("INFO"),
-        log::Level::Debug  => Colour::Blue.paint("DEBUG"),
-        log::Level::Trace  => Colour::Fixed(245).paint("TRACE"),
+        log::Level::Error  => Color::Red.paint("ERROR"),
+        log::Level::Warn   => Color::Yellow.paint("WARN"),
+        log::Level::Info   => Color::Cyan.paint("INFO"),
+        log::Level::Debug  => Color::Blue.paint("DEBUG"),
+        log::Level::Trace  => Color::Fixed(245).paint("TRACE"),
     }
 }

@@ -1,4 +1,4 @@
-use ansi_term::{ANSIString, Style};
+use nu_ansi_term::{AnsiString, Style};
 
 use crate::output::cell::{TextCell, DisplayWidth};
 use crate::fs::fields as f;
@@ -18,7 +18,7 @@ impl f::Git {
 
 
 impl f::GitStatus {
-    fn render(self, colours: &dyn Colours) -> ANSIString<'static> {
+    fn render(self, colours: &dyn Colours) -> AnsiString<'static> {
         match self {
             Self::NotModified  => colours.not_modified().paint("-"),
             Self::New          => colours.new().paint("N"),
@@ -52,8 +52,8 @@ pub mod test {
     use crate::output::cell::{TextCell, DisplayWidth};
     use crate::fs::fields as f;
 
-    use ansi_term::Colour::*;
-    use ansi_term::Style;
+    use nu_ansi_term::Color::*;
+    use nu_ansi_term::Style;
 
 
     struct TestColours;

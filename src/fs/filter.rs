@@ -186,7 +186,7 @@ pub enum SortField {
 }
 
 /// Whether a field should be sorted case-sensitively or case-insensitively.
-/// This determines which of the `natord` functions to use.
+/// This determines which of the `natord_plus_plus` functions to use.
 ///
 /// I kept on forgetting which one was sensitive and which one was
 /// insensitive. Would a case-sensitive sort put capital letters first because
@@ -210,7 +210,7 @@ impl SortField {
     /// Compares two files to determine the order they should be listed in,
     /// depending on the search field.
     ///
-    /// The `natord` crate is used here to provide a more *natural* sorting
+    /// The `natord_plus_plus` crate is used here to provide a more *natural* sorting
     /// order than just sorting character-by-character. This splits filenames
     /// into groups between letters and numbers, and then sorts those blocks
     /// together, so `file10` will sort after `file9`, instead of before it

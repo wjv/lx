@@ -4,7 +4,7 @@
 //! those are the only metadata that we have access to without reading the
 //! file’s contents.
 
-use ansi_term::Style;
+use nu_ansi_term::Style;
 
 use crate::fs::File;
 use crate::output::icons::FileIcon;
@@ -106,7 +106,7 @@ impl FileExtensions {
 
 impl FileColours for FileExtensions {
     fn colour_file(&self, file: &File<'_>) -> Option<Style> {
-        use ansi_term::Colour::*;
+        use nu_ansi_term::Color::*;
 
         Some(match file {
             f if self.is_temp(f)        => Fixed(244).normal(),

@@ -15,15 +15,15 @@ use std::fs::File;
 use std::io::{self, Write};
 use std::path::PathBuf;
 
-use datetime::{LocalDateTime, ISO};
+use chrono::Local;
 
 
 /// The build script entry point.
 fn main() -> io::Result<()> {
     #![allow(clippy::write_with_newline)]
 
-    let tagline = "exa - list files on the command-line";
-    let url     = "https://the.exa.website/";
+    let tagline = "lx - list extended (but call me Alex!)";
+    let url     = "https://github.com/wjv/lx";
 
     let ver =
         if is_debug_build() {
@@ -118,6 +118,5 @@ fn nonstandard_features_string() -> String {
 
 /// Formats the current date as an ISO 8601 string.
 fn build_date() -> String {
-    let now = LocalDateTime::now();
-    format!("{}", now.date().iso())
+    Local::now().format("%Y-%m-%d").to_string()
 }

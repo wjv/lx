@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use std::path::Path;
 
-use ansi_term::{ANSIString, Style};
+use nu_ansi_term::{AnsiString, Style};
 
 use crate::fs::{File, FileTarget};
 use crate::output::cell::TextCellContents;
@@ -222,7 +222,7 @@ impl<'a, 'dir, C: Colours> FileName<'a, 'dir, C> {
 
     /// Adds the bits of the parent path to the given bits vector.
     /// The path gets its characters escaped based on the colours.
-    fn add_parent_bits(&self, bits: &mut Vec<ANSIString<'_>>, parent: &Path) {
+    fn add_parent_bits(&self, bits: &mut Vec<AnsiString<'_>>, parent: &Path) {
         let coconut = parent.components().count();
 
         if coconut == 1 && parent.has_root() {
@@ -286,7 +286,7 @@ impl<'a, 'dir, C: Colours> FileName<'a, 'dir, C> {
     ///
     /// So in that situation, those characters will be escaped and highlighted in
     /// a different colour.
-    fn coloured_file_name<'unused>(&self) -> Vec<ANSIString<'unused>> {
+    fn coloured_file_name<'unused>(&self) -> Vec<AnsiString<'unused>> {
         let file_style = self.style();
         let mut bits = Vec::new();
 

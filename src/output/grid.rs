@@ -21,8 +21,8 @@ impl Options {
 }
 
 
-pub struct Render<'a> {
-    pub files: Vec<File<'a>>,
+pub struct Render<'a, 'dir> {
+    pub files: Vec<File<'dir>>,
     pub theme: &'a Theme,
     pub file_style: &'a FileStyle,
     pub opts: &'a Options,
@@ -30,39 +30,38 @@ pub struct Render<'a> {
     pub filter: &'a FileFilter,
 }
 
-impl<'a> Render<'a> {
+impl<'a, 'dir> Render<'a, 'dir> {
     pub fn render<W: Write>(mut self, w: &mut W) -> io::Result<()> {
-        let mut grid = tg::Grid::new(tg::GridOptions {
+        self.filter.sort_files(&mut self.files);
+
+        let cells: Vec<String> = self.files.iter()
+            .map(|file| {
+                let filename = self.file_style.for_file(file, self.theme).paint();
+                filename.strings().to_string()
+            })
+            .collect();
+
+        if cells.is_empty() {
+            return Ok(());
+        }
+
+        let grid = tg::Grid::new(cells, tg::GridOptions {
             direction:  self.opts.direction(),
             filling:    tg::Filling::Spaces(2),
+            width:      self.console_width,
         });
 
-        grid.reserve(self.files.len());
-
-        self.filter.sort_files(&mut self.files);
-        for file in &self.files {
-            let filename = self.file_style.for_file(file, self.theme).paint();
-
-            grid.add(tg::Cell {
-                contents:  filename.strings().to_string(),
-                width:     *filename.width(),
-                alignment: tg::Alignment::Left,
-            });
-        }
-
-        if let Some(display) = grid.fit_into_width(self.console_width) {
-            write!(w, "{}", display)
-        }
-        else {
-            // File names too long for a grid - drop down to just listing them!
-            // This isn’t *quite* the same as the lines view, which also
-            // displays full link paths.
+        // If the grid has as many rows as cells, it couldn't fit into
+        // multiple columns, so fall back to listing one per line.
+        if grid.row_count() >= self.files.len() {
             for file in &self.files {
                 let name_cell = self.file_style.for_file(file, self.theme).paint();
                 writeln!(w, "{}", name_cell.strings())?;
             }
-
             Ok(())
+        }
+        else {
+            write!(w, "{}", grid)
         }
     }
 }

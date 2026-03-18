@@ -1,4 +1,4 @@
-use ansi_term::Style;
+use nu_ansi_term::Style;
 
 use crate::fs::File;
 use crate::output::file_name::Colours as FileNameColours;
@@ -258,8 +258,8 @@ impl render::PermissionsColours for Theme {
 }
 
 impl render::SizeColours for Theme {
-    fn size(&self, prefix: Option<number_prefix::Prefix>) -> Style {
-        use number_prefix::Prefix::*;
+    fn size(&self, prefix: Option<unit_prefix::Prefix>) -> Style {
+        use unit_prefix::Prefix::*;
 
         match prefix {
             Some(Kilo | Kibi) => self.ui.size.number_kilo,
@@ -270,8 +270,8 @@ impl render::SizeColours for Theme {
         }
     }
 
-    fn unit(&self, prefix: Option<number_prefix::Prefix>) -> Style {
-        use number_prefix::Prefix::*;
+    fn unit(&self, prefix: Option<unit_prefix::Prefix>) -> Style {
+        use unit_prefix::Prefix::*;
 
         match prefix {
             Some(Kilo | Kibi) => self.ui.size.unit_kilo,
@@ -336,14 +336,14 @@ fn apply_overlay(mut base: Style, overlay: Style) -> Style {
 
     base
 }
-// TODO: move this function to the ansi_term crate
+// TODO: move this function to the nu_ansi_term crate
 
 
 #[cfg(test)]
 mod customs_test {
     use super::*;
     use crate::theme::ui_styles::UiStyles;
-    use ansi_term::Colour::*;
+    use nu_ansi_term::Color::*;
 
     macro_rules! test {
         ($name:ident:  ls $ls:expr, exa $exa:expr  =>  colours $expected:ident -> $process_expected:expr) => {

@@ -1,4 +1,4 @@
-use ansi_term::Style;
+use nu_ansi_term::Style;
 
 use crate::fs::fields as f;
 use crate::output::cell::TextCell;
@@ -26,7 +26,7 @@ pub mod test {
     use crate::output::cell::TextCell;
     use crate::fs::fields as f;
 
-    use ansi_term::Colour::*;
+    use nu_ansi_term::Color::*;
 
 
     #[test]

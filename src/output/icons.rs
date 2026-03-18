@@ -1,9 +1,9 @@
-use ansi_term::Style;
+use nu_ansi_term::Style;
 
 use crate::fs::File;
 use crate::info::filetype::FileExtensions;
-use lazy_static::lazy_static;
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
 
 pub trait FileIcon {
@@ -45,8 +45,7 @@ pub fn iconify_style(style: Style) -> Style {
 
 
 
-lazy_static! {
-    static ref MAP_BY_NAME: HashMap<&'static str, char> = {
+static MAP_BY_NAME: LazyLock<HashMap<&'static str, char>> = LazyLock::new(|| {
         let mut m = HashMap::new();
         m.insert(".Trash", '\u{f1f8}'); // 
         m.insert(".atom", '\u{e764}'); // 
@@ -90,8 +89,7 @@ lazy_static! {
         m.insert("yarn.lock", '\u{e718}'); // 
 
         m
-    };
-}
+});
 
 pub fn icon_for_file(file: &File<'_>) -> char {
     let extensions = Box::new(FileExtensions);
