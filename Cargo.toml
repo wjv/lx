@@ -9,7 +9,7 @@ exclude = ["/devtools/*", "/Justfile", "/Vagrantfile", "/screenshots.png"]
 readme = "README.md"
 license = "MIT"
 repository = "https://github.com/wjv/lx"
-version = "0.1.0-pre.2"
+version = "0.1.0-pre.3"
 
 
 [[bin]]
@@ -60,6 +60,11 @@ opt-level = 3
 codegen-units = 1
 panic = 'abort'
 
+
+[dev-dependencies]
+assert_cmd = "2"
+predicates = "3"
+tempfile = "3"
 
 [package.metadata.deb]
 license-file = ["LICENCE", "4"]
