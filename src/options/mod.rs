@@ -36,6 +36,19 @@ pub mod vars;
 pub use self::vars::Vars;
 
 
+/// Which VCS backend to use.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VcsBackend {
+    /// Detect automatically: prefer jj if `.jj/` exists, else git.
+    Auto,
+    /// Use git only.
+    Git,
+    /// Use jj only.
+    Jj,
+    /// Disable VCS integration.
+    None,
+}
+
 /// These **options** represent a parsed, error-checked versions of the
 /// user's command-line options.
 #[derive(Debug)]
@@ -56,6 +69,9 @@ pub struct Options {
 
     /// The options to make up the styles of the UI and file names.
     pub theme: ThemeOptions,
+
+    /// Which VCS backend to use for status display and ignore filtering.
+    pub vcs_backend: VcsBackend,
 }
 
 impl Options {
@@ -130,12 +146,19 @@ impl Options {
             )));
         }
 
+        let vcs_backend = match matches.get(flags::VCS) {
+            Some("git")  => VcsBackend::Git,
+            Some("jj")   => VcsBackend::Jj,
+            Some("none") => VcsBackend::None,
+            _            => VcsBackend::Auto,
+        };
+
         let view = View::deduce(matches, vars)?;
         let dir_action = DirAction::deduce(matches, matches!(view.mode, Mode::Details(_)))?;
         let filter = FileFilter::deduce(matches)?;
         let theme = ThemeOptions::deduce(matches, vars)?;
 
-        Ok(Self { dir_action, filter, view, theme })
+        Ok(Self { dir_action, filter, view, theme, vcs_backend })
     }
 }
 

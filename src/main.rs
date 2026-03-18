@@ -33,9 +33,10 @@ use log::*;
 
 use crate::fs::{Dir, File};
 use crate::fs::feature::git::GitCache;
+use crate::fs::feature::jj::JjCache;
 use crate::fs::feature::VcsCache;
 use crate::fs::filter::GitIgnore;
-use crate::options::{Options, Vars, vars, OptionsResult};
+use crate::options::{Options, VcsBackend, Vars, vars, OptionsResult};
 use crate::output::{escape, lines, grid, grid_details, details, View, Mode};
 use crate::theme::Theme;
 
@@ -156,15 +157,36 @@ impl Vars for LiveVars {
     }
 }
 
-/// Create a VCS cache populated with the arguments that are going to be
-/// listed before they're actually listed, if the options demand it.
+/// Create a VCS cache based on the selected backend and the paths that
+/// are going to be listed.
 fn vcs_cache(options: &Options, args: &[OsString]) -> Option<Box<dyn VcsCache>> {
-    if options.should_scan_for_git() {
-        let cache: GitCache = args.iter().map(PathBuf::from).collect();
-        Some(Box::new(cache))
+    if !options.should_scan_for_git() {
+        return None;
     }
-    else {
-        None
+
+    let paths: Vec<PathBuf> = args.iter().map(PathBuf::from).collect();
+
+    match options.vcs_backend {
+        VcsBackend::None => None,
+
+        VcsBackend::Git => {
+            let cache: GitCache = paths.into_iter().collect();
+            Some(Box::new(cache))
+        }
+
+        VcsBackend::Jj => {
+            JjCache::discover(&paths).map(|c| Box::new(c) as Box<dyn VcsCache>)
+        }
+
+        VcsBackend::Auto => {
+            // Prefer jj if a workspace is detected, fall back to git.
+            if let Some(jj) = JjCache::discover(&paths) {
+                Some(Box::new(jj) as Box<dyn VcsCache>)
+            } else {
+                let cache: GitCache = paths.into_iter().collect();
+                Some(Box::new(cache))
+            }
+        }
     }
 }
 
