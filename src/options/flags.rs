@@ -50,7 +50,12 @@ pub const NO_USER: &str = "no-user";
 pub const NO_TIME: &str = "no-time";
 pub const NO_ICONS: &str = "no-icons";
 
-// optional feature options
+// VCS options
+pub const VCS: &str = "vcs";
+pub const VCS_STATUS: &str = "vcs-status";
+pub const VCS_IGNORE: &str = "vcs-ignore";
+
+// optional feature options (GIT is a hidden alias for --vcs-status)
 pub const GIT: &str = "git";
 pub const EXTENDED: &str = "extended";
 pub const OCTAL: &str = "octal-permissions";

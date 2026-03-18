@@ -153,7 +153,7 @@ impl TableOptions {
 impl Columns {
     fn deduce(matches: &MatchedFlags) -> Result<Self, OptionsError> {
         let time_types = TimeTypes::deduce(matches)?;
-        let git = matches.has(flags::GIT);
+        let git = matches.has(flags::GIT) || matches.has(flags::VCS_STATUS);
 
         let blocks = matches.has(flags::BLOCKS);
         let group  = matches.has(flags::GROUP);

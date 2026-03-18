@@ -205,8 +205,9 @@ Environment variables:\n  \
             .value_name("GLOB"))
         .arg(Arg::new(flags::GIT_IGNORE)
             .long("git-ignore")
-            .help("Ignore files listed in .gitignore")
-            .action(ArgAction::Count))
+            .help("Hide files ignored by VCS (alias for --vcs-ignore)")
+            .action(ArgAction::Count)
+            .hide(true))
         .arg(Arg::new(flags::DIRS_FIRST)
             .long("group-directories-first")
             .help("List directories before other files")
@@ -328,12 +329,35 @@ Environment variables:\n  \
             .help("Don't display icons (overrides --icons)")
             .action(ArgAction::Count))
 
+        // ── VCS integration ────────────────────────────────────
+
+        .arg(Arg::new(flags::VCS)
+            .long("vcs")
+            .help("VCS backend to use [auto, git, jj, none]")
+            .action(ArgAction::Set)
+            .value_name("BACKEND")
+            .value_parser([
+                PossibleValue::new("auto"),
+                PossibleValue::new("git"),
+                PossibleValue::new("jj"),
+                PossibleValue::new("none"),
+            ]))
+        .arg(Arg::new(flags::VCS_STATUS)
+            .long("vcs-status")
+            .help("Show per-file VCS status column")
+            .action(ArgAction::Count))
+        .arg(Arg::new(flags::VCS_IGNORE)
+            .long("vcs-ignore")
+            .help("Hide files ignored by VCS")
+            .action(ArgAction::Count))
+
         // ── Optional features ───────────────────────────────────
 
         .arg(Arg::new(flags::GIT)
             .long("git")
-            .help("List each file's Git status, if tracked or ignored")
-            .action(ArgAction::Count))
+            .help("Show per-file Git status (alias for --vcs-status)")
+            .action(ArgAction::Count)
+            .hide(true))
         .arg(Arg::new(flags::EXTENDED)
             .short('@').long("extended")
             .help("List each file's extended attributes and sizes")

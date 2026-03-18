@@ -195,7 +195,7 @@ impl IgnorePatterns {
 
 impl GitIgnore {
     pub fn deduce(matches: &MatchedFlags) -> Self {
-        if matches.has(flags::GIT_IGNORE) {
+        if matches.has(flags::GIT_IGNORE) || matches.has(flags::VCS_IGNORE) {
             Self::CheckAndIgnore
         }
         else {
