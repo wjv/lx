@@ -6,12 +6,24 @@ use crate::fs::fields as f;
 
 impl f::VcsFileStatus {
     pub fn render(self, colours: &dyn Colours) -> TextCell {
-        TextCell {
-            width: DisplayWidth::from(2),
-            contents: vec![
-                self.staged.render(colours),
-                self.unstaged.render(colours),
-            ].into(),
+        if self.staged == self.unstaged {
+            // Single-column display (jj, or git with identical status).
+            TextCell {
+                width: DisplayWidth::from(2),
+                contents: vec![
+                    self.unstaged.render(colours),
+                    colours.not_modified().paint(" "),
+                ].into(),
+            }
+        } else {
+            // Two-column display (git staged + unstaged).
+            TextCell {
+                width: DisplayWidth::from(2),
+                contents: vec![
+                    self.staged.render(colours),
+                    self.unstaged.render(colours),
+                ].into(),
+            }
         }
     }
 }
@@ -72,17 +84,18 @@ pub mod test {
 
 
     #[test]
-    fn git_blank() {
+    fn vcs_blank() {
         let stati = f::Git {
             staged:   f::GitStatus::NotModified,
             unstaged: f::GitStatus::NotModified,
         };
 
+        // Equal statuses → single-column display (char + space).
         let expected = TextCell {
             width: DisplayWidth::from(2),
             contents: vec![
                 Fixed(90).paint("-"),
-                Fixed(90).paint("-"),
+                Fixed(90).paint(" "),
             ].into(),
         };
 
