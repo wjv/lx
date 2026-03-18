@@ -6,12 +6,11 @@
 //! configured using command-line options.
 //!
 //!
-//! ## Useless and overridden options
+//! ## Overridden options
 //!
-//! Options are resolved right-to-left: the last specified flag wins.  This
-//! supports shell aliases that set defaults which the user can then override
-//! on the command line.  In strict mode (`EXA_STRICT` set), duplicate or
-//! redundant flags are reported as errors instead.
+//! Options are resolved so that the last specified flag wins.  This supports
+//! shell aliases that set defaults which the user can then override on the
+//! command line.  Clap's `overrides_with` handles conflicting flags natively.
 
 use std::ffi::OsString;
 
@@ -68,14 +67,6 @@ impl Options {
     pub fn parse<V>(args: &[OsString], vars: &V) -> OptionsResult
     where V: Vars,
     {
-        use crate::options::parser::Strictness;
-
-        let strictness = match vars.get(vars::EXA_STRICT) {
-            None                         => Strictness::UseLastArguments,
-            Some(ref t) if t.is_empty()  => Strictness::UseLastArguments,
-            Some(_)                      => Strictness::ComplainAboutRedundantArguments,
-        };
-
         // Use Clap for validation, help, and version.
         // try_get_matches_from expects the binary name as the first argument.
         let mut clap_args = vec![OsString::from("lx")];
@@ -89,7 +80,6 @@ impl Options {
                         return OptionsResult::HelpOrVersion(e);
                     }
                     ErrorKind::DisplayVersion => {
-                        // Use our own version string instead of Clap's.
                         return OptionsResult::Version;
                     }
                     _ => {
@@ -97,18 +87,17 @@ impl Options {
                     }
                 }
             }
-            Ok(_clap_matches) => {
-                // Clap validated — now reconstruct ordered flags for deduce.
+            Ok(clap_matches) => {
+                let frees = clap_matches.get_many::<OsString>("FILE")
+                    .map(|vals| vals.cloned().collect())
+                    .unwrap_or_default();
+                let flags = MatchedFlags::new(clap_matches);
+
+                match Self::deduce(&flags, vars) {
+                    Ok(options)  => OptionsResult::Ok(options, frees),
+                    Err(oe)      => OptionsResult::InvalidOptions(oe),
+                }
             }
-        }
-
-        // Reconstruct the flag list from raw args for ordering and strict mode.
-        let parser::Matches { flags, frees } =
-            parser::reconstruct_matches(args, strictness);
-
-        match Self::deduce(&flags, vars) {
-            Ok(options)  => OptionsResult::Ok(options, frees),
-            Err(oe)      => OptionsResult::InvalidOptions(oe),
         }
     }
 
@@ -130,8 +119,7 @@ impl Options {
     /// Determines the complete set of options based on the given command-line
     /// arguments, after they've been parsed.
     fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
-        if cfg!(not(feature = "git")) &&
-                matches.has_where_any(|f| f.matches(&flags::GIT) || f.matches(&flags::GIT_IGNORE)).is_some() {
+        if cfg!(not(feature = "git")) && (matches.has(flags::GIT) || matches.has(flags::GIT_IGNORE)) {
             return Err(OptionsError::Unsupported(String::from(
                 "Options --git and --git-ignore can't be used because `git` feature was disabled in this build of lx"
             )));
@@ -170,164 +158,22 @@ pub enum OptionsResult {
 
 #[cfg(test)]
 pub mod test {
-    use crate::options::parser::{Arg, Strictness, MatchedFlags, Flag};
+    use crate::options::parser::MatchedFlags;
     use std::ffi::OsString;
 
-    #[derive(PartialEq, Eq, Debug)]
-    pub enum Strictnesses {
-        Last,
-        Complain,
-        Both,
-    }
-
-    /// This function gets used by the other testing modules.
-    /// It can run with one or both strictness values: if told to run with
-    /// both, then both should resolve to the same result.
-    ///
-    /// It returns a vector with one or two elements in.
-    /// These elements can then be tested with `assert_eq` or what have you.
-    pub fn parse_for_test<T, F>(inputs: &[&str], args: &'static [&'static Arg], strictnesses: Strictnesses, get: F) -> Vec<T>
+    /// Parse test inputs through the full Clap command and call the given
+    /// function on the resulting `MatchedFlags`.  Returns a single-element
+    /// `Vec` so existing test macros that iterate over results still work.
+    pub fn parse_for_test<T, F>(inputs: &[&str], get: F) -> Vec<T>
     where F: Fn(&MatchedFlags) -> T
     {
-        use self::Strictnesses::*;
-        use crate::options::parser::TakesValue;
-
-        let bits: Vec<OsString> = inputs.iter().map(|s| OsString::from(s)).collect();
-        let mut result = Vec::new();
-
-        // Build a mini Clap command for just these test args, to avoid
-        // depending on the full ALL_ARGS set in unit tests.
-        // But actually it's simpler to just reconstruct directly, since
-        // reconstruct_matches does the right thing and only looks up args
-        // it recognises.  We create a temporary ALL_ARGS-like lookup by
-        // just using the reconstruct logic with our test arg definitions.
-        //
-        // For test isolation, we bypass Clap validation entirely and call
-        // the reconstruction directly.  This is safe because tests only
-        // supply well-formed inputs.
-
-        if strictnesses == Last || strictnesses == Both {
-            let mf = parse_test_flags(&bits, args, Strictness::UseLastArguments);
-            result.push(get(&mf));
-        }
-
-        if strictnesses == Complain || strictnesses == Both {
-            let mf = parse_test_flags(&bits, args, Strictness::ComplainAboutRedundantArguments);
-            result.push(get(&mf));
-        }
-
-        result
-    }
-
-    /// Parse test flags using a mini flag reconstruction that only knows
-    /// about the given arg definitions.
-    fn parse_test_flags(args: &[OsString], arg_defs: &[&'static Arg], strictness: Strictness) -> MatchedFlags {
-        use crate::options::parser::TakesValue;
-
-        let mut flags: Vec<(Flag, Option<OsString>)> = Vec::new();
-        let mut parsing = true;
-        let mut iter = args.iter().peekable();
-
-        fn lookup_long_in<'a>(name: &[u8], defs: &[&'a Arg]) -> Option<&'a Arg> {
-            defs.iter().find(|a| a.long.as_bytes() == name).copied()
-        }
-
-        fn lookup_short_in<'a>(byte: u8, defs: &[&'a Arg]) -> Option<&'a Arg> {
-            defs.iter().find(|a| a.short == Some(byte)).copied()
-        }
-
-        #[cfg(unix)]
-        fn to_bytes(s: &OsString) -> &[u8] {
-            use std::os::unix::ffi::OsStrExt;
-            s.as_bytes()
-        }
-
-        #[cfg(windows)]
-        fn to_bytes(s: &OsString) -> &[u8] {
-            s.to_str().unwrap().as_bytes()
-        }
-
-        while let Some(arg) = iter.next() {
-            let bytes = to_bytes(arg);
-
-            if !parsing {
-                // free arg — ignored in tests
-            }
-            else if arg == "--" {
-                parsing = false;
-            }
-            else if bytes.starts_with(b"--") {
-                let long_arg = &bytes[2..];
-
-                if let Some(eq_pos) = long_arg.iter().position(|&b| b == b'=') {
-                    let name = &long_arg[..eq_pos];
-                    let value = &long_arg[eq_pos + 1..];
-                    if let Some(def) = lookup_long_in(name, arg_defs) {
-                        let flag = Flag::Long(def.long);
-                        #[cfg(unix)]
-                        let val = {
-                            use std::os::unix::ffi::OsStrExt;
-                            std::ffi::OsStr::from_bytes(value).to_os_string()
-                        };
-                        #[cfg(windows)]
-                        let val = OsString::from(std::str::from_utf8(value).unwrap());
-                        flags.push((flag, Some(val)));
-                    }
-                }
-                else if let Some(def) = lookup_long_in(long_arg, arg_defs) {
-                    let flag = Flag::Long(def.long);
-                    match def.takes_value {
-                        TakesValue::Forbidden => flags.push((flag, None)),
-                        TakesValue::Necessary(_) => {
-                            let value = iter.next().unwrap().clone();
-                            flags.push((flag, Some(value)));
-                        }
-                        TakesValue::Optional(_) => {
-                            if let Some(next) = iter.next() {
-                                flags.push((flag, Some(next.clone())));
-                            } else {
-                                flags.push((flag, None));
-                            }
-                        }
-                    }
-                }
-            }
-            else if bytes.starts_with(b"-") && bytes != b"-" {
-                for (index, &byte) in bytes.iter().enumerate().skip(1) {
-                    if let Some(def) = lookup_short_in(byte, arg_defs) {
-                        let flag = Flag::Short(byte);
-                        match def.takes_value {
-                            TakesValue::Forbidden => flags.push((flag, None)),
-                            TakesValue::Necessary(_) | TakesValue::Optional(_) => {
-                                if index + 1 < bytes.len() {
-                                    let rest = if bytes[index + 1] == b'=' {
-                                        &bytes[index + 2..]
-                                    } else {
-                                        &bytes[index + 1..]
-                                    };
-                                    #[cfg(unix)]
-                                    let val = {
-                                        use std::os::unix::ffi::OsStrExt;
-                                        std::ffi::OsStr::from_bytes(rest).to_os_string()
-                                    };
-                                    #[cfg(windows)]
-                                    let val = OsString::from(std::str::from_utf8(rest).unwrap());
-                                    flags.push((flag, Some(val)));
-                                }
-                                else if let Some(next) = iter.next() {
-                                    flags.push((flag, Some(next.clone())));
-                                }
-                                else {
-                                    flags.push((flag, None));
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        MatchedFlags::new_for_test(flags, strictness)
+        let args: Vec<OsString> = std::iter::once(OsString::from("lx"))
+            .chain(inputs.iter().map(|s| OsString::from(s)))
+            .collect();
+        let cmd = crate::options::parser::build_command();
+        let clap_matches = cmd.try_get_matches_from(&args)
+            .expect("Clap parse error in test");
+        let mf = MatchedFlags::new(clap_matches);
+        vec![get(&mf)]
     }
 }
