@@ -88,6 +88,10 @@ impl Options {
                 }
             }
             Ok(clap_matches) => {
+                if let Some(shell) = clap_matches.get_one::<clap_complete::Shell>("completions") {
+                    return OptionsResult::Completions(*shell);
+                }
+
                 let frees = clap_matches.get_many::<OsString>("FILE")
                     .map(|vals| vals.cloned().collect())
                     .unwrap_or_default();
@@ -153,6 +157,9 @@ pub enum OptionsResult {
 
     /// Clap detected an error in the arguments.
     InvalidOptionsClap(clap::Error),
+
+    /// The user requested shell completions.
+    Completions(clap_complete::Shell),
 }
 
 

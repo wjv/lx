@@ -108,6 +108,11 @@ fn main() {
             clap_err.exit();
         }
 
+        OptionsResult::Completions(shell) => {
+            let mut cmd = crate::options::parser::build_command();
+            clap_complete::generate(shell, &mut cmd, "lx", &mut io::stdout());
+        }
+
         OptionsResult::InvalidOptions(error) => {
             eprintln!("lx: {}", error);
             exit(exits::OPTIONS_ERROR);

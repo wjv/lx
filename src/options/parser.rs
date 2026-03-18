@@ -6,9 +6,18 @@
 
 use std::ffi::OsString;
 
-use clap::builder::PossibleValue;
+use clap::builder::{PossibleValue, styling};
 
 use crate::options::flags;
+
+
+/// Clap help-text styling matching the owner's preferred colour scheme.
+const STYLES: styling::Styles = styling::Styles::styled()
+    .header(styling::AnsiColor::Yellow.on_default().bold())
+    .usage(styling::AnsiColor::Yellow.on_default().bold())
+    .literal(styling::AnsiColor::Cyan.on_default().bold())
+    .placeholder(styling::AnsiColor::Green.on_default())
+    .error(styling::AnsiColor::Red.on_default().bold());
 
 
 /// Thin wrapper around `clap::ArgMatches` that the deduce functions query.
@@ -97,6 +106,7 @@ pub fn build_command() -> clap::Command {
     clap::Command::new("lx")
         .version(include_str!(concat!(env!("OUT_DIR"), "/version_string.txt")))
         .about("list extended (but call me Alex!)")
+        .styles(STYLES)
         .disable_help_flag(true)
         .disable_version_flag(true)
         .args_override_self(true)
@@ -343,6 +353,13 @@ Environment variables:\n  \
             .short('v').long("version")
             .help("Print version information")
             .action(ArgAction::Version))
+        .arg(Arg::new("completions")
+            .long("completions")
+            .help("Generate shell completions and exit")
+            .action(ArgAction::Set)
+            .value_name("SHELL")
+            .value_parser(clap::value_parser!(clap_complete::Shell))
+            .hide(true))
 
         // ── Positional file arguments ───────────────────────────
 

@@ -30,6 +30,7 @@ uutils_term_grid = "0.7"
 unicode-width = "0.2"
 unit-prefix = "0.5"
 clap = { version = "4.5", features = ["cargo", "derive"] }
+clap_complete = "4.5"
 
 [target.'cfg(unix)'.dependencies]
 uzers = "0.12"
@@ -73,7 +74,5 @@ assets = [
     ["target/release/lx", "/usr/bin/lx", "0755"],
     ["target/release/../man/lx.1", "/usr/share/man/man1/lx.1", "0644"],
     ["target/release/../man/lx_colors.5", "/usr/share/man/man5/lx_colors.5", "0644"],
-    ["completions/bash/lx", "/usr/share/bash-completion/completions/lx", "0644"],
-    ["completions/zsh/_lx", "/usr/share/zsh/site-functions/_lx", "0644"],
-    ["completions/fish/lx.fish", "/usr/share/fish/vendor_completions.d/lx.fish", "0644"],
 ]
+# Shell completions are generated at runtime via `lx --completions <shell>`.
