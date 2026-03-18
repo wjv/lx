@@ -4,8 +4,8 @@ pub use self::blocks::Colours as BlocksColours;
 mod filetype;
 pub use self::filetype::Colours as FiletypeColours;
 
-mod git;
-pub use self::git::Colours as GitColours;
+mod vcs;
+pub use self::vcs::Colours as VcsColours;
 
 #[cfg(unix)]
 mod groups;

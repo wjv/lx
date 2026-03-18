@@ -83,9 +83,9 @@ pub struct Render<'a> {
     pub row_threshold: RowThreshold,
 
     /// Whether we are skipping Git-ignored files.
-    pub git_ignoring: bool,
+    pub vcs_ignoring: bool,
 
-    pub git: Option<&'a dyn VcsCache>,
+    pub vcs: Option<&'a dyn VcsCache>,
 
     pub console_width: usize,
 }
@@ -115,8 +115,8 @@ impl<'a> Render<'a> {
             opts:          self.details,
             recurse:       None,
             filter:        self.filter,
-            git_ignoring:  self.git_ignoring,
-            git:           self.git,
+            vcs_ignoring:  self.vcs_ignoring,
+            vcs:           self.vcs,
         }
     }
 
@@ -133,8 +133,8 @@ impl<'a> Render<'a> {
             opts:          self.details,
             recurse:       None,
             filter:        self.filter,
-            git_ignoring:  self.git_ignoring,
-            git:           self.git,
+            vcs_ignoring:  self.vcs_ignoring,
+            vcs:           self.vcs,
         }
     }
 
@@ -209,13 +209,13 @@ impl<'a> Render<'a> {
     }
 
     fn make_table(&mut self, options: &'a TableOptions, drender: &DetailsRender<'_>) -> (Table<'a>, Vec<DetailsRow>) {
-        match (self.git, self.dir) {
-            (Some(g), Some(d))  => if ! g.has_anything_for(&d.path) { self.git = None },
-            (Some(g), None)     => if ! self.files.iter().any(|f| g.has_anything_for(&f.path)) { self.git = None },
+        match (self.vcs, self.dir) {
+            (Some(g), Some(d))  => if ! g.has_anything_for(&d.path) { self.vcs = None },
+            (Some(g), None)     => if ! self.files.iter().any(|f| g.has_anything_for(&f.path)) { self.vcs = None },
             (None,    _)        => {/* Keep Git how it is */},
         }
 
-        let mut table = Table::new(options, self.git, self.theme);
+        let mut table = Table::new(options, self.vcs, self.theme);
         let mut rows = Vec::new();
 
         if self.details.header {

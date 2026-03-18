@@ -124,9 +124,9 @@ pub struct Render<'a> {
     pub filter: &'a FileFilter,
 
     /// Whether we are skipping VCS-ignored files.
-    pub git_ignoring: bool,
+    pub vcs_ignoring: bool,
 
-    pub git: Option<&'a dyn VcsCache>,
+    pub vcs: Option<&'a dyn VcsCache>,
 }
 
 
@@ -150,13 +150,13 @@ impl<'a> Render<'a> {
         let mut rows = Vec::new();
 
         if let Some(ref table) = self.opts.table {
-            match (self.git, self.dir) {
-                (Some(g), Some(d))  => if ! g.has_anything_for(&d.path) { self.git = None },
-                (Some(g), None)     => if ! self.files.iter().any(|f| g.has_anything_for(&f.path)) { self.git = None },
+            match (self.vcs, self.dir) {
+                (Some(g), Some(d))  => if ! g.has_anything_for(&d.path) { self.vcs = None },
+                (Some(g), None)     => if ! self.files.iter().any(|f| g.has_anything_for(&f.path)) { self.vcs = None },
                 (None,    _)        => {/* Keep Git how it is */},
             }
 
-            let mut table = Table::new(table, self.git, self.theme);
+            let mut table = Table::new(table, self.vcs, self.theme);
 
             if self.opts.header {
                 let header = table.header_row();
@@ -294,7 +294,7 @@ impl<'a> Render<'a> {
             rows.push(row);
 
             if let Some(ref dir) = egg.dir {
-                for file_to_add in dir.files(self.filter.dot_filter, self.git, self.git_ignoring) {
+                for file_to_add in dir.files(self.filter.dot_filter, self.vcs, self.vcs_ignoring) {
                     match file_to_add {
                         Ok(f) => {
                             files.push(f);

@@ -216,16 +216,16 @@ impl render::FiletypeColours for Theme {
     fn special(&self)      -> Style { self.ui.filekinds.special }
 }
 
-impl render::GitColours for Theme {
+impl render::VcsColours for Theme {
     fn not_modified(&self)  -> Style { self.ui.punctuation }
     #[allow(clippy::new_ret_no_self)]
-    fn new(&self)           -> Style { self.ui.git.new }
-    fn modified(&self)      -> Style { self.ui.git.modified }
-    fn deleted(&self)       -> Style { self.ui.git.deleted }
-    fn renamed(&self)       -> Style { self.ui.git.renamed }
-    fn type_change(&self)   -> Style { self.ui.git.typechange }
-    fn ignored(&self)       -> Style { self.ui.git.ignored }
-    fn conflicted(&self)    -> Style { self.ui.git.conflicted }
+    fn new(&self)           -> Style { self.ui.vcs.new }
+    fn modified(&self)      -> Style { self.ui.vcs.modified }
+    fn deleted(&self)       -> Style { self.ui.vcs.deleted }
+    fn renamed(&self)       -> Style { self.ui.vcs.renamed }
+    fn type_change(&self)   -> Style { self.ui.vcs.typechange }
+    fn ignored(&self)       -> Style { self.ui.vcs.ignored }
+    fn conflicted(&self)    -> Style { self.ui.vcs.conflicted }
 }
 
 #[cfg(unix)]
@@ -483,11 +483,11 @@ mod customs_test {
     test!(lx_lc:  ls "", lx "lc=38;5;121"  =>  colours c -> { c.links.normal              = Fixed(121).normal(); });
     test!(lx_lm:  ls "", lx "lm=38;5;122"  =>  colours c -> { c.links.multi_link_file     = Fixed(122).normal(); });
 
-    test!(lx_ga:  ls "", lx "ga=38;5;123"  =>  colours c -> { c.git.new                   = Fixed(123).normal(); });
-    test!(lx_gm:  ls "", lx "gm=38;5;124"  =>  colours c -> { c.git.modified              = Fixed(124).normal(); });
-    test!(lx_gd:  ls "", lx "gd=38;5;125"  =>  colours c -> { c.git.deleted               = Fixed(125).normal(); });
-    test!(lx_gv:  ls "", lx "gv=38;5;126"  =>  colours c -> { c.git.renamed               = Fixed(126).normal(); });
-    test!(lx_gt:  ls "", lx "gt=38;5;127"  =>  colours c -> { c.git.typechange            = Fixed(127).normal(); });
+    test!(lx_ga:  ls "", lx "ga=38;5;123"  =>  colours c -> { c.vcs.new                   = Fixed(123).normal(); });
+    test!(lx_gm:  ls "", lx "gm=38;5;124"  =>  colours c -> { c.vcs.modified              = Fixed(124).normal(); });
+    test!(lx_gd:  ls "", lx "gd=38;5;125"  =>  colours c -> { c.vcs.deleted               = Fixed(125).normal(); });
+    test!(lx_gv:  ls "", lx "gv=38;5;126"  =>  colours c -> { c.vcs.renamed               = Fixed(126).normal(); });
+    test!(lx_gt:  ls "", lx "gt=38;5;127"  =>  colours c -> { c.vcs.typechange            = Fixed(127).normal(); });
 
     test!(lx_xx:  ls "", lx "xx=38;5;128"  =>  colours c -> { c.punctuation               = Fixed(128).normal(); });
     test!(lx_da:  ls "", lx "da=38;5;129"  =>  colours c -> { c.date                      = Fixed(129).normal(); });

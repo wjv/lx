@@ -38,7 +38,7 @@ pub struct Columns {
     pub links: bool,
     pub blocks: bool,
     pub group: bool,
-    pub git: bool,
+    pub vcs: bool,
     pub octal: bool,
 
     // Defaults to true:
@@ -48,7 +48,7 @@ pub struct Columns {
 }
 
 impl Columns {
-    pub fn collect(&self, actually_enable_git: bool) -> Vec<Column> {
+    pub fn collect(&self, actually_enable_vcs: bool) -> Vec<Column> {
         let mut columns = Vec::with_capacity(4);
 
         if self.inode {
@@ -105,8 +105,8 @@ impl Columns {
             columns.push(Column::Timestamp(TimeType::Accessed));
         }
 
-        if self.git && actually_enable_git {
-            columns.push(Column::GitStatus);
+        if self.vcs && actually_enable_vcs {
+            columns.push(Column::VcsStatus);
         }
 
         columns
@@ -130,7 +130,7 @@ pub enum Column {
     HardLinks,
     #[cfg(unix)]
     Inode,
-    GitStatus,
+    VcsStatus,
     #[cfg(unix)]
     Octal,
 }
@@ -153,7 +153,7 @@ impl Column {
             Self::HardLinks  |
             Self::Inode      |
             Self::Blocks     |
-            Self::GitStatus  => Alignment::Right,
+            Self::VcsStatus  => Alignment::Right,
             _                => Alignment::Left,
         }
     }
@@ -162,7 +162,7 @@ impl Column {
     pub fn alignment(&self) -> Alignment {
         match self {
             Self::FileSize   |
-            Self::GitStatus  => Alignment::Right,
+            Self::VcsStatus  => Alignment::Right,
             _                => Alignment::Left,
         }
     }
@@ -187,7 +187,7 @@ impl Column {
             Self::HardLinks     => "Links",
             #[cfg(unix)]
             Self::Inode         => "inode",
-            Self::GitStatus     => "Git",
+            Self::VcsStatus     => "VCS",
             #[cfg(unix)]
             Self::Octal         => "Octal",
         }
@@ -328,7 +328,7 @@ pub struct Table<'a> {
     time_format: TimeFormat,
     size_format: SizeFormat,
     user_format: UserFormat,
-    git: Option<&'a dyn VcsCache>,
+    vcs: Option<&'a dyn VcsCache>,
 }
 
 #[derive(Clone)]
@@ -337,8 +337,8 @@ pub struct Row {
 }
 
 impl<'a, 'f> Table<'a> {
-    pub fn new(options: &'a Options, git: Option<&'a dyn VcsCache>, theme: &'a Theme) -> Table<'a> {
-        let columns = options.columns.collect(git.is_some());
+    pub fn new(options: &'a Options, vcs: Option<&'a dyn VcsCache>, theme: &'a Theme) -> Table<'a> {
+        let columns = options.columns.collect(vcs.is_some());
         let widths = TableWidths::zero(columns.len());
         let env = &*ENVIRONMENT;
 
@@ -346,7 +346,7 @@ impl<'a, 'f> Table<'a> {
             theme,
             widths,
             columns,
-            git,
+            vcs,
             env,
             time_format: options.time_format,
             size_format: options.size_format,
@@ -424,8 +424,8 @@ impl<'a, 'f> Table<'a> {
             Column::Group => {
                 file.group().render(self.theme, &*self.env.lock_users(), self.user_format)
             }
-            Column::GitStatus => {
-                self.git_status(file).render(self.theme)
+            Column::VcsStatus => {
+                self.vcs_status(file).render(self.theme)
             }
             #[cfg(unix)]
             Column::Octal => {
@@ -447,10 +447,10 @@ impl<'a, 'f> Table<'a> {
         }
     }
 
-    fn git_status(&self, file: &File<'_>) -> f::Git {
-        debug!("Getting Git status for file {}", file.path.display());
+    fn vcs_status(&self, file: &File<'_>) -> f::VcsFileStatus {
+        debug!("Getting VCS status for file {}", file.path.display());
 
-        self.git
+        self.vcs
             .map(|g| g.get(&file.path, file.is_directory()))
             .unwrap_or_default()
     }

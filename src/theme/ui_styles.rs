@@ -12,7 +12,7 @@ pub struct UiStyles {
     pub size:       Size,
     pub users:      Users,
     pub links:      Links,
-    pub git:        Git,
+    pub vcs:        Git,
 
     pub punctuation:  Style,
     pub date:         Style,
@@ -178,11 +178,11 @@ impl UiStyles {
             "lc" => self.links.normal             = pair.to_style(),
             "lm" => self.links.multi_link_file    = pair.to_style(),
 
-            "ga" => self.git.new                  = pair.to_style(),
-            "gm" => self.git.modified             = pair.to_style(),
-            "gd" => self.git.deleted              = pair.to_style(),
-            "gv" => self.git.renamed              = pair.to_style(),
-            "gt" => self.git.typechange           = pair.to_style(),
+            "ga" => self.vcs.new                  = pair.to_style(),
+            "gm" => self.vcs.modified             = pair.to_style(),
+            "gd" => self.vcs.deleted              = pair.to_style(),
+            "gv" => self.vcs.renamed              = pair.to_style(),
+            "gt" => self.vcs.typechange           = pair.to_style(),
 
             "xx" => self.punctuation              = pair.to_style(),
             "da" => self.date                     = pair.to_style(),

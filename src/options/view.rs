@@ -153,7 +153,7 @@ impl TableOptions {
 impl Columns {
     fn deduce(matches: &MatchedFlags) -> Result<Self, OptionsError> {
         let time_types = TimeTypes::deduce(matches)?;
-        let git = matches.has(flags::GIT) || matches.has(flags::VCS_STATUS);
+        let vcs = matches.has(flags::GIT) || matches.has(flags::VCS_STATUS);
 
         let blocks = matches.has(flags::BLOCKS);
         let group  = matches.has(flags::GROUP);
@@ -165,7 +165,7 @@ impl Columns {
         let filesize =    ! matches.has(flags::NO_FILESIZE);
         let user =        ! matches.has(flags::NO_USER);
 
-        Ok(Self { time_types, inode, links, blocks, group, git, octal, permissions, filesize, user })
+        Ok(Self { time_types, inode, links, blocks, group, vcs, octal, permissions, filesize, user })
     }
 }
 
@@ -457,7 +457,8 @@ mod test {
         test!(just_numeric:  Mode <- ["--numeric"],  None;  like Ok(Mode::Grid(_)));
 
         #[cfg(feature = "git")]
-        test!(just_git:      Mode <- ["--git"],    None;  like Ok(Mode::Grid(_)));
+        test!(just_git:        Mode <- ["--git"],          None;  like Ok(Mode::Grid(_)));
+        test!(just_vcs_status: Mode <- ["--vcs-status"],   None;  like Ok(Mode::Grid(_)));
 
         // Contradictions and combinations
         test!(lgo:           Mode <- ["--long", "--grid", "--oneline"], None;  like Ok(Mode::Lines));

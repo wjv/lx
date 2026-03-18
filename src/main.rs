@@ -35,7 +35,7 @@ use crate::fs::{Dir, File};
 use crate::fs::feature::git::GitCache;
 use crate::fs::feature::jj::JjCache;
 use crate::fs::feature::VcsCache;
-use crate::fs::filter::GitIgnore;
+use crate::fs::filter::VcsIgnore;
 use crate::options::{Options, VcsBackend, Vars, vars, OptionsResult};
 use crate::output::{escape, lines, grid, grid_details, details, View, Mode};
 use crate::theme::Theme;
@@ -160,7 +160,7 @@ impl Vars for LiveVars {
 /// Create a VCS cache based on the selected backend and the paths that
 /// are going to be listed.
 fn vcs_cache(options: &Options, args: &[OsString]) -> Option<Box<dyn VcsCache>> {
-    if !options.should_scan_for_git() {
+    if !options.should_scan_for_vcs() {
         return None;
     }
 
@@ -254,8 +254,8 @@ impl Lx {
             }
 
             let mut children = Vec::new();
-            let git_ignore = self.options.filter.git_ignore == GitIgnore::CheckAndIgnore;
-            for file in dir.files(self.options.filter.dot_filter, self.vcs.as_deref(), git_ignore) {
+            let vcs_ignore = self.options.filter.vcs_ignore == VcsIgnore::CheckAndIgnore;
+            for file in dir.files(self.options.filter.dot_filter, self.vcs.as_deref(), vcs_ignore) {
                 match file {
                     Ok(file)        => children.push(file),
                     Err((path, e))  => writeln!(io::stderr(), "[{}: {}]", path.display(), e)?,
@@ -319,9 +319,9 @@ impl Lx {
                 let filter = &self.options.filter;
                 let recurse = self.options.dir_action.recurse_options();
 
-                let git_ignoring = self.options.filter.git_ignore == GitIgnore::CheckAndIgnore;
-                let git = self.vcs.as_deref();
-                let r = details::Render { dir, files, theme, file_style, opts, recurse, filter, git_ignoring, git };
+                let vcs_ignoring = self.options.filter.vcs_ignore == VcsIgnore::CheckAndIgnore;
+                let vcs = self.vcs.as_deref();
+                let r = details::Render { dir, files, theme, file_style, opts, recurse, filter, vcs_ignoring, vcs };
                 r.render(&mut self.writer)
             }
 
@@ -331,10 +331,10 @@ impl Lx {
                 let row_threshold = opts.row_threshold;
 
                 let filter = &self.options.filter;
-                let git_ignoring = self.options.filter.git_ignore == GitIgnore::CheckAndIgnore;
-                let git = self.vcs.as_deref();
+                let vcs_ignoring = self.options.filter.vcs_ignore == VcsIgnore::CheckAndIgnore;
+                let vcs = self.vcs.as_deref();
 
-                let r = grid_details::Render { dir, files, theme, file_style, grid, details, filter, row_threshold, git_ignoring, git, console_width };
+                let r = grid_details::Render { dir, files, theme, file_style, grid, details, filter, row_threshold, vcs_ignoring, vcs, console_width };
                 r.render(&mut self.writer)
             }
 
@@ -342,10 +342,10 @@ impl Lx {
                 let opts = &opts.to_details_options();
                 let filter = &self.options.filter;
                 let recurse = self.options.dir_action.recurse_options();
-                let git_ignoring = self.options.filter.git_ignore == GitIgnore::CheckAndIgnore;
+                let vcs_ignoring = self.options.filter.vcs_ignore == VcsIgnore::CheckAndIgnore;
 
-                let git = self.vcs.as_deref();
-                let r = details::Render { dir, files, theme, file_style, opts, recurse, filter, git_ignoring, git };
+                let vcs = self.vcs.as_deref();
+                let r = details::Render { dir, files, theme, file_style, opts, recurse, filter, vcs_ignoring, vcs };
                 r.render(&mut self.writer)
             }
         }

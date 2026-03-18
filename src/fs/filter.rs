@@ -58,8 +58,8 @@ pub struct FileFilter {
     /// patterns won’t be displayed in the list.
     pub ignore_patterns: IgnorePatterns,
 
-    /// Whether to ignore Git-ignored patterns.
-    pub git_ignore: GitIgnore,
+    /// Whether to ignore VCS-ignored patterns.
+    pub vcs_ignore: VcsIgnore,
 }
 
 impl FileFilter {
@@ -326,14 +326,14 @@ impl IgnorePatterns {
 }
 
 
-/// Whether to ignore or display files that Git would ignore.
+/// Whether to ignore or display files that the VCS would ignore.
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
-pub enum GitIgnore {
+pub enum VcsIgnore {
 
-    /// Ignore files that Git would ignore.
+    /// Ignore files that the VCS would ignore.
     CheckAndIgnore,
 
-    /// Display files, even if Git would ignore them.
+    /// Display files, even if the VCS would ignore them.
     Off,
 }
 

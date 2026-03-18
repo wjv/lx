@@ -85,9 +85,9 @@ pub mod test {
 
     #[test]
     fn vcs_blank() {
-        let stati = f::Git {
-            staged:   f::GitStatus::NotModified,
-            unstaged: f::GitStatus::NotModified,
+        let stati = f::VcsFileStatus {
+            staged:   f::VcsStatus::NotModified,
+            unstaged: f::VcsStatus::NotModified,
         };
 
         // Equal statuses → single-column display (char + space).
@@ -104,10 +104,10 @@ pub mod test {
 
 
     #[test]
-    fn git_new_changed() {
-        let stati = f::Git {
-            staged:   f::GitStatus::New,
-            unstaged: f::GitStatus::Modified,
+    fn vcs_staged_unstaged_differ() {
+        let stati = f::VcsFileStatus {
+            staged:   f::VcsStatus::New,
+            unstaged: f::VcsStatus::Modified,
         };
 
         let expected = TextCell {

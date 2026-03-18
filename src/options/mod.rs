@@ -15,7 +15,7 @@
 use std::ffi::OsString;
 
 use crate::fs::dir_action::DirAction;
-use crate::fs::filter::{FileFilter, GitIgnore};
+use crate::fs::filter::{FileFilter, VcsIgnore};
 use crate::output::{View, Mode, details, grid_details};
 use crate::theme::Options as ThemeOptions;
 
@@ -121,14 +121,14 @@ impl Options {
     /// Whether the View specified in this set of options includes a Git
     /// status column. It's only worth trying to discover a repository if the
     /// results will end up being displayed.
-    pub fn should_scan_for_git(&self) -> bool {
-        if self.filter.git_ignore == GitIgnore::CheckAndIgnore {
+    pub fn should_scan_for_vcs(&self) -> bool {
+        if self.filter.vcs_ignore == VcsIgnore::CheckAndIgnore {
             return true;
         }
 
         match self.view.mode {
             Mode::Details(details::Options { table: Some(ref table), .. }) |
-            Mode::GridDetails(grid_details::Options { details: details::Options { table: Some(ref table), .. }, .. }) => table.columns.git,
+            Mode::GridDetails(grid_details::Options { details: details::Options { table: Some(ref table), .. }, .. }) => table.columns.vcs,
             _ => false,
         }
     }

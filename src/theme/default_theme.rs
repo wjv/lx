@@ -56,7 +56,7 @@ impl UiStyles {
                 multi_link_file: Red.on(Yellow),
             },
 
-            git: Git {
+            vcs: Git {
                 new:         Green.normal(),
                 modified:    Blue.normal(),
                 deleted:     Red.normal(),

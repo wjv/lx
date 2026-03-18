@@ -1,7 +1,7 @@
 //! Parsing the options for `FileFilter`.
 
 use crate::fs::DotFilter;
-use crate::fs::filter::{FileFilter, SortField, SortCase, IgnorePatterns, GitIgnore};
+use crate::fs::filter::{FileFilter, SortField, SortCase, IgnorePatterns, VcsIgnore};
 
 use crate::options::{flags, OptionsError};
 use crate::options::parser::MatchedFlags;
@@ -18,7 +18,7 @@ impl FileFilter {
             sort_field:       SortField::deduce(matches)?,
             dot_filter:       DotFilter::deduce(matches)?,
             ignore_patterns:  IgnorePatterns::deduce(matches)?,
-            git_ignore:       GitIgnore::deduce(matches),
+            vcs_ignore:       VcsIgnore::deduce(matches),
         })
     }
 }
@@ -193,7 +193,7 @@ impl IgnorePatterns {
 }
 
 
-impl GitIgnore {
+impl VcsIgnore {
     pub fn deduce(matches: &MatchedFlags) -> Self {
         if matches.has(flags::GIT_IGNORE) || matches.has(flags::VCS_IGNORE) {
             Self::CheckAndIgnore
@@ -295,10 +295,11 @@ mod test {
     }
 
 
-    mod git_ignores {
+    mod vcs_ignores {
         use super::*;
 
-        test!(off:  GitIgnore <- [];                GitIgnore::Off);
-        test!(on:   GitIgnore <- ["--git-ignore"];  GitIgnore::CheckAndIgnore);
+        test!(off:      VcsIgnore <- [];                VcsIgnore::Off);
+        test!(git_flag: VcsIgnore <- ["--git-ignore"];   VcsIgnore::CheckAndIgnore);
+        test!(vcs_flag: VcsIgnore <- ["--vcs-ignore"];   VcsIgnore::CheckAndIgnore);
     }
 }
