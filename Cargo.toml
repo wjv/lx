@@ -5,11 +5,11 @@ authors = ["Benjamin Sago <ogham@bsago.me>", "Johann Visagie <johann@visagie.za.
 categories = ["command-line-utilities"]
 edition = "2024"
 rust-version = "1.94"
-exclude = ["/devtools/*", "/Justfile", "/Vagrantfile", "/screenshots.png"]
+exclude = ["/xtests/*"]
 readme = "README.md"
 license = "MIT"
 repository = "https://github.com/wjv/lx"
-version = "0.1.0-pre.3"
+version = "0.1.0-pre.4"
 
 
 [[bin]]
@@ -76,7 +76,5 @@ section = "utils"
 priority = "optional"
 assets = [
     ["target/release/lx", "/usr/bin/lx", "0755"],
-    ["target/release/../man/lx.1", "/usr/share/man/man1/lx.1", "0644"],
-    ["target/release/../man/lx_colors.5", "/usr/share/man/man5/lx_colors.5", "0644"],
 ]
 # Shell completions are generated at runtime via `lx --completions <shell>`.

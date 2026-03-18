@@ -76,9 +76,9 @@ fn main() {
 
             let console_width = options.view.width.actual_terminal_width();
             let theme = options.theme.to_theme(console_width.is_some());
-            let exa = Exa { options, writer, input_paths, theme, console_width, git };
+            let lx = Lx { options, writer, input_paths, theme, console_width, git };
 
-            match exa.run() {
+            match lx.run() {
                 Ok(exit_status) => {
                     exit(exit_status);
                 }
@@ -116,8 +116,9 @@ fn main() {
 }
 
 
-/// The main program wrapper.
-pub struct Exa {
+/// The main program wrapper.  Holds parsed options, the theme, and any
+/// pre-populated caches (e.g. Git status).
+pub struct Lx {
 
     /// List of command-line options, having been successfully parsed.
     pub options: Options,
@@ -165,7 +166,7 @@ fn git_options(options: &Options, args: &[OsString]) -> Option<GitCache> {
     }
 }
 
-impl Exa {
+impl Lx {
     /// # Errors
     ///
     /// Will return `Err` if printing to stderr fails.
