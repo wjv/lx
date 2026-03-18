@@ -305,7 +305,7 @@ pub struct Environment {
 
 impl Environment {
     #[cfg(unix)]
-    pub fn lock_users(&self) -> MutexGuard<UsersCache> {
+    pub fn lock_users(&self) -> MutexGuard<'_, UsersCache> {
         self.users.lock().unwrap()
     }
 

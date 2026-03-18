@@ -274,10 +274,10 @@ impl<'args> Exa<'args> {
         }
 
         let theme = &self.theme;
-        let View { ref mode, ref file_style, .. } = self.options.view;
+        let View { mode, file_style, .. } = &self.options.view;
 
         match (mode, self.console_width) {
-            (Mode::Grid(ref opts), Some(console_width)) => {
+            (Mode::Grid(opts), Some(console_width)) => {
                 let filter = &self.options.filter;
                 let r = grid::Render { files, theme, file_style, opts, console_width, filter };
                 r.render(&mut self.writer)
@@ -290,7 +290,7 @@ impl<'args> Exa<'args> {
                 r.render(&mut self.writer)
             }
 
-            (Mode::Details(ref opts), _) => {
+            (Mode::Details(opts), _) => {
                 let filter = &self.options.filter;
                 let recurse = self.options.dir_action.recurse_options();
 
@@ -300,7 +300,7 @@ impl<'args> Exa<'args> {
                 r.render(&mut self.writer)
             }
 
-            (Mode::GridDetails(ref opts), Some(console_width)) => {
+            (Mode::GridDetails(opts), Some(console_width)) => {
                 let grid = &opts.grid;
                 let details = &opts.details;
                 let row_threshold = opts.row_threshold;
@@ -313,7 +313,7 @@ impl<'args> Exa<'args> {
                 r.render(&mut self.writer)
             }
 
-            (Mode::GridDetails(ref opts), None) => {
+            (Mode::GridDetails(opts), None) => {
                 let opts = &opts.to_details_options();
                 let filter = &self.options.filter;
                 let recurse = self.options.dir_action.recurse_options();

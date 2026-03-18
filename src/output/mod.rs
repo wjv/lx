@@ -1,4 +1,3 @@
-pub use self::cell::{TextCell, TextCellContents, DisplayWidth};
 pub use self::escape::escape;
 
 pub mod details;

@@ -6,7 +6,6 @@ use crate::output::render;
 
 mod ui_styles;
 pub use self::ui_styles::UiStyles;
-pub use self::ui_styles::Size as SizeColours;
 
 mod lsc;
 pub use self::lsc::LSColors;

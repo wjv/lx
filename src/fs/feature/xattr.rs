@@ -116,7 +116,7 @@ mod lister {
     use std::ffi::CString;
     use std::ptr;
 
-    extern "C" {
+    unsafe extern "C" {
         fn listxattr(
             path: *const c_char,
             namebuf: *mut c_char,
@@ -197,7 +197,7 @@ mod lister {
     use super::FollowSymlinks;
     use std::ptr;
 
-    extern "C" {
+    unsafe extern "C" {
         fn listxattr(
             path: *const c_char,
             list: *mut c_char,

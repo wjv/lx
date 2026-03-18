@@ -92,7 +92,7 @@ impl fmt::Display for OptionsError {
             Self::Useless2(a, b1, b2)        => write!(f, "Option {} is useless without options {} or {}", a, b1, b2),
             Self::TreeAllAll                 => write!(f, "Option --tree is useless given --all --all"),
             Self::FailedParse(s, n, e)       => write!(f, "Value {:?} not valid for {}: {}", s, n, e),
-            Self::FailedGlobPattern(ref e)   => write!(f, "Failed to parse glob pattern: {}", e),
+            Self::FailedGlobPattern(e)       => write!(f, "Failed to parse glob pattern: {}", e),
         }
     }
 }
@@ -107,7 +107,7 @@ impl OptionsError {
             Self::BadArgument(time, r) if *time == &flags::TIME && r == "r" => {
                 Some("To sort oldest files last, try \"--sort oldest\", or just \"-sold\"")
             }
-            Self::Parse(ParseError::NeedsValue { ref flag, .. }) if *flag == Flag::Short(b't') => {
+            Self::Parse(ParseError::NeedsValue { flag, .. }) if *flag == Flag::Short(b't') => {
                 Some("To sort newest files last, try \"--sort newest\", or just \"-snew\"")
             }
             _ => {
