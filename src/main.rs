@@ -96,12 +96,7 @@ fn main() {
         }
 
         OptionsResult::HelpOrVersion(clap_err) => {
-            // Clap exits with the formatted help text.
             clap_err.exit();
-        }
-
-        OptionsResult::Version => {
-            print!("{}", include_str!(concat!(env!("OUT_DIR"), "/version_string.txt")));
         }
 
         OptionsResult::InvalidOptionsClap(clap_err) => {

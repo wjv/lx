@@ -104,7 +104,7 @@ pub fn build_command() -> clap::Command {
     use clap::{Arg, ArgAction};
 
     clap::Command::new("lx")
-        .version(include_str!(concat!(env!("OUT_DIR"), "/version_string.txt")))
+        .version(env!("CARGO_PKG_VERSION"))
         .about("list extended (but call me Alex!)")
         .styles(STYLES)
         .disable_help_flag(true)

@@ -76,11 +76,8 @@ impl Options {
             Err(e) => {
                 use clap::error::ErrorKind;
                 match e.kind() {
-                    ErrorKind::DisplayHelp => {
+                    ErrorKind::DisplayHelp | ErrorKind::DisplayVersion => {
                         return OptionsResult::HelpOrVersion(e);
-                    }
-                    ErrorKind::DisplayVersion => {
-                        return OptionsResult::Version;
                     }
                     _ => {
                         return OptionsResult::InvalidOptionsClap(e);
@@ -149,11 +146,8 @@ pub enum OptionsResult {
     /// There was an error in the deduce phase.
     InvalidOptions(OptionsError),
 
-    /// Clap wants to display help (normal exit).
+    /// Clap wants to display help or version (normal exit).
     HelpOrVersion(clap::Error),
-
-    /// Display our custom version string.
-    Version,
 
     /// Clap detected an error in the arguments.
     InvalidOptionsClap(clap::Error),
