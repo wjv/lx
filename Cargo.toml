@@ -43,8 +43,9 @@ default-features = false
 
 
 [features]
-default = ["git"]
+default = ["git", "jj"]
 git = ["git2"]
+jj = []
 vendored-openssl = ["git2/vendored-openssl"]
 
 

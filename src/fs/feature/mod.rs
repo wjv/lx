@@ -48,3 +48,33 @@ pub mod git {
         }
     }
 }
+
+
+#[cfg(feature = "jj")]
+pub mod jj;
+
+#[cfg(not(feature = "jj"))]
+pub mod jj {
+    use std::path::{Path, PathBuf};
+
+    use crate::fs::fields as f;
+    use super::VcsCache;
+
+    pub struct JjCache;
+
+    impl JjCache {
+        pub fn discover(_paths: &[PathBuf]) -> Option<Self> {
+            None
+        }
+    }
+
+    impl VcsCache for JjCache {
+        fn has_anything_for(&self, _path: &Path) -> bool {
+            false
+        }
+
+        fn get(&self, _path: &Path, _prefix_lookup: bool) -> f::VcsFileStatus {
+            f::VcsFileStatus::default()
+        }
+    }
+}
