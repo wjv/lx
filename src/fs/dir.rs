@@ -1,5 +1,5 @@
-use crate::fs::feature::git::GitCache;
-use crate::fs::fields::GitStatus;
+use crate::fs::feature::VcsCache;
+use crate::fs::fields::VcsStatus;
 use std::io;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -47,7 +47,7 @@ impl Dir {
 
     /// Produce an iterator of IO results of trying to read all the files in
     /// this directory.
-    pub fn files<'dir, 'ig>(&'dir self, dots: DotFilter, git: Option<&'ig GitCache>, git_ignoring: bool) -> Files<'dir, 'ig> {
+    pub fn files<'dir, 'ig>(&'dir self, dots: DotFilter, git: Option<&'ig dyn VcsCache>, git_ignoring: bool) -> Files<'dir, 'ig> {
         Files {
             inner:     self.contents.iter(),
             dir:       self,
@@ -86,7 +86,7 @@ pub struct Files<'dir, 'ig> {
     /// any files have been listed.
     dots: DotsNext,
 
-    git: Option<&'ig GitCache>,
+    git: Option<&'ig dyn VcsCache>,
 
     git_ignoring: bool,
 }
@@ -120,7 +120,7 @@ impl<'dir> Files<'dir, '_> {
 
                 if self.git_ignoring {
                     let git_status = self.git.map(|g| g.get(path, false)).unwrap_or_default();
-                    if git_status.unstaged == GitStatus::Ignored {
+                    if git_status.unstaged == VcsStatus::Ignored {
                          continue;
                     }
                 }

@@ -70,7 +70,7 @@ use rayon;
 
 use crate::fs::{Dir, File};
 use crate::fs::dir_action::RecurseOptions;
-use crate::fs::feature::git::GitCache;
+use crate::fs::feature::VcsCache;
 use crate::fs::feature::xattr::{Attribute, FileAttributes};
 use crate::fs::filter::FileFilter;
 use crate::output::cell::TextCell;
@@ -123,10 +123,10 @@ pub struct Render<'a> {
     /// How to sort and filter the files after getting their details.
     pub filter: &'a FileFilter,
 
-    /// Whether we are skipping Git-ignored files.
+    /// Whether we are skipping VCS-ignored files.
     pub git_ignoring: bool,
 
-    pub git: Option<&'a GitCache>,
+    pub git: Option<&'a dyn VcsCache>,
 }
 
 

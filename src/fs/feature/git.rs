@@ -24,15 +24,15 @@ pub struct GitCache {
     misses: Vec<PathBuf>,
 }
 
-impl GitCache {
-    pub fn has_anything_for(&self, index: &Path) -> bool {
-        self.repos.iter().any(|e| e.has_path(index))
+impl super::VcsCache for GitCache {
+    fn has_anything_for(&self, path: &Path) -> bool {
+        self.repos.iter().any(|e| e.has_path(path))
     }
 
-    pub fn get(&self, index: &Path, prefix_lookup: bool) -> f::Git {
+    fn get(&self, path: &Path, prefix_lookup: bool) -> f::VcsFileStatus {
         self.repos.iter()
-            .find(|e| e.has_path(index))
-            .map(|repo| repo.search(index, prefix_lookup))
+            .find(|e| e.has_path(path))
+            .map(|repo| repo.search(path, prefix_lookup))
             .unwrap_or_default()
     }
 }

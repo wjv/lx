@@ -33,6 +33,7 @@ use log::*;
 
 use crate::fs::{Dir, File};
 use crate::fs::feature::git::GitCache;
+use crate::fs::feature::VcsCache;
 use crate::fs::filter::GitIgnore;
 use crate::options::{Options, Vars, vars, OptionsResult};
 use crate::output::{escape, lines, grid, grid_details, details, View, Mode};
@@ -71,12 +72,12 @@ fn main() {
                 input_paths = vec![ OsString::from(".") ];
             }
 
-            let git = git_options(&options, &input_paths);
+            let vcs = vcs_cache(&options, &input_paths);
             let writer = io::stdout();
 
             let console_width = options.view.width.actual_terminal_width();
             let theme = options.theme.to_theme(console_width.is_some());
-            let lx = Lx { options, writer, input_paths, theme, console_width, git };
+            let lx = Lx { options, writer, input_paths, theme, console_width, vcs };
 
             match lx.run() {
                 Ok(exit_status) => {
@@ -139,10 +140,10 @@ pub struct Lx {
     /// view to use.
     pub console_width: Option<usize>,
 
-    /// A global Git cache, if the option was passed in.
+    /// A global VCS cache, if the option was passed in.
     /// This has to last the lifetime of the program, because the user might
     /// want to list several directories in the same repository.
-    pub git: Option<GitCache>,
+    pub vcs: Option<Box<dyn VcsCache>>,
 }
 
 /// The "real" environment variables type.
@@ -155,11 +156,12 @@ impl Vars for LiveVars {
     }
 }
 
-/// Create a Git cache populated with the arguments that are going to be
+/// Create a VCS cache populated with the arguments that are going to be
 /// listed before they're actually listed, if the options demand it.
-fn git_options(options: &Options, args: &[OsString]) -> Option<GitCache> {
+fn vcs_cache(options: &Options, args: &[OsString]) -> Option<Box<dyn VcsCache>> {
     if options.should_scan_for_git() {
-        Some(args.iter().map(PathBuf::from).collect())
+        let cache: GitCache = args.iter().map(PathBuf::from).collect();
+        Some(Box::new(cache))
     }
     else {
         None
@@ -231,7 +233,7 @@ impl Lx {
 
             let mut children = Vec::new();
             let git_ignore = self.options.filter.git_ignore == GitIgnore::CheckAndIgnore;
-            for file in dir.files(self.options.filter.dot_filter, self.git.as_ref(), git_ignore) {
+            for file in dir.files(self.options.filter.dot_filter, self.vcs.as_deref(), git_ignore) {
                 match file {
                     Ok(file)        => children.push(file),
                     Err((path, e))  => writeln!(io::stderr(), "[{}: {}]", path.display(), e)?,
@@ -296,7 +298,7 @@ impl Lx {
                 let recurse = self.options.dir_action.recurse_options();
 
                 let git_ignoring = self.options.filter.git_ignore == GitIgnore::CheckAndIgnore;
-                let git = self.git.as_ref();
+                let git = self.vcs.as_deref();
                 let r = details::Render { dir, files, theme, file_style, opts, recurse, filter, git_ignoring, git };
                 r.render(&mut self.writer)
             }
@@ -308,7 +310,7 @@ impl Lx {
 
                 let filter = &self.options.filter;
                 let git_ignoring = self.options.filter.git_ignore == GitIgnore::CheckAndIgnore;
-                let git = self.git.as_ref();
+                let git = self.vcs.as_deref();
 
                 let r = grid_details::Render { dir, files, theme, file_style, grid, details, filter, row_threshold, git_ignoring, git, console_width };
                 r.render(&mut self.writer)
@@ -320,7 +322,7 @@ impl Lx {
                 let recurse = self.options.dir_action.recurse_options();
                 let git_ignoring = self.options.filter.git_ignore == GitIgnore::CheckAndIgnore;
 
-                let git = self.git.as_ref();
+                let git = self.vcs.as_deref();
                 let r = details::Render { dir, files, theme, file_style, opts, recurse, filter, git_ignoring, git };
                 r.render(&mut self.writer)
             }

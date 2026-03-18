@@ -9,7 +9,7 @@ use log::*;
 use uzers::UsersCache;
 
 use crate::fs::{File, fields as f};
-use crate::fs::feature::git::GitCache;
+use crate::fs::feature::VcsCache;
 use crate::output::cell::TextCell;
 use crate::output::render::TimeRender;
 use crate::output::time::TimeFormat;
@@ -328,7 +328,7 @@ pub struct Table<'a> {
     time_format: TimeFormat,
     size_format: SizeFormat,
     user_format: UserFormat,
-    git: Option<&'a GitCache>,
+    git: Option<&'a dyn VcsCache>,
 }
 
 #[derive(Clone)]
@@ -337,7 +337,7 @@ pub struct Row {
 }
 
 impl<'a, 'f> Table<'a> {
-    pub fn new(options: &'a Options, git: Option<&'a GitCache>, theme: &'a Theme) -> Table<'a> {
+    pub fn new(options: &'a Options, git: Option<&'a dyn VcsCache>, theme: &'a Theme) -> Table<'a> {
         let columns = options.columns.collect(git.is_some());
         let widths = TableWidths::zero(columns.len());
         let env = &*ENVIRONMENT;

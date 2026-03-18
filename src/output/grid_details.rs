@@ -6,7 +6,7 @@ use nu_ansi_term::AnsiStrings;
 use term_grid as tg;
 
 use crate::fs::{Dir, File};
-use crate::fs::feature::git::GitCache;
+use crate::fs::feature::VcsCache;
 use crate::fs::feature::xattr::FileAttributes;
 use crate::fs::filter::FileFilter;
 use crate::output::cell::TextCell;
@@ -85,7 +85,7 @@ pub struct Render<'a> {
     /// Whether we are skipping Git-ignored files.
     pub git_ignoring: bool,
 
-    pub git: Option<&'a GitCache>,
+    pub git: Option<&'a dyn VcsCache>,
 
     pub console_width: usize,
 }
