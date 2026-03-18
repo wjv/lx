@@ -199,17 +199,15 @@ pub struct DeviceIDs {
 
 
 
-/// A file’s status in a Git repository. Whether a file is in a repository or
-/// not is handled by the Git module, rather than having a “null” variant in
-/// this enum.
+/// A file’s status in a VCS repository.  Backend-agnostic: used for both
+/// git and jj.
 #[derive(PartialEq, Eq, Copy, Clone)]
-pub enum GitStatus {
+pub enum VcsStatus {
 
     /// This file hasn’t changed since the last commit.
     NotModified,
 
-    /// This file didn’t exist for the last commit, and is not specified in
-    /// the ignored files list.
+    /// This file is new (added, not previously tracked).
     New,
 
     /// A file that’s been modified since the last commit.
@@ -218,36 +216,42 @@ pub enum GitStatus {
     /// A deleted file. This can’t ever be shown, but it’s here anyway!
     Deleted,
 
-    /// A file that Git has tracked a rename for.
+    /// A file that the VCS has tracked a rename for.
     Renamed,
 
     /// A file that’s had its type (such as the file permissions) changed.
     TypeChange,
 
-    /// A file that’s ignored (that matches a line in .gitignore)
+    /// A file that’s ignored (matches a VCS ignore pattern).
     Ignored,
 
-    /// A file that’s updated but unmerged.
+    /// A file that’s updated but unmerged (conflicted).
     Conflicted,
+
+    /// A file that’s been copied (jj tracks copies).
+    Copied,
 }
 
 
-/// A file’s complete Git status. It’s possible to make changes to a file, add
-/// it to the staging area, then make *more* changes, so we need to list each
-/// file’s status for both of these.
+/// A file’s complete VCS status.  For git this has separate staged and
+/// unstaged status; for jj (which has no staging area) both fields hold
+/// the same value.
 #[derive(Copy, Clone)]
-pub struct Git {
-    pub staged:   GitStatus,
-    pub unstaged: GitStatus,
+pub struct VcsFileStatus {
+    pub staged:   VcsStatus,
+    pub unstaged: VcsStatus,
 }
 
-impl Default for Git {
-
-    /// Create a Git status for a file with nothing done to it.
+impl Default for VcsFileStatus {
     fn default() -> Self {
         Self {
-            staged: GitStatus::NotModified,
-            unstaged: GitStatus::NotModified,
+            staged: VcsStatus::NotModified,
+            unstaged: VcsStatus::NotModified,
         }
     }
 }
+
+// Convenience aliases so existing `f::Git` / `f::GitStatus` references
+// continue to compile during the migration.
+pub type Git = VcsFileStatus;
+pub type GitStatus = VcsStatus;

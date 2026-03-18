@@ -4,7 +4,7 @@ use crate::output::cell::{TextCell, DisplayWidth};
 use crate::fs::fields as f;
 
 
-impl f::Git {
+impl f::VcsFileStatus {
     pub fn render(self, colours: &dyn Colours) -> TextCell {
         TextCell {
             width: DisplayWidth::from(2),
@@ -17,7 +17,7 @@ impl f::Git {
 }
 
 
-impl f::GitStatus {
+impl f::VcsStatus {
     fn render(self, colours: &dyn Colours) -> AnsiString<'static> {
         match self {
             Self::NotModified  => colours.not_modified().paint("-"),
@@ -28,6 +28,7 @@ impl f::GitStatus {
             Self::TypeChange   => colours.type_change().paint("T"),
             Self::Ignored      => colours.ignored().paint("I"),
             Self::Conflicted   => colours.conflicted().paint("U"),
+            Self::Copied       => colours.renamed().paint("C"),
         }
     }
 }
