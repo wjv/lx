@@ -135,7 +135,7 @@ impl Definitions {
                             warn!("Couldn't parse glob pattern {:?}: {}", pair.key, e);
                         }
                     }
-                };
+                }
             });
         }
 
@@ -193,7 +193,7 @@ impl ExtensionMappings {
     }
 
     fn add(&mut self, pattern: glob::Pattern, style: Style) {
-        self.mappings.push((pattern, style))
+        self.mappings.push((pattern, style));
     }
 }
 

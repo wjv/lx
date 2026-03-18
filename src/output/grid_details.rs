@@ -152,7 +152,7 @@ impl<'a> Render<'a> {
                 width:   self.console_width,
             });
 
-            write!(w, "{}", grid)
+            write!(w, "{grid}")
         }
         else {
             self.give_up().render(w)
@@ -196,11 +196,10 @@ impl<'a> Render<'a> {
                 // terminal, and it turns out there aren't enough rows to make
                 // it worthwhile (according to LX_GRID_ROWS), then just resort
                 // to the lines view.
-                if let RowThreshold::MinimumRows(thresh) = self.row_threshold {
-                    if last_working.row_count < thresh {
+                if let RowThreshold::MinimumRows(thresh) = self.row_threshold
+                    && last_working.row_count < thresh {
                         return None;
                     }
-                }
 
                 return Some(last_working);
             }
@@ -280,7 +279,7 @@ impl<'a> Render<'a> {
         }
         else {
             for column in &columns {
-                for cell in column.iter() {
+                for cell in column {
                     cells.push(AnsiStrings(&cell.contents).to_string());
                 }
             }
@@ -347,7 +346,7 @@ fn visual_width(s: &str) -> usize {
 fn divide_rounding_up(a: usize, b: usize) -> usize {
     let mut result = a / b;
 
-    if a % b != 0 {
+    if !a.is_multiple_of(b) {
         result += 1;
     }
 

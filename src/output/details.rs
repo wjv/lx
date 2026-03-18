@@ -117,7 +117,7 @@ pub struct Render<'a> {
 
     /// Whether to recurse through directories with a tree view, and if so,
     /// which options to use. This field is only relevant here if the `tree`
-    /// field of the RecurseOptions is `true`.
+    /// field of the `RecurseOptions` is `true`.
     pub recurse: Option<RecurseOptions>,
 
     /// How to sort and filter the files after getting their details.
@@ -170,14 +170,14 @@ impl<'a> Render<'a> {
             self.add_files_to_table(&mut table, &mut rows, &self.files, TreeDepth::root());
 
             for row in self.iterate_with_table(table.unwrap(), rows) {
-                writeln!(w, "{}", row.strings())?
+                writeln!(w, "{}", row.strings())?;
             }
         }
         else {
             self.add_files_to_table(&mut None, &mut rows, &self.files, TreeDepth::root());
 
             for row in self.iterate(rows) {
-                writeln!(w, "{}", row.strings())?
+                writeln!(w, "{}", row.strings())?;
             }
         }
 
@@ -250,8 +250,8 @@ impl<'a> Render<'a> {
                     }
 
                     let mut dir = None;
-                    if let Some(r) = self.recurse {
-                        if file.is_directory() && r.tree && ! r.is_too_deep(depth.0) {
+                    if let Some(r) = self.recurse
+                        && file.is_directory() && r.tree && ! r.is_too_deep(depth.0) {
                             match file.to_dir() {
                                 Ok(d) => {
                                     dir = Some(d);
@@ -261,7 +261,6 @@ impl<'a> Render<'a> {
                                 }
                             }
                         }
-                    };
 
                     let egg = Egg { table_row, xattrs, errors, dir, file };
                     unsafe { std::ptr::write(file_eggs.lock().unwrap()[idx].as_mut_ptr(), egg) }
@@ -352,7 +351,7 @@ impl<'a> Render<'a> {
         let error_message = if let Some(path) = path {
             format!("<{}: {}>", path.display(), error)
         } else {
-            format!("<{}>", error)
+            format!("<{error}>")
         };
 
         // TODO: broken_symlink() doesn’t quite seem like the right name for
@@ -418,7 +417,7 @@ pub struct TableIter<'a> {
     tree_trunk:  TreeTrunk,
 }
 
-impl<'a> Iterator for TableIter<'a> {
+impl Iterator for TableIter<'_> {
     type Item = TextCell;
 
     fn next(&mut self) -> Option<Self::Item> {

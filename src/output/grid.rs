@@ -30,7 +30,7 @@ pub struct Render<'a, 'dir> {
     pub filter: &'a FileFilter,
 }
 
-impl<'a, 'dir> Render<'a, 'dir> {
+impl Render<'_, '_> {
     pub fn render<W: Write>(mut self, w: &mut W) -> io::Result<()> {
         self.filter.sort_files(&mut self.files);
 
@@ -61,7 +61,7 @@ impl<'a, 'dir> Render<'a, 'dir> {
             Ok(())
         }
         else {
-            write!(w, "{}", grid)
+            write!(w, "{grid}")
         }
     }
 }

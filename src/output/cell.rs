@@ -143,7 +143,7 @@ impl Deref for TextCellContents {
     type Target = [AnsiString<'static>];
 
     fn deref(&self) -> &Self::Target {
-        &*self.0
+        &self.0
     }
 }
 

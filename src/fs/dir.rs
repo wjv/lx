@@ -91,7 +91,7 @@ pub struct Files<'dir, 'ig> {
     git_ignoring: bool,
 }
 
-impl<'dir, 'ig> Files<'dir, 'ig> {
+impl<'dir> Files<'dir, '_> {
     fn parent(&self) -> PathBuf {
         // We can’t use `Path#parent` here because all it does is remove the
         // last path component, which is no good for us if the path is
@@ -148,7 +148,7 @@ enum DotsNext {
     Files,
 }
 
-impl<'dir, 'ig> Iterator for Files<'dir, 'ig> {
+impl<'dir> Iterator for Files<'dir, '_> {
     type Item = Result<File<'dir>, (PathBuf, io::Error)>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -177,6 +177,7 @@ impl<'dir, 'ig> Iterator for Files<'dir, 'ig> {
 /// entries in particular are “extra-hidden”: `.` and `..`, which only become
 /// visible after an extra `-a` option.
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(Default)]
 pub enum DotFilter {
 
     /// Shows files, dotfiles, and `.` and `..`.
@@ -186,14 +187,10 @@ pub enum DotFilter {
     Dotfiles,
 
     /// Just show files, hiding anything beginning with a dot.
+    #[default]
     JustFiles,
 }
 
-impl Default for DotFilter {
-    fn default() -> Self {
-        Self::JustFiles
-    }
-}
 
 impl DotFilter {
 

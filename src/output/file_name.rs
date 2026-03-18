@@ -55,9 +55,11 @@ enum LinkStyle {
 
 /// Whether to append file class characters to the file names.
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(Default)]
 pub enum Classify {
 
     /// Just display the file names, without any characters.
+    #[default]
     JustFilenames,
 
     /// Add a character after the file name depending on what class of file
@@ -65,11 +67,6 @@ pub enum Classify {
     AddFileIndicators,
 }
 
-impl Default for Classify {
-    fn default() -> Self {
-        Self::JustFilenames
-    }
-}
 
 
 /// Whether and how to show icons.
@@ -104,7 +101,7 @@ pub struct FileName<'a, 'dir, C> {
     options: Options,
 }
 
-impl<'a, 'dir, C> FileName<'a, 'dir, C> {
+impl<C> FileName<'_, '_, C> {
 
     /// Sets the flag on this file name to display link targets with an
     /// arrow followed by their path.
@@ -114,7 +111,7 @@ impl<'a, 'dir, C> FileName<'a, 'dir, C> {
     }
 }
 
-impl<'a, 'dir, C: Colours> FileName<'a, 'dir, C> {
+impl<C: Colours> FileName<'_, '_, C> {
 
     /// Paints the name of the file using the colours, resulting in a vector
     /// of coloured cells that can be printed to the terminal.
@@ -138,11 +135,10 @@ impl<'a, 'dir, C: Colours> FileName<'a, 'dir, C> {
             }
         }
 
-        if self.file.parent_dir.is_none() {
-            if let Some(parent) = self.file.path.parent() {
+        if self.file.parent_dir.is_none()
+            && let Some(parent) = self.file.path.parent() {
                 self.add_parent_bits(&mut bits, parent);
             }
-        }
 
         if ! self.file.name.is_empty() {
         	// The “missing file” colour seems like it should be used here,
@@ -185,11 +181,10 @@ impl<'a, 'dir, C: Colours> FileName<'a, 'dir, C> {
                             bits.push(bit);
                         }
 
-                        if let Classify::AddFileIndicators = self.options.classify {
-                            if let Some(class) = self.classify_char(target) {
+                        if let Classify::AddFileIndicators = self.options.classify
+                            && let Some(class) = self.classify_char(target) {
                                 bits.push(Style::default().paint(class));
                             }
-                        }
                     }
                 }
 
@@ -211,11 +206,10 @@ impl<'a, 'dir, C: Colours> FileName<'a, 'dir, C> {
                 }
             }
         }
-        else if let Classify::AddFileIndicators = self.options.classify {
-            if let Some(class) = self.classify_char(self.file) {
+        else if let Classify::AddFileIndicators = self.options.classify
+            && let Some(class) = self.classify_char(self.file) {
                 bits.push(Style::default().paint(class));
             }
-        }
 
         bits.into()
     }
@@ -305,13 +299,11 @@ impl<'a, 'dir, C: Colours> FileName<'a, 'dir, C> {
     /// class on the filesystem or from its name. (Or the broken link colour,
     /// if there’s nowhere else for that fact to be shown.)
     pub fn style(&self) -> Style {
-        if let LinkStyle::JustFilenames = self.link_style {
-            if let Some(ref target) = self.target {
-                if target.is_broken() {
+        if let LinkStyle::JustFilenames = self.link_style
+            && let Some(ref target) = self.target
+                && target.is_broken() {
                     return self.colours.broken_symlink();
                 }
-            }
-        }
 
         match self.file {
             f if f.is_directory()        => self.colours.directory(),
@@ -367,5 +359,5 @@ pub trait Colours: FiletypeColours {
 
 /// Generate a string made of `n` spaces.
 fn spaces(width: u32) -> String {
-    (0 .. width).into_iter().map(|_| ' ').collect()
+    (0 .. width).map(|_| ' ').collect()
 }

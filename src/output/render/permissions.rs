@@ -105,13 +105,13 @@ impl f::Attributes {
 
     pub fn render_type<C: Colours+FiletypeColours>(&self, colours: &C) -> AnsiString<'static> {
         if self.reparse_point {
-            return colours.pipe().paint("l")
+            colours.pipe().paint("l")
         }
         else if self.directory {
-            return colours.directory().paint("d")
+            colours.directory().paint("d")
         }
         else {
-            return colours.dash().paint("-")
+            colours.dash().paint("-")
         }
     }
 }

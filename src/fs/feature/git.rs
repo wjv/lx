@@ -50,10 +50,10 @@ impl FromIterator<PathBuf> for GitCache {
 
         for path in iter {
             if git.misses.contains(&path) {
-                debug!("Skipping {:?} because it already came back Gitless", path);
+                debug!("Skipping {path:?} because it already came back Gitless");
             }
             else if git.repos.iter().any(|e| e.has_path(&path)) {
-                debug!("Skipping {:?} because we already queried it", path);
+                debug!("Skipping {path:?} because we already queried it");
             }
             else {
                 match GitRepo::discover(path) {
@@ -68,7 +68,7 @@ impl FromIterator<PathBuf> for GitCache {
                         git.repos.push(r);
                     }
                     Err(miss) => {
-                        git.misses.push(miss)
+                        git.misses.push(miss);
                     }
                 }
             }
@@ -91,7 +91,7 @@ pub struct GitRepo {
     workdir: PathBuf,
 
     /// The path that was originally checked to discover this repository.
-    /// This is as important as the extra_paths (it gets checked first), but
+    /// This is as important as the `extra_paths` (it gets checked first), but
     /// is separate to avoid having to deal with a non-empty Vec.
     original_path: PathBuf,
 
@@ -161,11 +161,11 @@ impl GitRepo {
     /// Searches for a Git repository at any point above the given path.
     /// Returns the original buffer if none is found.
     fn discover(path: PathBuf) -> Result<Self, PathBuf> {
-        info!("Searching for Git repository above {:?}", path);
+        info!("Searching for Git repository above {path:?}");
         let repo = match git2::Repository::discover(&path) {
             Ok(r) => r,
             Err(e) => {
-                error!("Error discovering Git repositories: {:?}", e);
+                error!("Error discovering Git repositories: {e:?}");
                 return Err(path);
             }
         };
@@ -204,7 +204,7 @@ impl GitContents {
 fn repo_to_statuses(repo: &git2::Repository, workdir: &Path) -> Git {
     let mut statuses = Vec::new();
 
-    info!("Getting Git statuses for repo with workdir {:?}", workdir);
+    info!("Getting Git statuses for repo with workdir {workdir:?}");
     match repo.statuses(None) {
         Ok(es) => {
             for e in es.iter() {
@@ -219,7 +219,7 @@ fn repo_to_statuses(repo: &git2::Repository, workdir: &Path) -> Git {
             }
         }
         Err(e) => {
-            error!("Error looking up Git statuses: {:?}", e);
+            error!("Error looking up Git statuses: {e:?}");
         }
     }
 
@@ -302,8 +302,8 @@ fn reorient(path: &Path) -> PathBuf {
 
     // TODO: I’m not 100% on this func tbh
     let path = match current_dir() {
-        Err(_)   => Path::new(".").join(&path),
-        Ok(dir)  => dir.join(&path),
+        Err(_)   => Path::new(".").join(path),
+        Ok(dir)  => dir.join(path),
     };
 
     path.canonicalize().unwrap_or(path)

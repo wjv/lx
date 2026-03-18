@@ -198,10 +198,12 @@ impl Column {
 /// Formatting options for file sizes.
 #[allow(clippy::enum_variant_names)]
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(Default)]
 pub enum SizeFormat {
 
     /// Format the file size using **decimal** prefixes, such as “kilo”,
     /// “mega”, or “giga”.
+    #[default]
     DecimalBytes,
 
     /// Format the file size using **binary** prefixes, such as “kibi”,
@@ -221,11 +223,6 @@ pub enum UserFormat {
     Name,
 }
 
-impl Default for SizeFormat {
-    fn default() -> Self {
-        Self::DecimalBytes
-    }
-}
 
 
 /// The types of a file’s time fields. These three fields are standard
@@ -378,7 +375,7 @@ impl<'a, 'f> Table<'a> {
     }
 
     pub fn add_widths(&mut self, row: &Row) {
-        self.widths.add_widths(row)
+        self.widths.add_widths(row);
     }
 
     fn permissions_plus(&self, file: &File<'_>, xattrs: bool) -> f::PermissionsPlus {

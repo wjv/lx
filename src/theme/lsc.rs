@@ -47,11 +47,10 @@ where I: Iterator<Item = &'a str>
     match iter.peek() {
         Some(&"5") => {
             let _ = iter.next();
-            if let Some(byte) = iter.next() {
-                if let Ok(num) = byte.parse() {
+            if let Some(byte) = iter.next()
+                && let Ok(num) = byte.parse() {
                     return Some(Fixed(num));
                 }
-            }
         }
 
         Some(&"2") => {
@@ -90,7 +89,7 @@ pub struct Pair<'var> {
     pub value: &'var str,
 }
 
-impl<'var> Pair<'var> {
+impl Pair<'_> {
     pub fn to_style(&self) -> Style {
         let mut style = Style::default();
         let mut iter = self.value.split(';').peekable();

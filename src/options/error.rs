@@ -36,7 +36,7 @@ impl From<glob::PatternError> for OptionsError {
 impl fmt::Display for NumberSource {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Env(env) => write!(f, "environment variable {}", env),
+            Self::Env(env) => write!(f, "environment variable {env}"),
         }
     }
 }
@@ -44,10 +44,10 @@ impl fmt::Display for NumberSource {
 impl fmt::Display for OptionsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Unsupported(e)             => write!(f, "{}", e),
+            Self::Unsupported(e)             => write!(f, "{e}"),
             Self::TreeAllAll                 => write!(f, "Option --tree is useless given --all --all"),
-            Self::FailedParse(s, n, e)       => write!(f, "Value {:?} not valid for {}: {}", s, n, e),
-            Self::FailedGlobPattern(e)       => write!(f, "Failed to parse glob pattern: {}", e),
+            Self::FailedParse(s, n, e)       => write!(f, "Value {s:?} not valid for {n}: {e}"),
+            Self::FailedGlobPattern(e)       => write!(f, "Failed to parse glob pattern: {e}"),
         }
     }
 }

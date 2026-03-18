@@ -18,14 +18,13 @@ impl f::Group {
         };
 
         let current_uid = users.get_current_uid();
-        if let Some(current_user) = users.get_user_by_uid(current_uid) {
+        if let Some(current_user) = users.get_user_by_uid(current_uid)
 
-            if current_user.primary_group_id() == group.gid()
-            || group.members().iter().any(|u| u == current_user.name())
+            && (current_user.primary_group_id() == group.gid()
+            || group.members().iter().any(|u| u == current_user.name()))
             {
                 style = colours.yours();
             }
-        }
 
         let group_name = match format {
             UserFormat::Name => group.name().to_string_lossy().into(),

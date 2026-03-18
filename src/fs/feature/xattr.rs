@@ -61,7 +61,7 @@ pub fn list_attrs(lister: &lister::Lister, path: &Path) -> io::Result<Vec<Attrib
     let c_path = match path.to_str().and_then(|s| CString::new(s).ok()) {
         Some(cstring) => cstring,
         None => {
-            return Err(io::Error::new(io::ErrorKind::Other, "Error: path somehow contained a NUL?"));
+            return Err(io::Error::other("Error: path somehow contained a NUL?"));
         }
     };
 

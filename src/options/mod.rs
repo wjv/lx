@@ -77,10 +77,10 @@ impl Options {
                 use clap::error::ErrorKind;
                 match e.kind() {
                     ErrorKind::DisplayHelp | ErrorKind::DisplayVersion => {
-                        return OptionsResult::HelpOrVersion(e);
+                        OptionsResult::HelpOrVersion(e)
                     }
                     _ => {
-                        return OptionsResult::InvalidOptionsClap(e);
+                        OptionsResult::InvalidOptionsClap(e)
                     }
                 }
             }
