@@ -9,7 +9,7 @@ use crate::output::time::TimeFormat;
 
 
 impl View {
-    pub fn deduce<V: Vars>(matches: &MatchedFlags<'_>, vars: &V) -> Result<Self, OptionsError> {
+    pub fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
         let mode = Mode::deduce(matches, vars)?;
         let width = TerminalWidth::deduce(vars)?;
         let file_style = FileStyle::deduce(matches, vars)?;
@@ -28,7 +28,7 @@ impl Mode {
     ///
     /// This is complicated a little by the fact that `--grid` and `--tree`
     /// can also combine with `--long`, so care has to be taken to use the
-    pub fn deduce<V: Vars>(matches: &MatchedFlags<'_>, vars: &V) -> Result<Self, OptionsError> {
+    pub fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
         let flag = matches.has_where_any(|f| f.matches(&flags::LONG) || f.matches(&flags::ONE_LINE)
                                           || f.matches(&flags::GRID) || f.matches(&flags::TREE));
 
@@ -76,7 +76,7 @@ impl Mode {
         Ok(Self::Grid(grid))
     }
 
-    fn strict_check_long_flags(matches: &MatchedFlags<'_>) -> Result<(), OptionsError> {
+    fn strict_check_long_flags(matches: &MatchedFlags) -> Result<(), OptionsError> {
         // If --long hasn’t been passed, then check if we need to warn the
         // user about flags that won’t have any effect.
         if matches.is_strict() {
@@ -101,7 +101,7 @@ impl Mode {
 
 
 impl grid::Options {
-    fn deduce(matches: &MatchedFlags<'_>) -> Result<Self, OptionsError> {
+    fn deduce(matches: &MatchedFlags) -> Result<Self, OptionsError> {
         let grid = grid::Options {
             across: matches.has(&flags::ACROSS)?,
         };
@@ -112,7 +112,7 @@ impl grid::Options {
 
 
 impl details::Options {
-    fn deduce_tree(matches: &MatchedFlags<'_>) -> Result<Self, OptionsError> {
+    fn deduce_tree(matches: &MatchedFlags) -> Result<Self, OptionsError> {
         let details = details::Options {
             table: None,
             header: false,
@@ -122,7 +122,7 @@ impl details::Options {
         Ok(details)
     }
 
-    fn deduce_long<V: Vars>(matches: &MatchedFlags<'_>, vars: &V) -> Result<Self, OptionsError> {
+    fn deduce_long<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
         if matches.is_strict() {
             if matches.has(&flags::ACROSS)? && ! matches.has(&flags::GRID)? {
                 return Err(OptionsError::Useless(&flags::ACROSS, true, &flags::LONG));
@@ -186,7 +186,7 @@ impl RowThreshold {
 
 
 impl TableOptions {
-    fn deduce<V: Vars>(matches: &MatchedFlags<'_>, vars: &V) -> Result<Self, OptionsError> {
+    fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
         let time_format = TimeFormat::deduce(matches, vars)?;
         let size_format = SizeFormat::deduce(matches)?;
         let user_format = UserFormat::deduce(matches)?;
@@ -197,7 +197,7 @@ impl TableOptions {
 
 
 impl Columns {
-    fn deduce(matches: &MatchedFlags<'_>) -> Result<Self, OptionsError> {
+    fn deduce(matches: &MatchedFlags) -> Result<Self, OptionsError> {
         let time_types = TimeTypes::deduce(matches)?;
         let git = matches.has(&flags::GIT)?;
 
@@ -226,7 +226,7 @@ impl SizeFormat {
     /// strings of digits in your head. Changing the format to anything else
     /// involves the `--binary` or `--bytes` flags, and these conflict with
     /// each other.
-    fn deduce(matches: &MatchedFlags<'_>) -> Result<Self, OptionsError> {
+    fn deduce(matches: &MatchedFlags) -> Result<Self, OptionsError> {
         let flag = matches.has_where(|f| f.matches(&flags::BINARY) || f.matches(&flags::BYTES))?;
 
         Ok(match flag {
@@ -241,7 +241,7 @@ impl SizeFormat {
 impl TimeFormat {
 
     /// Determine how time should be formatted in timestamp columns.
-    fn deduce<V: Vars>(matches: &MatchedFlags<'_>, vars: &V) -> Result<Self, OptionsError> {
+    fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
         let word =
             if let Some(w) = matches.get(&flags::TIME_STYLE)? {
                 w.to_os_string()
@@ -274,7 +274,7 @@ impl TimeFormat {
 
 
 impl UserFormat {
-    fn deduce(matches: &MatchedFlags<'_>) -> Result<Self, OptionsError> {
+    fn deduce(matches: &MatchedFlags) -> Result<Self, OptionsError> {
         let flag = matches.has(&flags::NUMERIC)?;
         Ok(if flag { Self::Numeric } else { Self::Name })
     }
@@ -293,7 +293,7 @@ impl TimeTypes {
     /// It’s valid to show more than one column by passing in more than one
     /// option, but passing *no* options means that the user just wants to
     /// see the default set.
-    fn deduce(matches: &MatchedFlags<'_>) -> Result<Self, OptionsError> {
+    fn deduce(matches: &MatchedFlags) -> Result<Self, OptionsError> {
         let possible_word = matches.get(&flags::TIME)?;
         let modified = matches.has(&flags::MODIFIED)?;
         let changed  = matches.has(&flags::CHANGED)?;

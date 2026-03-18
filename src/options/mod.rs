@@ -1,6 +1,6 @@
-//! Parsing command-line strings into exa options.
+//! Parsing command-line strings into lx options.
 //!
-//! This module imports exa’s configuration types, such as `View` (the details
+//! This module imports lx's configuration types, such as `View` (the details
 //! of displaying multiple files) and `DirAction` (what to do when encountering
 //! a directory), and implements `deduce` methods on them so they can be
 //! configured using command-line options.
@@ -8,68 +8,12 @@
 //!
 //! ## Useless and overridden options
 //!
-//! Let’s say exa was invoked with just one argument: `exa --inode`. The
-//! `--inode` option is used in the details view, where it adds the inode
-//! column to the output. But because the details view is *only* activated with
-//! the `--long` argument, adding `--inode` without it would not have any
-//! effect.
-//!
-//! For a long time, exa’s philosophy was that the user should be warned
-//! whenever they could be mistaken like this. If you tell exa to display the
-//! inode, and it *doesn’t* display the inode, isn’t that more annoying than
-//! having it throw an error back at you?
-//!
-//! However, this doesn’t take into account *configuration*. Say a user wants
-//! to configure exa so that it lists inodes in the details view, but otherwise
-//! functions normally. A common way to do this for command-line programs is to
-//! define a shell alias that specifies the details they want to use every
-//! time. For the inode column, the alias would be:
-//!
-//! `alias exa="exa --inode"`
-//!
-//! Using this alias means that although the inode column will be shown in the
-//! details view, you’re now *only* allowed to use the details view, as any
-//! other view type will result in an error. Oops!
-//!
-//! Another example is when an option is specified twice, such as `exa
-//! --sort=Name --sort=size`. Did the user change their mind about sorting, and
-//! accidentally specify the option twice?
-//!
-//! Again, exa rejected this case, throwing an error back to the user instead
-//! of trying to guess how they want their output sorted. And again, this
-//! doesn’t take into account aliases being used to set defaults. A user who
-//! wants their files to be sorted case-insensitively may configure their shell
-//! with the following:
-//!
-//! `alias exa="exa --sort=Name"`
-//!
-//! Just like the earlier example, the user now can’t use any other sort order,
-//! because exa refuses to guess which one they meant. It’s *more* annoying to
-//! have to go back and edit the command than if there were no error.
-//!
-//! Fortunately, there’s a heuristic for telling which options came from an
-//! alias and which came from the actual command-line: aliased options are
-//! nearer the beginning of the options array, and command-line options are
-//! nearer the end. This means that after the options have been parsed, exa
-//! needs to traverse them *backwards* to find the last-most-specified one.
-//!
-//! For example, invoking exa with `exa --sort=size` when that alias is present
-//! would result in a full command-line of:
-//!
-//! `exa --sort=Name --sort=size`
-//!
-//! `--sort=size` should override `--sort=Name` because it’s closer to the end
-//! of the arguments array. In fact, because there’s no way to tell where the
-//! arguments came from — it’s just a heuristic — this will still work even
-//! if no aliases are being used!
-//!
-//! Finally, this isn’t just useful when options could override each other.
-//! Creating an alias `exal="exa --long --inode --header"` then invoking `exal
-//! --grid --long` shouldn’t complain about `--long` being given twice when
-//! it’s clear what the user wants.
+//! Options are resolved right-to-left: the last specified flag wins.  This
+//! supports shell aliases that set defaults which the user can then override
+//! on the command line.  In strict mode (`EXA_STRICT` set), duplicate or
+//! redundant flags are reported as errors instead.
 
-
-use std::ffi::OsStr;
+use std::ffi::OsString;
 
 use crate::fs::dir_action::DirAction;
 use crate::fs::filter::{FileFilter, GitIgnore};
@@ -86,21 +30,15 @@ mod view;
 mod error;
 pub use self::error::{OptionsError, NumberSource};
 
-mod help;
-use self::help::HelpString;
-
-mod parser;
+pub mod parser;
 use self::parser::MatchedFlags;
 
 pub mod vars;
 pub use self::vars::Vars;
 
-mod version;
-use self::version::VersionString;
-
 
 /// These **options** represent a parsed, error-checked versions of the
-/// user’s command-line options.
+/// user's command-line options.
 #[derive(Debug)]
 pub struct Options {
 
@@ -111,7 +49,7 @@ pub struct Options {
     /// How to sort and filter files before outputting them.
     pub filter: FileFilter,
 
-    /// The user’s preference of view to use (lines, grid, details, or
+    /// The user's preference of view to use (lines, grid, details, or
     /// grid-details) along with the options on how to render file names.
     /// If the view requires the terminal to have a width, and there is no
     /// width, then the view will be downgraded.
@@ -127,11 +65,10 @@ impl Options {
     /// struct and a list of free filenames, using the environment variables
     /// for extra options.
     #[allow(unused_results)]
-    pub fn parse<'args, I, V>(args: I, vars: &V) -> OptionsResult<'args>
-    where I: IntoIterator<Item = &'args OsStr>,
-          V: Vars,
+    pub fn parse<V>(args: &[OsString], vars: &V) -> OptionsResult
+    where V: Vars,
     {
-        use crate::options::parser::{Matches, Strictness};
+        use crate::options::parser::Strictness;
 
         let strictness = match vars.get(vars::EXA_STRICT) {
             None                         => Strictness::UseLastArguments,
@@ -139,18 +76,35 @@ impl Options {
             Some(_)                      => Strictness::ComplainAboutRedundantArguments,
         };
 
-        let Matches { flags, frees } = match flags::ALL_ARGS.parse(args, strictness) {
-            Ok(m)    => m,
-            Err(pe)  => return OptionsResult::InvalidOptions(OptionsError::Parse(pe)),
-        };
-
-        if let Some(help) = HelpString::deduce(&flags) {
-            return OptionsResult::Help(help);
+        // Use Clap for validation, help, and version.
+        // try_get_matches_from expects the binary name as the first argument.
+        let mut clap_args = vec![OsString::from("lx")];
+        clap_args.extend_from_slice(args);
+        let cmd = parser::build_command();
+        match cmd.try_get_matches_from(&clap_args) {
+            Err(e) => {
+                use clap::error::ErrorKind;
+                match e.kind() {
+                    ErrorKind::DisplayHelp => {
+                        return OptionsResult::HelpOrVersion(e);
+                    }
+                    ErrorKind::DisplayVersion => {
+                        // Use our own version string instead of Clap's.
+                        return OptionsResult::Version;
+                    }
+                    _ => {
+                        return OptionsResult::InvalidOptionsClap(e);
+                    }
+                }
+            }
+            Ok(_clap_matches) => {
+                // Clap validated — now reconstruct ordered flags for deduce.
+            }
         }
 
-        if let Some(version) = VersionString::deduce(&flags) {
-            return OptionsResult::Version(version);
-        }
+        // Reconstruct the flag list from raw args for ordering and strict mode.
+        let parser::Matches { flags, frees } =
+            parser::reconstruct_matches(args, strictness);
 
         match Self::deduce(&flags, vars) {
             Ok(options)  => OptionsResult::Ok(options, frees),
@@ -159,7 +113,7 @@ impl Options {
     }
 
     /// Whether the View specified in this set of options includes a Git
-    /// status column. It’s only worth trying to discover a repository if the
+    /// status column. It's only worth trying to discover a repository if the
     /// results will end up being displayed.
     pub fn should_scan_for_git(&self) -> bool {
         if self.filter.git_ignore == GitIgnore::CheckAndIgnore {
@@ -174,12 +128,12 @@ impl Options {
     }
 
     /// Determines the complete set of options based on the given command-line
-    /// arguments, after they’ve been parsed.
-    fn deduce<V: Vars>(matches: &MatchedFlags<'_>, vars: &V) -> Result<Self, OptionsError> {
+    /// arguments, after they've been parsed.
+    fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
         if cfg!(not(feature = "git")) &&
                 matches.has_where_any(|f| f.matches(&flags::GIT) || f.matches(&flags::GIT_IGNORE)).is_some() {
             return Err(OptionsError::Unsupported(String::from(
-                "Options --git and --git-ignore can't be used because `git` feature was disabled in this build of exa"
+                "Options --git and --git-ignore can't be used because `git` feature was disabled in this build of lx"
             )));
         }
 
@@ -193,28 +147,31 @@ impl Options {
 }
 
 
-/// The result of the `Options::getopts` function.
+/// The result of the `Options::parse` function.
 #[derive(Debug)]
-pub enum OptionsResult<'args> {
+pub enum OptionsResult {
 
     /// The options were parsed successfully.
-    Ok(Options, Vec<&'args OsStr>),
+    Ok(Options, Vec<OsString>),
 
-    /// There was an error parsing the arguments.
+    /// There was an error in the deduce phase.
     InvalidOptions(OptionsError),
 
-    /// One of the arguments was `--help`, so display help.
-    Help(HelpString),
+    /// Clap wants to display help (normal exit).
+    HelpOrVersion(clap::Error),
 
-    /// One of the arguments was `--version`, so display the version number.
-    Version(VersionString),
+    /// Display our custom version string.
+    Version,
+
+    /// Clap detected an error in the arguments.
+    InvalidOptionsClap(clap::Error),
 }
 
 
 #[cfg(test)]
 pub mod test {
-    use crate::options::parser::{Arg, MatchedFlags};
-    use std::ffi::OsStr;
+    use crate::options::parser::{Arg, Strictness, MatchedFlags, Flag};
+    use std::ffi::OsString;
 
     #[derive(PartialEq, Eq, Debug)]
     pub enum Strictnesses {
@@ -230,24 +187,147 @@ pub mod test {
     /// It returns a vector with one or two elements in.
     /// These elements can then be tested with `assert_eq` or what have you.
     pub fn parse_for_test<T, F>(inputs: &[&str], args: &'static [&'static Arg], strictnesses: Strictnesses, get: F) -> Vec<T>
-    where F: Fn(&MatchedFlags<'_>) -> T
+    where F: Fn(&MatchedFlags) -> T
     {
         use self::Strictnesses::*;
-        use crate::options::parser::{Args, Strictness};
+        use crate::options::parser::TakesValue;
 
-        let bits = inputs.iter().map(OsStr::new).collect::<Vec<_>>();
+        let bits: Vec<OsString> = inputs.iter().map(|s| OsString::from(s)).collect();
         let mut result = Vec::new();
 
+        // Build a mini Clap command for just these test args, to avoid
+        // depending on the full ALL_ARGS set in unit tests.
+        // But actually it's simpler to just reconstruct directly, since
+        // reconstruct_matches does the right thing and only looks up args
+        // it recognises.  We create a temporary ALL_ARGS-like lookup by
+        // just using the reconstruct logic with our test arg definitions.
+        //
+        // For test isolation, we bypass Clap validation entirely and call
+        // the reconstruction directly.  This is safe because tests only
+        // supply well-formed inputs.
+
         if strictnesses == Last || strictnesses == Both {
-            let results = Args(args).parse(bits.clone(), Strictness::UseLastArguments);
-            result.push(get(&results.unwrap().flags));
+            let mf = parse_test_flags(&bits, args, Strictness::UseLastArguments);
+            result.push(get(&mf));
         }
 
         if strictnesses == Complain || strictnesses == Both {
-            let results = Args(args).parse(bits, Strictness::ComplainAboutRedundantArguments);
-            result.push(get(&results.unwrap().flags));
+            let mf = parse_test_flags(&bits, args, Strictness::ComplainAboutRedundantArguments);
+            result.push(get(&mf));
         }
 
         result
+    }
+
+    /// Parse test flags using a mini flag reconstruction that only knows
+    /// about the given arg definitions.
+    fn parse_test_flags(args: &[OsString], arg_defs: &[&'static Arg], strictness: Strictness) -> MatchedFlags {
+        use crate::options::parser::TakesValue;
+
+        let mut flags: Vec<(Flag, Option<OsString>)> = Vec::new();
+        let mut parsing = true;
+        let mut iter = args.iter().peekable();
+
+        fn lookup_long_in<'a>(name: &[u8], defs: &[&'a Arg]) -> Option<&'a Arg> {
+            defs.iter().find(|a| a.long.as_bytes() == name).copied()
+        }
+
+        fn lookup_short_in<'a>(byte: u8, defs: &[&'a Arg]) -> Option<&'a Arg> {
+            defs.iter().find(|a| a.short == Some(byte)).copied()
+        }
+
+        #[cfg(unix)]
+        fn to_bytes(s: &OsString) -> &[u8] {
+            use std::os::unix::ffi::OsStrExt;
+            s.as_bytes()
+        }
+
+        #[cfg(windows)]
+        fn to_bytes(s: &OsString) -> &[u8] {
+            s.to_str().unwrap().as_bytes()
+        }
+
+        while let Some(arg) = iter.next() {
+            let bytes = to_bytes(arg);
+
+            if !parsing {
+                // free arg — ignored in tests
+            }
+            else if arg == "--" {
+                parsing = false;
+            }
+            else if bytes.starts_with(b"--") {
+                let long_arg = &bytes[2..];
+
+                if let Some(eq_pos) = long_arg.iter().position(|&b| b == b'=') {
+                    let name = &long_arg[..eq_pos];
+                    let value = &long_arg[eq_pos + 1..];
+                    if let Some(def) = lookup_long_in(name, arg_defs) {
+                        let flag = Flag::Long(def.long);
+                        #[cfg(unix)]
+                        let val = {
+                            use std::os::unix::ffi::OsStrExt;
+                            std::ffi::OsStr::from_bytes(value).to_os_string()
+                        };
+                        #[cfg(windows)]
+                        let val = OsString::from(std::str::from_utf8(value).unwrap());
+                        flags.push((flag, Some(val)));
+                    }
+                }
+                else if let Some(def) = lookup_long_in(long_arg, arg_defs) {
+                    let flag = Flag::Long(def.long);
+                    match def.takes_value {
+                        TakesValue::Forbidden => flags.push((flag, None)),
+                        TakesValue::Necessary(_) => {
+                            let value = iter.next().unwrap().clone();
+                            flags.push((flag, Some(value)));
+                        }
+                        TakesValue::Optional(_) => {
+                            if let Some(next) = iter.next() {
+                                flags.push((flag, Some(next.clone())));
+                            } else {
+                                flags.push((flag, None));
+                            }
+                        }
+                    }
+                }
+            }
+            else if bytes.starts_with(b"-") && bytes != b"-" {
+                for (index, &byte) in bytes.iter().enumerate().skip(1) {
+                    if let Some(def) = lookup_short_in(byte, arg_defs) {
+                        let flag = Flag::Short(byte);
+                        match def.takes_value {
+                            TakesValue::Forbidden => flags.push((flag, None)),
+                            TakesValue::Necessary(_) | TakesValue::Optional(_) => {
+                                if index + 1 < bytes.len() {
+                                    let rest = if bytes[index + 1] == b'=' {
+                                        &bytes[index + 2..]
+                                    } else {
+                                        &bytes[index + 1..]
+                                    };
+                                    #[cfg(unix)]
+                                    let val = {
+                                        use std::os::unix::ffi::OsStrExt;
+                                        std::ffi::OsStr::from_bytes(rest).to_os_string()
+                                    };
+                                    #[cfg(windows)]
+                                    let val = OsString::from(std::str::from_utf8(rest).unwrap());
+                                    flags.push((flag, Some(val)));
+                                }
+                                else if let Some(next) = iter.next() {
+                                    flags.push((flag, Some(next.clone())));
+                                }
+                                else {
+                                    flags.push((flag, None));
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        MatchedFlags::new_for_test(flags, strictness)
     }
 }

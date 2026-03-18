@@ -4,7 +4,7 @@ use crate::theme::{Options, UseColours, ColourScale, Definitions};
 
 
 impl Options {
-    pub fn deduce<V: Vars>(matches: &MatchedFlags<'_>, vars: &V) -> Result<Self, OptionsError> {
+    pub fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
         let use_colours = UseColours::deduce(matches, vars)?;
         let colour_scale = ColourScale::deduce(matches)?;
 
@@ -21,7 +21,7 @@ impl Options {
 
 
 impl UseColours {
-    fn deduce<V: Vars>(matches: &MatchedFlags<'_>, vars: &V) -> Result<Self, OptionsError> {
+    fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
         let default_value = match vars.get(vars::NO_COLOR) {
             Some(_) => Self::Never,
             None => Self::Automatic,
@@ -49,7 +49,7 @@ impl UseColours {
 
 
 impl ColourScale {
-    fn deduce(matches: &MatchedFlags<'_>) -> Result<Self, OptionsError> {
+    fn deduce(matches: &MatchedFlags) -> Result<Self, OptionsError> {
         if matches.has_where(|f| f.matches(&flags::COLOR_SCALE) || f.matches(&flags::COLOUR_SCALE))?.is_some() {
             Ok(Self::Gradient)
         }

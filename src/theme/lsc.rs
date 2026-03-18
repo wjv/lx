@@ -180,10 +180,10 @@ mod ansi_test {
     test!(hibo:  "48;5;1;1"  => Style::default().on(Fixed(1)).bold());
     test!(hiund: "4;48;5;1"  => Style::default().on(Fixed(1)).underline());
 
-    test!(rgb:   "38;2;255;100;0"     => Style::default().fg(RGB(255, 100, 0)));
-    test!(rgbi:  "38;2;255;100;0;3"   => Style::default().fg(RGB(255, 100, 0)).italic());
-    test!(rgbbg: "48;2;255;100;0"     => Style::default().on(RGB(255, 100, 0)));
-    test!(rgbbi: "48;2;255;100;0;3"   => Style::default().on(RGB(255, 100, 0)).italic());
+    test!(rgb:   "38;2;255;100;0"     => Style::default().fg(Rgb(255, 100, 0)));
+    test!(rgbi:  "38;2;255;100;0;3"   => Style::default().fg(Rgb(255, 100, 0)).italic());
+    test!(rgbbg: "48;2;255;100;0"     => Style::default().on(Rgb(255, 100, 0)));
+    test!(rgbbi: "48;2;255;100;0;3"   => Style::default().on(Rgb(255, 100, 0)).italic());
 
     test!(fgbg:  "38;5;121;48;5;212"  => Fixed(121).on(Fixed(212)));
     test!(bgfg:  "48;5;121;38;5;212"  => Fixed(212).on(Fixed(121)));

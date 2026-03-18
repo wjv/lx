@@ -1,7 +1,7 @@
-use crate::options::parser::{Arg, Args, TakesValue, Values};
+use crate::options::parser::{Arg, TakesValue, Values};
 
 
-// exa options
+// exa options — help and version are now handled by Clap directly.
 pub static VERSION: Arg = Arg { short: Some(b'v'), long: "version",  takes_value: TakesValue::Forbidden };
 pub static HELP:    Arg = Arg { short: Some(b'?'), long: "help",     takes_value: TakesValue::Forbidden };
 
@@ -67,7 +67,9 @@ pub static EXTENDED:  Arg = Arg { short: Some(b'@'), long: "extended",          
 pub static OCTAL:     Arg = Arg { short: None,       long: "octal-permissions", takes_value: TakesValue::Forbidden };
 
 
-pub static ALL_ARGS: Args = Args(&[
+/// All known arguments. Used by the Clap command builder and the flag
+/// reconstruction scan.
+pub static ALL_ARGS: &[&Arg] = &[
     &VERSION, &HELP,
 
     &ONE_LINE, &LONG, &GRID, &ACROSS, &RECURSE, &TREE, &CLASSIFY,
@@ -81,4 +83,4 @@ pub static ALL_ARGS: Args = Args(&[
     &NO_PERMISSIONS, &NO_FILESIZE, &NO_USER, &NO_TIME, &NO_ICONS,
 
     &GIT, &EXTENDED, &OCTAL
-]);
+];

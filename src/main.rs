@@ -23,7 +23,7 @@
 #![allow(clippy::wildcard_imports)]
 
 use std::env;
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsString;
 use std::io::{self, Write, ErrorKind};
 use std::path::{Component, PathBuf};
 
@@ -62,13 +62,13 @@ fn main() {
     }
 
     let args: Vec<_> = env::args_os().skip(1).collect();
-    match Options::parse(args.iter().map(std::convert::AsRef::as_ref), &LiveVars) {
+    match Options::parse(&args, &LiveVars) {
         OptionsResult::Ok(options, mut input_paths) => {
 
             // List the current directory by default.
-            // (This has to be done here, otherwise git_options won’t see it.)
+            // (This has to be done here, otherwise git_options won't see it.)
             if input_paths.is_empty() {
-                input_paths = vec![ OsStr::new(".") ];
+                input_paths = vec![ OsString::from(".") ];
             }
 
             let git = git_options(&options, &input_paths);
@@ -95,16 +95,21 @@ fn main() {
             }
         }
 
-        OptionsResult::Help(help_text) => {
-            print!("{}", help_text);
+        OptionsResult::HelpOrVersion(clap_err) => {
+            // Clap exits with the formatted help text.
+            clap_err.exit();
         }
 
-        OptionsResult::Version(version_str) => {
-            print!("{}", version_str);
+        OptionsResult::Version => {
+            print!("{}", include_str!(concat!(env!("OUT_DIR"), "/version_string.txt")));
+        }
+
+        OptionsResult::InvalidOptionsClap(clap_err) => {
+            clap_err.exit();
         }
 
         OptionsResult::InvalidOptions(error) => {
-            eprintln!("exa: {}", error);
+            eprintln!("lx: {}", error);
 
             if let Some(s) = error.suggestion() {
                 eprintln!("{}", s);
@@ -117,7 +122,7 @@ fn main() {
 
 
 /// The main program wrapper.
-pub struct Exa<'args> {
+pub struct Exa {
 
     /// List of command-line options, having been successfully parsed.
     pub options: Options,
@@ -126,8 +131,8 @@ pub struct Exa<'args> {
     pub writer: io::Stdout,
 
     /// List of the free command-line arguments that should correspond to file
-    /// names (anything that isn’t an option).
-    pub input_paths: Vec<&'args OsStr>,
+    /// names (anything that isn't an option).
+    pub input_paths: Vec<OsString>,
 
     /// The theme that has been configured from the command-line options and
     /// environment variables. If colours are disabled, this is a theme with
@@ -144,7 +149,7 @@ pub struct Exa<'args> {
     pub git: Option<GitCache>,
 }
 
-/// The “real” environment variables type.
+/// The "real" environment variables type.
 /// Instead of just calling `var_os` from within the options module,
 /// the method of looking up environment variables has to be passed in.
 struct LiveVars;
@@ -155,8 +160,8 @@ impl Vars for LiveVars {
 }
 
 /// Create a Git cache populated with the arguments that are going to be
-/// listed before they’re actually listed, if the options demand it.
-fn git_options(options: &Options, args: &[&OsStr]) -> Option<GitCache> {
+/// listed before they're actually listed, if the options demand it.
+fn git_options(options: &Options, args: &[OsString]) -> Option<GitCache> {
     if options.should_scan_for_git() {
         Some(args.iter().map(PathBuf::from).collect())
     }
@@ -165,7 +170,7 @@ fn git_options(options: &Options, args: &[&OsStr]) -> Option<GitCache> {
     }
 }
 
-impl<'args> Exa<'args> {
+impl Exa {
     /// # Errors
     ///
     /// Will return `Err` if printing to stderr fails.
@@ -197,9 +202,9 @@ impl<'args> Exa<'args> {
             }
         }
 
-        // We want to print a directory’s name before we list it, *except* in
-        // the case where it’s the only directory, *except* if there are any
-        // files to print as well. (It’s a double negative)
+        // We want to print a directory's name before we list it, *except* in
+        // the case where it's the only directory, *except* if there are any
+        // files to print as well. (It's a double negative)
 
         let no_files = files.is_empty();
         let is_only_dir = dirs.len() == 1 && no_files;
@@ -330,7 +335,7 @@ impl<'args> Exa<'args> {
 
 mod exits {
 
-    /// Exit code for when exa runs OK.
+    /// Exit code for when lx runs OK.
     pub const SUCCESS: i32 = 0;
 
     /// Exit code for when there was at least one I/O error during execution.

@@ -12,7 +12,7 @@ impl DirAction {
     /// There are three possible actions, and they overlap somewhat: the
     /// `--tree` flag is another form of recursion, so those two are allowed
     /// to both be present, but the `--list-dirs` flag is used separately.
-    pub fn deduce(matches: &MatchedFlags<'_>, can_tree: bool) -> Result<Self, OptionsError> {
+    pub fn deduce(matches: &MatchedFlags, can_tree: bool) -> Result<Self, OptionsError> {
         let recurse = matches.has(&flags::RECURSE)?;
         let as_file = matches.has(&flags::LIST_DIRS)?;
         let tree    = matches.has(&flags::TREE)?;
@@ -54,7 +54,7 @@ impl RecurseOptions {
     /// flag’s value, and whether the `--tree` flag was passed, which was
     /// determined earlier. The maximum level should be a number, and this
     /// will fail with an `Err` if it isn’t.
-    pub fn deduce(matches: &MatchedFlags<'_>, tree: bool) -> Result<Self, OptionsError> {
+    pub fn deduce(matches: &MatchedFlags, tree: bool) -> Result<Self, OptionsError> {
         if let Some(level) = matches.get(&flags::LEVEL)? {
             let arg_str = level.to_string_lossy();
             match arg_str.parse() {
