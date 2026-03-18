@@ -57,9 +57,9 @@ impl ColourScale {
 
 impl Definitions {
     fn deduce<V: Vars>(vars: &V) -> Self {
-        let ls =  vars.get(vars::LS_COLORS) .map(|e| e.to_string_lossy().to_string());
-        let exa = vars.get(vars::EXA_COLORS).map(|e| e.to_string_lossy().to_string());
-        Self { ls, exa }
+        let ls = vars.get(vars::LS_COLORS).map(|e| e.to_string_lossy().to_string());
+        let lx = vars.get(vars::LX_COLORS).map(|e| e.to_string_lossy().to_string());
+        Self { ls, lx }
     }
 }
 
@@ -94,7 +94,7 @@ mod terminal_test {
 
     struct MockVars {
         ls: &'static str,
-        exa: &'static str,
+        lx: &'static str,
         no_color: &'static str,
     }
 
@@ -102,14 +102,14 @@ mod terminal_test {
         fn empty() -> MockVars {
             MockVars {
                 ls: "",
-                exa: "",
+                lx: "",
                 no_color: "",
             }
         }
         fn with_no_color() -> MockVars {
             MockVars {
                 ls: "",
-                exa: "",
+                lx: "",
                 no_color: "true",
             }
         }
@@ -121,8 +121,8 @@ mod terminal_test {
             if name == vars::LS_COLORS && ! self.ls.is_empty() {
                 Some(OsString::from(self.ls))
             }
-            else if name == vars::EXA_COLORS && ! self.exa.is_empty() {
-                Some(OsString::from(self.exa))
+            else if name == vars::LX_COLORS && ! self.lx.is_empty() {
+                Some(OsString::from(self.lx))
             }
             else if name == vars::NO_COLOR && ! self.no_color.is_empty() {
                 Some(OsString::from(self.no_color))

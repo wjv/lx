@@ -54,7 +54,7 @@ fn main() {
         libc::signal(libc::SIGPIPE, libc::SIG_DFL);
     }
 
-    logger::configure(env::var_os(vars::EXA_DEBUG));
+    logger::configure(env::var_os(vars::LX_DEBUG));
 
     #[cfg(windows)]
     if let Err(e) = nu_ansi_term::enable_ansi_support() {

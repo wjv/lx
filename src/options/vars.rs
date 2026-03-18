@@ -15,31 +15,31 @@ pub static COLUMNS: &str = "COLUMNS";
 /// Environment variable used to datetime format.
 pub static TIME_STYLE: &str = "TIME_STYLE";
 
-/// Environment variable used to disable colors.
+/// Environment variable used to disable colours.
 /// See: <https://no-color.org/>
 pub static NO_COLOR: &str = "NO_COLOR";
 
-// exa-specific variables
+// lx-specific variables
 
-/// Environment variable used to colour exa's interface when colours are
+/// Environment variable used to colour lx's interface when colours are
 /// enabled. This includes all the colours that `LS_COLORS` would recognise,
-/// overriding them if necessary. It can also contain exa-specific codes.
-pub static EXA_COLORS: &str = "EXA_COLORS";
+/// overriding them if necessary. It can also contain lx-specific codes.
+pub static LX_COLORS: &str = "LX_COLORS";
 
-/// Environment variable used to make exa print out debugging information as
+/// Environment variable used to make lx print out debugging information as
 /// it runs. Any non-empty value will turn debug mode on.
-pub static EXA_DEBUG: &str = "EXA_DEBUG";
+pub static LX_DEBUG: &str = "LX_DEBUG";
 
 /// Environment variable used to limit the grid-details view
 /// (`--grid --long`) so it's only activated if there's at least the given
 /// number of rows of output.
-pub static EXA_GRID_ROWS: &str = "EXA_GRID_ROWS";
+pub static LX_GRID_ROWS: &str = "LX_GRID_ROWS";
 
 /// Environment variable used to specify how many spaces to print between an
 /// icon and its file name. Different terminals display icons differently,
 /// with 1 space bringing them too close together or 2 spaces putting them too
 /// far apart, so this may be necessary depending on how they are shown.
-pub static EXA_ICON_SPACING: &str = "EXA_ICON_SPACING";
+pub static LX_ICON_SPACING: &str = "LX_ICON_SPACING";
 
 
 /// Mockable wrapper for `std::env::var_os`.

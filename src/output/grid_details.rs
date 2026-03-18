@@ -194,7 +194,7 @@ impl<'a> Render<'a> {
             if !the_grid_fits || column_count == file_names.len() {
                 // If we've figured out how many columns can fit in the user's
                 // terminal, and it turns out there aren't enough rows to make
-                // it worthwhile (according to EXA_GRID_ROWS), then just resort
+                // it worthwhile (according to LX_GRID_ROWS), then just resort
                 // to the lines view.
                 if let RowThreshold::MinimumRows(thresh) = self.row_threshold {
                     if last_working.row_count < thresh {

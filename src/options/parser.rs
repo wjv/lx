@@ -113,11 +113,11 @@ pub fn build_command() -> clap::Command {
         .after_help("\
 Environment variables:\n  \
   COLUMNS          Override terminal width (characters)\n  \
-  EXA_GRID_ROWS    Minimum rows before grid-details view activates\n  \
-  EXA_ICON_SPACING Spaces between icon and file name\n  \
+  LX_GRID_ROWS    Minimum rows before grid-details view activates\n  \
+  LX_ICON_SPACING Spaces between icon and file name\n  \
   NO_COLOR         Disable colours (overridden by --color)\n  \
   LS_COLORS        File-type colour scheme\n  \
-  EXA_COLORS       Extended colour scheme (UI elements and metadata)\n  \
+  LX_COLORS       Extended colour scheme (UI elements and metadata)\n  \
   TIME_STYLE       Default timestamp style (overridden by --time-style)")
 
         // ── Display mode flags ──────────────────────────────────
