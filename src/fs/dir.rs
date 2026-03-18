@@ -36,7 +36,7 @@ impl Dir {
     /// entries, so if the user wants to see them, we’ll have to add them
     /// ourselves after the files have been read.
     pub fn read_dir(path: PathBuf) -> io::Result<Self> {
-        info!("Reading directory {:?}", &path);
+        info!("Reading directory {}", path.display());
 
         let contents = fs::read_dir(&path)?
                           .map(|result| result.map(|entry| entry.path()))

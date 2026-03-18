@@ -448,7 +448,7 @@ impl<'a, 'f> Table<'a> {
     }
 
     fn git_status(&self, file: &File<'_>) -> f::Git {
-        debug!("Getting Git status for file {:?}", file.path);
+        debug!("Getting Git status for file {}", file.path.display());
 
         self.git
             .map(|g| g.get(&file.path, file.is_directory()))

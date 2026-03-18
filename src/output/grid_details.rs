@@ -159,7 +159,7 @@ impl<'a> Render<'a> {
         }
     }
 
-    pub fn find_fitting_grid(&mut self) -> Option<RenderedGrid> {
+    fn find_fitting_grid(&mut self) -> Option<RenderedGrid> {
         let options = self.details.table.as_ref().expect("Details table options not given!");
 
         let drender = self.details_for_column();

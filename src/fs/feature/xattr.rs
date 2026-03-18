@@ -12,17 +12,12 @@ pub const ENABLED: bool = cfg!(any(target_os = "macos", target_os = "linux"));
 
 pub trait FileAttributes {
     fn attributes(&self) -> io::Result<Vec<Attribute>>;
-    fn symlink_attributes(&self) -> io::Result<Vec<Attribute>>;
 }
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 impl FileAttributes for Path {
     fn attributes(&self) -> io::Result<Vec<Attribute>> {
         list_attrs(&lister::Lister::new(FollowSymlinks::Yes), self)
-    }
-
-    fn symlink_attributes(&self) -> io::Result<Vec<Attribute>> {
-        list_attrs(&lister::Lister::new(FollowSymlinks::No), self)
     }
 }
 
@@ -31,16 +26,13 @@ impl FileAttributes for Path {
     fn attributes(&self) -> io::Result<Vec<Attribute>> {
         Ok(Vec::new())
     }
-
-    fn symlink_attributes(&self) -> io::Result<Vec<Attribute>> {
-        Ok(Vec::new())
-    }
 }
 
 
 /// Attributes which can be passed to `Attribute::list_with_flags`
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 #[derive(Copy, Clone)]
+#[allow(dead_code)]  // No variant used by platform lister internals
 pub enum FollowSymlinks {
     Yes,
     No,

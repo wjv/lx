@@ -236,7 +236,7 @@ impl<'a> Render<'a> {
                                     errors.push((e, None));
                                 }
                                 else {
-                                    error!("Error looking up xattr for {:?}: {:#?}", file.path, e);
+                                    error!("Error looking up xattr for {}: {e}", file.path.display());
                                 }
                             }
                         }

@@ -77,7 +77,7 @@ impl<'dir> File<'dir> {
         let name       = filename.into().unwrap_or_else(|| File::filename(&path));
         let ext        = File::ext(&path);
 
-        debug!("Statting file {:?}", &path);
+        debug!("Statting file {}", path.display());
         let metadata   = std::fs::symlink_metadata(&path)?;
         let is_all_all = false;
 
@@ -88,7 +88,7 @@ impl<'dir> File<'dir> {
         let path       = parent_dir.path.clone();
         let ext        = File::ext(&path);
 
-        debug!("Statting file {:?}", &path);
+        debug!("Statting file {}", path.display());
         let metadata   = std::fs::symlink_metadata(&path)?;
         let is_all_all = true;
         let parent_dir = Some(parent_dir);
@@ -99,7 +99,7 @@ impl<'dir> File<'dir> {
     pub fn new_aa_parent(path: PathBuf, parent_dir: &'dir Dir) -> io::Result<File<'dir>> {
         let ext        = File::ext(&path);
 
-        debug!("Statting file {:?}", &path);
+        debug!("Statting file {}", path.display());
         let metadata   = std::fs::symlink_metadata(&path)?;
         let is_all_all = true;
         let parent_dir = Some(parent_dir);
@@ -116,7 +116,7 @@ impl<'dir> File<'dir> {
         }
         else {
             // use the path as fallback
-            error!("Path {path:?} has no last component");
+            error!("Path {} has no last component", path.display());
             path.display().to_string()
         }
     }
@@ -247,7 +247,7 @@ impl<'dir> File<'dir> {
         // this file — which could be absolute or relative — to the path
         // we actually look up and turn into a `File` — which needs to be
         // absolute to be accessible from any directory.
-        debug!("Reading link {:?}", &self.path);
+        debug!("Reading link {}", self.path.display());
         let path = match std::fs::read_link(&self.path) {
             Ok(p)   => p,
             Err(e)  => return FileTarget::Err(e),
@@ -265,7 +265,7 @@ impl<'dir> File<'dir> {
                 FileTarget::Ok(Box::new(file))
             }
             Err(e) => {
-                error!("Error following link {:?}: {:#?}", &path, e);
+                error!("Error following link {}: {e}", path.display());
                 FileTarget::Broken(path)
             }
         }

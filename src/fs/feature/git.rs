@@ -50,16 +50,16 @@ impl FromIterator<PathBuf> for GitCache {
 
         for path in iter {
             if git.misses.contains(&path) {
-                debug!("Skipping {path:?} because it already came back Gitless");
+                debug!("Skipping {} because it already came back Gitless", path.display());
             }
             else if git.repos.iter().any(|e| e.has_path(&path)) {
-                debug!("Skipping {path:?} because we already queried it");
+                debug!("Skipping {} because we already queried it", path.display());
             }
             else {
                 match GitRepo::discover(path) {
                     Ok(r) => {
                         if let Some(r2) = git.repos.iter_mut().find(|e| e.has_workdir(&r.workdir)) {
-                            debug!("Adding to existing repo (workdir matches with {:?})", r2.workdir);
+                            debug!("Adding to existing repo (workdir matches with {})", r2.workdir.display());
                             r2.extra_paths.push(r.original_path);
                             continue;
                         }
@@ -136,11 +136,11 @@ impl GitRepo {
 
         let mut contents = self.contents.lock().unwrap();
         if let GitContents::After { ref statuses } = *contents {
-            debug!("Git repo {:?} has been found in cache", &self.workdir);
+            debug!("Git repo {} has been found in cache", self.workdir.display());
             return statuses.status(index, prefix_lookup);
         }
 
-        debug!("Querying Git repo {:?} for the first time", &self.workdir);
+        debug!("Querying Git repo {} for the first time", self.workdir.display());
         let repo = replace(&mut *contents, GitContents::Processing).inner_repo();
         let statuses = repo_to_statuses(&repo, &self.workdir);
         let result = statuses.status(index, prefix_lookup);
@@ -161,11 +161,11 @@ impl GitRepo {
     /// Searches for a Git repository at any point above the given path.
     /// Returns the original buffer if none is found.
     fn discover(path: PathBuf) -> Result<Self, PathBuf> {
-        info!("Searching for Git repository above {path:?}");
+        info!("Searching for Git repository above {}", path.display());
         let repo = match git2::Repository::discover(&path) {
             Ok(r) => r,
             Err(e) => {
-                error!("Error discovering Git repositories: {e:?}");
+                error!("Error discovering Git repositories: {e}");
                 return Err(path);
             }
         };
@@ -204,7 +204,7 @@ impl GitContents {
 fn repo_to_statuses(repo: &git2::Repository, workdir: &Path) -> Git {
     let mut statuses = Vec::new();
 
-    info!("Getting Git statuses for repo with workdir {workdir:?}");
+    info!("Getting Git statuses for repo with workdir {}", workdir.display());
     match repo.statuses(None) {
         Ok(es) => {
             for e in es.iter() {
