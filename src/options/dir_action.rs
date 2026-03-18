@@ -1,7 +1,7 @@
 //! Parsing the options for `DirAction`.
 
 use crate::options::parser::MatchedFlags;
-use crate::options::{flags, OptionsError, NumberSource};
+use crate::options::{flags, OptionsError};
 
 use crate::fs::dir_action::{DirAction, RecurseOptions};
 
@@ -42,20 +42,9 @@ impl RecurseOptions {
     /// determined earlier. The maximum level should be a number, and this
     /// will fail with an `Err` if it isn't.
     pub fn deduce(matches: &MatchedFlags, tree: bool) -> Result<Self, OptionsError> {
-        if let Some(level) = matches.get(flags::LEVEL) {
-            match level.parse() {
-                Ok(l) => {
-                    Ok(Self { tree, max_depth: Some(l) })
-                }
-                Err(e) => {
-                    let source = NumberSource::Arg(flags::LEVEL);
-                    Err(OptionsError::FailedParse(level.to_string(), source, e))
-                }
-            }
-        }
-        else {
-            Ok(Self { tree, max_depth: None })
-        }
+        // Clap validates --level as a usize at parse time.
+        let max_depth = matches.get_usize(flags::LEVEL);
+        Ok(Self { tree, max_depth })
     }
 }
 

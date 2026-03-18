@@ -110,11 +110,6 @@ fn main() {
 
         OptionsResult::InvalidOptions(error) => {
             eprintln!("lx: {}", error);
-
-            if let Some(s) = error.suggestion() {
-                eprintln!("{}", s);
-            }
-
             exit(exits::OPTIONS_ERROR);
         }
     }

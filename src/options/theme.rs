@@ -32,18 +32,13 @@ impl UseColours {
             None => return Ok(default_value),
         };
 
-        if word == "always" {
-            Ok(Self::Always)
-        }
-        else if word == "auto" || word == "automatic" {
-            Ok(Self::Automatic)
-        }
-        else if word == "never" {
-            Ok(Self::Never)
-        }
-        else {
-            Err(OptionsError::BadArgument(flags::COLOR, word.into()))
-        }
+        // Clap validates the value, so this match is exhaustive over accepted inputs.
+        Ok(match word {
+            "always"                => Self::Always,
+            "auto" | "automatic"    => Self::Automatic,
+            "never"                 => Self::Never,
+            _                       => unreachable!("Clap rejects invalid --color values"),
+        })
     }
 }
 
@@ -73,7 +68,6 @@ impl Definitions {
 mod terminal_test {
     use super::*;
     use std::ffi::OsString;
-    use crate::options::flags;
 
     use crate::options::test::parse_for_test;
 
@@ -93,16 +87,6 @@ mod terminal_test {
                 let env = $env;
                 for result in parse_for_test($inputs.as_ref(), |mf| $type::deduce(mf, &env)) {
                     assert_eq!(result, $result);
-                }
-            }
-        };
-
-        ($name:ident:  $type:ident <- $inputs:expr, $env:expr;  err $result:expr) => {
-            #[test]
-            fn $name() {
-                let env = $env;
-                for result in parse_for_test($inputs.as_ref(), |mf| $type::deduce(mf, &env)) {
-                    assert_eq!(result.unwrap_err(), $result);
                 }
             }
         };
@@ -165,9 +149,17 @@ mod terminal_test {
     test!(no_u_auto:     UseColours <- ["--color=auto"], MockVars::empty();       Ok(UseColours::Automatic));
     test!(no_u_never:    UseColours <- ["--color", "never"], MockVars::empty();   Ok(UseColours::Never));
 
-    // Errors
-    test!(no_u_error:    UseColours <- ["--color=upstream"], MockVars::empty();   err OptionsError::BadArgument(flags::COLOR, OsString::from("upstream")));
-    test!(u_error:       UseColours <- ["--colour=lovers"], MockVars::empty();    err OptionsError::BadArgument(flags::COLOR, OsString::from("lovers")));
+    // Errors — Clap rejects invalid values at parse time
+    #[test]
+    fn no_u_error() {
+        let cmd = crate::options::parser::build_command();
+        assert!(cmd.try_get_matches_from(["lx", "--color=upstream"]).is_err());
+    }
+    #[test]
+    fn u_error() {
+        let cmd = crate::options::parser::build_command();
+        assert!(cmd.try_get_matches_from(["lx", "--colour=lovers"]).is_err());
+    }
 
     // Overriding
     test!(overridden_1:  UseColours <- ["--colour=auto", "--colour=never"], MockVars::empty();  Ok(UseColours::Never));

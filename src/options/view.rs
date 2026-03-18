@@ -198,32 +198,29 @@ impl TimeFormat {
 
     /// Determine how time should be formatted in timestamp columns.
     fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
-        let word =
-            if let Some(w) = matches.get(flags::TIME_STYLE) {
-                w.to_owned().into()
-            }
-            else {
-                use crate::options::vars;
-                match vars.get(vars::TIME_STYLE) {
-                    Some(ref t) if ! t.is_empty()  => t.clone(),
-                    _                              => return Ok(Self::DefaultFormat)
-                }
-            };
+        // When --time-style is given, Clap has already validated the value.
+        if let Some(w) = matches.get(flags::TIME_STYLE) {
+            return Ok(Self::from_str(w));
+        }
 
-        if &word == "default" {
-            Ok(Self::DefaultFormat)
+        use crate::options::vars;
+        match vars.get(vars::TIME_STYLE) {
+            Some(ref t) if ! t.is_empty()  => {
+                // Environment variable — not validated by Clap; fall back
+                // to the default for unknown values.
+                Ok(Self::from_str(&t.to_string_lossy()))
+            }
+            _ => Ok(Self::DefaultFormat),
         }
-        else if &word == "iso" {
-            Ok(Self::ISOFormat)
-        }
-        else if &word == "long-iso" {
-            Ok(Self::LongISO)
-        }
-        else if &word == "full-iso" {
-            Ok(Self::FullISO)
-        }
-        else {
-            Err(OptionsError::BadArgument(flags::TIME_STYLE, word))
+    }
+
+    fn from_str(word: &str) -> Self {
+        match word {
+            "default"  => Self::DefaultFormat,
+            "iso"      => Self::ISOFormat,
+            "long-iso" => Self::LongISO,
+            "full-iso" => Self::FullISO,
+            _          => Self::DefaultFormat,
         }
     }
 }
@@ -249,7 +246,6 @@ impl TimeTypes {
     /// option, but passing *no* options means that the user just wants to
     /// see the default set.
     fn deduce(matches: &MatchedFlags) -> Result<Self, OptionsError> {
-        let possible_word = matches.get(flags::TIME);
         let modified = matches.has(flags::MODIFIED);
         let changed  = matches.has(flags::CHANGED);
         let accessed = matches.has(flags::ACCESSED);
@@ -257,35 +253,17 @@ impl TimeTypes {
 
         let no_time = matches.has(flags::NO_TIME);
 
+        // Clap validates --time values and enforces conflicts with
+        // --modified/--changed/--accessed/--created.
         let time_types = if no_time {
             Self { modified: false, changed: false, accessed: false, created: false }
-        } else if let Some(word) = possible_word {
-            if modified {
-                return Err(OptionsError::Useless(flags::MODIFIED, true, flags::TIME));
-            }
-            else if changed {
-                return Err(OptionsError::Useless(flags::CHANGED, true, flags::TIME));
-            }
-            else if accessed {
-                return Err(OptionsError::Useless(flags::ACCESSED, true, flags::TIME));
-            }
-            else if created {
-                return Err(OptionsError::Useless(flags::CREATED, true, flags::TIME));
-            }
-            else if word == "mod" || word == "modified" {
-                Self { modified: true,  changed: false, accessed: false, created: false }
-            }
-            else if word == "ch" || word == "changed" {
-                Self { modified: false, changed: true,  accessed: false, created: false }
-            }
-            else if word == "acc" || word == "accessed" {
-                Self { modified: false, changed: false, accessed: true,  created: false }
-            }
-            else if word == "cr" || word == "created" {
-                Self { modified: false, changed: false, accessed: false, created: true  }
-            }
-            else {
-                return Err(OptionsError::BadArgument(flags::TIME, word.into()));
+        } else if let Some(word) = matches.get(flags::TIME) {
+            match word {
+                "mod" | "modified" => Self { modified: true,  changed: false, accessed: false, created: false },
+                "ch"  | "changed"  => Self { modified: false, changed: true,  accessed: false, created: false },
+                "acc" | "accessed" => Self { modified: false, changed: false, accessed: true,  created: false },
+                "cr"  | "created"  => Self { modified: false, changed: false, accessed: false, created: true  },
+                _ => unreachable!("Clap rejects invalid --time values"),
             }
         }
         else if modified || changed || accessed || created {
@@ -303,8 +281,6 @@ impl TimeTypes {
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::ffi::OsString;
-    use crate::options::flags;
 
     use crate::options::test::parse_for_test;
 
@@ -315,24 +291,6 @@ mod test {
             fn $name() {
                 for result in parse_for_test($inputs.as_ref(), |mf| $type::deduce(mf)) {
                     assert_eq!(result, $result);
-                }
-            }
-        };
-
-        ($name:ident: $type:ident <- $inputs:expr; err $result:expr) => {
-            #[test]
-            fn $name() {
-                for result in parse_for_test($inputs.as_ref(), |mf| $type::deduce(mf)) {
-                    assert_eq!(result.unwrap_err(), $result);
-                }
-            }
-        };
-
-        ($name:ident: $type:ident <- $inputs:expr, $vars:expr; err $result:expr) => {
-            #[test]
-            fn $name() {
-                for result in parse_for_test($inputs.as_ref(), |mf| $type::deduce(mf, &$vars)) {
-                    assert_eq!(result.unwrap_err(), $result);
                 }
             }
         };
@@ -389,8 +347,12 @@ mod test {
         test!(actually:  TimeFormat <- ["--time-style=default", "--time-style", "iso"], None;  like Ok(TimeFormat::ISOFormat));
         test!(nevermind: TimeFormat <- ["--time-style", "long-iso", "--time-style=full-iso"], None;  like Ok(TimeFormat::FullISO));
 
-        // Errors
-        test!(daily:     TimeFormat <- ["--time-style=24-hour"], None;  err OptionsError::BadArgument(flags::TIME_STYLE, OsString::from("24-hour")));
+        // Errors — Clap rejects invalid values at parse time
+        #[test]
+        fn daily() {
+            let cmd = crate::options::parser::build_command();
+            assert!(cmd.try_get_matches_from(["lx", "--time-style=24-hour"]).is_err());
+        }
 
         // `TIME_STYLE` environment variable is defined.
         // If the time-style argument is not given, `TIME_STYLE` is used.
@@ -437,9 +399,17 @@ mod test {
         test!(time_uu:   TimeTypes <- ["-u", "--modified"];    Ok(TimeTypes { modified: true,  changed: false, accessed: true,  created: false }));
 
 
-        // Errors
-        test!(time_tea:  TimeTypes <- ["--time=tea"];          err OptionsError::BadArgument(flags::TIME, OsString::from("tea")));
-        test!(t_ea:      TimeTypes <- ["-tea"];                err OptionsError::BadArgument(flags::TIME, OsString::from("ea")));
+        // Errors — Clap rejects invalid values at parse time
+        #[test]
+        fn time_tea() {
+            let cmd = crate::options::parser::build_command();
+            assert!(cmd.try_get_matches_from(["lx", "--time=tea"]).is_err());
+        }
+        #[test]
+        fn t_ea() {
+            let cmd = crate::options::parser::build_command();
+            assert!(cmd.try_get_matches_from(["lx", "-tea"]).is_err());
+        }
 
         // Overriding
         test!(overridden:   TimeTypes <- ["-tcr", "-tmod"];    Ok(TimeTypes { modified: true,  changed: false, accessed: false, created: false }));

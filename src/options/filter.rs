@@ -92,9 +92,7 @@ impl SortField {
             "none" => {
                 Self::Unsorted
             }
-            _ => {
-                return Err(OptionsError::BadArgument(flags::SORT, word.into()));
-            }
+            _ => unreachable!("Clap rejects invalid --sort values"),
         };
 
         Ok(field)
@@ -210,8 +208,6 @@ impl GitIgnore {
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::ffi::OsString;
-    use crate::options::flags;
 
     macro_rules! test {
         ($name:ident: $type:ident <- $inputs:expr; $result:expr) => {
@@ -246,8 +242,12 @@ mod test {
         test!(mix_hidden_lowercase:     SortField <- ["--sort", ".name"];  Ok(SortField::NameMixHidden(SortCase::AaBbCc)));
         test!(mix_hidden_uppercase:     SortField <- ["--sort", ".Name"];  Ok(SortField::NameMixHidden(SortCase::ABCabc)));
 
-        // Errors
-        test!(error:         SortField <- ["--sort=colour"];   Err(OptionsError::BadArgument(flags::SORT, OsString::from("colour"))));
+        // Errors — Clap rejects invalid values at parse time
+        #[test]
+        fn error() {
+            let cmd = crate::options::parser::build_command();
+            assert!(cmd.try_get_matches_from(["lx", "--sort=colour"]).is_err());
+        }
 
         // Overriding
         test!(overridden:    SortField <- ["--sort=cr",       "--sort", "mod"];     Ok(SortField::ModifiedDate));

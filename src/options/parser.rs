@@ -6,6 +6,8 @@
 
 use std::ffi::OsString;
 
+use clap::builder::PossibleValue;
+
 use crate::options::flags;
 
 
@@ -34,6 +36,56 @@ impl MatchedFlags {
     pub fn count(&self, id: &str) -> u8 {
         self.0.get_count(id)
     }
+
+    /// Return the value of a flag parsed as `usize`, or `None` if absent.
+    pub fn get_usize(&self, id: &str) -> Option<usize> {
+        self.0.get_one::<usize>(id).copied()
+    }
+}
+
+
+/// Build the set of accepted `--sort` values, with most aliases hidden.
+fn sort_values() -> clap::builder::PossibleValuesParser {
+    let mut vals = vec![
+        // Shown in help
+        PossibleValue::new("name"),
+        PossibleValue::new("Name"),
+        PossibleValue::new("size"),
+        PossibleValue::new("extension"),
+        PossibleValue::new("Extension"),
+        PossibleValue::new("modified"),
+        PossibleValue::new("changed"),
+        PossibleValue::new("accessed"),
+        PossibleValue::new("created"),
+        PossibleValue::new("type"),
+        PossibleValue::new("none"),
+        // Hidden aliases
+        PossibleValue::new("filename").hide(true),
+        PossibleValue::new("Filename").hide(true),
+        PossibleValue::new(".name").hide(true),
+        PossibleValue::new(".Name").hide(true),
+        PossibleValue::new(".filename").hide(true),
+        PossibleValue::new(".Filename").hide(true),
+        PossibleValue::new("filesize").hide(true),
+        PossibleValue::new("ext").hide(true),
+        PossibleValue::new("Ext").hide(true),
+        PossibleValue::new("date").hide(true),
+        PossibleValue::new("time").hide(true),
+        PossibleValue::new("mod").hide(true),
+        PossibleValue::new("new").hide(true),
+        PossibleValue::new("newest").hide(true),
+        PossibleValue::new("age").hide(true),
+        PossibleValue::new("old").hide(true),
+        PossibleValue::new("oldest").hide(true),
+        PossibleValue::new("ch").hide(true),
+        PossibleValue::new("acc").hide(true),
+        PossibleValue::new("cr").hide(true),
+    ];
+
+    #[cfg(unix)]
+    vals.push(PossibleValue::new("inode"));
+
+    clap::builder::PossibleValuesParser::new(vals)
 }
 
 
@@ -98,7 +150,13 @@ Environment variables:\n  \
             .long("color").visible_alias("colour")
             .help("When to use terminal colours [always, auto, never]")
             .action(ArgAction::Set)
-            .value_name("WHEN"))
+            .value_name("WHEN")
+            .value_parser([
+                PossibleValue::new("always"),
+                PossibleValue::new("auto"),
+                PossibleValue::new("never"),
+                PossibleValue::new("automatic").hide(true),
+            ]))
         .arg(Arg::new(flags::COLOR_SCALE)
             .long("color-scale").visible_alias("colour-scale")
             .help("Colour file sizes on a scale")
@@ -118,7 +176,8 @@ Environment variables:\n  \
             .short('L').long("level")
             .help("Limit the depth of recursion")
             .action(ArgAction::Set)
-            .value_name("DEPTH"))
+            .value_name("DEPTH")
+            .value_parser(clap::value_parser!(usize)))
         .arg(Arg::new(flags::REVERSE)
             .short('r').long("reverse")
             .help("Reverse the sort order")
@@ -127,7 +186,8 @@ Environment variables:\n  \
             .short('s').long("sort")
             .help("Which field to sort by")
             .action(ArgAction::Set)
-            .value_name("FIELD"))
+            .value_name("FIELD")
+            .value_parser(sort_values()))
         .arg(Arg::new(flags::IGNORE_GLOB)
             .short('I').long("ignore-glob")
             .help("Glob patterns (pipe-separated) of files to ignore")
@@ -198,7 +258,23 @@ Environment variables:\n  \
             .short('t').long("time")
             .help("Which timestamp field to display [modified, changed, accessed, created]")
             .action(ArgAction::Set)
-            .value_name("FIELD"))
+            .value_name("FIELD")
+            .value_parser([
+                PossibleValue::new("modified"),
+                PossibleValue::new("changed"),
+                PossibleValue::new("accessed"),
+                PossibleValue::new("created"),
+                PossibleValue::new("mod").hide(true),
+                PossibleValue::new("ch").hide(true),
+                PossibleValue::new("acc").hide(true),
+                PossibleValue::new("cr").hide(true),
+            ])
+            .conflicts_with_all([
+                flags::MODIFIED,
+                flags::CHANGED,
+                flags::ACCESSED,
+                flags::CREATED,
+            ]))
         .arg(Arg::new(flags::ACCESSED)
             .short('u').long("accessed")
             .help("Use the accessed timestamp field")
@@ -211,7 +287,13 @@ Environment variables:\n  \
             .long("time-style")
             .help("How to format timestamps [default, iso, long-iso, full-iso]")
             .action(ArgAction::Set)
-            .value_name("STYLE"))
+            .value_name("STYLE")
+            .value_parser([
+                PossibleValue::new("default"),
+                PossibleValue::new("iso"),
+                PossibleValue::new("long-iso"),
+                PossibleValue::new("full-iso"),
+            ]))
 
         // ── Suppressing columns ─────────────────────────────────
 
