@@ -1,15 +1,15 @@
 [package]
 name = "lx"
 description = "list extended (but call me Alex!)"
-authors = ["Benjamin Sago <ogham@bsago.me>"]
+authors = ["Benjamin Sago <ogham@bsago.me>", "Johann Visagie <johann@visagie.za.net>"]
 categories = ["command-line-utilities"]
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.94"
 exclude = ["/devtools/*", "/Justfile", "/Vagrantfile", "/screenshots.png"]
 readme = "README.md"
 license = "MIT"
 repository = "https://github.com/wjv/lx"
-version = "0.1.0-feat.modernise-deps"
+version = "0.1.0-pre.0"
 
 
 [[bin]]
