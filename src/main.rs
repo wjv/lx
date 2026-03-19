@@ -169,6 +169,19 @@ fn main() {
             clap_complete::generate(shell, &mut cmd, "lx", &mut io::stdout());
         }
 
+        OptionsResult::InitConfig => {
+            let path = config::init_config_path();
+            match config::write_init_config(&path) {
+                Ok(()) => {
+                    eprintln!("Wrote default config to {}", path.display());
+                }
+                Err(e) => {
+                    eprintln!("lx: failed to write config to {}: {e}", path.display());
+                    exit(exits::RUNTIME_ERROR);
+                }
+            }
+        }
+
         OptionsResult::InvalidOptions(error) => {
             eprintln!("lx: {error}");
             exit(exits::OPTIONS_ERROR);

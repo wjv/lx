@@ -105,6 +105,10 @@ impl Options {
                     return OptionsResult::Completions(*shell);
                 }
 
+                if clap_matches.get_flag("init-config") {
+                    return OptionsResult::InitConfig;
+                }
+
                 let frees = clap_matches.get_many::<OsString>("FILE")
                     .map(|vals| vals.cloned().collect())
                     .unwrap_or_default();
@@ -184,6 +188,9 @@ pub enum OptionsResult {
 
     /// The user requested shell completions.
     Completions(clap_complete::Shell),
+
+    /// The user wants to generate a default config file.
+    InitConfig,
 }
 
 

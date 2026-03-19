@@ -228,6 +228,26 @@ pub fn default_config_toml() -> &'static str {
 # format = "long2"
 # flags = ["--tree", "--group-dirs=first"]
 
+# ── Custom formats ────────────────────────────────────────────────
+# Define your own column layouts:
+
+# [formats.minimal]
+# columns = ["perms", "size", "modified"]
+
+# [formats.hpc]             # multi-user systems: always show group
+# columns = ["perms", "size", "user", "group", "modified", "vcs"]
+
+# ── Custom personalities ──────────────────────────────────────────
+# Create your own; symlink lx to the name for argv[0] dispatch:
+
+# [personalities.lt]         # time-sorted long listing
+# format = "long2"
+# flags = ["--group-dirs=first", "--sort=age"]
+
+# [personalities.recent]     # recently modified files
+# format = "long"
+# flags = ["--sort=modified", "--reverse"]
+
 # ── Theme ─────────────────────────────────────────────────────────
 # Colour definitions (not yet implemented).
 # Accepts LS_COLORS-compatible codes and lx two-letter codes.
@@ -285,6 +305,24 @@ pub fn resolve_personality(name: &str) -> Option<PersonalityDef> {
         }),
         _ => None,
     }
+}
+
+
+/// The default path for `--init-config` to write to.
+pub fn init_config_path() -> PathBuf {
+    home_dir()
+        .map(|h| h.join(".lxconfig.toml"))
+        .unwrap_or_else(|| PathBuf::from(".lxconfig.toml"))
+}
+
+/// Write the default config file.
+pub fn write_init_config(path: &PathBuf) -> std::io::Result<()> {
+    if path.exists() {
+        return Err(std::io::Error::other(
+            format!("{} already exists; remove it first or edit it directly", path.display())
+        ));
+    }
+    fs::write(path, default_config_toml())
 }
 
 
