@@ -23,6 +23,7 @@ pub const REVERSE: &str = "reverse";
 pub const SORT: &str = "sort";
 pub const IGNORE_GLOB: &str = "ignore-glob";
 pub const GIT_IGNORE: &str = "git-ignore";
+pub const GROUP_DIRS: &str = "group-dirs";
 pub const DIRS_FIRST: &str = "group-directories-first";
 pub const ONLY_DIRS: &str = "only-dirs";
 

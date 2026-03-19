@@ -217,10 +217,46 @@ fn only_dirs_hides_files() {
 }
 
 
-// ── Group directories first ───────────────────────────────────────
+// ── Group directories ─────────────────────────────────────────────
 
 #[test]
-fn group_directories_first() {
+fn group_dirs_first() {
+    let dir = tempdir().expect("failed to create tempdir");
+    fs::write(dir.path().join("aaa_file.txt"), "").unwrap();
+    fs::create_dir(dir.path().join("zzz_dir")).unwrap();
+
+    lx_no_colour()
+        .args(["-1", "--group-dirs=first"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::function(|output: &str| {
+            let dir_pos = output.find("zzz_dir").unwrap();
+            let file_pos = output.find("aaa_file.txt").unwrap();
+            dir_pos < file_pos
+        }));
+}
+
+#[test]
+fn group_dirs_last() {
+    let dir = tempdir().expect("failed to create tempdir");
+    fs::write(dir.path().join("aaa_file.txt"), "").unwrap();
+    fs::create_dir(dir.path().join("zzz_dir")).unwrap();
+
+    lx_no_colour()
+        .args(["-1", "--group-dirs=last"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::function(|output: &str| {
+            let dir_pos = output.find("zzz_dir").unwrap();
+            let file_pos = output.find("aaa_file.txt").unwrap();
+            file_pos < dir_pos
+        }));
+}
+
+#[test]
+fn group_directories_first_legacy() {
     let dir = tempdir().expect("failed to create tempdir");
     fs::write(dir.path().join("aaa_file.txt"), "").unwrap();
     fs::create_dir(dir.path().join("zzz_dir")).unwrap();

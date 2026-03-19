@@ -26,9 +26,8 @@ use crate::fs::File;
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct FileFilter {
 
-    /// Whether directories should be listed first, and other types of file
-    /// second. Some users prefer it like this.
-    pub list_dirs_first: bool,
+    /// Whether to group directories before or after other files.
+    pub group_dirs: GroupDirs,
 
     /// The metadata field to sort by.
     pub sort_field: SortField,
@@ -100,13 +99,22 @@ impl FileFilter {
             files.reverse();
         }
 
-        if self.list_dirs_first {
-            // This relies on the fact that `sort_by` is *stable*: it will keep
-            // adjacent elements next to each other.
-            files.sort_by(|a, b| {
-                b.as_ref().points_to_directory()
-                    .cmp(&a.as_ref().points_to_directory())
-            });
+        match self.group_dirs {
+            GroupDirs::First => {
+                // This relies on the fact that `sort_by` is *stable*: it will
+                // keep adjacent elements next to each other.
+                files.sort_by(|a, b| {
+                    b.as_ref().points_to_directory()
+                        .cmp(&a.as_ref().points_to_directory())
+                });
+            }
+            GroupDirs::Last => {
+                files.sort_by(|a, b| {
+                    a.as_ref().points_to_directory()
+                        .cmp(&b.as_ref().points_to_directory())
+                });
+            }
+            GroupDirs::None => {}
         }
     }
 }
@@ -323,6 +331,19 @@ impl IgnorePatterns {
     fn is_ignored(&self, file: &str) -> bool {
         self.patterns.iter().any(|p| p.matches(file))
     }
+}
+
+
+/// How to group directories relative to other files in the listing.
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Default)]
+pub enum GroupDirs {
+    /// List directories before other files.
+    First,
+    /// List directories after other files.
+    Last,
+    /// No special grouping; directories sort with everything else.
+    #[default]
+    None,
 }
 
 

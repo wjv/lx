@@ -208,10 +208,21 @@ Environment variables:\n  \
             .help("Hide files ignored by VCS (alias for --vcs-ignore)")
             .action(ArgAction::Count)
             .hide(true))
+        .arg(Arg::new(flags::GROUP_DIRS)
+            .long("group-dirs")
+            .help("Group directories before or after other files [first, last, none]")
+            .action(ArgAction::Set)
+            .value_name("WHEN")
+            .value_parser([
+                PossibleValue::new("first"),
+                PossibleValue::new("last"),
+                PossibleValue::new("none"),
+            ]))
         .arg(Arg::new(flags::DIRS_FIRST)
             .long("group-directories-first")
-            .help("List directories before other files")
-            .action(ArgAction::Count))
+            .help("List directories first (alias for --group-dirs=first)")
+            .action(ArgAction::Count)
+            .hide(true))
         .arg(Arg::new(flags::ONLY_DIRS)
             .short('D').long("only-dirs")
             .help("List only directories, not files")

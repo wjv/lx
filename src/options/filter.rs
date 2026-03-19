@@ -1,7 +1,7 @@
 //! Parsing the options for `FileFilter`.
 
 use crate::fs::DotFilter;
-use crate::fs::filter::{FileFilter, SortField, SortCase, IgnorePatterns, VcsIgnore};
+use crate::fs::filter::{FileFilter, SortField, SortCase, GroupDirs, IgnorePatterns, VcsIgnore};
 
 use crate::options::{flags, OptionsError};
 use crate::options::parser::MatchedFlags;
@@ -12,7 +12,7 @@ impl FileFilter {
     /// Determines which of all the file filter options to use.
     pub fn deduce(matches: &MatchedFlags) -> Result<Self, OptionsError> {
         Ok(Self {
-            list_dirs_first:  matches.has(flags::DIRS_FIRST),
+            group_dirs:       GroupDirs::deduce(matches),
             reverse:          matches.has(flags::REVERSE),
             only_dirs:        matches.has(flags::ONLY_DIRS),
             sort_field:       SortField::deduce(matches)?,
@@ -20,6 +20,27 @@ impl FileFilter {
             ignore_patterns:  IgnorePatterns::deduce(matches)?,
             vcs_ignore:       VcsIgnore::deduce(matches),
         })
+    }
+}
+
+impl GroupDirs {
+    fn deduce(matches: &MatchedFlags) -> Self {
+        // --group-dirs=first|last|none takes priority
+        if let Some(word) = matches.get(flags::GROUP_DIRS) {
+            return match word {
+                "first" => Self::First,
+                "last"  => Self::Last,
+                "none"  => Self::None,
+                _       => unreachable!("Clap rejects invalid --group-dirs values"),
+            };
+        }
+
+        // Legacy --group-directories-first flag
+        if matches.has(flags::DIRS_FIRST) {
+            return Self::First;
+        }
+
+        Self::None
     }
 }
 
