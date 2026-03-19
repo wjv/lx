@@ -148,7 +148,8 @@ impl TableOptions {
         let size_format = SizeFormat::deduce(matches);
         let user_format = UserFormat::deduce(matches);
         let columns = deduce_columns(matches, long_count);
-        Ok(Self { size_format, time_format, user_format, columns })
+        let total_size = matches.has(flags::TOTAL_SIZE);
+        Ok(Self { size_format, time_format, user_format, columns, total_size })
     }
 }
 
@@ -284,7 +285,6 @@ fn apply_individual_adds(matches: &MatchedFlags, columns: &mut Vec<Column>) {
         (matches.has(flags::BLOCKS),     Column::Blocks),
         (matches.has(flags::GROUP),      Column::Group),
         (matches.has(flags::OCTAL),      Column::Octal),
-        (matches.has(flags::TOTAL_SIZE), Column::TotalSize),  // replaces FileSize below
         (matches.has(flags::GIT) || matches.has(flags::VCS_STATUS), Column::VcsStatus),
     ];
 
@@ -297,12 +297,6 @@ fn apply_individual_adds(matches: &MatchedFlags, columns: &mut Vec<Column>) {
         }
     }
 
-    // --total-size replaces FileSize with TotalSize (same position).
-    if columns.contains(&Column::TotalSize) {
-        if let Some(pos) = columns.iter().position(|c| *c == Column::FileSize) {
-            columns.remove(pos);
-        }
-    }
 }
 
 

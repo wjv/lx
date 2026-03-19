@@ -157,7 +157,7 @@ Use with `--format=compact` or reference from a personality.
 
 Available column names: `perms`, `size`, `user`, `group`, `links`,
 `inode`, `blocks`, `octal`, `modified`, `changed`, `accessed`,
-`created`, `vcs`, `totalsize`.
+`created`, `vcs`.
 
 
 ### Personalities
@@ -170,7 +170,7 @@ format = "long2"
 flags = ["--group-dirs=first", "--sort=age"]
 
 [personalities.stree]
-columns = ["totalsize"]
+columns = ["size"]
 flags = ["--tree", "--only-dirs", "--reverse", "--sort=size",
          "--total-size", "--level=1"]
 ```

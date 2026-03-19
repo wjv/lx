@@ -23,6 +23,8 @@ pub struct Options {
     pub time_format: TimeFormat,
     pub user_format: UserFormat,
     pub columns: Vec<Column>,
+    /// When true, the size column shows recursive directory sizes.
+    pub total_size: bool,
 }
 
 
@@ -42,7 +44,6 @@ pub enum Column {
     HardLinks,
     #[cfg(unix)]
     Inode,
-    TotalSize,
     VcsStatus,
     #[cfg(unix)]
     Octal,
@@ -68,7 +69,6 @@ impl Column {
             Self::HardLinks         => "links",
             #[cfg(unix)]
             Self::Inode             => "inode",
-            Self::TotalSize         => "totalsize",
             Self::VcsStatus         => "vcs",
             #[cfg(unix)]
             Self::Octal             => "octal",
@@ -95,7 +95,6 @@ impl Column {
             "links"                 => Some(Self::HardLinks),
             #[cfg(unix)]
             "inode"                 => Some(Self::Inode),
-            "totalsize" | "total-size" => Some(Self::TotalSize),
             "vcs"                   => Some(Self::VcsStatus),
             #[cfg(unix)]
             "octal"                 => Some(Self::Octal),
@@ -119,7 +118,6 @@ impl Column {
     pub fn alignment(self) -> Alignment {
         match self {
             Self::FileSize   |
-            Self::TotalSize  |
             Self::HardLinks  |
             Self::Inode      |
             Self::Blocks     |
@@ -132,7 +130,6 @@ impl Column {
     pub fn alignment(&self) -> Alignment {
         match self {
             Self::FileSize   |
-            Self::TotalSize  |
             Self::VcsStatus  => Alignment::Right,
             _                => Alignment::Left,
         }
@@ -158,7 +155,6 @@ impl Column {
             Self::HardLinks     => "Links",
             #[cfg(unix)]
             Self::Inode         => "inode",
-            Self::TotalSize     => "Total Size",
             Self::VcsStatus     => "VCS",
             #[cfg(unix)]
             Self::Octal         => "Octal",
@@ -273,6 +269,7 @@ pub struct Table<'a> {
     time_format: TimeFormat,
     size_format: SizeFormat,
     user_format: UserFormat,
+    total_size: bool,
     vcs: Option<&'a dyn VcsCache>,
 }
 
@@ -300,6 +297,7 @@ impl<'a, 'f> Table<'a> {
             time_format: options.time_format,
             size_format: options.size_format,
             user_format: options.user_format,
+            total_size: options.total_size,
         }
     }
 
@@ -351,10 +349,11 @@ impl<'a, 'f> Table<'a> {
                 self.permissions_plus(file, xattrs).render(self.theme)
             }
             Column::FileSize => {
-                file.size().render(self.theme, self.size_format, &self.env.numeric)
-            }
-            Column::TotalSize => {
-                file.total_size().render(self.theme, self.size_format, &self.env.numeric)
+                if self.total_size {
+                    file.total_size().render(self.theme, self.size_format, &self.env.numeric)
+                } else {
+                    file.size().render(self.theme, self.size_format, &self.env.numeric)
+                }
             }
             #[cfg(unix)]
             Column::HardLinks => {

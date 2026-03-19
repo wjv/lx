@@ -206,7 +206,7 @@ COLUMN AND FORMAT SELECTION
 : Comma-separated list of columns to display. Overrides the `-l` tier.
 Implies long view. Valid names: `perms`, `size`, `user`, `group`,
 `links`, `inode`, `blocks`, `octal`, `modified`, `changed`, `accessed`,
-`created`, `vcs`, `totalsize`.
+`created`, `vcs`.
 
 `--format=NAME`
 : Select a named column format. Compiled-in formats: `long`, `long2`,

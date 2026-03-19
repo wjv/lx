@@ -32,7 +32,7 @@ fn total_size_via_columns() {
     fs::write(sub.join("a.txt"), "abc").unwrap();
 
     lx_no_colour()
-        .args(["--columns=totalsize"])
+        .args(["--columns=size", "-Z"])
         .arg(dir.path())
         .assert()
         .success()
@@ -106,8 +106,8 @@ fn stree_style() {
     fs::write(b.join("small.txt"), "hi").unwrap();
 
     lx_no_colour()
-        .args(["-DT", "-L1", "--columns=totalsize",
-               "-rs", "size", "--total-size"])
+        .args(["-DT", "-L1", "--columns=size",
+               "-rs", "size", "-Z"])
         .arg(dir.path())
         .assert()
         .success()

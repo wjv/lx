@@ -72,7 +72,7 @@
 # flags = ["--sort=modified", "--reverse"]
 
 # [personalities.du]         # du replacement: dir sizes, largest first
-# columns = ["totalsize"]
+# columns = ["size"]
 # flags = ["--only-dirs", "--tree", "--level=1", "--reverse",
 #          "--sort=size", "--total-size"]
 
