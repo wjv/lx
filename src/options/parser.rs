@@ -258,7 +258,7 @@ Environment variables:\n  \
             .help("Use the modified timestamp field")
             .action(ArgAction::Count))
         .arg(Arg::new(flags::CHANGED)
-            .long("changed")
+            .short('c').long("changed")
             .help("Use the changed timestamp field")
             .action(ArgAction::Count))
         .arg(Arg::new(flags::BLOCKS)

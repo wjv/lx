@@ -379,6 +379,8 @@ mod test {
         #[cfg(target_family = "unix")]
         test!(changed:   TimeTypes <- ["--changed"];           Ok(TimeTypes { modified: false, changed: true,  accessed: false, created: false }));
         #[cfg(target_family = "unix")]
+        test!(changed_c: TimeTypes <- ["-c"];                  Ok(TimeTypes { modified: false, changed: true,  accessed: false, created: false }));
+        #[cfg(target_family = "unix")]
         test!(time_ch:   TimeTypes <- ["--time=changed"];      Ok(TimeTypes { modified: false, changed: true,  accessed: false, created: false }));
         #[cfg(target_family = "unix")]
         test!(t_ch:    TimeTypes <- ["-t", "ch"];              Ok(TimeTypes { modified: false, changed: true,  accessed: false, created: false }));
