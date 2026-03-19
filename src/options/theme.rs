@@ -37,7 +37,7 @@ impl UseColours {
             "always"                => Self::Always,
             "auto" | "automatic"    => Self::Automatic,
             "never"                 => Self::Never,
-            _                       => unreachable!("Clap rejects invalid --color values"),
+            _                       => unreachable!("Clap rejects invalid --colour values"),
         })
     }
 }

@@ -75,7 +75,7 @@ impl Options {
 
         // Parse the environment variables into colours and extension mappings
         let mut ui = UiStyles::default_theme(self.colour_scale);
-        let (exts, use_default_filetypes) = self.definitions.parse_color_vars(&mut ui);
+        let (exts, use_default_filetypes) = self.definitions.parse_colour_vars(&mut ui);
 
         // Use between 0 and 2 file name highlighters
         let exts = match (exts.is_non_empty(), use_default_filetypes) {
@@ -97,7 +97,7 @@ impl Definitions {
     ///
     /// Also returns if the `LX_COLORS` variable should reset the existing file
     /// type mappings or not. The `reset` code needs to be the first one.
-    fn parse_color_vars(&self, colours: &mut UiStyles) -> (ExtensionMappings, bool) {
+    fn parse_colour_vars(&self, colours: &mut UiStyles) -> (ExtensionMappings, bool) {
         use log::*;
 
         let mut exts = ExtensionMappings::default();
@@ -357,7 +357,7 @@ mod customs_test {
                 };
 
                 let mut result = UiStyles::default();
-                let (_exts, _reset) = definitions.parse_color_vars(&mut result);
+                let (_exts, _reset) = definitions.parse_colour_vars(&mut result);
                 assert_eq!($expected, result);
             }
         };
@@ -374,7 +374,7 @@ mod customs_test {
                     lx: Some($lx.into()),
                 };
 
-                let (result, _reset) = definitions.parse_color_vars(&mut UiStyles::default());
+                let (result, _reset) = definitions.parse_colour_vars(&mut UiStyles::default());
                 assert_eq!(ExtensionMappings { mappings }, result);
             }
         };
@@ -395,7 +395,7 @@ mod customs_test {
                 };
 
                 let mut meh = UiStyles::colourful(false);
-                let (result, _reset) = definitions.parse_color_vars(&vars, &mut meh);
+                let (result, _reset) = definitions.parse_colour_vars(&vars, &mut meh);
                 assert_eq!(ExtensionMappings { mappings }, result);
                 assert_eq!($expected, meh);
             }
