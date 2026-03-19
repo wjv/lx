@@ -1,21 +1,12 @@
-# Rust stuff
+# Rust
 target
 
-# Vagrant stuff
-.vagrant
-*.log
+# Generated files
+man/lx.1
 
-# Compiled artifacts
-# (see devtools/*-package-for-*.sh)
-/exa-linux-x86_64
-/exa-linux-x86_64-*.zip
-/exa-macos-x86_64
-/exa-macos-x86_64-*.zip
-/MD5SUMS
-/SHA1SUMS
+# Editor backups
+*~
+*.swp
 
-# Snap stuff
-parts
-prime
-stage
-*.snap
+# macOS
+.DS_Store

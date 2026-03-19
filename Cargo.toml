@@ -5,19 +5,15 @@ authors = ["Benjamin Sago <ogham@bsago.me>", "Johann Visagie <johann@visagie.za.
 categories = ["command-line-utilities"]
 edition = "2024"
 rust-version = "1.94"
-exclude = ["/xtests/*"]
 readme = "README.md"
 license = "MIT"
 repository = "https://github.com/wjv/lx"
-version = "0.1.0-pre.15"
-
-
-[[bin]]
-name = "lx"
-
+version = "0.1.0-pre.16"
 
 [dependencies]
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
+clap = { version = "4.5", features = ["cargo", "derive"] }
+clap_complete = "4.5"
 glob = "0.3"
 libc = "0.2"
 locale = "0.2"
@@ -25,14 +21,12 @@ log = "0.4"
 natord-plus-plus = "2.0"
 nu-ansi-term = "0.50"
 rayon = "1.10"
+serde = { version = "1", features = ["derive"] }
 terminal_size = "0.4"
-uutils_term_grid = "0.7"
+toml = "1"
 unicode-width = "0.2"
 unit-prefix = "0.5"
-clap = { version = "4.5", features = ["cargo", "derive"] }
-clap_complete = "4.5"
-serde = { version = "1", features = ["derive"] }
-toml = "0.8"
+uutils_term_grid = "0.8"
 
 [target.'cfg(unix)'.dependencies]
 uzers = "0.12"
@@ -42,42 +36,25 @@ version = "0.20"
 optional = true
 default-features = false
 
-
-
 [features]
 default = ["git", "jj"]
 git = ["git2"]
 jj = []
 vendored-openssl = ["git2/vendored-openssl"]
 
-
-# make dev builds faster by excluding debug symbols
-[profile.dev]
-debug = false
-
-# use LTO for smaller binaries (that take longer to build)
-[profile.release]
-lto = true
-strip = true
-opt-level = 3
-codegen-units = 1
-panic = 'abort'
-
-
 [dev-dependencies]
 assert_cmd = "2"
 predicates = "3"
 tempfile = "3"
 
-[package.metadata.deb]
-license-file = ["LICENCE", "4"]
-depends = "$auto"
-extended-description = """
-lx is a modern file lister for UNIX.
-"""
-section = "utils"
-priority = "optional"
-assets = [
-    ["target/release/lx", "/usr/bin/lx", "0755"],
-]
-# Shell completions are generated at runtime via `lx --completions <shell>`.
+# Make dev builds faster by excluding debug symbols
+[profile.dev]
+debug = false
+
+# Optimise release builds for size
+[profile.release]
+lto = true
+strip = true
+opt-level = 3
+codegen-units = 1
+panic = "abort"
