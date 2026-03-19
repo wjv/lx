@@ -52,8 +52,10 @@ links, blocks).
 : When to use terminal colours. WHEN is `always`, `auto`, or `never`.
 Alias: `--color`.
 
-`--colour-scale`
-: Colour file sizes on a scale. Alias: `--color-scale`.
+`--colour-scale`[`=MODE`]
+: Colour file sizes on a scale. MODE is `16` (basic ANSI colours),
+`256` (extended palette), or `none`. Default when bare: `16`.
+Alias: `--color-scale`.
 
 `--icons`[`=WHEN`]
 : Display icons next to file names. WHEN is `always`, `auto`, or `never`.

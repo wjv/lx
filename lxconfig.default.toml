@@ -7,6 +7,7 @@
 
 # [defaults]
 # colour = "auto"          # always / auto / never
+# colour-scale = "none"    # none / 16 / 256
 # time-style = "default"   # default / iso / long-iso / full-iso
 # group-dirs = "none"      # first / last / none
 # icons = "never"          # always / auto / never

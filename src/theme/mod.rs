@@ -43,10 +43,15 @@ pub enum UseColours {
     Never,
 }
 
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Default)]
 pub enum ColourScale {
-    Fixed,
-    Gradient,
+    /// No size-dependent colouring; all sizes use the same colour.
+    #[default]
+    None,
+    /// Size-dependent colouring using basic 16-colour ANSI.
+    Scale16,
+    /// Size-dependent colouring using the 256-colour palette.
+    Scale256,
 }
 
 #[derive(PartialEq, Eq, Debug, Default)]

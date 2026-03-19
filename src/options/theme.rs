@@ -45,11 +45,11 @@ impl UseColours {
 
 impl ColourScale {
     fn deduce(matches: &MatchedFlags) -> Self {
-        if matches.has(flags::COLOR_SCALE) {
-            Self::Gradient
-        }
-        else {
-            Self::Fixed
+        match matches.get(flags::COLOR_SCALE) {
+            Some("16")   => Self::Scale16,
+            Some("256")  => Self::Scale256,
+            Some("none") => Self::None,
+            _            => Self::None,
         }
     }
 }
@@ -167,8 +167,10 @@ mod terminal_test {
     test!(overridden_3:  UseColours <- ["--colour=auto", "--color=never"], MockVars::empty();   Ok(UseColours::Never));
     test!(overridden_4:  UseColours <- ["--color=auto",  "--color=never"], MockVars::empty();   Ok(UseColours::Never));
 
-    test!(scale_1:  ColourScale <- ["--color-scale", "--colour-scale"];   ColourScale::Gradient);
-    test!(scale_2:  ColourScale <- ["--color-scale",                 ];   ColourScale::Gradient);
-    test!(scale_3:  ColourScale <- [                 "--colour-scale"];   ColourScale::Gradient);
-    test!(scale_4:  ColourScale <- [                                 ];   ColourScale::Fixed);
+    test!(scale_bare:   ColourScale <- ["--colour-scale"];                ColourScale::Scale16);
+    test!(scale_16:     ColourScale <- ["--colour-scale=16"];              ColourScale::Scale16);
+    test!(scale_256:    ColourScale <- ["--colour-scale=256"];             ColourScale::Scale256);
+    test!(scale_none:   ColourScale <- ["--colour-scale=none"];            ColourScale::None);
+    test!(scale_alias:  ColourScale <- ["--color-scale"];                  ColourScale::Scale16);
+    test!(scale_absent: ColourScale <- [];                                 ColourScale::None);
 }

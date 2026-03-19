@@ -42,6 +42,7 @@ pub struct Config {
 #[serde(default, rename_all = "kebab-case")]
 pub struct Defaults {
     pub colour: Option<String>,
+    pub colour_scale: Option<String>,
     pub time_style: Option<String>,
     pub group_dirs: Option<String>,
     pub icons: Option<String>,
@@ -57,6 +58,9 @@ impl Defaults {
 
         if let Some(ref v) = self.colour {
             args.push(format!("--colour={v}").into());
+        }
+        if let Some(ref v) = self.colour_scale {
+            args.push(format!("--colour-scale={v}").into());
         }
         if let Some(ref v) = self.time_style {
             args.push(format!("--time-style={v}").into());

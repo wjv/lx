@@ -85,8 +85,9 @@ impl UiStyles {
 impl Size {
     pub fn colourful(scale: ColourScale) -> Self {
         match scale {
-            ColourScale::Gradient  => Self::colourful_gradient(),
-            ColourScale::Fixed     => Self::colourful_fixed(),
+            ColourScale::None     => Self::colourful_fixed(),
+            ColourScale::Scale16  => Self::colourful_gradient(),
+            ColourScale::Scale256 => Self::colourful_gradient_256(),
         }
     }
 
@@ -110,6 +111,26 @@ impl Size {
     }
 
     fn colourful_gradient() -> Self {
+        Self {
+            major:  Green.bold(),
+            minor:  Green.normal(),
+
+            number_byte: Green.normal(),
+            number_kilo: Green.bold(),
+            number_mega: Yellow.normal(),
+            number_giga: Red.normal(),
+            number_huge: Purple.normal(),
+
+            unit_byte: Green.normal(),
+            unit_kilo: Green.bold(),
+            unit_mega: Yellow.normal(),
+            unit_giga: Red.normal(),
+            unit_huge: Purple.normal(),
+        }
+    }
+
+    /// 256-colour gradient.
+    fn colourful_gradient_256() -> Self {
         Self {
             major:  Green.bold(),
             minor:  Green.normal(),

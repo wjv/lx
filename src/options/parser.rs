@@ -179,7 +179,16 @@ Environment variables:\n  \
         .arg(Arg::new(flags::COLOR_SCALE)
             .long("colour-scale").visible_alias("color-scale")
             .help("Colour file sizes on a scale")
-            .action(ArgAction::Count))
+            .action(ArgAction::Set)
+            .value_name("MODE")
+            .value_parser([
+                PossibleValue::new("16"),
+                PossibleValue::new("256"),
+                PossibleValue::new("none"),
+            ])
+            .num_args(0..=1)
+            .require_equals(true)
+            .default_missing_value("16"))
 
         // ── Filtering and sorting ───────────────────────────────
 
