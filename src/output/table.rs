@@ -22,95 +22,7 @@ pub struct Options {
     pub size_format: SizeFormat,
     pub time_format: TimeFormat,
     pub user_format: UserFormat,
-    pub columns: Columns,
-}
-
-/// Extra columns to display in the table.
-#[allow(clippy::struct_excessive_bools)]
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
-pub struct Columns {
-
-    /// At least one of these timestamps will be shown.
-    pub time_types: TimeTypes,
-
-    // The rest are just on/off
-    pub inode: bool,
-    pub links: bool,
-    pub blocks: bool,
-    pub group: bool,
-    pub vcs: bool,
-    pub octal: bool,
-
-    // Defaults to true:
-    pub permissions: bool,
-    pub filesize: bool,
-    pub user: bool,
-}
-
-impl Columns {
-    pub fn collect(&self, actually_enable_vcs: bool) -> Vec<Column> {
-        let mut columns = Vec::with_capacity(4);
-
-        if self.inode {
-            #[cfg(unix)]
-            columns.push(Column::Inode);
-        }
-
-        if self.octal {
-            #[cfg(unix)]
-            columns.push(Column::Octal);
-        }
-
-        if self.permissions {
-            columns.push(Column::Permissions);
-        }
-
-        if self.links {
-            #[cfg(unix)]
-            columns.push(Column::HardLinks);
-        }
-
-        if self.filesize {
-            columns.push(Column::FileSize);
-        }
-
-        if self.blocks {
-            #[cfg(unix)]
-            columns.push(Column::Blocks);
-        }
-
-        if self.user {
-            #[cfg(unix)]
-            columns.push(Column::User);
-        }
-
-        if self.group {
-            #[cfg(unix)]
-            columns.push(Column::Group);
-        }
-
-        if self.time_types.modified {
-            columns.push(Column::Timestamp(TimeType::Modified));
-        }
-
-        if self.time_types.changed {
-            columns.push(Column::Timestamp(TimeType::Changed));
-        }
-
-        if self.time_types.created {
-            columns.push(Column::Timestamp(TimeType::Created));
-        }
-
-        if self.time_types.accessed {
-            columns.push(Column::Timestamp(TimeType::Accessed));
-        }
-
-        if self.vcs && actually_enable_vcs {
-            columns.push(Column::VcsStatus);
-        }
-
-        columns
-    }
+    pub columns: Vec<Column>,
 }
 
 
@@ -392,7 +304,11 @@ pub struct Row {
 
 impl<'a, 'f> Table<'a> {
     pub fn new(options: &'a Options, vcs: Option<&'a dyn VcsCache>, theme: &'a Theme) -> Table<'a> {
-        let columns = options.columns.collect(vcs.is_some());
+        // Filter out VcsStatus column if no VCS cache is available.
+        let columns: Vec<Column> = options.columns.iter()
+            .copied()
+            .filter(|c| !matches!(c, Column::VcsStatus) || vcs.is_some())
+            .collect();
         let widths = TableWidths::zero(columns.len());
         let env = &*ENVIRONMENT;
 

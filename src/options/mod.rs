@@ -126,9 +126,12 @@ impl Options {
             return true;
         }
 
+        use crate::output::table::Column;
         match self.view.mode {
             Mode::Details(details::Options { table: Some(ref table), .. }) |
-            Mode::GridDetails(grid_details::Options { details: details::Options { table: Some(ref table), .. }, .. }) => table.columns.vcs,
+            Mode::GridDetails(grid_details::Options { details: details::Options { table: Some(ref table), .. }, .. }) => {
+                table.columns.contains(&Column::VcsStatus)
+            }
             _ => false,
         }
     }

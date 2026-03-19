@@ -4,7 +4,7 @@ use crate::options::parser::MatchedFlags;
 use crate::output::{View, Mode, TerminalWidth, grid, details};
 use crate::output::grid_details::{self, RowThreshold};
 use crate::output::file_name::Options as FileStyle;
-use crate::output::table::{TimeTypes, SizeFormat, UserFormat, Columns, Options as TableOptions};
+use crate::output::table::{Column, TimeType, SizeFormat, UserFormat, Options as TableOptions};
 use crate::output::time::TimeFormat;
 
 
@@ -145,59 +145,174 @@ impl TableOptions {
         let time_format = TimeFormat::deduce(matches, vars)?;
         let size_format = SizeFormat::deduce(matches);
         let user_format = UserFormat::deduce(matches);
-        let columns = Columns::deduce(matches, long_count)?;
+        let columns = deduce_columns(matches, long_count);
         Ok(Self { size_format, time_format, user_format, columns })
     }
 }
 
 
-impl Columns {
-    fn deduce(matches: &MatchedFlags, long_count: u8) -> Result<Self, OptionsError> {
-        let time_types = TimeTypes::deduce(matches, long_count)?;
+/// Compiled-in format definitions (column lists only).
+fn format_columns(name: &str) -> Option<Vec<Column>> {
+    let cols = match name {
+        "long" => vec![
+            Column::Permissions,
+            Column::FileSize,
+            #[cfg(unix)]
+            Column::User,
+            Column::Timestamp(TimeType::Modified),
+        ],
+        "long2" => vec![
+            Column::Permissions,
+            Column::FileSize,
+            #[cfg(unix)]
+            Column::User,
+            #[cfg(unix)]
+            Column::Group,
+            Column::Timestamp(TimeType::Modified),
+            Column::VcsStatus,
+        ],
+        "long3" => vec![
+            Column::Permissions,
+            #[cfg(unix)]
+            Column::HardLinks,
+            Column::FileSize,
+            #[cfg(unix)]
+            Column::Blocks,
+            #[cfg(unix)]
+            Column::User,
+            #[cfg(unix)]
+            Column::Group,
+            Column::Timestamp(TimeType::Modified),
+            Column::Timestamp(TimeType::Changed),
+            Column::Timestamp(TimeType::Created),
+            Column::Timestamp(TimeType::Accessed),
+            Column::VcsStatus,
+        ],
+        _ => return None,
+    };
+    Some(cols)
+}
 
-        // Tier 1 (-l): base columns from individual flags
-        let mut vcs    = matches.has(flags::GIT) || matches.has(flags::VCS_STATUS);
-        let mut blocks = matches.has(flags::BLOCKS);
-        let mut group  = matches.has(flags::GROUP);
-        let mut inode  = matches.has(flags::INODE);
-        let mut links  = matches.has(flags::LINKS);
-        let     octal  = matches.has(flags::OCTAL);
+/// The list of compiled-in format names (for Clap validation).
+pub fn format_names() -> Vec<&'static str> {
+    vec!["long", "long2", "long3"]
+}
 
-        // Tier 2 (-ll): add group and VCS status
-        if long_count >= 2 {
-            group = true;
-            vcs = true;
+
+/// Build the column list from the -l tier, individual flags, and
+/// positive/negative overrides.
+fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Vec<Column> {
+    // Start with the base column set from the -l tier.
+    let tier_name = match long_count {
+        0 | 1 => "long",
+        2     => "long2",
+        _     => "long3",
+    };
+    let mut columns = format_columns(tier_name)
+        .expect("compiled-in format always exists");
+
+    // Individual positive flags: add if not already present.
+    let adds: &[(bool, Column)] = &[
+        (matches.has(flags::INODE),      Column::Inode),
+        (matches.has(flags::LINKS),      Column::HardLinks),
+        (matches.has(flags::BLOCKS),     Column::Blocks),
+        (matches.has(flags::GROUP),      Column::Group),
+        (matches.has(flags::OCTAL),      Column::Octal),
+        (matches.has(flags::GIT) || matches.has(flags::VCS_STATUS), Column::VcsStatus),
+    ];
+
+    for &(enabled, col) in adds {
+        if enabled && !columns.contains(&col) {
+            // Insert before VcsStatus if present, else at end.
+            let pos = columns.iter()
+                .position(|c| *c == Column::VcsStatus)
+                .unwrap_or(columns.len());
+            columns.insert(pos, col);
         }
-
-        // Tier 3 (-lll): add links and blocks
-        // (header and all-timestamps are handled in deduce_long and
-        // TimeTypes::deduce respectively — the caller passes the count)
-        if long_count >= 3 {
-            links = true;
-            blocks = true;
-        }
-
-        // Positive/negative pairs: last one wins (Clap's overrides_with).
-        // For default-on columns, start with true and check --no-*.
-        // For the new positive flags, check if they re-enable.
-        let mut permissions = ! matches.has(flags::NO_PERMISSIONS);
-        let mut filesize =    ! matches.has(flags::NO_FILESIZE);
-        let mut user =        ! matches.has(flags::NO_USER);
-
-        // Positive flags re-enable (only matters if a personality
-        // suppressed them, or if the user writes --no-user --user).
-        if matches.has(flags::SHOW_PERMISSIONS) { permissions = true; }
-        if matches.has(flags::SHOW_FILESIZE)    { filesize = true; }
-        if matches.has(flags::SHOW_USER)        { user = true; }
-
-        // Negative flags for columns that default to off
-        if matches.has(flags::NO_INODE)  { inode = false; }
-        if matches.has(flags::NO_GROUP)  { group = false; }
-        if matches.has(flags::NO_LINKS)  { links = false; }
-        if matches.has(flags::NO_BLOCKS) { blocks = false; }
-
-        Ok(Self { time_types, inode, links, blocks, group, vcs, octal, permissions, filesize, user })
     }
+
+    // Timestamp flags: if any explicit timestamp flags are given,
+    // they override the tier's timestamp set.
+    let has_explicit_time = matches.has(flags::MODIFIED) || matches.has(flags::CHANGED)
+        || matches.has(flags::ACCESSED) || matches.has(flags::CREATED)
+        || matches.get(flags::TIME).is_some();
+
+    if has_explicit_time {
+        // Remove all existing timestamps.
+        columns.retain(|c| !matches!(c, Column::Timestamp(_)));
+
+        // Add the explicitly requested ones.
+        if matches.has(flags::MODIFIED) || matches.get(flags::TIME).is_some_and(|v| v == "modified" || v == "mod") {
+            columns.insert(timestamp_insert_pos(&columns), Column::Timestamp(TimeType::Modified));
+        }
+        if matches.has(flags::CHANGED) || matches.get(flags::TIME).is_some_and(|v| v == "changed" || v == "ch") {
+            columns.insert(timestamp_insert_pos(&columns), Column::Timestamp(TimeType::Changed));
+        }
+        if matches.has(flags::ACCESSED) || matches.get(flags::TIME).is_some_and(|v| v == "accessed" || v == "acc") {
+            columns.insert(timestamp_insert_pos(&columns), Column::Timestamp(TimeType::Accessed));
+        }
+        if matches.has(flags::CREATED) || matches.get(flags::TIME).is_some_and(|v| v == "created" || v == "cr") {
+            columns.insert(timestamp_insert_pos(&columns), Column::Timestamp(TimeType::Created));
+        }
+    }
+
+    // Suppression flags: remove columns.
+    if matches.has(flags::NO_PERMISSIONS) && !matches.has(flags::SHOW_PERMISSIONS) {
+        columns.retain(|c| *c != Column::Permissions);
+    }
+    if matches.has(flags::NO_FILESIZE) && !matches.has(flags::SHOW_FILESIZE) {
+        columns.retain(|c| *c != Column::FileSize);
+    }
+    #[cfg(unix)]
+    if matches.has(flags::NO_USER) && !matches.has(flags::SHOW_USER) {
+        columns.retain(|c| *c != Column::User);
+    }
+    if matches.has(flags::NO_TIME) {
+        columns.retain(|c| !matches!(c, Column::Timestamp(_)));
+    }
+    #[cfg(unix)]
+    if matches.has(flags::NO_INODE)  { columns.retain(|c| *c != Column::Inode); }
+    #[cfg(unix)]
+    if matches.has(flags::NO_GROUP)  { columns.retain(|c| *c != Column::Group); }
+    #[cfg(unix)]
+    if matches.has(flags::NO_LINKS)  { columns.retain(|c| *c != Column::HardLinks); }
+    #[cfg(unix)]
+    if matches.has(flags::NO_BLOCKS) { columns.retain(|c| *c != Column::Blocks); }
+
+    // Re-enable flags (override --no-* via Clap's overrides_with,
+    // but also work as explicit adds on a personality).
+    if matches.has(flags::SHOW_PERMISSIONS) && !columns.contains(&Column::Permissions) {
+        columns.insert(0, Column::Permissions);
+    }
+    if matches.has(flags::SHOW_FILESIZE) && !columns.contains(&Column::FileSize) {
+        // After permissions, before user.
+        let pos = columns.iter()
+            .position(|c| matches!(c, Column::User | Column::Group | Column::Timestamp(_) | Column::VcsStatus))
+            .unwrap_or(columns.len());
+        columns.insert(pos, Column::FileSize);
+    }
+    #[cfg(unix)]
+    if matches.has(flags::SHOW_USER) && !columns.contains(&Column::User) {
+        let pos = columns.iter()
+            .position(|c| matches!(c, Column::Group | Column::Timestamp(_) | Column::VcsStatus))
+            .unwrap_or(columns.len());
+        columns.insert(pos, Column::User);
+    }
+
+    columns
+}
+
+/// Find the position to insert a timestamp column — after existing
+/// timestamps but before VcsStatus.
+fn timestamp_insert_pos(columns: &[Column]) -> usize {
+    // After the last existing timestamp, or before VcsStatus, or at end.
+    let last_ts = columns.iter().rposition(|c| matches!(c, Column::Timestamp(_)));
+    if let Some(pos) = last_ts {
+        return pos + 1;
+    }
+    columns.iter()
+        .position(|c| *c == Column::VcsStatus)
+        .unwrap_or(columns.len())
 }
 
 
@@ -264,53 +379,8 @@ impl UserFormat {
 }
 
 
-impl TimeTypes {
-
-    /// Determine which of a file's time fields should be displayed for it
-    /// based on the user's options.
-    ///
-    /// There are two separate ways to pick which fields to show: with a
-    /// flag (such as `--modified`) or with a parameter (such as
-    /// `--time=modified`). An error is signalled if both ways are used.
-    ///
-    /// It's valid to show more than one column by passing in more than one
-    /// option, but passing *no* options means that the user just wants to
-    /// see the default set.
-    fn deduce(matches: &MatchedFlags, long_count: u8) -> Result<Self, OptionsError> {
-        let modified = matches.has(flags::MODIFIED);
-        let changed  = matches.has(flags::CHANGED);
-        let accessed = matches.has(flags::ACCESSED);
-        let created  = matches.has(flags::CREATED);
-
-        let no_time = matches.has(flags::NO_TIME);
-
-        // Clap validates --time values and enforces conflicts with
-        // --modified/--changed/--accessed/--created.
-        let time_types = if no_time {
-            Self { modified: false, changed: false, accessed: false, created: false }
-        } else if let Some(word) = matches.get(flags::TIME) {
-            match word {
-                "mod" | "modified" => Self { modified: true,  changed: false, accessed: false, created: false },
-                "ch"  | "changed"  => Self { modified: false, changed: true,  accessed: false, created: false },
-                "acc" | "accessed" => Self { modified: false, changed: false, accessed: true,  created: false },
-                "cr"  | "created"  => Self { modified: false, changed: false, accessed: false, created: true  },
-                _ => unreachable!("Clap rejects invalid --time values"),
-            }
-        }
-        else if modified || changed || accessed || created {
-            Self { modified, changed, accessed, created }
-        }
-        else if long_count >= 3 {
-            // -lll: show all timestamp columns
-            Self { modified: true, changed: true, accessed: true, created: true }
-        }
-        else {
-            Self::default()
-        };
-
-        Ok(time_types)
-    }
-}
+// TimeTypes::deduce() has been replaced by deduce_columns() above,
+// which builds timestamps directly into the Vec<Column>.
 
 
 #[cfg(test)]
@@ -325,15 +395,6 @@ mod test {
             #[test]
             fn $name() {
                 for result in parse_for_test($inputs.as_ref(), |mf| $type::deduce(mf)) {
-                    assert_eq!(result, $result);
-                }
-            }
-        };
-
-        ($name:ident: $type:ident <- $inputs:expr, long_count $count:expr; $result:expr) => {
-            #[test]
-            fn $name() {
-                for result in parse_for_test($inputs.as_ref(), |mf| $type::deduce(mf, $count)) {
                     assert_eq!(result, $result);
                 }
             }
@@ -407,50 +468,103 @@ mod test {
     }
 
 
-    mod time_types {
-        use super::*;
+    mod columns {
+        use crate::options::test::parse_for_test;
+        use crate::output::table::{Column, TimeType};
+        use super::deduce_columns;
 
-        // Default behaviour (tier 1)
-        test!(empty:     TimeTypes <- [], long_count 1;        Ok(TimeTypes::default()));
+        /// Helper: parse flags and return the timestamp columns present.
+        fn timestamps(inputs: &[&str], long_count: u8) -> Vec<Column> {
+            parse_for_test(inputs, |mf| deduce_columns(mf, long_count))
+                .into_iter().next().unwrap()
+                .into_iter()
+                .filter(|c| matches!(c, Column::Timestamp(_)))
+                .collect()
+        }
 
-        // Modified
-        test!(modified:  TimeTypes <- ["--modified"], long_count 1;  Ok(TimeTypes { modified: true,  changed: false, accessed: false, created: false }));
-        test!(m:         TimeTypes <- ["-m"], long_count 1;          Ok(TimeTypes { modified: true,  changed: false, accessed: false, created: false }));
-        test!(time_mod:  TimeTypes <- ["--time=modified"], long_count 1;  Ok(TimeTypes { modified: true,  changed: false, accessed: false, created: false }));
-        test!(t_m:       TimeTypes <- ["-tmod"], long_count 1;       Ok(TimeTypes { modified: true,  changed: false, accessed: false, created: false }));
+        #[test]
+        fn default_has_modified() {
+            let ts = timestamps(&[], 1);
+            assert_eq!(ts, vec![Column::Timestamp(TimeType::Modified)]);
+        }
 
-        // Changed
-        #[cfg(target_family = "unix")]
-        test!(changed:   TimeTypes <- ["--changed"], long_count 1;   Ok(TimeTypes { modified: false, changed: true,  accessed: false, created: false }));
-        #[cfg(target_family = "unix")]
-        test!(changed_c: TimeTypes <- ["-c"], long_count 1;          Ok(TimeTypes { modified: false, changed: true,  accessed: false, created: false }));
-        #[cfg(target_family = "unix")]
-        test!(time_ch:   TimeTypes <- ["--time=changed"], long_count 1;  Ok(TimeTypes { modified: false, changed: true,  accessed: false, created: false }));
-        #[cfg(target_family = "unix")]
-        test!(t_ch:    TimeTypes <- ["-t", "ch"], long_count 1;      Ok(TimeTypes { modified: false, changed: true,  accessed: false, created: false }));
+        #[test]
+        fn explicit_modified() {
+            let ts = timestamps(&["--modified"], 1);
+            assert_eq!(ts, vec![Column::Timestamp(TimeType::Modified)]);
+        }
 
-        // Accessed
-        test!(acc:       TimeTypes <- ["--accessed"], long_count 1;  Ok(TimeTypes { modified: false, changed: false, accessed: true,  created: false }));
-        test!(a:         TimeTypes <- ["-u"], long_count 1;          Ok(TimeTypes { modified: false, changed: false, accessed: true,  created: false }));
-        test!(time_acc:  TimeTypes <- ["--time", "accessed"], long_count 1;  Ok(TimeTypes { modified: false, changed: false, accessed: true,  created: false }));
-        test!(time_a:    TimeTypes <- ["-t", "acc"], long_count 1;   Ok(TimeTypes { modified: false, changed: false, accessed: true,  created: false }));
+        #[test]
+        fn explicit_accessed() {
+            let ts = timestamps(&["-u"], 1);
+            assert_eq!(ts, vec![Column::Timestamp(TimeType::Accessed)]);
+        }
 
-        // Created
-        test!(cr:        TimeTypes <- ["--created"], long_count 1;   Ok(TimeTypes { modified: false, changed: false, accessed: false, created: true  }));
-        test!(c:         TimeTypes <- ["-U"], long_count 1;          Ok(TimeTypes { modified: false, changed: false, accessed: false, created: true  }));
-        test!(time_cr:   TimeTypes <- ["--time=created"], long_count 1;  Ok(TimeTypes { modified: false, changed: false, accessed: false, created: true  }));
-        test!(t_cr:      TimeTypes <- ["-tcr"], long_count 1;        Ok(TimeTypes { modified: false, changed: false, accessed: false, created: true  }));
+        #[test]
+        fn explicit_created() {
+            let ts = timestamps(&["-U"], 1);
+            assert_eq!(ts, vec![Column::Timestamp(TimeType::Created)]);
+        }
 
-        // Multiples
-        test!(time_uu:   TimeTypes <- ["-u", "--modified"], long_count 1;  Ok(TimeTypes { modified: true,  changed: false, accessed: true,  created: false }));
+        #[test]
+        fn time_param_modified() {
+            let ts = timestamps(&["--time=modified"], 1);
+            assert_eq!(ts, vec![Column::Timestamp(TimeType::Modified)]);
+        }
 
-        // Tier 3 (-lll): all timestamps
-        test!(tier3_all: TimeTypes <- [], long_count 3;        Ok(TimeTypes { modified: true,  changed: true,  accessed: true,  created: true  }));
+        #[test]
+        fn time_param_accessed() {
+            let ts = timestamps(&["-t", "acc"], 1);
+            assert_eq!(ts, vec![Column::Timestamp(TimeType::Accessed)]);
+        }
 
-        // Explicit flags override tier 3
-        test!(tier3_explicit: TimeTypes <- ["--no-time"], long_count 3;  Ok(TimeTypes { modified: false, changed: false, accessed: false, created: false }));
+        #[test]
+        fn multiple_timestamps() {
+            let ts = timestamps(&["-u", "--modified"], 1);
+            assert!(ts.contains(&Column::Timestamp(TimeType::Modified)));
+            assert!(ts.contains(&Column::Timestamp(TimeType::Accessed)));
+        }
 
-        // Errors — Clap rejects invalid values at parse time
+        #[test]
+        fn tier3_all_timestamps() {
+            let ts = timestamps(&[], 3);
+            assert_eq!(ts.len(), 4);
+            assert!(ts.contains(&Column::Timestamp(TimeType::Modified)));
+            assert!(ts.contains(&Column::Timestamp(TimeType::Changed)));
+            assert!(ts.contains(&Column::Timestamp(TimeType::Accessed)));
+            assert!(ts.contains(&Column::Timestamp(TimeType::Created)));
+        }
+
+        #[test]
+        fn no_time_suppresses_all() {
+            let ts = timestamps(&["--no-time"], 3);
+            assert!(ts.is_empty());
+        }
+
+        #[test]
+        fn tier2_has_vcs_and_group() {
+            let cols: Vec<Column> = parse_for_test(&[], |mf| deduce_columns(mf, 2))
+                .into_iter().next().unwrap();
+            assert!(cols.contains(&Column::VcsStatus));
+            assert!(cols.contains(&Column::Group));
+        }
+
+        #[test]
+        fn tier3_has_links_and_blocks() {
+            let cols: Vec<Column> = parse_for_test(&[], |mf| deduce_columns(mf, 3))
+                .into_iter().next().unwrap();
+            assert!(cols.contains(&Column::HardLinks));
+            assert!(cols.contains(&Column::Blocks));
+        }
+
+        #[test]
+        fn no_group_suppresses() {
+            let cols: Vec<Column> = parse_for_test(&["--no-group"], |mf| deduce_columns(mf, 2))
+                .into_iter().next().unwrap();
+            assert!(!cols.contains(&Column::Group));
+        }
+
+        // Clap rejects invalid --time values
         #[test]
         fn time_tea() {
             let cmd = crate::options::parser::build_command();
@@ -461,9 +575,6 @@ mod test {
             let cmd = crate::options::parser::build_command();
             assert!(cmd.try_get_matches_from(["lx", "-tea"]).is_err());
         }
-
-        // Overriding
-        test!(overridden:   TimeTypes <- ["-tcr", "-tmod"], long_count 1;  Ok(TimeTypes { modified: true,  changed: false, accessed: false, created: false }));
     }
 
 
