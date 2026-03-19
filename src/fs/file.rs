@@ -359,6 +359,47 @@ impl<'dir> File<'dir> {
         }
     }
 
+    /// The total size of this file or directory.  For regular files, this
+    /// is the same as `size()`.  For directories, it recursively sums the
+    /// sizes of all contents.
+    pub fn total_size(&self) -> f::Size {
+        if self.is_directory() {
+            f::Size::Some(Self::dir_total_size(&self.path))
+        } else {
+            self.size()
+        }
+    }
+
+    /// Recursively sum file sizes in a directory.
+    fn dir_total_size(path: &std::path::Path) -> u64 {
+        let mut total = 0u64;
+
+        let entries = match std::fs::read_dir(path) {
+            Ok(e) => e,
+            Err(_) => return 0,
+        };
+
+        for entry in entries {
+            let entry = match entry {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
+
+            let metadata = match entry.metadata() {
+                Ok(m) => m,
+                Err(_) => continue,
+            };
+
+            if metadata.is_dir() {
+                total += Self::dir_total_size(&entry.path());
+            } else {
+                total += metadata.len();
+            }
+        }
+
+        total
+    }
+
     /// This file’s last modified timestamp, if available on this platform.
     pub fn modified_time(&self) -> Option<SystemTime> {
         self.metadata.modified().ok()

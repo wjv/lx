@@ -32,6 +32,9 @@ pub struct FileFilter {
     /// The metadata field to sort by.
     pub sort_field: SortField,
 
+    /// When true, sort by total (recursive) size instead of file size.
+    pub sort_by_total_size: bool,
+
     /// Whether to reverse the sorting order. This would sort the largest
     /// files first, or files starting with Z, or the most-recently-changed
     /// ones, depending on the sort field.
@@ -98,9 +101,19 @@ impl FileFilter {
     pub fn sort_files<'a, F>(&self, files: &mut [F])
     where F: AsRef<File<'a>>
     {
-        files.sort_by(|a, b| {
-            self.sort_field.compare_files(a.as_ref(), b.as_ref())
-        });
+        if self.sort_by_total_size && self.sort_field == SortField::Size {
+            // When --total-size is active, sort by recursive dir size.
+            use crate::fs::fields::Size;
+            files.sort_by(|a, b| {
+                let sa = match a.as_ref().total_size() { Size::Some(s) => s, _ => 0 };
+                let sb = match b.as_ref().total_size() { Size::Some(s) => s, _ => 0 };
+                sa.cmp(&sb)
+            });
+        } else {
+            files.sort_by(|a, b| {
+                self.sort_field.compare_files(a.as_ref(), b.as_ref())
+            });
+        }
 
         if self.reverse {
             files.reverse();

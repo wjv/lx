@@ -42,6 +42,7 @@ pub enum Column {
     HardLinks,
     #[cfg(unix)]
     Inode,
+    TotalSize,
     VcsStatus,
     #[cfg(unix)]
     Octal,
@@ -67,6 +68,7 @@ impl Column {
             Self::HardLinks         => "links",
             #[cfg(unix)]
             Self::Inode             => "inode",
+            Self::TotalSize         => "totalsize",
             Self::VcsStatus         => "vcs",
             #[cfg(unix)]
             Self::Octal             => "octal",
@@ -93,6 +95,7 @@ impl Column {
             "links"                 => Some(Self::HardLinks),
             #[cfg(unix)]
             "inode"                 => Some(Self::Inode),
+            "totalsize" | "total-size" => Some(Self::TotalSize),
             "vcs"                   => Some(Self::VcsStatus),
             #[cfg(unix)]
             "octal"                 => Some(Self::Octal),
@@ -116,6 +119,7 @@ impl Column {
     pub fn alignment(self) -> Alignment {
         match self {
             Self::FileSize   |
+            Self::TotalSize  |
             Self::HardLinks  |
             Self::Inode      |
             Self::Blocks     |
@@ -128,6 +132,7 @@ impl Column {
     pub fn alignment(&self) -> Alignment {
         match self {
             Self::FileSize   |
+            Self::TotalSize  |
             Self::VcsStatus  => Alignment::Right,
             _                => Alignment::Left,
         }
@@ -153,6 +158,7 @@ impl Column {
             Self::HardLinks     => "Links",
             #[cfg(unix)]
             Self::Inode         => "inode",
+            Self::TotalSize     => "Total Size",
             Self::VcsStatus     => "VCS",
             #[cfg(unix)]
             Self::Octal         => "Octal",
@@ -346,6 +352,9 @@ impl<'a, 'f> Table<'a> {
             }
             Column::FileSize => {
                 file.size().render(self.theme, self.size_format, &self.env.numeric)
+            }
+            Column::TotalSize => {
+                file.total_size().render(self.theme, self.size_format, &self.env.numeric)
             }
             #[cfg(unix)]
             Column::HardLinks => {

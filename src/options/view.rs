@@ -284,6 +284,7 @@ fn apply_individual_adds(matches: &MatchedFlags, columns: &mut Vec<Column>) {
         (matches.has(flags::BLOCKS),     Column::Blocks),
         (matches.has(flags::GROUP),      Column::Group),
         (matches.has(flags::OCTAL),      Column::Octal),
+        (matches.has(flags::TOTAL_SIZE), Column::TotalSize),
         (matches.has(flags::GIT) || matches.has(flags::VCS_STATUS), Column::VcsStatus),
     ];
 

@@ -61,6 +61,8 @@ pub const NO_GROUP: &str = "no-group";
 pub const NO_LINKS: &str = "no-links";
 pub const NO_BLOCKS: &str = "no-blocks";
 
+pub const TOTAL_SIZE: &str = "total-size";
+
 // column / format / personality selection
 pub const COLUMNS: &str = "columns";
 pub const FORMAT: &str = "format";
