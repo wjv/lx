@@ -378,6 +378,23 @@ Environment variables:\n  \
             .help("Suppress the blocks field")
             .action(ArgAction::Count))
 
+        // ── Column / format selection ─────────────────────────
+
+        .arg(Arg::new(flags::COLUMNS)
+            .long("columns")
+            .help("Comma-separated list of columns to display [perms, size, user, group, links, inode, blocks, octal, modified, changed, accessed, created, vcs]")
+            .action(ArgAction::Set)
+            .value_name("COLS"))
+        .arg(Arg::new(flags::FORMAT)
+            .long("format")
+            .help("Named column format")
+            .action(ArgAction::Set)
+            .value_name("NAME")
+            .value_parser(crate::options::view::format_names()
+                .into_iter()
+                .map(PossibleValue::new)
+                .collect::<Vec<_>>()))
+
         // ── VCS integration ────────────────────────────────────
 
         .arg(Arg::new(flags::VCS)

@@ -28,7 +28,9 @@ impl Mode {
     /// priority over grid when both are present.
     pub fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
         let long_count = matches.count(flags::LONG);
-        let long    = long_count > 0;
+        let has_columns = matches.get(flags::COLUMNS).is_some()
+            || matches.get(flags::FORMAT).is_some();
+        let long    = long_count > 0 || has_columns;
         let tree    = matches.has(flags::TREE);
         let grid    = matches.has(flags::GRID);
         let oneline = matches.has(flags::ONE_LINE);
@@ -199,10 +201,39 @@ pub fn format_names() -> Vec<&'static str> {
 }
 
 
-/// Build the column list from the -l tier, individual flags, and
-/// positive/negative overrides.
+/// Build the column list from --columns, --format, the -l tier,
+/// individual flags, and positive/negative overrides.
+///
+/// Precedence: --columns > --format > -l tier > individual flags.
 fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Vec<Column> {
-    // Start with the base column set from the -l tier.
+    // --columns: explicit comma-separated column list.
+    if let Some(cols_str) = matches.get(flags::COLUMNS) {
+        let mut columns = Vec::new();
+        for name in cols_str.split(',') {
+            let name = name.trim();
+            if let Some(col) = Column::from_name(name) {
+                if !columns.contains(&col) {
+                    columns.push(col);
+                }
+            }
+            // Unknown names are silently ignored (could warn in future).
+        }
+        // Suppression flags still apply on top of --columns.
+        apply_suppressions(matches, &mut columns);
+        return columns;
+    }
+
+    // --format: named column set.
+    if let Some(fmt_name) = matches.get(flags::FORMAT) {
+        if let Some(cols) = format_columns(fmt_name) {
+            let mut columns = cols;
+            apply_individual_adds(matches, &mut columns);
+            apply_suppressions(matches, &mut columns);
+            return columns;
+        }
+    }
+
+    // -l tier: compiled-in format.
     let tier_name = match long_count {
         0 | 1 => "long",
         2     => "long2",
@@ -211,7 +242,17 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Vec<Column> {
     let mut columns = format_columns(tier_name)
         .expect("compiled-in format always exists");
 
-    // Individual positive flags: add if not already present.
+    apply_individual_adds(matches, &mut columns);
+    apply_timestamp_overrides(matches, &mut columns);
+    apply_suppressions(matches, &mut columns);
+
+    columns
+}
+
+
+/// Add columns requested by individual flags (-i, -g, -H, -S, etc.)
+/// if not already present.
+fn apply_individual_adds(matches: &MatchedFlags, columns: &mut Vec<Column>) {
     let adds: &[(bool, Column)] = &[
         (matches.has(flags::INODE),      Column::Inode),
         (matches.has(flags::LINKS),      Column::HardLinks),
@@ -223,40 +264,44 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Vec<Column> {
 
     for &(enabled, col) in adds {
         if enabled && !columns.contains(&col) {
-            // Insert before VcsStatus if present, else at end.
             let pos = columns.iter()
                 .position(|c| *c == Column::VcsStatus)
                 .unwrap_or(columns.len());
             columns.insert(pos, col);
         }
     }
+}
 
-    // Timestamp flags: if any explicit timestamp flags are given,
-    // they override the tier's timestamp set.
+
+/// If explicit timestamp flags are given, override the base timestamp set.
+fn apply_timestamp_overrides(matches: &MatchedFlags, columns: &mut Vec<Column>) {
     let has_explicit_time = matches.has(flags::MODIFIED) || matches.has(flags::CHANGED)
         || matches.has(flags::ACCESSED) || matches.has(flags::CREATED)
         || matches.get(flags::TIME).is_some();
 
-    if has_explicit_time {
-        // Remove all existing timestamps.
-        columns.retain(|c| !matches!(c, Column::Timestamp(_)));
-
-        // Add the explicitly requested ones.
-        if matches.has(flags::MODIFIED) || matches.get(flags::TIME).is_some_and(|v| v == "modified" || v == "mod") {
-            columns.insert(timestamp_insert_pos(&columns), Column::Timestamp(TimeType::Modified));
-        }
-        if matches.has(flags::CHANGED) || matches.get(flags::TIME).is_some_and(|v| v == "changed" || v == "ch") {
-            columns.insert(timestamp_insert_pos(&columns), Column::Timestamp(TimeType::Changed));
-        }
-        if matches.has(flags::ACCESSED) || matches.get(flags::TIME).is_some_and(|v| v == "accessed" || v == "acc") {
-            columns.insert(timestamp_insert_pos(&columns), Column::Timestamp(TimeType::Accessed));
-        }
-        if matches.has(flags::CREATED) || matches.get(flags::TIME).is_some_and(|v| v == "created" || v == "cr") {
-            columns.insert(timestamp_insert_pos(&columns), Column::Timestamp(TimeType::Created));
-        }
+    if !has_explicit_time {
+        return;
     }
 
-    // Suppression flags: remove columns.
+    columns.retain(|c| !matches!(c, Column::Timestamp(_)));
+
+    if matches.has(flags::MODIFIED) || matches.get(flags::TIME).is_some_and(|v| v == "modified" || v == "mod") {
+        columns.insert(timestamp_insert_pos(columns), Column::Timestamp(TimeType::Modified));
+    }
+    if matches.has(flags::CHANGED) || matches.get(flags::TIME).is_some_and(|v| v == "changed" || v == "ch") {
+        columns.insert(timestamp_insert_pos(columns), Column::Timestamp(TimeType::Changed));
+    }
+    if matches.has(flags::ACCESSED) || matches.get(flags::TIME).is_some_and(|v| v == "accessed" || v == "acc") {
+        columns.insert(timestamp_insert_pos(columns), Column::Timestamp(TimeType::Accessed));
+    }
+    if matches.has(flags::CREATED) || matches.get(flags::TIME).is_some_and(|v| v == "created" || v == "cr") {
+        columns.insert(timestamp_insert_pos(columns), Column::Timestamp(TimeType::Created));
+    }
+}
+
+
+/// Apply --no-* suppression flags and --show-* re-enable flags.
+fn apply_suppressions(matches: &MatchedFlags, columns: &mut Vec<Column>) {
     if matches.has(flags::NO_PERMISSIONS) && !matches.has(flags::SHOW_PERMISSIONS) {
         columns.retain(|c| *c != Column::Permissions);
     }
@@ -279,13 +324,11 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Vec<Column> {
     #[cfg(unix)]
     if matches.has(flags::NO_BLOCKS) { columns.retain(|c| *c != Column::Blocks); }
 
-    // Re-enable flags (override --no-* via Clap's overrides_with,
-    // but also work as explicit adds on a personality).
+    // Re-enable flags
     if matches.has(flags::SHOW_PERMISSIONS) && !columns.contains(&Column::Permissions) {
         columns.insert(0, Column::Permissions);
     }
     if matches.has(flags::SHOW_FILESIZE) && !columns.contains(&Column::FileSize) {
-        // After permissions, before user.
         let pos = columns.iter()
             .position(|c| matches!(c, Column::User | Column::Group | Column::Timestamp(_) | Column::VcsStatus))
             .unwrap_or(columns.len());
@@ -298,8 +341,6 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Vec<Column> {
             .unwrap_or(columns.len());
         columns.insert(pos, Column::User);
     }
-
-    columns
 }
 
 /// Find the position to insert a timestamp column — after existing
