@@ -77,9 +77,27 @@ fn main() {
         args.extend(cfg.defaults.to_args());
     }
 
-    // Layer 2: personality (if --personality/-p is in the CLI args).
-    // We scan the raw args pre-Clap to find the personality name.
-    if let Some(personality_name) = find_personality_arg(&cli_args) {
+    // Layer 2: personality.
+    // Explicit --personality/-p takes priority; if absent, check argv[0].
+    let explicit_personality = find_personality_arg(&cli_args);
+    let personality_name = explicit_personality.or_else(|| {
+        let argv0 = env::args().next()?;
+        let bin_name = std::path::Path::new(&argv0)
+            .file_name()?
+            .to_string_lossy()
+            .to_string();
+        // Only dispatch if the name isn't "lx" (the canonical binary).
+        if bin_name == "lx" {
+            None
+        } else if config::resolve_personality(&bin_name).is_some() {
+            debug!("argv[0] dispatch: {bin_name}");
+            Some(bin_name)
+        } else {
+            None
+        }
+    });
+
+    if let Some(ref personality_name) = personality_name {
         if let Some(personality) = config::resolve_personality(&personality_name) {
             // Inject the personality's format/columns as a synthetic --format arg.
             if let Some(ref cols) = personality.columns {
