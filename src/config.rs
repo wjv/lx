@@ -43,6 +43,33 @@ pub struct Defaults {
     pub classify: Option<String>,
 }
 
+impl Defaults {
+    /// Convert defaults into CLI args that can be prepended before
+    /// the real arguments.  Clap's `args_override_self` ensures that
+    /// any explicit CLI flag overrides these.
+    pub fn to_args(&self) -> Vec<std::ffi::OsString> {
+        let mut args = Vec::new();
+
+        if let Some(ref v) = self.colour {
+            args.push(format!("--colour={v}").into());
+        }
+        if let Some(ref v) = self.time_style {
+            args.push(format!("--time-style={v}").into());
+        }
+        if let Some(ref v) = self.group_dirs {
+            args.push(format!("--group-dirs={v}").into());
+        }
+        if let Some(ref v) = self.icons {
+            args.push(format!("--icons={v}").into());
+        }
+        // classify is long-form only, no ArgAction::Set currently —
+        // defer until =WHEN vocabulary is standardised (#11)
+
+        args
+    }
+}
+
+
 /// A named column layout.
 #[derive(Debug, Deserialize)]
 pub struct FormatDef {

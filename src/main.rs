@@ -64,7 +64,17 @@ fn main() {
         warn!("Failed to enable ANSI support: {}", e);
     }
 
-    let args: Vec<_> = env::args_os().skip(1).collect();
+    let config = config::load_config();
+
+    // Build the arg list: config defaults first, then real CLI args.
+    // Clap's args_override_self means CLI flags win over config defaults.
+    let cli_args: Vec<_> = env::args_os().skip(1).collect();
+    let mut args = Vec::new();
+    if let Some(ref cfg) = config {
+        args.extend(cfg.defaults.to_args());
+    }
+    args.extend(cli_args);
+
     match Options::parse(&args, &LiveVars) {
         OptionsResult::Ok(options, mut input_paths) => {
 
