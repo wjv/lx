@@ -26,13 +26,9 @@ test:
 lint:
     cargo clippy
 
-# Install locally (debug)
+# Install locally
 install:
     cargo install --path .
-
-# Install locally (release)
-install-release:
-    cargo install --path . --release
 
 # Generate shell completions
 completions:
@@ -42,13 +38,13 @@ completions:
     cargo run -- --completions fish > completions/lx.fish
     @echo "Generated completions/"
 
-# Create personality symlinks in ~/bin
+# Create personality symlinks in ~/.local/bin
 symlinks:
-    @mkdir -p ~/bin
+    @mkdir -p ~/local/bin
     @for name in ll lll la tree ls; do \
-        ln -sf $$(which lx) ~/bin/$$name 2>/dev/null || true; \
+        ln -sf $$(which lx) ~/.local/bin/$$name 2>/dev/null || true; \
     done
-    @echo "Created symlinks in ~/bin: ll lll la tree ls"
+    @echo "Created symlinks in ~/.local/bin: ll lll la tree ls"
 
 # Generate default config file
 init-config:

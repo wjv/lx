@@ -1,8 +1,9 @@
 # Rust
-target
+/target
 
 # Generated files
-man/lx.1
+/man/lx.1
+/completions
 
 # Editor backups
 *~
