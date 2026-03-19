@@ -16,17 +16,35 @@ impl Options {
 
 impl Classify {
     fn deduce(matches: &MatchedFlags) -> Self {
-        if matches.has(flags::CLASSIFY) { Self::AddFileIndicators }
-                                   else { Self::JustFilenames }
+        match matches.get(flags::CLASSIFY) {
+            Some("always")  => Self::AddFileIndicators,
+            Some("auto")    => Self::AddFileIndicators,  // TODO: check TTY
+            Some("never")   => Self::JustFilenames,
+            _               => Self::JustFilenames,
+        }
     }
 }
 
 impl ShowIcons {
     pub fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
-        if matches.has(flags::NO_ICONS) || !matches.has(flags::ICONS) {
-            Ok(Self::Off)
+        // --no-icons always wins.
+        if matches.has(flags::NO_ICONS) {
+            return Ok(Self::Off);
         }
-        else if let Some(columns) = vars.get(vars::LX_ICON_SPACING).and_then(|s| s.into_string().ok()) {
+
+        // Check --icons=WHEN value.
+        let show = match matches.get(flags::ICONS) {
+            Some("always")  => true,
+            Some("auto")    => true,   // TODO: check TTY
+            Some("never")   => false,
+            _               => false,  // absent = off
+        };
+
+        if !show {
+            return Ok(Self::Off);
+        }
+
+        if let Some(columns) = vars.get(vars::LX_ICON_SPACING).and_then(|s| s.into_string().ok()) {
             match columns.parse() {
                 Ok(width) => {
                     Ok(Self::On(width))

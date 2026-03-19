@@ -151,8 +151,17 @@ Environment variables:\n  \
             .action(ArgAction::Count))
         .arg(Arg::new(flags::CLASSIFY)
             .long("classify")
-            .help("Display file kind indicators next to file names")
-            .action(ArgAction::Count))
+            .help("Display file kind indicators")
+            .action(ArgAction::Set)
+            .value_name("WHEN")
+            .value_parser([
+                PossibleValue::new("always"),
+                PossibleValue::new("auto"),
+                PossibleValue::new("never"),
+            ])
+            .num_args(0..=1)
+            .require_equals(true)
+            .default_missing_value("auto"))
 
         // ── Colour ──────────────────────────────────────────────
 
@@ -259,7 +268,16 @@ Environment variables:\n  \
         .arg(Arg::new(flags::ICONS)
             .long("icons")
             .help("Display icons next to file names")
-            .action(ArgAction::Count))
+            .action(ArgAction::Set)
+            .value_name("WHEN")
+            .value_parser([
+                PossibleValue::new("always"),
+                PossibleValue::new("auto"),
+                PossibleValue::new("never"),
+            ])
+            .num_args(0..=1)
+            .require_equals(true)
+            .default_missing_value("auto"))
         .arg(Arg::new(flags::INODE)
             .short('i').long("inode")
             .help("List each file's inode number")
@@ -359,7 +377,7 @@ Environment variables:\n  \
             .action(ArgAction::Count))
         .arg(Arg::new(flags::NO_ICONS)
             .long("no-icons")
-            .help("Don't display icons (overrides --icons)")
+            .help("Don't display icons (alias for --icons=never)")
             .action(ArgAction::Count))
         .arg(Arg::new(flags::NO_INODE)
             .long("no-inode")
