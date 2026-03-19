@@ -223,33 +223,6 @@ impl TimeType {
 }
 
 
-/// Fields for which of a file’s time fields should be displayed in the
-/// columns output.
-///
-/// There should always be at least one of these — there’s no way to disable
-/// the time columns entirely (yet).
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
-#[allow(clippy::struct_excessive_bools)]
-pub struct TimeTypes {
-    pub modified: bool,
-    pub changed:  bool,
-    pub accessed: bool,
-    pub created:  bool,
-}
-
-impl Default for TimeTypes {
-
-    /// By default, display just the ‘modified’ time. This is the most
-    /// common option, which is why it has this shorthand.
-    fn default() -> Self {
-        Self {
-            modified: true,
-            changed:  false,
-            accessed: false,
-            created:  false,
-        }
-    }
-}
 
 
 /// The **environment** struct contains any data that could change between

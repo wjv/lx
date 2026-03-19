@@ -14,7 +14,7 @@ fn help_flag() {
         .arg("--help")
         .assert()
         .success()
-        .stdout(predicate::str::contains("list extended"));
+        .stdout(predicate::str::contains("List eXtended"));
 }
 
 #[test]

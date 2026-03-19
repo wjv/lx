@@ -175,13 +175,17 @@ fn vcs_cache(options: &Options, args: &[OsString]) -> Option<Box<dyn VcsCache>> 
         }
 
         VcsBackend::Jj => {
-            JjCache::discover(&paths).map(|c| Box::new(c) as Box<dyn VcsCache>)
+            JjCache::discover(&paths).map(|c| {
+                let b: Box<dyn VcsCache> = Box::new(c);
+                b
+            })
         }
 
         VcsBackend::Auto => {
             // Prefer jj if a workspace is detected, fall back to git.
             if let Some(jj) = JjCache::discover(&paths) {
-                Some(Box::new(jj) as Box<dyn VcsCache>)
+                let b: Box<dyn VcsCache> = Box::new(jj);
+                Some(b)
             } else {
                 let cache: GitCache = paths.into_iter().collect();
                 Some(Box::new(cache))
