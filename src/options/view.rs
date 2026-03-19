@@ -27,19 +27,20 @@ impl Mode {
     /// relationships — it combines with long or stands alone, and takes
     /// priority over grid when both are present.
     pub fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
-        let long    = matches.has(flags::LONG);
+        let long_count = matches.count(flags::LONG);
+        let long    = long_count > 0;
         let tree    = matches.has(flags::TREE);
         let grid    = matches.has(flags::GRID);
         let oneline = matches.has(flags::ONE_LINE);
 
         // Tree takes priority over grid when combined with long.
         if long && tree {
-            let details = details::Options::deduce_long(matches, vars)?;
+            let details = details::Options::deduce_long(matches, vars, long_count)?;
             return Ok(Self::Details(details));
         }
 
         if long && grid {
-            let details = details::Options::deduce_long(matches, vars)?;
+            let details = details::Options::deduce_long(matches, vars, long_count)?;
             let grid = grid::Options::deduce(matches);
             let row_threshold = RowThreshold::deduce(vars)?;
             let grid_details = grid_details::Options { grid, details, row_threshold };
@@ -47,7 +48,7 @@ impl Mode {
         }
 
         if long {
-            let details = details::Options::deduce_long(matches, vars)?;
+            let details = details::Options::deduce_long(matches, vars, long_count)?;
             return Ok(Self::Details(details));
         }
 
@@ -85,10 +86,10 @@ impl details::Options {
         }
     }
 
-    fn deduce_long<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
+    fn deduce_long<V: Vars>(matches: &MatchedFlags, vars: &V, long_count: u8) -> Result<Self, OptionsError> {
         Ok(Self {
-            table: Some(TableOptions::deduce(matches, vars)?),
-            header: matches.has(flags::HEADER),
+            table: Some(TableOptions::deduce(matches, vars, long_count)?),
+            header: matches.has(flags::HEADER) || long_count >= 3,
             xattr: xattr::ENABLED && matches.has(flags::EXTENDED),
         })
     }
@@ -140,27 +141,43 @@ impl RowThreshold {
 
 
 impl TableOptions {
-    fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
+    fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V, long_count: u8) -> Result<Self, OptionsError> {
         let time_format = TimeFormat::deduce(matches, vars)?;
         let size_format = SizeFormat::deduce(matches);
         let user_format = UserFormat::deduce(matches);
-        let columns = Columns::deduce(matches)?;
+        let columns = Columns::deduce(matches, long_count)?;
         Ok(Self { size_format, time_format, user_format, columns })
     }
 }
 
 
 impl Columns {
-    fn deduce(matches: &MatchedFlags) -> Result<Self, OptionsError> {
-        let time_types = TimeTypes::deduce(matches)?;
-        let vcs = matches.has(flags::GIT) || matches.has(flags::VCS_STATUS);
+    fn deduce(matches: &MatchedFlags, long_count: u8) -> Result<Self, OptionsError> {
+        let time_types = TimeTypes::deduce(matches, long_count)?;
 
-        let blocks = matches.has(flags::BLOCKS);
-        let group  = matches.has(flags::GROUP);
-        let inode  = matches.has(flags::INODE);
-        let links  = matches.has(flags::LINKS);
-        let octal  = matches.has(flags::OCTAL);
+        // Tier 1 (-l): base columns from individual flags
+        let mut vcs    = matches.has(flags::GIT) || matches.has(flags::VCS_STATUS);
+        let mut blocks = matches.has(flags::BLOCKS);
+        let mut group  = matches.has(flags::GROUP);
+        let     inode  = matches.has(flags::INODE);
+        let mut links  = matches.has(flags::LINKS);
+        let     octal  = matches.has(flags::OCTAL);
 
+        // Tier 2 (-ll): add group and VCS status
+        if long_count >= 2 {
+            group = true;
+            vcs = true;
+        }
+
+        // Tier 3 (-lll): add links and blocks
+        // (header and all-timestamps are handled in deduce_long and
+        // TimeTypes::deduce respectively — the caller passes the count)
+        if long_count >= 3 {
+            links = true;
+            blocks = true;
+        }
+
+        // Suppression flags always win, regardless of tier
         let permissions = ! matches.has(flags::NO_PERMISSIONS);
         let filesize =    ! matches.has(flags::NO_FILESIZE);
         let user =        ! matches.has(flags::NO_USER);
@@ -245,7 +262,7 @@ impl TimeTypes {
     /// It's valid to show more than one column by passing in more than one
     /// option, but passing *no* options means that the user just wants to
     /// see the default set.
-    fn deduce(matches: &MatchedFlags) -> Result<Self, OptionsError> {
+    fn deduce(matches: &MatchedFlags, long_count: u8) -> Result<Self, OptionsError> {
         let modified = matches.has(flags::MODIFIED);
         let changed  = matches.has(flags::CHANGED);
         let accessed = matches.has(flags::ACCESSED);
@@ -269,6 +286,10 @@ impl TimeTypes {
         else if modified || changed || accessed || created {
             Self { modified, changed, accessed, created }
         }
+        else if long_count >= 3 {
+            // -lll: show all timestamp columns
+            Self { modified: true, changed: true, accessed: true, created: true }
+        }
         else {
             Self::default()
         };
@@ -290,6 +311,15 @@ mod test {
             #[test]
             fn $name() {
                 for result in parse_for_test($inputs.as_ref(), |mf| $type::deduce(mf)) {
+                    assert_eq!(result, $result);
+                }
+            }
+        };
+
+        ($name:ident: $type:ident <- $inputs:expr, long_count $count:expr; $result:expr) => {
+            #[test]
+            fn $name() {
+                for result in parse_for_test($inputs.as_ref(), |mf| $type::deduce(mf, $count)) {
                     assert_eq!(result, $result);
                 }
             }
@@ -366,40 +396,45 @@ mod test {
     mod time_types {
         use super::*;
 
-        // Default behaviour
-        test!(empty:     TimeTypes <- [];                      Ok(TimeTypes::default()));
+        // Default behaviour (tier 1)
+        test!(empty:     TimeTypes <- [], long_count 1;        Ok(TimeTypes::default()));
 
         // Modified
-        test!(modified:  TimeTypes <- ["--modified"];          Ok(TimeTypes { modified: true,  changed: false, accessed: false, created: false }));
-        test!(m:         TimeTypes <- ["-m"];                  Ok(TimeTypes { modified: true,  changed: false, accessed: false, created: false }));
-        test!(time_mod:  TimeTypes <- ["--time=modified"];     Ok(TimeTypes { modified: true,  changed: false, accessed: false, created: false }));
-        test!(t_m:       TimeTypes <- ["-tmod"];               Ok(TimeTypes { modified: true,  changed: false, accessed: false, created: false }));
+        test!(modified:  TimeTypes <- ["--modified"], long_count 1;  Ok(TimeTypes { modified: true,  changed: false, accessed: false, created: false }));
+        test!(m:         TimeTypes <- ["-m"], long_count 1;          Ok(TimeTypes { modified: true,  changed: false, accessed: false, created: false }));
+        test!(time_mod:  TimeTypes <- ["--time=modified"], long_count 1;  Ok(TimeTypes { modified: true,  changed: false, accessed: false, created: false }));
+        test!(t_m:       TimeTypes <- ["-tmod"], long_count 1;       Ok(TimeTypes { modified: true,  changed: false, accessed: false, created: false }));
 
         // Changed
         #[cfg(target_family = "unix")]
-        test!(changed:   TimeTypes <- ["--changed"];           Ok(TimeTypes { modified: false, changed: true,  accessed: false, created: false }));
+        test!(changed:   TimeTypes <- ["--changed"], long_count 1;   Ok(TimeTypes { modified: false, changed: true,  accessed: false, created: false }));
         #[cfg(target_family = "unix")]
-        test!(changed_c: TimeTypes <- ["-c"];                  Ok(TimeTypes { modified: false, changed: true,  accessed: false, created: false }));
+        test!(changed_c: TimeTypes <- ["-c"], long_count 1;          Ok(TimeTypes { modified: false, changed: true,  accessed: false, created: false }));
         #[cfg(target_family = "unix")]
-        test!(time_ch:   TimeTypes <- ["--time=changed"];      Ok(TimeTypes { modified: false, changed: true,  accessed: false, created: false }));
+        test!(time_ch:   TimeTypes <- ["--time=changed"], long_count 1;  Ok(TimeTypes { modified: false, changed: true,  accessed: false, created: false }));
         #[cfg(target_family = "unix")]
-        test!(t_ch:    TimeTypes <- ["-t", "ch"];              Ok(TimeTypes { modified: false, changed: true,  accessed: false, created: false }));
+        test!(t_ch:    TimeTypes <- ["-t", "ch"], long_count 1;      Ok(TimeTypes { modified: false, changed: true,  accessed: false, created: false }));
 
         // Accessed
-        test!(acc:       TimeTypes <- ["--accessed"];          Ok(TimeTypes { modified: false, changed: false, accessed: true,  created: false }));
-        test!(a:         TimeTypes <- ["-u"];                  Ok(TimeTypes { modified: false, changed: false, accessed: true,  created: false }));
-        test!(time_acc:  TimeTypes <- ["--time", "accessed"];  Ok(TimeTypes { modified: false, changed: false, accessed: true,  created: false }));
-        test!(time_a:    TimeTypes <- ["-t", "acc"];           Ok(TimeTypes { modified: false, changed: false, accessed: true,  created: false }));
+        test!(acc:       TimeTypes <- ["--accessed"], long_count 1;  Ok(TimeTypes { modified: false, changed: false, accessed: true,  created: false }));
+        test!(a:         TimeTypes <- ["-u"], long_count 1;          Ok(TimeTypes { modified: false, changed: false, accessed: true,  created: false }));
+        test!(time_acc:  TimeTypes <- ["--time", "accessed"], long_count 1;  Ok(TimeTypes { modified: false, changed: false, accessed: true,  created: false }));
+        test!(time_a:    TimeTypes <- ["-t", "acc"], long_count 1;   Ok(TimeTypes { modified: false, changed: false, accessed: true,  created: false }));
 
         // Created
-        test!(cr:        TimeTypes <- ["--created"];           Ok(TimeTypes { modified: false, changed: false, accessed: false, created: true  }));
-        test!(c:         TimeTypes <- ["-U"];                  Ok(TimeTypes { modified: false, changed: false, accessed: false, created: true  }));
-        test!(time_cr:   TimeTypes <- ["--time=created"];      Ok(TimeTypes { modified: false, changed: false, accessed: false, created: true  }));
-        test!(t_cr:      TimeTypes <- ["-tcr"];                Ok(TimeTypes { modified: false, changed: false, accessed: false, created: true  }));
+        test!(cr:        TimeTypes <- ["--created"], long_count 1;   Ok(TimeTypes { modified: false, changed: false, accessed: false, created: true  }));
+        test!(c:         TimeTypes <- ["-U"], long_count 1;          Ok(TimeTypes { modified: false, changed: false, accessed: false, created: true  }));
+        test!(time_cr:   TimeTypes <- ["--time=created"], long_count 1;  Ok(TimeTypes { modified: false, changed: false, accessed: false, created: true  }));
+        test!(t_cr:      TimeTypes <- ["-tcr"], long_count 1;        Ok(TimeTypes { modified: false, changed: false, accessed: false, created: true  }));
 
         // Multiples
-        test!(time_uu:   TimeTypes <- ["-u", "--modified"];    Ok(TimeTypes { modified: true,  changed: false, accessed: true,  created: false }));
+        test!(time_uu:   TimeTypes <- ["-u", "--modified"], long_count 1;  Ok(TimeTypes { modified: true,  changed: false, accessed: true,  created: false }));
 
+        // Tier 3 (-lll): all timestamps
+        test!(tier3_all: TimeTypes <- [], long_count 3;        Ok(TimeTypes { modified: true,  changed: true,  accessed: true,  created: true  }));
+
+        // Explicit flags override tier 3
+        test!(tier3_explicit: TimeTypes <- ["--no-time"], long_count 3;  Ok(TimeTypes { modified: false, changed: false, accessed: false, created: false }));
 
         // Errors — Clap rejects invalid values at parse time
         #[test]
@@ -414,7 +449,7 @@ mod test {
         }
 
         // Overriding
-        test!(overridden:   TimeTypes <- ["-tcr", "-tmod"];    Ok(TimeTypes { modified: true,  changed: false, accessed: false, created: false }));
+        test!(overridden:   TimeTypes <- ["-tcr", "-tmod"], long_count 1;  Ok(TimeTypes { modified: true,  changed: false, accessed: false, created: false }));
     }
 
 
