@@ -115,7 +115,7 @@ impl Columns {
 
 
 /// A table contains these.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Column {
     Permissions,
     FileSize,
@@ -133,6 +133,60 @@ pub enum Column {
     VcsStatus,
     #[cfg(unix)]
     Octal,
+}
+
+impl Column {
+    /// The canonical name used in `--columns` and config files.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Permissions       => "perms",
+            Self::FileSize          => "size",
+            Self::Timestamp(TimeType::Modified) => "modified",
+            Self::Timestamp(TimeType::Changed)  => "changed",
+            Self::Timestamp(TimeType::Accessed) => "accessed",
+            Self::Timestamp(TimeType::Created)  => "created",
+            #[cfg(unix)]
+            Self::Blocks            => "blocks",
+            #[cfg(unix)]
+            Self::User              => "user",
+            #[cfg(unix)]
+            Self::Group             => "group",
+            #[cfg(unix)]
+            Self::HardLinks         => "links",
+            #[cfg(unix)]
+            Self::Inode             => "inode",
+            Self::VcsStatus         => "vcs",
+            #[cfg(unix)]
+            Self::Octal             => "octal",
+        }
+    }
+
+    /// Parse a column name from `--columns` or a config file.
+    /// Returns `None` for unrecognised names.
+    pub fn from_name(s: &str) -> Option<Self> {
+        match s {
+            "perms" | "permissions" => Some(Self::Permissions),
+            "size" | "filesize"     => Some(Self::FileSize),
+            "modified"              => Some(Self::Timestamp(TimeType::Modified)),
+            "changed"               => Some(Self::Timestamp(TimeType::Changed)),
+            "accessed"              => Some(Self::Timestamp(TimeType::Accessed)),
+            "created"               => Some(Self::Timestamp(TimeType::Created)),
+            #[cfg(unix)]
+            "blocks"                => Some(Self::Blocks),
+            #[cfg(unix)]
+            "user"                  => Some(Self::User),
+            #[cfg(unix)]
+            "group"                 => Some(Self::Group),
+            #[cfg(unix)]
+            "links"                 => Some(Self::HardLinks),
+            #[cfg(unix)]
+            "inode"                 => Some(Self::Inode),
+            "vcs"                   => Some(Self::VcsStatus),
+            #[cfg(unix)]
+            "octal"                 => Some(Self::Octal),
+            _                       => None,
+        }
+    }
 }
 
 /// Each column can pick its own **Alignment**. Usually, numbers are
