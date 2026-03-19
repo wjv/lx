@@ -150,7 +150,7 @@ Environment variables:\n  \
             .help("Recurse into directories as a tree")
             .action(ArgAction::Count))
         .arg(Arg::new(flags::CLASSIFY)
-            .short('F').long("classify")
+            .long("classify")
             .help("Display file kind indicators next to file names")
             .action(ArgAction::Count))
 
@@ -226,6 +226,10 @@ Environment variables:\n  \
         .arg(Arg::new(flags::ONLY_DIRS)
             .short('D').long("only-dirs")
             .help("List only directories, not files")
+            .action(ArgAction::Count))
+        .arg(Arg::new(flags::ONLY_FILES)
+            .short('f').long("only-files")
+            .help("List only regular files, not directories")
             .action(ArgAction::Count))
 
         // ── Long-view detail columns ────────────────────────────

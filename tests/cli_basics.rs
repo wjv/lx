@@ -57,6 +57,15 @@ fn unknown_short_flag() {
 }
 
 #[test]
+fn uppercase_f_no_longer_accepted() {
+    // -F was removed as short form for --classify (freed for -f/--only-files)
+    lx()
+        .arg("-F")
+        .assert()
+        .failure();
+}
+
+#[test]
 fn unknown_long_flag() {
     lx()
         .arg("--ternary")

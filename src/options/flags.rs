@@ -26,6 +26,7 @@ pub const GIT_IGNORE: &str = "git-ignore";
 pub const GROUP_DIRS: &str = "group-dirs";
 pub const DIRS_FIRST: &str = "group-directories-first";
 pub const ONLY_DIRS: &str = "only-dirs";
+pub const ONLY_FILES: &str = "only-files";
 
 // long view options
 pub const BINARY: &str = "binary";

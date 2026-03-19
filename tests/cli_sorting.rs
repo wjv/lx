@@ -217,6 +217,24 @@ fn only_dirs_hides_files() {
 }
 
 
+// ── Only files ────────────────────────────────────────────────────
+
+#[test]
+fn only_files_hides_dirs() {
+    let dir = tempdir().expect("failed to create tempdir");
+    fs::write(dir.path().join("file.txt"), "").unwrap();
+    fs::create_dir(dir.path().join("subdir")).unwrap();
+
+    lx_no_colour()
+        .args(["-1f"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("file.txt"))
+        .stdout(predicate::str::contains("subdir").not());
+}
+
+
 // ── Group directories ─────────────────────────────────────────────
 
 #[test]
