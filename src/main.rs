@@ -40,6 +40,7 @@ use crate::options::{Options, VcsBackend, Vars, vars, OptionsResult};
 use crate::output::{escape, lines, grid, grid_details, details, View, Mode};
 use crate::theme::Theme;
 
+mod config;
 mod fs;
 mod info;
 mod logger;
