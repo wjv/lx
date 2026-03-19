@@ -159,7 +159,7 @@ impl Columns {
         let mut vcs    = matches.has(flags::GIT) || matches.has(flags::VCS_STATUS);
         let mut blocks = matches.has(flags::BLOCKS);
         let mut group  = matches.has(flags::GROUP);
-        let     inode  = matches.has(flags::INODE);
+        let mut inode  = matches.has(flags::INODE);
         let mut links  = matches.has(flags::LINKS);
         let     octal  = matches.has(flags::OCTAL);
 
@@ -177,10 +177,24 @@ impl Columns {
             blocks = true;
         }
 
-        // Suppression flags always win, regardless of tier
-        let permissions = ! matches.has(flags::NO_PERMISSIONS);
-        let filesize =    ! matches.has(flags::NO_FILESIZE);
-        let user =        ! matches.has(flags::NO_USER);
+        // Positive/negative pairs: last one wins (Clap's overrides_with).
+        // For default-on columns, start with true and check --no-*.
+        // For the new positive flags, check if they re-enable.
+        let mut permissions = ! matches.has(flags::NO_PERMISSIONS);
+        let mut filesize =    ! matches.has(flags::NO_FILESIZE);
+        let mut user =        ! matches.has(flags::NO_USER);
+
+        // Positive flags re-enable (only matters if a personality
+        // suppressed them, or if the user writes --no-user --user).
+        if matches.has(flags::SHOW_PERMISSIONS) { permissions = true; }
+        if matches.has(flags::SHOW_FILESIZE)    { filesize = true; }
+        if matches.has(flags::SHOW_USER)        { user = true; }
+
+        // Negative flags for columns that default to off
+        if matches.has(flags::NO_INODE)  { inode = false; }
+        if matches.has(flags::NO_GROUP)  { group = false; }
+        if matches.has(flags::NO_LINKS)  { links = false; }
+        if matches.has(flags::NO_BLOCKS) { blocks = false; }
 
         Ok(Self { time_types, inode, links, blocks, group, vcs, octal, permissions, filesize, user })
     }

@@ -45,12 +45,21 @@ pub const ACCESSED: &str = "accessed";
 pub const CREATED: &str = "created";
 pub const TIME_STYLE: &str = "time-style";
 
+// explicit column enablers (positive counterparts of --no-*)
+pub const SHOW_PERMISSIONS: &str = "show-permissions";
+pub const SHOW_FILESIZE: &str = "show-filesize";
+pub const SHOW_USER: &str = "show-user";
+
 // suppressing columns
 pub const NO_PERMISSIONS: &str = "no-permissions";
 pub const NO_FILESIZE: &str = "no-filesize";
 pub const NO_USER: &str = "no-user";
 pub const NO_TIME: &str = "no-time";
 pub const NO_ICONS: &str = "no-icons";
+pub const NO_INODE: &str = "no-inode";
+pub const NO_GROUP: &str = "no-group";
+pub const NO_LINKS: &str = "no-links";
+pub const NO_BLOCKS: &str = "no-blocks";
 
 // VCS options
 pub const VCS: &str = "vcs";
