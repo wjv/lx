@@ -284,7 +284,7 @@ fn apply_individual_adds(matches: &MatchedFlags, columns: &mut Vec<Column>) {
         (matches.has(flags::BLOCKS),     Column::Blocks),
         (matches.has(flags::GROUP),      Column::Group),
         (matches.has(flags::OCTAL),      Column::Octal),
-        (matches.has(flags::TOTAL_SIZE), Column::TotalSize),
+        (matches.has(flags::TOTAL_SIZE), Column::TotalSize),  // replaces FileSize below
         (matches.has(flags::GIT) || matches.has(flags::VCS_STATUS), Column::VcsStatus),
     ];
 
@@ -294,6 +294,13 @@ fn apply_individual_adds(matches: &MatchedFlags, columns: &mut Vec<Column>) {
                 .position(|c| *c == Column::VcsStatus)
                 .unwrap_or(columns.len());
             columns.insert(pos, col);
+        }
+    }
+
+    // --total-size replaces FileSize with TotalSize (same position).
+    if columns.contains(&Column::TotalSize) {
+        if let Some(pos) = columns.iter().position(|c| *c == Column::FileSize) {
+            columns.remove(pos);
         }
     }
 }
