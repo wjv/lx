@@ -153,8 +153,21 @@ impl TableOptions {
 }
 
 
-/// Compiled-in format definitions (column lists only).
+/// Look up a format by name: config-defined first, then compiled-in.
 fn format_columns(name: &str) -> Option<Vec<Column>> {
+    // Check config-defined formats first.
+    if let Some(ref cfg) = *crate::config::CONFIG {
+        if let Some(fmt) = cfg.formats.get(name) {
+            let cols: Vec<Column> = fmt.columns.iter()
+                .filter_map(|s| Column::from_name(s))
+                .collect();
+            if !cols.is_empty() {
+                return Some(cols);
+            }
+        }
+    }
+
+    // Compiled-in formats.
     let cols = match name {
         "long" => vec![
             Column::Permissions,
@@ -195,9 +208,21 @@ fn format_columns(name: &str) -> Option<Vec<Column>> {
     Some(cols)
 }
 
-/// The list of compiled-in format names (for Clap validation).
-pub fn format_names() -> Vec<&'static str> {
-    vec!["long", "long2", "long3"]
+/// All available format names: config-defined + compiled-in.
+pub fn format_names() -> Vec<String> {
+    let mut names: Vec<String> = vec![
+        "long".into(), "long2".into(), "long3".into(),
+    ];
+
+    if let Some(ref cfg) = *crate::config::CONFIG {
+        for name in cfg.formats.keys() {
+            if !names.iter().any(|n| n == name) {
+                names.push(name.clone());
+            }
+        }
+    }
+
+    names
 }
 
 

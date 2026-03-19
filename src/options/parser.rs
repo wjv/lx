@@ -390,10 +390,14 @@ Environment variables:\n  \
             .help("Named column format")
             .action(ArgAction::Set)
             .value_name("NAME")
-            .value_parser(crate::options::view::format_names()
-                .into_iter()
-                .map(PossibleValue::new)
-                .collect::<Vec<_>>()))
+            .value_parser({
+                let names = crate::options::view::format_names();
+                // Leak the strings so Clap can hold &'static str references.
+                // This is called once at startup; the small leak is acceptable.
+                names.into_iter()
+                    .map(|s| { let leaked: &'static str = Box::leak(s.into_boxed_str()); PossibleValue::new(leaked) })
+                    .collect::<Vec<_>>()
+            }))
 
         // ── VCS integration ────────────────────────────────────
 

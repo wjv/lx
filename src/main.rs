@@ -64,13 +64,14 @@ fn main() {
         warn!("Failed to enable ANSI support: {}", e);
     }
 
-    let config = config::load_config();
+    // Force config to load (populates the CONFIG static).
+    let _ = &*config::CONFIG;
 
     // Build the arg list: config defaults first, then real CLI args.
     // Clap's args_override_self means CLI flags win over config defaults.
     let cli_args: Vec<_> = env::args_os().skip(1).collect();
     let mut args = Vec::new();
-    if let Some(ref cfg) = config {
+    if let Some(ref cfg) = *config::CONFIG {
         args.extend(cfg.defaults.to_args());
     }
     args.extend(cli_args);

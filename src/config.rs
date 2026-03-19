@@ -11,9 +11,14 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 
 use log::*;
 use serde::Deserialize;
+
+
+/// Global config, loaded once at startup.
+pub static CONFIG: LazyLock<Option<Config>> = LazyLock::new(load_config);
 
 
 /// Top-level config file structure.
