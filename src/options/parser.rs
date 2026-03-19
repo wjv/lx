@@ -399,6 +399,12 @@ Environment variables:\n  \
                     .collect::<Vec<_>>()
             }))
 
+        .arg(Arg::new(flags::PERSONALITY)
+            .short('p').long("personality")
+            .help("Apply a named personality (columns + flags)")
+            .action(ArgAction::Set)
+            .value_name("NAME"))
+
         // ── VCS integration ────────────────────────────────────
 
         .arg(Arg::new(flags::VCS)

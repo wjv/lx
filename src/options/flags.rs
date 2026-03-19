@@ -61,9 +61,10 @@ pub const NO_GROUP: &str = "no-group";
 pub const NO_LINKS: &str = "no-links";
 pub const NO_BLOCKS: &str = "no-blocks";
 
-// column / format selection
+// column / format / personality selection
 pub const COLUMNS: &str = "columns";
 pub const FORMAT: &str = "format";
+pub const PERSONALITY: &str = "personality";
 
 // VCS options
 pub const VCS: &str = "vcs";

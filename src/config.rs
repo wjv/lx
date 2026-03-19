@@ -241,6 +241,53 @@ pub fn default_config_toml() -> &'static str {
 }
 
 
+/// Look up a personality by name: config first, then compiled-in defaults.
+pub fn resolve_personality(name: &str) -> Option<PersonalityDef> {
+    // Config-defined personalities take priority.
+    if let Some(ref cfg) = *CONFIG {
+        if let Some(p) = cfg.personalities.get(name) {
+            return Some(PersonalityDef {
+                format: p.format.clone(),
+                columns: p.columns.clone(),
+                flags: p.flags.clone(),
+                time_style: p.time_style.clone(),
+                header: p.header,
+            });
+        }
+    }
+
+    // Compiled-in personalities.
+    match name {
+        "ll" => Some(PersonalityDef {
+            format: Some("long2".into()),
+            flags: Some(vec!["--group-dirs=first".into()]),
+            ..Default::default()
+        }),
+        "lll" => Some(PersonalityDef {
+            format: Some("long3".into()),
+            flags: Some(vec!["--group-dirs=first".into(), "--header".into()]),
+            time_style: Some("long-iso".into()),
+            ..Default::default()
+        }),
+        "la" => Some(PersonalityDef {
+            format: Some("long2".into()),
+            flags: Some(vec!["--all".into(), "--group-dirs=first".into()]),
+            ..Default::default()
+        }),
+        "tree" => Some(PersonalityDef {
+            format: Some("long2".into()),
+            flags: Some(vec!["--tree".into(), "--group-dirs=first".into()]),
+            ..Default::default()
+        }),
+        "ls" => Some(PersonalityDef {
+            flags: Some(vec!["--grid".into(), "--across".into()]),
+            ..Default::default()
+        }),
+        _ => None,
+    }
+}
+
+
 /// Get the user's home directory.
 fn home_dir() -> Option<PathBuf> {
     env::var_os("HOME").map(PathBuf::from)

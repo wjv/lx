@@ -67,14 +67,43 @@ fn main() {
     // Force config to load (populates the CONFIG static).
     let _ = &*config::CONFIG;
 
-    // Build the arg list: config defaults first, then real CLI args.
-    // Clap's args_override_self means CLI flags win over config defaults.
-    let cli_args: Vec<_> = env::args_os().skip(1).collect();
-    let mut args = Vec::new();
+    // Build the arg list in layers; Clap's args_override_self ensures
+    // later flags win: config defaults < personality < CLI flags.
+    let cli_args: Vec<OsString> = env::args_os().skip(1).collect();
+
+    // Layer 1: config defaults.
+    let mut args: Vec<OsString> = Vec::new();
     if let Some(ref cfg) = *config::CONFIG {
         args.extend(cfg.defaults.to_args());
     }
+
+    // Layer 2: personality (if --personality/-p is in the CLI args).
+    // We scan the raw args pre-Clap to find the personality name.
+    if let Some(personality_name) = find_personality_arg(&cli_args) {
+        if let Some(personality) = config::resolve_personality(&personality_name) {
+            // Inject the personality's format/columns as a synthetic --format arg.
+            if let Some(ref cols) = personality.columns {
+                args.push(format!("--columns={}", cols.join(",")).into());
+            } else if let Some(ref fmt) = personality.format {
+                args.push(format!("--format={fmt}").into());
+            }
+            // Inject personality settings.
+            if let Some(ref ts) = personality.time_style {
+                args.push(format!("--time-style={ts}").into());
+            }
+            if personality.header == Some(true) {
+                args.push("--header".into());
+            }
+            // Inject personality flags.
+            if let Some(ref flags) = personality.flags {
+                args.extend(flags.iter().map(|f| OsString::from(f)));
+            }
+        }
+    }
+
+    // Layer 3: actual CLI args (override everything above).
     args.extend(cli_args);
+
 
     match Options::parse(&args, &LiveVars) {
         OptionsResult::Ok(options, mut input_paths) => {
@@ -366,6 +395,30 @@ impl Lx {
             }
         }
     }
+}
+
+
+/// Scan raw args for --personality=NAME or -p NAME before Clap parsing.
+fn find_personality_arg(args: &[OsString]) -> Option<String> {
+    let mut iter = args.iter();
+    while let Some(arg) = iter.next() {
+        let s = arg.to_string_lossy();
+        if let Some(name) = s.strip_prefix("--personality=") {
+            return Some(name.to_string());
+        }
+        if s == "--personality" || s == "-p" {
+            if let Some(next) = iter.next() {
+                return Some(next.to_string_lossy().to_string());
+            }
+        }
+        // Handle -pNAME (short flag with attached value)
+        if let Some(name) = s.strip_prefix("-p") {
+            if !name.is_empty() && !name.starts_with('-') {
+                return Some(name.to_string());
+            }
+        }
+    }
+    None
 }
 
 
