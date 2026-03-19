@@ -158,7 +158,7 @@ impl TableOptions {
 fn format_columns(name: &str) -> Option<Vec<Column>> {
     // Check config-defined formats first.
     if let Some(ref cfg) = *crate::config::CONFIG {
-        if let Some(fmt) = cfg.formats.get(name) {
+        if let Some(fmt) = cfg.format.get(name) {
             let cols: Vec<Column> = fmt.columns.iter()
                 .filter_map(|s| Column::from_name(s))
                 .collect();
@@ -216,7 +216,7 @@ pub fn format_names() -> Vec<String> {
     ];
 
     if let Some(ref cfg) = *crate::config::CONFIG {
-        for name in cfg.formats.keys() {
+        for name in cfg.format.keys() {
             if !names.iter().any(|n| n == name) {
                 names.push(name.clone());
             }

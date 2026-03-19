@@ -28,10 +28,10 @@ pub struct Config {
     pub defaults: Defaults,
 
     #[serde(default)]
-    pub formats: HashMap<String, FormatDef>,
+    pub format: HashMap<String, FormatDef>,
 
     #[serde(default)]
-    pub personalities: HashMap<String, PersonalityDef>,
+    pub personality: HashMap<String, PersonalityDef>,
 
     // theme: deferred to a later iteration
 }
@@ -191,7 +191,7 @@ pub fn default_config_toml() -> &'static str {
 pub fn resolve_personality(name: &str) -> Option<PersonalityDef> {
     // Config-defined personalities take priority.
     if let Some(ref cfg) = *CONFIG {
-        if let Some(p) = cfg.personalities.get(name) {
+        if let Some(p) = cfg.personality.get(name) {
             return Some(PersonalityDef {
                 format: p.format.clone(),
                 columns: p.columns.clone(),

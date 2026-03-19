@@ -146,10 +146,10 @@ flags always win.
 A format is a named column layout:
 
 ```toml
-[formats.compact]
+[format.compact]
 columns = ["perms", "size", "modified"]
 
-[formats.hpc]
+[format.hpc]
 columns = ["perms", "size", "user", "group", "modified", "vcs"]
 ```
 
@@ -165,11 +165,11 @@ Available column names: `perms`, `size`, `user`, `group`, `links`,
 A personality bundles columns, flags, and settings:
 
 ```toml
-[personalities.lt]
+[personality.lt]
 format = "long2"
 flags = ["--group-dirs=first", "--sort=age"]
 
-[personalities.stree]
+[personality.stree]
 columns = ["size"]
 flags = ["--tree", "--only-dirs", "--reverse", "--sort=size",
          "--total-size", "--level=1"]

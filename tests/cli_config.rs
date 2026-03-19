@@ -90,7 +90,7 @@ fn config_default_time_style() {
 #[test]
 fn config_custom_format() {
     let (_dir, mut cmd) = lx_with_config(r#"
-        [formats.tiny]
+        [format.tiny]
         columns = ["size", "modified"]
     "#);
 
@@ -105,7 +105,7 @@ fn config_custom_format() {
 #[test]
 fn config_format_overrides_compiled_in() {
     let (_dir, mut cmd) = lx_with_config(r#"
-        [formats.long]
+        [format.long]
         columns = ["size", "modified"]
     "#);
 
@@ -123,7 +123,7 @@ fn config_format_overrides_compiled_in() {
 #[test]
 fn config_custom_personality() {
     let (_dir, mut cmd) = lx_with_config(r#"
-        [personalities.myview]
+        [personality.myview]
         columns = ["perms", "size"]
         flags = ["--group-dirs=first"]
     "#);
@@ -268,8 +268,8 @@ fn init_config_creates_file() {
     let contents = fs::read_to_string(&config_path).unwrap();
     assert!(contents.contains("# lx configuration file"));
     assert!(contents.contains("[defaults]"));
-    assert!(contents.contains("[formats.long]"));
-    assert!(contents.contains("[personalities.ll]"));
+    assert!(contents.contains("[format.long]"));
+    assert!(contents.contains("[personality.ll]"));
 }
 
 #[test]
