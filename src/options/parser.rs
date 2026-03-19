@@ -115,7 +115,7 @@ Environment variables:\n  \
   COLUMNS          Override terminal width (characters)\n  \
   LX_GRID_ROWS    Minimum rows before grid-details view activates\n  \
   LX_ICON_SPACING Spaces between icon and file name\n  \
-  NO_COLOR         Disable colours (overridden by --color)\n  \
+  NO_COLOR         Disable colours (overridden by --colour)\n  \
   LS_COLORS        File-type colour scheme\n  \
   LX_COLORS       Extended colour scheme (UI elements and metadata)\n  \
   TIME_STYLE       Default timestamp style (overridden by --time-style)")
@@ -157,8 +157,8 @@ Environment variables:\n  \
         // ── Colour ──────────────────────────────────────────────
 
         .arg(Arg::new(flags::COLOR)
-            .long("color").visible_alias("colour")
-            .help("When to use terminal colours [always, auto, never]")
+            .long("colour").visible_alias("color")
+            .help("When to use terminal colours")
             .action(ArgAction::Set)
             .value_name("WHEN")
             .value_parser([
@@ -168,7 +168,7 @@ Environment variables:\n  \
                 PossibleValue::new("automatic").hide(true),
             ]))
         .arg(Arg::new(flags::COLOR_SCALE)
-            .long("color-scale").visible_alias("colour-scale")
+            .long("colour-scale").visible_alias("color-scale")
             .help("Colour file sizes on a scale")
             .action(ArgAction::Count))
 
@@ -194,7 +194,7 @@ Environment variables:\n  \
             .action(ArgAction::Count))
         .arg(Arg::new(flags::SORT)
             .short('s').long("sort")
-            .help("Which field to sort by")
+            .help("Sort field")
             .action(ArgAction::Set)
             .value_name("FIELD")
             .value_parser(sort_values()))
@@ -210,7 +210,7 @@ Environment variables:\n  \
             .hide(true))
         .arg(Arg::new(flags::GROUP_DIRS)
             .long("group-dirs")
-            .help("Group directories before or after other files [first, last, none]")
+            .help("Group directories before or after other files")
             .action(ArgAction::Set)
             .value_name("WHEN")
             .value_parser([
@@ -282,7 +282,7 @@ Environment variables:\n  \
             .action(ArgAction::Count))
         .arg(Arg::new(flags::TIME)
             .short('t').long("time")
-            .help("Which timestamp field to display [modified, changed, accessed, created]")
+            .help("Which timestamp field to display")
             .action(ArgAction::Set)
             .value_name("FIELD")
             .value_parser([
@@ -311,7 +311,7 @@ Environment variables:\n  \
             .action(ArgAction::Count))
         .arg(Arg::new(flags::TIME_STYLE)
             .long("time-style")
-            .help("How to format timestamps [default, iso, long-iso, full-iso]")
+            .help("How to format timestamps")
             .action(ArgAction::Set)
             .value_name("STYLE")
             .value_parser([
@@ -348,7 +348,7 @@ Environment variables:\n  \
 
         .arg(Arg::new(flags::VCS)
             .long("vcs")
-            .help("VCS backend to use [auto, git, jj, none]")
+            .help("VCS backend to use")
             .action(ArgAction::Set)
             .value_name("BACKEND")
             .value_parser([
