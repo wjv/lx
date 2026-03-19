@@ -105,7 +105,7 @@ pub fn build_command() -> clap::Command {
 
     clap::Command::new("lx")
         .version(env!("CARGO_PKG_VERSION"))
-        .about("list extended (but call me Alex!)")
+        .about(env!("CARGO_PKG_DESCRIPTION"))
         .styles(STYLES)
         .disable_help_flag(true)
         .disable_version_flag(true)
