@@ -109,15 +109,18 @@ impl JjCache {
 
 impl super::VcsCache for JjCache {
     fn has_anything_for(&self, path: &Path) -> bool {
-        // Check if any cached path starts with this directory, or matches
-        // the file exactly.
+        // Return true if the path lies inside this jj workspace.
+        // Unlike the git backend, we don't check for actual statuses —
+        // the column should appear (showing "not modified") even in a
+        // clean working copy.
         let abs = if path.is_absolute() {
             path.to_path_buf()
         } else {
             self.workdir.join(path)
         };
+        let abs = abs.canonicalize().unwrap_or(abs);
 
-        self.statuses.keys().any(|p| p.starts_with(&abs) || p == &abs)
+        abs.starts_with(&self.workdir)
     }
 
     fn get(&self, path: &Path, prefix_lookup: bool) -> f::VcsFileStatus {
@@ -126,6 +129,7 @@ impl super::VcsCache for JjCache {
         } else {
             self.workdir.join(path)
         };
+        let abs = abs.canonicalize().unwrap_or(abs);
 
         if prefix_lookup {
             // Directory: aggregate child statuses (worst wins).
