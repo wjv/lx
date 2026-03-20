@@ -37,7 +37,7 @@ with a somewhat different approach to the command-line user interface.
   variables. Define defaults, custom formats, and personalities. Run
   `lx --init-config` to get started.
 
-- **Unified VCS support**
+- **Unified VCS support, including Jujutsu!**
 
   `--vcs=auto|git|jj|none` with built-in backends for both 
   [Git](https://git-scm.com) and [Jujutsu](https://jj-vcs.dev/latest/). 
@@ -313,12 +313,28 @@ fly at shell startup.
 
 - **`--vcs-ignore` does not work with the jj backend**
 
-  The `jj` CLI currently has no way to report which files are gitignored. Workarounds:
-  - Use `--vcs=git --vcs-ignore`
+  The `jj` CLI currently has no way to report which files are gitignored. 
+  Workarounds:
+  - Use `--vcs=git --vcs-ignore` in a colocated repository.
   - Use `-I` glob patterns to exclude specific files (e.g. `-I target`).
 
 - **The `lx` crate name on crates.io is taken** by an unrelated
   library. Install from GitHub instead (see [Installation](#installation)).
+
+
+## Roadmap: 0.2
+
+- **Config redesign**
+  * multi-level personality inheritance
+  * dedicated fields for all settings (no more `flags` arrays)
+  * config file versioning and `--upgrade-config` for migrating 0.1 configs
+  * `[defaults]` section is replaced by a base personality
+- **Theme support**
+  * `[theme]` section in the config file with human-readable colour values,
+    X11/CSS colour names, and per-file extension styling
+  * Layers on top of `LS_COLORS`/`LX_COLORS`
+- **Diverse UI tweaks**
+  - Stay tuned…
 
 
 ## User interface stability
