@@ -76,7 +76,7 @@ fn format_long2_has_group() {
         .args(["-l", "--format=long2", "Cargo.toml"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("staff").or(predicate::str::contains("wheel")));
+        .stdout(predicate::str::contains(support::current_group()));
 }
 
 #[test]
