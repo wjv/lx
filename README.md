@@ -1,4 +1,4 @@
-# lx --- an eXtended file Lister
+# lx — file Lister eXtended
 
 **`lx`** ("alex") is a modern file lister for Unix. A replacement (albeit 
 explicitly *not* a drop-in replacement) for the standard `ls`.
@@ -13,7 +13,7 @@ with a somewhat different approach to the command-line user interface.
 
 ## Highlights
 
-- **Personalities** --- named profiles that bundle columns, flags, and
+- **Personalities** — named profiles that bundle columns, flags, and
   settings
 
   Create symlinks (`ll`, `ls`, `la`, `tree`) and `lx` adapts its behaviour to 
@@ -25,7 +25,7 @@ with a somewhat different approach to the command-line user interface.
   their order: `--columns=perms,size,user,modified`.  
   `--format` allows you to apply named sets of columns: `--format=long2`.
 
-- **"Compounding" flags** --- flags that compound their effect when repeated
+- **"Compounding" flags** — flags that compound their effect when repeated
 
   Use `-l` for a long listing, `-ll` for more detail, and `-lll` for even more.  
   No more remembering which combination of `-g`, `-H`, `-h`, and `--git` you 
