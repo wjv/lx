@@ -5,6 +5,12 @@ All notable changes to lx are documented here. lx is forked from
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-03-20
+
+### Fixed
+- Release workflow now produces distinct binaries per platform
+  (was overwriting with a single `lx` file)
+
 ## [0.1.0] — 2026-03-20
 
 First release of lx. Major changes from the exa base:

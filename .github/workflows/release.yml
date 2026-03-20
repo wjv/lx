@@ -33,10 +33,14 @@ jobs:
           echo '[target.aarch64-unknown-linux-gnu]' >> .cargo/config.toml
           echo 'linker = "aarch64-linux-gnu-gcc"' >> .cargo/config.toml
       - run: cargo build --release --target ${{ matrix.target }}
+      - name: Rename binary with target triple
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/lx dist/lx-${{ matrix.target }}
       - uses: actions/upload-artifact@v4
         with:
           name: lx-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/lx
+          path: dist/lx-${{ matrix.target }}
 
   release:
     needs: build
@@ -45,7 +49,9 @@ jobs:
       contents: write
     steps:
       - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
-          files: lx-*/lx
+          files: lx-*
           generate_release_notes: true
