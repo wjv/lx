@@ -22,12 +22,12 @@ fn lx_with_config(config_content: &str) -> (tempfile::TempDir, assert_cmd::Comma
 }
 
 
-// ── Config defaults ──────────────────────────────────────────────
+// ── The lx personality (global defaults) ─────────────────────────
 
 #[test]
-fn config_default_group_dirs() {
+fn config_lx_personality_group_dirs() {
     let (_dir, mut cmd) = lx_with_config(r#"
-        [defaults]
+        [personality.lx]
         group-dirs = "first"
     "#);
 
@@ -48,9 +48,9 @@ fn config_default_group_dirs() {
 }
 
 #[test]
-fn config_default_overridden_by_cli() {
+fn config_lx_overridden_by_cli() {
     let (_dir, mut cmd) = lx_with_config(r#"
-        [defaults]
+        [personality.lx]
         group-dirs = "first"
     "#);
 
@@ -71,9 +71,9 @@ fn config_default_overridden_by_cli() {
 }
 
 #[test]
-fn config_default_time_style() {
+fn config_lx_personality_time_style() {
     let (_dir, mut cmd) = lx_with_config(r#"
-        [defaults]
+        [personality.lx]
         time-style = "long-iso"
     "#);
 
@@ -125,7 +125,7 @@ fn config_custom_personality() {
     let (_dir, mut cmd) = lx_with_config(r#"
         [personality.myview]
         columns = ["perms", "size"]
-        flags = ["--group-dirs=first"]
+        group-dirs = "first"
     "#);
 
     let work = tempdir().expect("failed to create workdir");
@@ -142,6 +142,191 @@ fn config_custom_personality() {
             let file_pos = output.find("file.txt").unwrap();
             dir_pos < file_pos
         }));
+}
+
+
+// ── Personality inheritance ───────────────────────────────────────
+
+#[test]
+fn inherit_single_level() {
+    let (_dir, mut cmd) = lx_with_config(r#"
+        [personality.base]
+        group-dirs = "first"
+
+        [personality.child]
+        inherits = "base"
+        format = "long"
+    "#);
+
+    let work = tempdir().expect("failed to create workdir");
+    fs::write(work.path().join("aaa_file.txt"), "").unwrap();
+    fs::create_dir(work.path().join("zzz_dir")).unwrap();
+
+    cmd.args(["-pchild"])
+        .arg(work.path())
+        .assert()
+        .success()
+        // group-dirs=first inherited from base
+        .stdout(predicate::function(|output: &str| {
+            let dir_pos = output.find("zzz_dir").unwrap();
+            let file_pos = output.find("aaa_file.txt").unwrap();
+            dir_pos < file_pos
+        }));
+}
+
+#[test]
+fn inherit_multi_level() {
+    let (_dir, mut cmd) = lx_with_config(r#"
+        [personality.root]
+        group-dirs = "first"
+
+        [personality.mid]
+        inherits = "root"
+        format = "long"
+
+        [personality.leaf]
+        inherits = "mid"
+        header = true
+    "#);
+
+    cmd.args(["-pleaf", "Cargo.toml"])
+        .assert()
+        .success()
+        // header from leaf, format=long from mid, group-dirs from root
+        .stdout(predicate::str::contains("Permissions"));
+}
+
+#[test]
+fn inherit_child_overrides_parent_setting() {
+    let (_dir, mut cmd) = lx_with_config(r#"
+        [personality.parent]
+        format = "long"
+        sort = "name"
+
+        [personality.child]
+        inherits = "parent"
+        sort = "size"
+    "#);
+
+    // Just check it runs without error; sort=size from child wins
+    cmd.args(["-pchild", "Cargo.toml"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn inherit_child_overrides_format() {
+    let (_dir, mut cmd) = lx_with_config(r#"
+        [personality.parent]
+        format = "long2"
+
+        [personality.child]
+        inherits = "parent"
+        format = "long"
+    "#);
+
+    cmd.args(["-pchild", "Cargo.toml"])
+        .assert()
+        .success()
+        // long format has no group column
+        .stdout(predicate::str::contains("staff").not());
+}
+
+#[test]
+fn inherit_cycle_detected() {
+    let (_dir, mut cmd) = lx_with_config(r#"
+        [personality.a]
+        inherits = "b"
+
+        [personality.b]
+        inherits = "a"
+    "#);
+
+    cmd.args(["-pa", "Cargo.toml"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("inheritance cycle"));
+}
+
+#[test]
+fn inherit_from_compiled_in() {
+    // Config personality inherits from compiled-in "ll"
+    let (_dir, mut cmd) = lx_with_config(r#"
+        [personality.myll]
+        inherits = "ll"
+        header = true
+    "#);
+
+    cmd.args(["-pmyll", "Cargo.toml"])
+        .assert()
+        .success()
+        // ll gives long2 format (includes group) + header from child
+        .stdout(predicate::str::contains("Permissions"))
+        .stdout(predicate::str::contains(support::current_group()));
+}
+
+#[test]
+fn standalone_no_inherits() {
+    // No inherits = standalone, no inherited settings
+    let (_dir, mut cmd) = lx_with_config(r#"
+        [personality.base]
+        group-dirs = "first"
+        header = true
+
+        [personality.standalone]
+        format = "long"
+    "#);
+
+    cmd.args(["-pstandalone", "Cargo.toml"])
+        .assert()
+        .success()
+        // Should NOT have header (not inherited from base)
+        .stdout(predicate::str::contains("Permissions").not());
+}
+
+
+// ── Named settings ──────────────────────────────────────────────
+
+#[test]
+fn config_personality_bool_setting() {
+    let (_dir, mut cmd) = lx_with_config(r#"
+        [personality.hdr]
+        format = "long"
+        header = true
+    "#);
+
+    cmd.args(["-phdr", "Cargo.toml"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Permissions"));
+}
+
+#[test]
+fn config_personality_columns_as_string() {
+    let (_dir, mut cmd) = lx_with_config(r#"
+        [personality.tiny]
+        columns = "size,modified"
+    "#);
+
+    cmd.args(["-ptiny", "Cargo.toml"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Cargo.toml"))
+        .stdout(predicate::str::contains(".rw").not());
+}
+
+#[test]
+fn config_unknown_setting_warns() {
+    let (_dir, mut cmd) = lx_with_config(r#"
+        [personality.bad]
+        format = "long"
+        frobnicate = true
+    "#);
+
+    cmd.args(["-pbad", "Cargo.toml"])
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("unknown setting 'frobnicate'"));
 }
 
 
@@ -268,9 +453,10 @@ fn init_config_creates_file() {
     // The generated file should be valid TOML (all commented out = empty)
     let contents = fs::read_to_string(&config_path).unwrap();
     assert!(contents.contains("# lx configuration file"));
-    assert!(contents.contains("[defaults]"));
+    assert!(contents.contains("version = \"0.2\""));
     assert!(contents.contains("[format.long]"));
     assert!(contents.contains("[personality.ll]"));
+    assert!(contents.contains("inherits"));
 }
 
 #[test]
@@ -295,7 +481,7 @@ fn lx_config_env_takes_priority() {
     let dir = tempdir().expect("failed to create tempdir");
     let config_path = dir.path().join("custom.toml");
     fs::write(&config_path, r#"
-        [defaults]
+        [personality.lx]
         group-dirs = "first"
     "#).unwrap();
 

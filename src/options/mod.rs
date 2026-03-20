@@ -109,6 +109,10 @@ impl Options {
                     return OptionsResult::InitConfig;
                 }
 
+                if clap_matches.get_flag("upgrade-config") {
+                    return OptionsResult::UpgradeConfig;
+                }
+
                 let frees = clap_matches.get_many::<OsString>("FILE")
                     .map(|vals| vals.cloned().collect())
                     .unwrap_or_default();
@@ -191,6 +195,9 @@ pub enum OptionsResult {
 
     /// The user wants to generate a default config file.
     InitConfig,
+
+    /// The user wants to upgrade a legacy config file.
+    UpgradeConfig,
 }
 
 

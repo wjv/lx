@@ -64,57 +64,52 @@ fn main() {
         warn!("Failed to enable ANSI support: {}", e);
     }
 
-    // Force config to load (populates the CONFIG static).
-    let _ = &*config::CONFIG;
-
-    // Build the arg list in layers; Clap's args_override_self ensures
-    // later flags win: config defaults < personality < CLI flags.
     let cli_args: Vec<OsString> = env::args_os().skip(1).collect();
 
-    // Layer 1: config defaults.
-    let mut args: Vec<OsString> = Vec::new();
-    if let Some(ref cfg) = *config::CONFIG {
-        args.extend(cfg.defaults.to_args());
+    // Skip config loading for --upgrade-config (the config may be
+    // legacy and would emit an error before we get to handle it).
+    let upgrading = cli_args.iter().any(|a| a == "--upgrade-config");
+    if !upgrading {
+        // Force config to load (populates the CONFIG static).
+        let _ = &*config::CONFIG;
     }
 
-    // Layer 2: personality.
-    // Explicit --personality/-p takes priority; if absent, check argv[0].
-    let explicit_personality = find_personality_arg(&cli_args);
-    let personality_name = explicit_personality.or_else(|| {
-        let argv0 = env::args().next()?;
-        let bin_name = std::path::Path::new(&argv0)
-            .file_name()?
-            .to_string_lossy()
-            .to_string();
-        // Only dispatch if the name isn't "lx" (the canonical binary).
-        if bin_name == "lx" {
-            None
-        } else if config::resolve_personality(&bin_name).is_some() {
-            debug!("argv[0] dispatch: {bin_name}");
-            Some(bin_name)
-        } else {
-            None
-        }
-    });
+    // Build the arg list in layers; Clap's args_override_self ensures
+    // later flags win: personality < CLI flags.
+    let mut args: Vec<OsString> = Vec::new();
 
-    if let Some(ref personality_name) = personality_name {
-        if let Some(personality) = config::resolve_personality(&personality_name) {
-            // Inject the personality's format/columns as a synthetic --format arg.
-            if let Some(ref cols) = personality.columns {
-                args.push(format!("--columns={}", cols.join(",")).into());
-            } else if let Some(ref fmt) = personality.format {
-                args.push(format!("--format={fmt}").into());
+    // Layer 1: personality (skip when upgrading — config may be legacy).
+    if !upgrading {
+        // Determine which personality to apply.
+        // Explicit --personality/-p takes priority; if absent, check argv[0].
+        let explicit_personality = find_personality_arg(&cli_args);
+        let personality_name = explicit_personality.or_else(|| {
+            let argv0 = env::args().next()?;
+            let bin_name = std::path::Path::new(&argv0)
+                .file_name()?
+                .to_string_lossy()
+                .to_string();
+            // Check if this name resolves to a personality (config or compiled-in).
+            // We only probe here; actual resolution + error handling happens below.
+            match config::resolve_personality(&bin_name) {
+                Ok(Some(_)) | Err(_) => {
+                    debug!("argv[0] dispatch: {bin_name}");
+                    Some(bin_name)
+                }
+                Ok(None) => None,  // unknown name, not a personality
             }
-            // Inject personality settings.
-            if let Some(ref ts) = personality.time_style {
-                args.push(format!("--time-style={ts}").into());
-            }
-            if personality.header == Some(true) {
-                args.push("--header".into());
-            }
-            // Inject personality flags.
-            if let Some(ref flags) = personality.flags {
-                args.extend(flags.iter().map(|f| OsString::from(f)));
+        });
+
+        if let Some(ref personality_name) = personality_name {
+            match config::resolve_personality(personality_name) {
+                Ok(Some(personality)) => {
+                    args.extend(personality.to_args());
+                }
+                Ok(None) => {}  // unknown personality, ignore
+                Err(e) => {
+                    eprintln!("lx: {e}");
+                    std::process::exit(exits::OPTIONS_ERROR);
+                }
             }
         }
     }
@@ -179,6 +174,17 @@ fn main() {
                     eprintln!("lx: failed to write config to {}: {e}", path.display());
                     exit(exits::RUNTIME_ERROR);
                 }
+            }
+        }
+
+        OptionsResult::UpgradeConfig => {
+            let Some(path) = config::find_config_path() else {
+                eprintln!("lx: no config file found to upgrade");
+                exit(exits::RUNTIME_ERROR);
+            };
+            if let Err(e) = config::upgrade_config(&path) {
+                eprintln!("lx: {e}");
+                exit(exits::RUNTIME_ERROR);
             }
         }
 

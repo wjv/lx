@@ -9,23 +9,297 @@
 
 use std::collections::HashMap;
 use std::env;
+use std::ffi::OsString;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::LazyLock;
 
 use log::*;
 use serde::Deserialize;
+use thiserror::Error;
+
+
+// ── Error types ─────────────────────────────────────────────────
+
+/// Errors that can occur when loading or resolving configuration.
+#[derive(Debug, Error)]
+pub enum ConfigError {
+    /// I/O error accessing a config file.
+    #[error("I/O error on {path}: {source}")]
+    Io {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+
+    /// TOML parsing failed.
+    #[error("error parsing {path}: {source}")]
+    Parse {
+        path: PathBuf,
+        #[source]
+        source: toml::de::Error,
+    },
+
+    /// The config file uses the legacy (pre-0.2) format.
+    #[error("config file {path} uses the legacy format.\n\
+             Run `lx --upgrade-config` to migrate it to the current format.")]
+    Legacy { path: PathBuf },
+
+    /// Personality inheritance forms a cycle.
+    #[error("personality inheritance cycle: {chain}")]
+    InheritanceCycle { chain: String },
+
+    /// A personality inherits from a name that doesn't exist.
+    #[error("personality '{child}' inherits from '{parent}', which does not exist")]
+    MissingParent { child: String, parent: String },
+
+    /// `--upgrade-config` on a config that isn't legacy.
+    #[error("{path} does not appear to be a legacy config \
+             (already has a version field, or no [defaults] section)")]
+    NotLegacy { path: PathBuf },
+}
+
+/// Extension trait for attaching path context to `io::Result`.
+trait IoResultExt<T> {
+    fn with_path(self, path: impl Into<PathBuf>) -> Result<T, ConfigError>;
+}
+
+impl<T> IoResultExt<T> for std::io::Result<T> {
+    fn with_path(self, path: impl Into<PathBuf>) -> Result<T, ConfigError> {
+        self.map_err(|source| ConfigError::Io { path: path.into(), source })
+    }
+}
 
 
 /// Global config, loaded once at startup.
 pub static CONFIG: LazyLock<Option<Config>> = LazyLock::new(load_config);
 
 
+// ── Setting-to-flag mapping ─────────────────────────────────────
+
+/// How a TOML value maps to a CLI argument.
+enum SettingKind {
+    /// String value: `--flag=VALUE`
+    Str,
+    /// Boolean: `true` → `--flag`, `false` → omitted
+    Bool,
+    /// Integer: `--flag=N`
+    Int,
+}
+
+/// Maps a config key name to its CLI flag and value kind.
+struct SettingDef {
+    key: &'static str,
+    flag: &'static str,
+    kind: SettingKind,
+}
+
+/// Master table of all config keys that map to CLI flags.
+///
+/// Adding a new flag to lx = adding one entry here.
+static SETTING_FLAGS: &[SettingDef] = &[
+    // display options
+    SettingDef { key: "oneline",       flag: "--oneline",        kind: SettingKind::Bool },
+    SettingDef { key: "long",          flag: "--long",           kind: SettingKind::Bool },
+    SettingDef { key: "grid",          flag: "--grid",           kind: SettingKind::Bool },
+    SettingDef { key: "across",        flag: "--across",         kind: SettingKind::Bool },
+    SettingDef { key: "recurse",       flag: "--recurse",        kind: SettingKind::Bool },
+    SettingDef { key: "tree",          flag: "--tree",           kind: SettingKind::Bool },
+    SettingDef { key: "classify",      flag: "--classify",       kind: SettingKind::Str },
+    SettingDef { key: "colour",        flag: "--colour",         kind: SettingKind::Str },
+    SettingDef { key: "colour-scale",  flag: "--colour-scale",   kind: SettingKind::Str },
+    SettingDef { key: "icons",         flag: "--icons",          kind: SettingKind::Str },
+
+    // filtering and sorting
+    SettingDef { key: "all",           flag: "--all",            kind: SettingKind::Bool },
+    SettingDef { key: "list-dirs",     flag: "--list-dirs",      kind: SettingKind::Bool },
+    SettingDef { key: "level",         flag: "--level",          kind: SettingKind::Int },
+    SettingDef { key: "reverse",       flag: "--reverse",        kind: SettingKind::Bool },
+    SettingDef { key: "sort",          flag: "--sort",           kind: SettingKind::Str },
+    SettingDef { key: "group-dirs",    flag: "--group-dirs",     kind: SettingKind::Str },
+    SettingDef { key: "only-dirs",     flag: "--only-dirs",      kind: SettingKind::Bool },
+    SettingDef { key: "only-files",    flag: "--only-files",     kind: SettingKind::Bool },
+
+    // long view options
+    SettingDef { key: "binary",        flag: "--binary",         kind: SettingKind::Bool },
+    SettingDef { key: "bytes",         flag: "--bytes",          kind: SettingKind::Bool },
+    SettingDef { key: "header",        flag: "--header",         kind: SettingKind::Bool },
+    SettingDef { key: "inode",         flag: "--inode",          kind: SettingKind::Bool },
+    SettingDef { key: "links",         flag: "--links",          kind: SettingKind::Bool },
+    SettingDef { key: "blocks",        flag: "--blocks",         kind: SettingKind::Bool },
+    SettingDef { key: "group",         flag: "--group",          kind: SettingKind::Bool },
+    SettingDef { key: "numeric",       flag: "--numeric",        kind: SettingKind::Bool },
+    SettingDef { key: "time-style",    flag: "--time-style",     kind: SettingKind::Str },
+    SettingDef { key: "time",          flag: "--time",           kind: SettingKind::Str },
+    SettingDef { key: "modified",      flag: "--modified",       kind: SettingKind::Bool },
+    SettingDef { key: "changed",       flag: "--changed",        kind: SettingKind::Bool },
+    SettingDef { key: "accessed",      flag: "--accessed",       kind: SettingKind::Bool },
+    SettingDef { key: "created",       flag: "--created",        kind: SettingKind::Bool },
+    SettingDef { key: "total-size",    flag: "--total-size",     kind: SettingKind::Bool },
+    SettingDef { key: "extended",      flag: "--extended",       kind: SettingKind::Bool },
+    SettingDef { key: "octal-permissions", flag: "--octal-permissions", kind: SettingKind::Bool },
+
+    // VCS
+    SettingDef { key: "vcs",           flag: "--vcs",            kind: SettingKind::Str },
+    SettingDef { key: "vcs-status",    flag: "--vcs-status",     kind: SettingKind::Bool },
+    SettingDef { key: "vcs-ignore",    flag: "--vcs-ignore",     kind: SettingKind::Bool },
+
+    // explicit column enablers
+    SettingDef { key: "permissions",   flag: "--permissions",    kind: SettingKind::Bool },
+    SettingDef { key: "filesize",      flag: "--filesize",       kind: SettingKind::Bool },
+    SettingDef { key: "user",          flag: "--user",           kind: SettingKind::Bool },
+
+    // column suppressors
+    SettingDef { key: "no-permissions", flag: "--no-permissions", kind: SettingKind::Bool },
+    SettingDef { key: "no-filesize",   flag: "--no-filesize",    kind: SettingKind::Bool },
+    SettingDef { key: "no-user",       flag: "--no-user",        kind: SettingKind::Bool },
+    SettingDef { key: "no-time",       flag: "--no-time",        kind: SettingKind::Bool },
+    SettingDef { key: "no-icons",      flag: "--no-icons",       kind: SettingKind::Bool },
+    SettingDef { key: "no-inode",      flag: "--no-inode",       kind: SettingKind::Bool },
+    SettingDef { key: "no-group",      flag: "--no-group",       kind: SettingKind::Bool },
+    SettingDef { key: "no-links",      flag: "--no-links",       kind: SettingKind::Bool },
+    SettingDef { key: "no-blocks",     flag: "--no-blocks",      kind: SettingKind::Bool },
+];
+
+/// Look up a setting definition by config key name.
+fn find_setting(key: &str) -> Option<&'static SettingDef> {
+    SETTING_FLAGS.iter().find(|s| s.key == key)
+}
+
+/// Convert a settings map (from `[defaults]` or `[personality.*]`)
+/// into synthetic CLI arguments.  Unknown keys are warned about.
+fn settings_to_args(settings: &HashMap<String, toml::Value>, context: &str) -> Vec<OsString> {
+    let mut args = Vec::new();
+
+    for (key, value) in settings {
+        let Some(def) = find_setting(key) else {
+            eprintln!("lx: unknown setting '{key}' in {context}");
+            continue;
+        };
+
+        match def.kind {
+            SettingKind::Bool => {
+                let truthy = match value {
+                    toml::Value::Boolean(b) => *b,
+                    toml::Value::String(s) => s == "true",
+                    _ => {
+                        warn!("Expected boolean for '{key}' in {context}; ignoring");
+                        continue;
+                    }
+                };
+                if truthy {
+                    args.push(def.flag.into());
+                }
+            }
+            SettingKind::Str => {
+                let s = match value {
+                    toml::Value::String(s) => s.as_str(),
+                    _ => {
+                        warn!("Expected string for '{key}' in {context}; ignoring");
+                        continue;
+                    }
+                };
+                args.push(format!("{}={s}", def.flag).into());
+            }
+            SettingKind::Int => {
+                let n = match value {
+                    toml::Value::Integer(n) => *n,
+                    toml::Value::String(s) => {
+                        match s.parse::<i64>() {
+                            Ok(n) => n,
+                            Err(_) => {
+                                warn!("Expected integer for '{key}' in {context}; ignoring");
+                                continue;
+                            }
+                        }
+                    }
+                    _ => {
+                        warn!("Expected integer for '{key}' in {context}; ignoring");
+                        continue;
+                    }
+                };
+                args.push(format!("{}={n}", def.flag).into());
+            }
+        }
+    }
+
+    args
+}
+
+
+// ── StringOrList ────────────────────────────────────────────────
+
+/// A value that can be either a TOML string (comma-separated) or a
+/// TOML array of strings.  Used for the `columns` field.
+#[derive(Debug, Clone)]
+pub enum StringOrList {
+    Str(String),
+    List(Vec<String>),
+}
+
+impl StringOrList {
+    /// Convert to a comma-separated string suitable for `--columns=`.
+    pub fn to_csv(&self) -> String {
+        match self {
+            Self::Str(s) => s.clone(),
+            Self::List(v) => v.join(","),
+        }
+    }
+
+    /// Convert to a Vec of individual column names.
+    #[allow(dead_code)]  // will be used once view.rs reads columns directly
+    pub fn to_vec(&self) -> Vec<String> {
+        match self {
+            Self::Str(s) => s.split(',').map(|s| s.trim().to_string()).collect(),
+            Self::List(v) => v.clone(),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for StringOrList {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where D: serde::Deserializer<'de>,
+    {
+        use serde::de;
+
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = StringOrList;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_str("a string or array of strings")
+            }
+
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<StringOrList, E> {
+                Ok(StringOrList::Str(v.to_string()))
+            }
+
+            fn visit_seq<A: de::SeqAccess<'de>>(self, mut seq: A) -> Result<StringOrList, A::Error> {
+                let mut v = Vec::new();
+                while let Some(s) = seq.next_element::<String>()? {
+                    v.push(s);
+                }
+                Ok(StringOrList::List(v))
+            }
+        }
+
+        deserializer.deserialize_any(Visitor)
+    }
+}
+
+
+// ── Config types ────────────────────────────────────────────────
+
+/// The current config schema version.
+pub const CONFIG_VERSION: &str = "0.2";
+
 /// Top-level config file structure.
 #[derive(Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct Config {
-    pub defaults: Defaults,
+    /// Config schema version.  `None` means a legacy (pre-0.2) config.
+    pub version: Option<String>,
 
     #[serde(default)]
     pub format: HashMap<String, FormatDef>,
@@ -36,48 +310,6 @@ pub struct Config {
     // theme: deferred to a later iteration
 }
 
-/// Default settings applied to every invocation unless overridden by
-/// CLI flags or environment variables.
-#[derive(Debug, Default, Deserialize)]
-#[serde(default, rename_all = "kebab-case")]
-pub struct Defaults {
-    pub colour: Option<String>,
-    pub colour_scale: Option<String>,
-    pub time_style: Option<String>,
-    pub group_dirs: Option<String>,
-    pub icons: Option<String>,
-    pub classify: Option<String>,
-}
-
-impl Defaults {
-    /// Convert defaults into CLI args that can be prepended before
-    /// the real arguments.  Clap's `args_override_self` ensures that
-    /// any explicit CLI flag overrides these.
-    pub fn to_args(&self) -> Vec<std::ffi::OsString> {
-        let mut args = Vec::new();
-
-        if let Some(ref v) = self.colour {
-            args.push(format!("--colour={v}").into());
-        }
-        if let Some(ref v) = self.colour_scale {
-            args.push(format!("--colour-scale={v}").into());
-        }
-        if let Some(ref v) = self.time_style {
-            args.push(format!("--time-style={v}").into());
-        }
-        if let Some(ref v) = self.group_dirs {
-            args.push(format!("--group-dirs={v}").into());
-        }
-        if let Some(ref v) = self.icons {
-            args.push(format!("--icons={v}").into());
-        }
-        // classify is long-form only, no ArgAction::Set currently —
-        // defer until =WHEN vocabulary is standardised (#11)
-
-        args
-    }
-}
-
 
 /// A named column layout.
 #[derive(Debug, Deserialize)]
@@ -85,26 +317,54 @@ pub struct FormatDef {
     pub columns: Vec<String>,
 }
 
-/// A personality bundles columns, flags, and settings.
-#[derive(Debug, Default, Deserialize)]
-#[serde(default, rename_all = "kebab-case")]
+/// A personality bundles format, columns, and settings.
+///
+/// `format` and `columns` are structural fields (they define the
+/// column layout).  `inherits` controls how personalities compose.
+/// All other settings are captured via `serde(flatten)` and
+/// converted to CLI args via `SETTING_FLAGS`.
+#[derive(Debug, Default, Deserialize, Clone)]
+#[serde(default)]
 pub struct PersonalityDef {
-    /// Reference to a named format (looked up in `[formats]`).
+    /// Inherit from another personality.  The parent's settings
+    /// are applied first; this personality's values override per-key.
+    /// `format` and `columns` replace (not merge) the parent's.
+    pub inherits: Option<String>,
+
+    /// Reference to a named format (looked up in `[format.*]`).
     pub format: Option<String>,
 
     /// Inline column list (overrides `format` if both given).
-    pub columns: Option<Vec<String>>,
+    /// Accepts a TOML array or a comma-separated string.
+    pub columns: Option<StringOrList>,
 
-    /// CLI flags to prepend (e.g. `["--group-dirs=first", "--header"]`).
-    pub flags: Option<Vec<String>>,
-
-    /// Override time-style for this personality.
-    pub time_style: Option<String>,
-
-    /// Override header setting for this personality.
-    pub header: Option<bool>,
+    /// All other settings, converted to CLI args via `SETTING_FLAGS`.
+    #[serde(flatten)]
+    pub settings: HashMap<String, toml::Value>,
 }
 
+impl PersonalityDef {
+    /// Convert this personality's settings to synthetic CLI arguments.
+    /// Order: columns/format first, then named settings.
+    pub fn to_args(&self) -> Vec<OsString> {
+        let mut args = Vec::new();
+
+        // Structural fields.
+        if let Some(ref cols) = self.columns {
+            args.push(format!("--columns={}", cols.to_csv()).into());
+        } else if let Some(ref fmt) = self.format {
+            args.push(format!("--format={fmt}").into());
+        }
+
+        // Named settings.
+        args.extend(settings_to_args(&self.settings, "[personality]"));
+
+        args
+    }
+}
+
+
+// ── Config file discovery and loading ───────────────────────────
 
 /// Search for a config file and return its path, or `None`.
 pub fn find_config_path() -> Option<PathBuf> {
@@ -155,29 +415,57 @@ pub fn find_config_path() -> Option<PathBuf> {
 
 
 /// Load and parse the config file, if one is found.
-/// Returns `None` if no config file exists.
-/// Prints an error and returns `None` if the file exists but can't be parsed.
-pub fn load_config() -> Option<Config> {
-    let path = find_config_path()?;
+///
+/// Returns `Ok(None)` if no config file exists.  Returns a typed
+/// `ConfigError` on I/O failures, parse errors, or legacy format.
+fn try_load_config() -> Result<Option<Config>, ConfigError> {
+    let Some(path) = find_config_path() else {
+        return Ok(None);
+    };
 
-    match fs::read_to_string(&path) {
-        Ok(contents) => {
-            match toml::from_str(&contents) {
-                Ok(config) => {
-                    info!("Loaded config from {}", path.display());
-                    Some(config)
-                }
-                Err(e) => {
-                    eprintln!("lx: error parsing {}: {e}", path.display());
-                    None
-                }
-            }
-        }
+    let contents = fs::read_to_string(&path).with_path(&path)?;
+
+    if is_legacy_config(&contents) {
+        return Err(ConfigError::Legacy { path });
+    }
+
+    let config: Config = toml::from_str(&contents)
+        .map_err(|source| ConfigError::Parse { path: path.clone(), source })?;
+
+    info!("Loaded config from {}", path.display());
+    Ok(Some(config))
+}
+
+/// Load config for the `LazyLock` static.  Errors are printed to
+/// stderr and result in `None` (lx continues without a config).
+fn load_config() -> Option<Config> {
+    match try_load_config() {
+        Ok(config) => config,
         Err(e) => {
-            eprintln!("lx: error reading {}: {e}", path.display());
+            eprintln!("lx: {e}");
             None
         }
     }
+}
+
+/// Check whether a config file is legacy (pre-0.2) format.
+///
+/// A legacy config has `[defaults]` and no `version` key.
+/// We check the raw text rather than parsing, so that even
+/// malformed legacy configs are detected.
+fn is_legacy_config(contents: &str) -> bool {
+    // Quick check: does it have a version line?
+    for line in contents.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("version") && trimmed.contains('=') {
+            return false;  // has a version field, not legacy
+        }
+    }
+    // No version field.  Is there a [defaults] section?
+    contents.lines().any(|line| {
+        let trimmed = line.trim();
+        trimmed == "[defaults]"
+    })
 }
 
 
@@ -187,46 +475,107 @@ pub fn default_config_toml() -> &'static str {
 }
 
 
-/// Look up a personality by name: config first, then compiled-in defaults.
-pub fn resolve_personality(name: &str) -> Option<PersonalityDef> {
-    // Config-defined personalities take priority.
-    if let Some(ref cfg) = *CONFIG {
-        if let Some(p) = cfg.personality.get(name) {
-            return Some(PersonalityDef {
-                format: p.format.clone(),
-                columns: p.columns.clone(),
-                flags: p.flags.clone(),
-                time_style: p.time_style.clone(),
-                header: p.header,
+/// Look up a personality by name, resolving inheritance.
+///
+/// Config-defined personalities take priority over compiled-in ones.
+/// If the personality declares `inherits = "NAME"`, the chain is
+/// walked to the root and settings are merged (child overrides parent
+/// per-key; `format`/`columns` replace entirely).
+///
+/// Returns `Ok(Some(...))` on success, `Ok(None)` if the personality
+/// doesn't exist, or `Err(ConfigError)` on config errors (e.g. cycles).
+pub fn resolve_personality(name: &str) -> Result<Option<PersonalityDef>, ConfigError> {
+    // Build the inheritance chain: [leaf, ..., root].
+    let mut chain: Vec<PersonalityDef> = Vec::new();
+    let mut visited: Vec<String> = Vec::new();
+    let mut current = Some(name.to_string());
+
+    while let Some(ref pname) = current {
+        // Cycle detection.
+        if visited.contains(pname) {
+            visited.push(pname.clone());
+            let chain_str = visited.join(" \u{2192} ");
+            return Err(ConfigError::InheritanceCycle { chain: chain_str });
+        }
+        visited.push(pname.clone());
+
+        // Look up: config first, then compiled-in.
+        let Some(def) = lookup_personality(pname) else {
+            if chain.is_empty() {
+                return Ok(None);  // top-level personality not found
+            }
+            return Err(ConfigError::MissingParent {
+                child: visited[visited.len() - 2].clone(),
+                parent: pname.clone(),
             });
+        };
+        let next = def.inherits.clone();
+        chain.push(def);
+        current = next;
+    }
+
+    // Merge from root (last) to leaf (first).
+    let mut effective = PersonalityDef::default();
+    for def in chain.into_iter().rev() {
+        if def.format.is_some() {
+            effective.format = def.format;
+        }
+        if def.columns.is_some() {
+            effective.columns = def.columns;
+        }
+        // Settings: child values override parent values.
+        for (key, value) in def.settings {
+            effective.settings.insert(key, value);
         }
     }
 
-    // Compiled-in personalities.
+    Ok(Some(effective))
+}
+
+/// Look up a single personality definition by name (no inheritance).
+fn lookup_personality(name: &str) -> Option<PersonalityDef> {
+    if let Some(ref cfg) = *CONFIG {
+        if let Some(p) = cfg.personality.get(name) {
+            return Some(p.clone());
+        }
+    }
+    compiled_personality(name)
+}
+
+/// Return a compiled-in personality definition, if one exists.
+fn compiled_personality(name: &str) -> Option<PersonalityDef> {
+    use toml::Value::{Boolean, String as Str};
+
     match name {
         "ll" => Some(PersonalityDef {
             format: Some("long2".into()),
-            flags: Some(vec!["--group-dirs=first".into()]),
+            settings: HashMap::from([
+                ("group-dirs".into(), Str("first".into())),
+            ]),
             ..Default::default()
         }),
         "lll" => Some(PersonalityDef {
             format: Some("long3".into()),
-            flags: Some(vec!["--group-dirs=first".into(), "--header".into()]),
-            time_style: Some("long-iso".into()),
-            ..Default::default()
-        }),
-        "la" => Some(PersonalityDef {
-            format: Some("long2".into()),
-            flags: Some(vec!["--all".into(), "--group-dirs=first".into()]),
+            settings: HashMap::from([
+                ("group-dirs".into(), Str("first".into())),
+                ("header".into(), Boolean(true)),
+                ("time-style".into(), Str("long-iso".into())),
+            ]),
             ..Default::default()
         }),
         "tree" => Some(PersonalityDef {
             format: Some("long2".into()),
-            flags: Some(vec!["--tree".into(), "--group-dirs=first".into()]),
+            settings: HashMap::from([
+                ("tree".into(), Boolean(true)),
+                ("group-dirs".into(), Str("first".into())),
+            ]),
             ..Default::default()
         }),
         "ls" => Some(PersonalityDef {
-            flags: Some(vec!["--grid".into(), "--across".into()]),
+            settings: HashMap::from([
+                ("grid".into(), Boolean(true)),
+                ("across".into(), Boolean(true)),
+            ]),
             ..Default::default()
         }),
         _ => None,
@@ -249,6 +598,107 @@ pub fn write_init_config(path: &PathBuf) -> std::io::Result<()> {
         ));
     }
     fs::write(path, default_config_toml())
+}
+
+
+/// Upgrade a legacy config file to the current format.
+///
+/// Reads the config at `path`, converts `[defaults]` to
+/// `[personality.default]`, ensures `[personality.lx]` inherits
+/// from it, stamps `version = "0.2"`, saves a `.bak` backup,
+/// and writes the new file.
+pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
+    let contents = fs::read_to_string(path).with_path(path)?;
+
+    if !is_legacy_config(&contents) {
+        return Err(ConfigError::NotLegacy { path: path.clone() });
+    }
+
+    // Parse the old config with a permissive legacy struct.
+    let legacy: LegacyConfig = toml::from_str(&contents)
+        .map_err(|source| ConfigError::Parse { path: path.clone(), source })?;
+
+    // Generate the new config.
+    let mut out = String::new();
+    out.push_str(&format!("version = \"{CONFIG_VERSION}\"\n"));
+
+    // Formats (preserved as-is).
+    for (name, fmt) in &legacy.format {
+        out.push_str(&format!(
+            "\n[format.{}]\ncolumns = [{}]\n",
+            name,
+            fmt.columns.iter()
+                .map(|c| format!("\"{c}\""))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+
+    // Convert [defaults] → [personality.default].
+    if !legacy.defaults.is_empty() {
+        out.push_str("\n[personality.default]\n");
+        for (key, value) in &legacy.defaults {
+            out.push_str(&format!("{key} = {value}\n"));
+        }
+    }
+
+    // Ensure [personality.lx] inherits from "default".
+    let has_lx = legacy.personality.contains_key("lx");
+    if !legacy.defaults.is_empty() {
+        if has_lx {
+            // Existing [personality.lx] — add inherits if not present.
+            out.push_str("\n[personality.lx]\n");
+            out.push_str("inherits = \"default\"\n");
+            if let Some(lx_p) = legacy.personality.get("lx") {
+                for (key, value) in lx_p {
+                    if key != "inherits" {
+                        out.push_str(&format!("{key} = {value}\n"));
+                    }
+                }
+            }
+        } else {
+            out.push_str("\n[personality.lx]\ninherits = \"default\"\n");
+        }
+    }
+
+    // Other personalities (preserved, with flags converted if present).
+    for (name, settings) in &legacy.personality {
+        if name == "lx" {
+            continue;  // already handled above
+        }
+        out.push_str(&format!("\n[personality.{name}]\n"));
+        for (key, value) in settings {
+            out.push_str(&format!("{key} = {value}\n"));
+        }
+    }
+
+    // Back up the original.
+    let backup = path.with_extension("toml.bak");
+    fs::copy(path, &backup).with_path(&backup)?;
+
+    // Write the new config.
+    fs::write(path, &out).with_path(path)?;
+
+    eprintln!("Original config saved to {}", backup.display());
+    eprintln!("Upgraded {} to version {CONFIG_VERSION}", path.display());
+    eprintln!("Note: comments were not preserved. You may want to review the result.");
+
+    Ok(())
+}
+
+/// Legacy config structure for migration.  Uses raw TOML tables
+/// so we can round-trip key-value pairs without losing data.
+#[derive(Debug, Default, Deserialize)]
+#[serde(default)]
+struct LegacyConfig {
+    #[serde(default)]
+    defaults: HashMap<String, toml::Value>,
+
+    #[serde(default)]
+    format: HashMap<String, FormatDef>,
+
+    #[serde(default)]
+    personality: HashMap<String, HashMap<String, toml::Value>>,
 }
 
 
