@@ -5,7 +5,7 @@ All notable changes to lx are documented here. lx is forked from
 
 ## [Unreleased]
 
-## [0.1.0] — YYYY-MM-DD
+## [0.1.0] — 2026-03-20
 
 First release of lx. Major changes from the exa base:
 
