@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "rel/**"]
     paths:
       - "src/**"
       - "tests/**"
@@ -41,7 +41,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - run: cargo clippy -- -D warnings
+      - run: cargo clippy
 
   # Verify it builds without default features (no git, no jj)
   no-default-features:

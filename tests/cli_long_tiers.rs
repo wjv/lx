@@ -45,7 +45,7 @@ fn tier2_has_group() {
         .args(["-ll", "Cargo.toml"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("staff").or(predicate::str::contains("wheel")));
+        .stdout(predicate::str::contains(support::current_group()));
 }
 
 #[test]
@@ -110,7 +110,7 @@ fn tier1_plus_group_flag() {
         .args(["-l", "-g", "Cargo.toml"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("staff").or(predicate::str::contains("wheel")));
+        .stdout(predicate::str::contains(support::current_group()));
 }
 
 #[test]
