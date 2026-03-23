@@ -8,7 +8,7 @@ rust-version = "1.94"
 readme = "README.md"
 license = "MIT"
 repository = "https://github.com/wjv/lx"
-version = "0.3.0-feat.class-style"
+version = "0.3.0-pre.2"
 
 [dependencies]
 chrono = { version = "0.4", default-features = false, features = ["clock"] }

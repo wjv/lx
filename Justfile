@@ -31,9 +31,18 @@ test:
 lint:
     cargo clippy
 
-# Install locally
-install:
-    cargo install --path .
+# Install lx to ~/.local/bin (XDG standard)
+install: release
+    @mkdir -p ~/.local/bin
+    cp target/release/lx ~/.local/bin/lx
+    @echo "Installed lx to ~/.local/bin/lx"
+
+# Create personality symlinks in ~/.local/bin
+install-personalities: install
+    @ln -sf ~/.local/bin/lx ~/.local/bin/ll
+    @ln -sf ~/.local/bin/lx ~/.local/bin/lll
+    @ln -sf ~/.local/bin/lx ~/.local/bin/tree
+    @echo "Created personality symlinks in ~/.local/bin: ll lll tree"
 
 # Generate shell completions
 completions:
@@ -42,14 +51,6 @@ completions:
     cargo run -- --completions zsh > completions/_lx
     cargo run -- --completions fish > completions/lx.fish
     @echo "Generated completions/"
-
-# Create personality symlinks in ~/.local/bin
-symlinks:
-    @mkdir -p ~/local/bin
-    @for name in ll lll tree ls; do \
-        ln -sf $$(which lx) ~/.local/bin/$$name 2>/dev/null || true; \
-    done
-    @echo "Created symlinks in ~/.local/bin: ll lll tree ls"
 
 # Generate default config file
 init-config:

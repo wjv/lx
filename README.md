@@ -1,10 +1,10 @@
 # lx — file Lister eXtended
 
-**`lx`** ("alex") is a modern file lister for Unix. A replacement (albeit 
-explicitly *not* a drop-in replacement) for the standard `ls`.
+**`lx`** ("alex") is a modern file lister for Unix. A replacement for the standard `ls`.
 
-`lx` is forked from [`exa`](https://github.com/ogham/exa) by Benjamin Sago. `exa` 
-appears to be unmaintained.
+> `lx` is explicitly not a *drop-in* replacement for POSIX `ls`.
+
+`lx` is forked from [`exa`](https://github.com/ogham/exa) by Benjamin Sago. `exa` appears to be unmaintained (and has been for some years).
 
 An active community fork of `exa` named
 [`eza`](https://github.com/eza-community/eza) exists, but `lx` is an experiment
@@ -34,15 +34,17 @@ with a somewhat different approach to the command-line user interface.
 - **Configuration file**
 
   One `lxconfig.toml` replaces all your shell aliases and environment
-  variables. Define formats, personalities with inheritance, and colour
-  themes. Run `lx --init-config` to get started.
+  variables. Define formats, personalities, colour themes, styles,
+  and file-type classes — all with inheritance. Run
+  `lx --init-config` to get started.
 
-- **Named colour themes and styles**
+- **Named colour themes, styles, and file-type classes**
 
-  Define themes (UI elements) and styles (file types) in your config
-  using human-readable colour names (`"bold dodgerblue"`, `"tomato"`,
-  `"#ff8700"`), with inheritance and composable style sets. Select
-  via personality settings or `--theme=NAME`.
+  Define themes (UI elements), styles (file colours), and classes
+  (file-type categories) in your config using human-readable colour
+  names (`"bold dodgerblue"`, `"tomato"`, `"#ff8700"`).  Everything
+  inherits, composes, and can be overridden. Select via personality
+  settings or `--theme=NAME`.
 
 - **Unified VCS support, including Jujutsu!**
 
@@ -85,43 +87,88 @@ your `$PATH`.
 
 ## Quick start
 
+Just start using it. Do keep in mind that the flags differ from those of `ls`. When you get stuck, the `--help` flag is your friend.
+
 ```sh
 lx                    # grid view (like ls)
 lx -l                 # long view: perms, size, user, modified
 lx -ll                # + group, VCS status
 lx -lll               # + header, all timestamps, links, blocks
+lx --help             # display online help
 lx -T                 # tree view
 lx -T -L2             # tree, depth 2
 ```
 
-### Personalities
+## A file lister with personality
 
-Instead of shell aliases, use personalities:
-
-```sh
-# Create symlinks once:
-ln -s $(which lx) ~/bin/ll
-ln -s $(which lx) ~/bin/lll
-ln -s $(which lx) ~/bin/tree
-
-# Then just use them:
-ll                    # long view, group, VCS, dirs first
-lll                   # all columns, header, long-iso timestamps
-tree                  # long tree view, dirs first
-```
-
-Or use the `-p`/`--personality` flag directly:
+Since time immemorial (or at least since Unix shells supported command aliasing), Unix users have used shell aliases to call `ls` with certain options. For example, it's very common to alias `ll` to list files in the long format:
 
 ```sh
-lx -pll               # "longer" long view
-lx --personality tree  # tree view
+alias ll="ls -l"
 ```
 
-The personalities `ll`, `lll`, `tree`, and `ls` are compiled-in defaults.
-You can edit these or define your own in the config file.
+Or `la` for a long listing that also shows hidden files:
 
+```sh
+alias la="ls -la"
+```
+
+`lx` *embraces* the idea of being called by different names. It calls this "personalities". The idea is pretty simple:
+
+1. Define a *personality* in `lx`'s configuration — `ll`, for instance:
+
+    ```toml
+    [personality.ll]
+    format = "long"
+    ```
+
+2. Invoke `lx` as `ll` by creating a [symlink](https://en.wikipedia.org/wiki/Symbolic_link#Unix-like) named `ll` that points to `lx`, for example:
+
+    ```sh
+    ln -s $(which lx) ~/.local/bin/ll
+    ```
+
+Whenever you invoke `lx` under a different name *and* a personality with that name is defined, `lx` behaves like that personality. (If no personality with the given name exists, `lx` adopts its default personality named `lx`.)
+
+Personalities can inherit from each other. For instance, you can create an `la` personality that behaves just like `ll`, but shows hidden files as well:
+
+```toml
+[personality.la]
+inherits = "ll"
+all = true
+```
+
+`lx` ships with some default, built-in personalities. You can redefine these in the configuration file.
+
+* `default` is base personality used to define default settings, inherited by other personalities. Note that there's nothing magical about the name `default`; you can define your own base personality with a different name.
+* `lx` is `lx`'s standard personality, and is used when no other personality has been invoked.
+* `ll` is a long file listing, like `lx -l`; it shows VCS information and groups directories first
+* `lll` is an even more expansive file listing with headers, like `lx -lll`
+* `tree` is a recursive file listing showing a graphical file tree, with directories first
+* `ls` makes `lx`'s output look more like that of standard POSIX `ls`
+
+You can test personalities with the `-p`/`--personality` flag. To see what `ll` or `tree` will look like:
+
+```sh
+lx -p ll
+lx --personality tree
+```
+
+Of course, you can still use shell aliases with `lx`. Personalities are an alternative that offer you a more structured way of doing the same thing.
+
+For more on how personalities are configured — including the inheritance tree 
+and all available settings — see [Personalities](#personalities) in the 
+Configuration section below.
 
 ## Configuration
+
+Personalities — and other aspects of `lx`'s behaviour — can be
+defined in a configuration file.
+
+> **Of course** the configuration file is **optional**. `lx` is
+> just a file lister, after all, and it's designed to work just
+> fine with its compiled-in defaults. The configuration file is a
+> tool for the user who wants more flexibility!
 
 Generate a starter config with:
 
@@ -129,16 +176,39 @@ Generate a starter config with:
 lx --init-config
 ```
 
-This creates `~/.lxconfig.toml` with commented examples. The config
-file has three main sections: Formats, Personalities, and Themes.
+This creates `~/.lxconfig.toml` with commented examples.  The
+file is self-documenting — prose comments (starting with `##`)
+explain each section, while commented-out values (starting with
+`#`) show the compiled-in defaults you can customise.
 
-For the full reference, see the `lxconfig.toml(5)` man page or the
-[online documentation](https://github.com/wjv/lx).
+The configuration has five kinds of named section, each controlling
+a different aspect of `lx`'s behaviour:
+
+| Section              | Purpose                                             | Example                                               |
+|----------------------|-----------------------------------------------------|-------------------------------------------------------|
+| `[format.NAME]`      | Column layouts for long view                        | `columns = ["perms", "size", "user", "modified"]`     |
+| `[personality.NAME]` | Bundles of settings, activated by name              | `inherits = "lx"`, `format = "long2"`, `sort = "age"` |
+| `[theme.NAME]`       | UI element colours (directories, dates, etc.)       | `directory = "bold blue"`, `date = "steelblue"`       |
+| `[style.NAME]`       | File-type colours (by class, glob, or filename)     | `class.source = "yellow"`, `"*.rs" = "#ff8700"`       |
+| `[class]`            | Named file-type categories (lists of glob patterns) | `media = ["*.jpg", "*.png", "*.mp4"]`                 |
+
+These sections compose naturally.  Personalities and themes support
+inheritance; styles and classes are simple flat definitions.
+
+```
+personality ──→ format  (column layout)
+     │
+     └──→ theme ──────→ style ────────→ class
+          (UI colours)  (file colours)  (pattern lists)
+```
+
+For the full reference, see the
+[`lxconfig.toml(5)`](man/lxconfig.toml.5.md) man page.
 
 
 ### Formats
 
-A format is a named column layout:
+A format assigns a name to a column layout:
 
 ```toml
 [format.compact]
@@ -148,67 +218,91 @@ columns = ["perms", "size", "modified"]
 columns = ["perms", "size", "user", "group", "modified", "vcs"]
 ```
 
-Use with `--format=compact` or reference from a personality.
+Available column names:
 
-Available column names: `perms`, `size`, `user`, `group`, `links`,
-`inode`, `blocks`, `octal`, `modified`, `changed`, `accessed`,
-`created`, `vcs`.
+| Column     | Shows                   |
+|------------|-------------------------|
+| `perms`    | Permission bits         |
+| `size`     | File size               |
+| `user`     | Owner                   |
+| `group`    | Group                   |
+| `links`    | Hard link count         |
+| `inode`    | Inode number            |
+| `blocks`   | Block count             |
+| `octal`    | Octal permissions       |
+| `modified` | Last modified time      |
+| `changed`  | Last status change time |
+| `accessed` | Last access time        |
+| `created`  | Creation time           |
+| `vcs`      | VCS status              |
 
+The built-in formats `long`, `long2`, and `long3` are used by the
+flags `-l`, `-ll`, and `-lll`.
+
+```toml
+[format.long]
+columns = ["perms", "size", "user", "modified"]
+
+[format.long2]
+columns = ["perms", "size", "user", "group", "modified", "vcs"]
+
+[format.long3]
+columns = ["perms", "links", "size", "blocks", "user", "group",
+           "modified", "changed", "created", "accessed", "vcs"]
+```
+
+You can override the built-in defaults by simply redefining them.
+
+You can explicitly use a format with `--format=NAME`, but more often
+you will want to use formats in personalities:
 
 ### Personalities
 
-A personality bundles format, columns, and settings under a name.
-Every CLI flag has a corresponding config key (e.g. `--sort=age`
-becomes `sort = "age"`).
+As described [above](#a-file-lister-with-personality), a personality
+bundles format, columns, and settings under a name. Every CLI flag
+has a corresponding config key (e.g. `--sort=age` becomes
+`sort = "age"`).
 
-Personalities can inherit from each other with `inherits = "NAME"`.
-The child's `format`/`columns` replace the parent's; settings merge
-with the child winning.
+The built-in personalities form an inheritance tree:
 
 ```
-default ──┬──→ lx ──┬──→ ll ──┬──→ lt
-          │         │         └──→ la
+default ──┬──→ lx ──┬──→ ll
           │         └──→ lll
           └──→ tree
 
 ls  (standalone — no inherits)
 ```
 
-Example:
+The child's `format`/`columns` replace the parent's; settings merge
+with the child winning. Define your own and wire them into the tree
+however you like:
 
 ```toml
-[personality.default]
-colour = "auto"
-time-style = "default"
-group-dirs = "none"
-# theme = "ocean"
-
-[personality.lx]
-inherits = "default"
-
-[personality.ll]
-inherits = "lx"
-format = "long2"
-group-dirs = "first"
-
-[personality.la]
+[personality.la]              # all files, including hidden
 inherits = "ll"
 all = true
 
-[personality.lt]
+[personality.lt]              # time-sorted long listing
 inherits = "ll"
 sort = "age"
-```
 
-Invoke a personality with `-p NAME` or `--personality=NAME`, or by
-creating a symlink with the personality name pointing to the `lx`
-binary.
+[personality.recent]          # recently modified files
+format = "long"
+sort = "modified"
+reverse = true
+
+[personality.du]              # du replacement: dir sizes
+columns = ["size"]
+only-dirs = true
+tree = true
+level = 2
+sort = "size"
+reverse = true
+total-size = true
+```
 
 > **Upgrading from 0.1:** if you have a config file with a `[defaults]`
 > section, run `lx --upgrade-config` to migrate it to the 0.2 format.
-> The old `[defaults]` section is replaced by a `[personality.default]`
-> base personality, and the `flags` arrays are expanded to individual
-> settings.
 
 
 ### Config file locations
@@ -273,14 +367,21 @@ lx --columns=inode,perms,size,user,group,modified,vcs
 Or define your own named format in the config file.
 
 
-## Themes and styles
+## Themes, styles, and classes
 
-Colour customisation uses two kinds of config section that work together:
+Colour customisation uses three kinds of config section that work
+together:
 
-- **Themes** (`[theme.NAME]`) set colours for UI elements: directories,
-  permissions, dates, VCS status, etc.
-- **Styles** (`[style.NAME]`) set colours for files by name or extension,
-  using glob patterns.
+- **Themes** (`[theme.NAME]`) set colours for UI elements:
+  directories, permissions, dates, VCS status, etc.
+- **Styles** (`[style.NAME]`) set colours for files — either by
+  referencing a named class or by matching a glob pattern / filename.
+- **Classes** (`[class]`) define named file-type categories as lists
+  of glob patterns: `media`, `source`, `archive`, etc.
+
+The built-in `"exa"` theme and `"exa"` style provide sensible
+defaults out of the box.  To customise, define your own theme
+and/or style:
 
 ```toml
 [theme.ocean]
@@ -288,14 +389,26 @@ inherits = "exa"                  # start from the compiled-in defaults
 directory = "bold dodgerblue"
 date = "steelblue"
 vcs-new = "bold mediumspringgreen"
-use-style = "dev"                # reference a named style set
+use-style = "dev"                 # reference a named style set
 
 [style.dev]
-"*.rs" = "#ff8700"                # glob pattern: all .rs files
-"*.toml" = "sandybrown"
-"*.md" = "cornflowerblue"
-Makefile = "bold underline yellow" # exact match: Makefile only
+class.source = "#ff8700"          # class reference (bare dotted key)
+"*.toml" = "sandybrown"           # glob pattern (quoted key)
+"Makefile" = "bold underline yellow"  # exact filename (quoted key)
 ```
+
+Classes let you group file types by category:
+
+```toml
+[class]
+source = ["*.rs", "*.py", "*.js", "*.go"]
+data   = ["*.csv", "*.json", "*.xml"]
+```
+
+`lx` ships with built-in classes for `image`, `video`, `music`,
+`lossless`, `crypto`, `document`, `compressed`, `compiled`, `temp`,
+and `immediate` (build/project files).  Override any of them by
+redefining the name in your `[class]` section.
 
 Select a theme through a personality or from the command line:
 
@@ -308,15 +421,17 @@ theme = "ocean"                   # all personalities inherit this
 lx --theme=warm                   # override from the command line
 ```
 
-Colour values accept named ANSI colours (`"bold blue"`), X11/CSS names
-(`"tomato"`, `"cornflowerblue"`), hex (`"#ff8700"`), 256-colour
-(`"38;5;208"`), and modifiers (`bold`, `dimmed`, `italic`, `underline`).
+Colour values accept named ANSI colours (`"bold blue"`), X11/CSS
+names (`"tomato"`, `"cornflowerblue"`), hex (`"#ff8700"`),
+256-colour (`"38;5;208"`), and modifiers (`bold`, `dimmed`,
+`italic`, `underline`).
 
-Themes can inherit from other themes. The special name `"exa"` refers to
-the compiled-in default theme. Without `inherits`, a theme starts from a
-blank slate.
+Themes can inherit from other themes. The special name `"exa"`
+refers to the compiled-in default theme and style.  Without
+`inherits`, a theme starts from a blank slate.
 
-See `lxconfig.toml(5)` for the full list of theme and style keys.
+See [`lxconfig.toml(5)`](man/lxconfig.toml.5.md) for the full
+list of theme keys, style syntax, and built-in class definitions.
 
 
 ## Sorting
@@ -406,7 +521,13 @@ fly at shell startup.
 
 ## Roadmap: 0.3
 
-- Unify built-in file-type colours with the `[style.*]` system
+- **File types and unified styles** — user-definable file-type
+  collections (`[type]`) replace the hard-coded categories.  Styles
+  reference types by name (`type.media = "bold purple"`), giving
+  full control over file-type colouring with the same expressive
+  power as the built-in theme.
+- `--show-config` to display the active personality, format, theme,
+  and their resolved definitions
 - `--list-themes`, `--list-personalities`, `--list-formats` for
   discoverability
 - `--time-style=relative` ("2 hours ago")
