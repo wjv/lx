@@ -589,11 +589,24 @@ fn lookup_personality(name: &str) -> Option<PersonalityDef> {
 }
 
 /// Return a compiled-in personality definition, if one exists.
+///
+/// These match the uncommented sections in `lxconfig.default.toml`,
+/// so the tool behaves the same with or without a config file.
 fn compiled_personality(name: &str) -> Option<PersonalityDef> {
     use toml::Value::{Boolean, String as Str};
 
     match name {
+        // The "default" personality exists as a named anchor for
+        // inheritance.  Its settings in the config template document
+        // the built-in defaults but don't need to be injected — they
+        // match what lx does without any config.
+        "default" => Some(PersonalityDef::default()),
+        "lx" => Some(PersonalityDef {
+            inherits: Some("default".into()),
+            ..Default::default()
+        }),
         "ll" => Some(PersonalityDef {
+            inherits: Some("lx".into()),
             format: Some("long2".into()),
             settings: HashMap::from([
                 ("group-dirs".into(), Str("first".into())),
@@ -601,6 +614,7 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
             ..Default::default()
         }),
         "lll" => Some(PersonalityDef {
+            inherits: Some("lx".into()),
             format: Some("long3".into()),
             settings: HashMap::from([
                 ("group-dirs".into(), Str("first".into())),
@@ -610,6 +624,7 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
             ..Default::default()
         }),
         "tree" => Some(PersonalityDef {
+            inherits: Some("default".into()),
             format: Some("long2".into()),
             settings: HashMap::from([
                 ("tree".into(), Boolean(true)),
