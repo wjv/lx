@@ -5,6 +5,22 @@ All notable changes to lx are documented here. lx is forked from
 
 ## [Unreleased]
 
+### Added
+- Compiled-in `default` and `lx` personalities matching the
+  default config template
+- `--group-directories-first` now properly overrides personality-
+  injected `--group-dirs` values
+
+### Removed
+- `--git` and `--git-ignore` legacy flags (use `--vcs-status`
+  and `--vcs-ignore`)
+
+## [0.2.1] — 2026-03-23
+
+### Fixed
+- Add compiled-in `default` and `lx` personalities so the tool
+  behaves the same with or without a config file
+
 ## [0.2.0] — 2026-03-23
 
 ### Added
