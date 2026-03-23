@@ -16,7 +16,7 @@ with a somewhat different approach to the command-line user interface.
 - **Personalities** — named profiles that bundle columns, flags, and
   settings
 
-  Create symlinks (`ll`, `ls`, `la`, `tree`) and `lx` adapts its behaviour to 
+  Create symlinks (`ll`, `lll`, `tree`) and `lx` adapts its behaviour to
   the name it's invoked as!
 
 - **Fully configurable column layout**
@@ -33,9 +33,16 @@ with a somewhat different approach to the command-line user interface.
 
 - **Configuration file**
 
-  One `lxconfig.toml` replaces all your shell aliases and environment 
-  variables. Define defaults, custom formats, and personalities. Run
-  `lx --init-config` to get started.
+  One `lxconfig.toml` replaces all your shell aliases and environment
+  variables. Define formats, personalities with inheritance, and colour
+  themes. Run `lx --init-config` to get started.
+
+- **Named colour themes**
+
+  Define themes in your config file using human-readable colour names
+  (`"bold dodgerblue"`, `"tomato"`, `"#ff8700"`), with inheritance and
+  composable extension/filename colour sets. Select via personality
+  settings or `--theme=NAME`.
 
 - **Unified VCS support, including Jujutsu!**
 
@@ -96,25 +103,22 @@ Instead of shell aliases, use personalities:
 ln -s $(which lx) ~/bin/ll
 ln -s $(which lx) ~/bin/lll
 ln -s $(which lx) ~/bin/tree
-ln -s $(which lx) ~/bin/la
 
 # Then just use them:
 ll                    # long view, group, VCS, dirs first
 lll                   # all columns, header, long-iso timestamps
 tree                  # long tree view, dirs first
-la                    # long view + hidden files
 ```
 
-Or use the `-p`/`--profile` flag directly:
+Or use the `-p`/`--personality` flag directly:
 
 ```sh
 lx -pll               # "longer" long view
-lx --profile tree     # tree view
+lx --personality tree  # tree view
 ```
 
-The personalities mentioned above (`ll`, `lll`, `la`, `tree`) are 
-compiled-in defaults, as is `ls` (mimics "plain" ls).  You can edit these or 
-define your own in the config file.
+The personalities `ll`, `lll`, `tree`, and `ls` are compiled-in defaults.
+You can edit these or define your own in the config file.
 
 
 ## Configuration
@@ -126,19 +130,10 @@ lx --init-config
 ```
 
 This creates `~/.lxconfig.toml` with commented examples. The config
-file has three sections: Defaults, Formats, and Personalities.
+file has three main sections: Formats, Personalities, and Themes.
 
-### Defaults
-
-```toml
-[defaults]
-colour = "always"
-time-style = "long-iso"
-group-dirs = "first"
-```
-
-These are prepended as flags before your CLI arguments, so explicit
-flags always win.
+For the full reference, see the `lxconfig.toml(5)` man page or the
+[online documentation](https://github.com/wjv/lx).
 
 
 ### Formats
@@ -162,21 +157,58 @@ Available column names: `perms`, `size`, `user`, `group`, `links`,
 
 ### Personalities
 
-A personality bundles columns, flags, and settings:
+A personality bundles format, columns, and settings under a name.
+Every CLI flag has a corresponding config key (e.g. `--sort=age`
+becomes `sort = "age"`).
 
-```toml
-[personality.lt]
-format = "long2"
-flags = ["--group-dirs=first", "--sort=age"]
+Personalities can inherit from each other with `inherits = "NAME"`.
+The child's `format`/`columns` replace the parent's; settings merge
+with the child winning.
 
-[personality.stree]
-columns = ["size"]
-flags = ["--tree", "--only-dirs", "--reverse", "--sort=size",
-         "--total-size", "--level=1"]
+```
+default ──┬──→ lx ──┬──→ ll ──┬──→ lt
+          │         │         └──→ la
+          │         └──→ lll
+          └──→ tree
+
+ls  (standalone — no inherits)
 ```
 
-Invoke a personality with `-p NAME` or `--personality=NAME`, or by creating a
-symlink with the personality name pointing to the lx binary.
+Example:
+
+```toml
+[personality.default]
+colour = "auto"
+time-style = "default"
+group-dirs = "none"
+# theme = "ocean"
+
+[personality.lx]
+inherits = "default"
+
+[personality.ll]
+inherits = "lx"
+format = "long2"
+group-dirs = "first"
+
+[personality.la]
+inherits = "ll"
+all = true
+
+[personality.lt]
+inherits = "ll"
+sort = "age"
+```
+
+Invoke a personality with `-p NAME` or `--personality=NAME`, or by
+creating a symlink with the personality name pointing to the `lx`
+binary.
+
+> **Upgrading from 0.1:** if you have a config file with a `[defaults]`
+> section, run `lx --upgrade-config` to migrate it to the 0.2 format.
+> The old `[defaults]` section is replaced by a `[personality.default]`
+> base personality, and the `flags` arrays are expanded to individual
+> settings.
 
 
 ### Config file locations
@@ -239,6 +271,46 @@ lx --columns=inode,perms,size,user,group,modified,vcs
 ```
 
 Or define your own named format in the config file.
+
+
+## Themes
+
+Define named colour themes in the config file:
+
+```toml
+[theme.ocean]
+inherits = "exa"                  # start from the compiled-in defaults
+directory = "bold dodgerblue"
+date = "steelblue"
+vcs-new = "bold mediumspringgreen"
+use-extensions = "dev"            # reference a named extension set
+
+[extensions.dev]
+rs = "#ff8700"
+toml = "sandybrown"
+md = "cornflowerblue"
+```
+
+Select a theme through a personality or from the command line:
+
+```toml
+[personality.default]
+theme = "ocean"                   # all personalities inherit this
+```
+
+```sh
+lx --theme=warm                   # override from the command line
+```
+
+Colour values accept named ANSI colours (`"bold blue"`), X11/CSS names
+(`"tomato"`, `"cornflowerblue"`), hex (`"#ff8700"`), 256-colour
+(`"38;5;208"`), and modifiers (`bold`, `dimmed`, `italic`, `underline`).
+
+Themes can inherit from other themes. The special name `"exa"` refers to
+the compiled-in default theme. Without `inherits`, a theme starts from a
+blank slate.
+
+See `lxconfig.toml(5)` for the full list of theme keys.
 
 
 ## Sorting
@@ -318,23 +390,30 @@ fly at shell startup.
   - Use `--vcs=git --vcs-ignore` in a colocated repository.
   - Use `-I` glob patterns to exclude specific files (e.g. `-I target`).
 
+- **0.1 config files need migrating** — the 0.2 config format is not
+  backwards-compatible. Run `lx --upgrade-config` to convert
+  automatically (a `.bak` backup is saved).
+
 - **The `lx` crate name on crates.io is taken** by an unrelated
   library. Install from GitHub instead (see [Installation](#installation)).
 
 
-## Roadmap: 0.2
+## What's new in 0.2
 
-- **Config redesign**
-  * multi-level personality inheritance
-  * dedicated fields for all settings (no more `flags` arrays)
-  * config file versioning and `--upgrade-config` for migrating 0.1 configs
-  * `[defaults]` section is replaced by a base personality
-- **Theme support**
-  * `[theme]` section in the config file with human-readable colour values,
-    X11/CSS colour names, and per-file extension styling
-  * Layers on top of `LS_COLORS`/`LX_COLORS`
-- **Diverse UI tweaks**
-  - Stay tuned…
+- **Configuration redesign** — personality inheritance replaces the old
+  `[defaults]` section and `flags` arrays. Every CLI flag now has a
+  dedicated config key. Config files carry a `version` field;
+  `--upgrade-config` migrates 0.1 configs automatically.
+
+- **Theme system** — named themes in `[theme.NAME]` sections with
+  human-readable colour values (X11/CSS names like `"tomato"`,
+  `"cornflowerblue"`; hex `"#ff8700"`; ANSI 256-colour codes).
+  Themes can inherit from each other and layer on top of
+  `LS_COLORS`/`LX_COLORS`.
+
+- **New flags** — `--width` (explicit terminal width), `--absolute`
+  (show absolute paths), `--hyperlink` (OSC 8 clickable links),
+  `--quotes` (quote filenames containing spaces).
 
 
 ## User interface stability

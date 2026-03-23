@@ -2,7 +2,7 @@
 /target
 
 # Generated files
-/man/lx.1
+/man/*.[1-9]
 /completions
 
 # Editor backups

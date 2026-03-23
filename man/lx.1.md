@@ -63,6 +63,23 @@ Alias: `--color-scale`.
 `--no-icons`
 : Don't display icons. Alias for `--icons=never`.
 
+`-w`, `--width=COLS`
+: Set the terminal width explicitly, overriding auto-detection and the
+`COLUMNS` environment variable.
+
+`--absolute`
+: Display fully resolved absolute file paths.
+
+`--hyperlink`[`=WHEN`]
+: Display file names as clickable OSC 8 hyperlinks. WHEN is `always`,
+`auto`, or `never`.
+
+`--quotes`[`=WHEN`]
+: Quote file names containing spaces. WHEN is `always`, `auto`, or `never`.
+
+`--theme=NAME`
+: Select a named theme from the config file.
+
 
 FILTERING AND SORTING OPTIONS
 =============================
@@ -225,8 +242,12 @@ PERSONALITIES
 : Apply a named personality, which bundles columns, flags, and settings.
 Equivalent to invoking lx via an argv[0] symlink with that name.
 
-Compiled-in personalities: `ll`, `lll`, `la`, `tree`, `ls`.
+Compiled-in personalities: `ll`, `lll`, `tree`, `ls`.
 Additional personalities may be defined in the config file.
+
+Personalities support inheritance: a personality may include
+`inherits = "NAME"` to build upon another personality's settings.
+A personality may also set `theme = "NAME"` to select a named theme.
 
 When lx is invoked via a symlink whose name matches a personality, that
 personality is applied automatically. For example, if `ll` is a symlink
@@ -261,6 +282,12 @@ lx reads a TOML configuration file from these locations (first found wins):
 4. `~/Library/Application Support/lx/config.toml` (macOS)
 
 Run `lx --init-config` to generate a commented starter file.
+
+The config file includes a `version = "0.2"` field to track the schema
+version. If you have a legacy config from an earlier version, run
+`lx --upgrade-config` to migrate it to the current format.
+
+See **lxconfig.toml**(5) for full config file documentation.
 
 
 ENVIRONMENT VARIABLES
@@ -315,6 +342,12 @@ KNOWN BUGS
 currently has no way to report which files are gitignored (as distinct
 from untracked).  Workarounds: use `--vcs=git --vcs-ignore`, or use
 `-I` glob patterns to exclude specific files.
+
+
+SEE ALSO
+========
+
+**lxconfig.toml**(5)
 
 
 AUTHOR

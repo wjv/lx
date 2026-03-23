@@ -5,6 +5,30 @@ All notable changes to lx are documented here. lx is forked from
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-03-23
+
+### Added
+- Configuration redesign: personality inheritance (`inherits`), named settings for all CLI flags, config versioning (`version = "0.2"`), `--upgrade-config` migration tool
+- Theme system: `[theme.NAME]` sections with human-readable colour values (named ANSI, X11/CSS names, hex `#RRGGBB`), theme inheritance, `--theme=NAME` flag
+- Separate `[extensions.NAME]` and `[filenames.NAME]` colour sets, referenced from themes
+- `-w`/`--width` for explicit terminal width
+- `--absolute` for absolute file paths
+- `--hyperlink` for OSC 8 clickable file names
+- `--quotes` for quoting file names containing spaces
+- `phf` crate for X11 colour name lookup (148 names)
+- `thiserror` crate for typed configuration errors
+
+### Changed
+- `[defaults]` config section replaced by `[personality.lx]` (or user-defined base personality)
+- Config-file personalities use named settings instead of `flags` arrays
+- `la` removed from compiled-in personality defaults (available as config example)
+- Default config template uses `##` for prose comments, uncommented structural sections
+- Test helpers now isolate from user config (`LX_CONFIG`/`HOME`)
+
+### Removed
+- `[defaults]` config section (use `[personality.default]` + inheritance)
+- `flags` field in personality definitions (use named settings)
+
 ## [0.1.1] — 2026-03-20
 
 ### Fixed
