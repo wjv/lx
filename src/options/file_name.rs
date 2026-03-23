@@ -2,15 +2,22 @@ use crate::options::{flags, OptionsError, NumberSource};
 use crate::options::parser::MatchedFlags;
 use crate::options::vars::{self, Vars};
 
-use crate::output::file_name::{Options, Classify, ShowIcons};
+use crate::output::file_name::{Options, Classify, ShowIcons, Quotes};
 
 
 impl Options {
     pub fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
         let classify = Classify::deduce(matches);
         let show_icons = ShowIcons::deduce(matches, vars)?;
+        let absolute = matches.has(flags::ABSOLUTE);
+        let hyperlink = matches!(matches.get(flags::HYPERLINK),
+            Some("always") | Some("auto"));
+        let quotes = match matches.get(flags::QUOTES) {
+            Some("always") | Some("auto") => Quotes::Always,
+            _ => Quotes::Never,
+        };
 
-        Ok(Self { classify, show_icons })
+        Ok(Self { classify, show_icons, absolute, hyperlink, quotes })
     }
 }
 

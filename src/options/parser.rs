@@ -31,8 +31,16 @@ impl MatchedFlags {
     }
 
     /// Whether the given flag was specified at all.
+    /// Works with both `ArgAction::Count` and `ArgAction::SetTrue`.
     pub fn has(&self, id: &str) -> bool {
-        self.0.get_count(id) > 0
+        // Try count first (for Count actions), then bool (for SetTrue).
+        if let Some(&count) = self.0.try_get_one::<u8>(id).ok().flatten() {
+            return count > 0;
+        }
+        if let Some(&flag) = self.0.try_get_one::<bool>(id).ok().flatten() {
+            return flag;
+        }
+        false
     }
 
     /// Return the value of a flag that takes a parameter, or `None` if the
@@ -489,6 +497,35 @@ Environment variables:\n  \
             .help("Use a named theme from the config file")
             .action(ArgAction::Set)
             .value_name("NAME"))
+        .arg(Arg::new("width")
+            .long("width")
+            .short('w')
+            .help("Set the terminal width (overrides auto-detection and COLUMNS)")
+            .action(ArgAction::Set)
+            .value_name("COLS")
+            .value_parser(clap::value_parser!(usize)))
+        .arg(Arg::new("absolute")
+            .long("absolute")
+            .help("Show absolute file paths")
+            .action(ArgAction::SetTrue))
+        .arg(Arg::new("hyperlink")
+            .long("hyperlink")
+            .help("Display file names as clickable hyperlinks")
+            .action(ArgAction::Set)
+            .value_name("WHEN")
+            .default_missing_value("always")
+            .require_equals(true)
+            .num_args(0..=1)
+            .value_parser(["always", "auto", "never"]))
+        .arg(Arg::new("quotes")
+            .long("quotes")
+            .help("Quote file names containing spaces")
+            .action(ArgAction::Set)
+            .value_name("WHEN")
+            .default_missing_value("always")
+            .require_equals(true)
+            .num_args(0..=1)
+            .value_parser(["always", "auto", "never"]))
         .arg(Arg::new("init-config")
             .long("init-config")
             .help("Generate a default config file and exit")

@@ -11,7 +11,7 @@ use crate::output::time::TimeFormat;
 impl View {
     pub fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
         let mode = Mode::deduce(matches, vars)?;
-        let width = TerminalWidth::deduce(vars)?;
+        let width = TerminalWidth::deduce(matches, vars)?;
         let file_style = FileStyle::deduce(matches, vars)?;
         Ok(Self { mode, width, file_style })
     }
@@ -99,9 +99,15 @@ impl details::Options {
 
 
 impl TerminalWidth {
-    fn deduce<V: Vars>(vars: &V) -> Result<Self, OptionsError> {
+    fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
         use crate::options::vars;
 
+        // --width/-w flag takes highest priority.
+        if let Some(w) = matches.get_usize(flags::WIDTH) {
+            return Ok(Self::Set(w));
+        }
+
+        // COLUMNS environment variable.
         if let Some(columns) = vars.get(vars::COLUMNS).and_then(|s| s.into_string().ok()) {
             match columns.parse() {
                 Ok(width) => {

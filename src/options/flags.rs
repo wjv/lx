@@ -76,6 +76,12 @@ pub const VCS_IGNORE: &str = "vcs-ignore";
 // theme selection
 pub const THEME: &str = "theme";
 
+// display options
+pub const WIDTH: &str = "width";
+pub const ABSOLUTE: &str = "absolute";
+pub const HYPERLINK: &str = "hyperlink";
+pub const QUOTES: &str = "quotes";
+
 // optional feature options (GIT is a hidden alias for --vcs-status)
 pub const GIT: &str = "git";
 pub const EXTENDED: &str = "extended";

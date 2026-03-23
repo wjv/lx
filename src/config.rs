@@ -147,6 +147,12 @@ static SETTING_FLAGS: &[SettingDef] = &[
     // theme
     SettingDef { key: "theme",         flag: "--theme",           kind: SettingKind::Str },
 
+    // display
+    SettingDef { key: "width",         flag: "--width",           kind: SettingKind::Int },
+    SettingDef { key: "absolute",      flag: "--absolute",        kind: SettingKind::Bool },
+    SettingDef { key: "hyperlink",     flag: "--hyperlink",       kind: SettingKind::Str },
+    SettingDef { key: "quotes",        flag: "--quotes",          kind: SettingKind::Str },
+
     // explicit column enablers
     SettingDef { key: "permissions",   flag: "--permissions",    kind: SettingKind::Bool },
     SettingDef { key: "filesize",      flag: "--filesize",       kind: SettingKind::Bool },

@@ -19,6 +19,25 @@ pub struct Options {
 
     /// Whether to prepend icon characters before file names.
     pub show_icons: ShowIcons,
+
+    /// Whether to display absolute file paths.
+    pub absolute: bool,
+
+    /// Whether to wrap file names in OSC 8 hyperlinks.
+    pub hyperlink: bool,
+
+    /// Whether to quote file names containing spaces.
+    pub quotes: Quotes,
+}
+
+/// Whether to quote filenames that contain spaces or special characters.
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Default)]
+pub enum Quotes {
+    /// Always quote.
+    Always,
+    /// Quote only names with spaces.
+    #[default]
+    Never,
 }
 
 impl Options {
@@ -135,7 +154,30 @@ impl<C: Colours> FileName<'_, '_, C> {
             }
         }
 
-        if self.file.parent_dir.is_none()
+        // OSC 8 hyperlink opening.
+        if self.options.hyperlink {
+            if let Ok(abs) = std::fs::canonicalize(&self.file.path) {
+                let uri = format!("file://{}", abs.display());
+                bits.push(Style::default().paint(format!("\x1b]8;;{uri}\x07")));
+            }
+        }
+
+        // Opening quote.
+        let needs_quotes = self.options.quotes == Quotes::Always
+            && self.file.name.contains(' ');
+        if needs_quotes {
+            bits.push(Style::default().paint("\""));
+        }
+
+        // Absolute path: show the full resolved path instead of
+        // just the parent directory.
+        if self.options.absolute {
+            if let Ok(abs) = std::fs::canonicalize(&self.file.path) {
+                if let Some(parent) = abs.parent() {
+                    self.add_parent_bits(&mut bits, parent);
+                }
+            }
+        } else if self.file.parent_dir.is_none()
             && let Some(parent) = self.file.path.parent() {
                 self.add_parent_bits(&mut bits, parent);
             }
@@ -167,6 +209,9 @@ impl<C: Colours> FileName<'_, '_, C> {
                         let target_options = Options {
                             classify: Classify::JustFilenames,
                             show_icons: ShowIcons::Off,
+                            absolute: false,
+                            hyperlink: false,
+                            quotes: Quotes::Never,
                         };
 
                         let target_name = FileName {
@@ -210,6 +255,16 @@ impl<C: Colours> FileName<'_, '_, C> {
             && let Some(class) = self.classify_char(self.file) {
                 bits.push(Style::default().paint(class));
             }
+
+        // Closing quote.
+        if needs_quotes {
+            bits.push(Style::default().paint("\""));
+        }
+
+        // OSC 8 hyperlink closing.
+        if self.options.hyperlink {
+            bits.push(Style::default().paint("\x1b]8;;\x07"));
+        }
 
         bits.into()
     }
