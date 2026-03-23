@@ -10,7 +10,7 @@ All notable changes to lx are documented here. lx is forked from
 ### Added
 - Configuration redesign: personality inheritance (`inherits`), named settings for all CLI flags, config versioning (`version = "0.2"`), `--upgrade-config` migration tool
 - Theme system: `[theme.NAME]` sections with human-readable colour values (named ANSI, X11/CSS names, hex `#RRGGBB`), theme inheritance, `--theme=NAME` flag
-- Separate `[extensions.NAME]` and `[filenames.NAME]` colour sets, referenced from themes
+- `[style.NAME]` file colour sets with glob patterns, referenced from themes
 - `-w`/`--width` for explicit terminal width
 - `--absolute` for absolute file paths
 - `--hyperlink` for OSC 8 clickable file names

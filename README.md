@@ -37,12 +37,12 @@ with a somewhat different approach to the command-line user interface.
   variables. Define formats, personalities with inheritance, and colour
   themes. Run `lx --init-config` to get started.
 
-- **Named colour themes**
+- **Named colour themes and styles**
 
-  Define themes in your config file using human-readable colour names
-  (`"bold dodgerblue"`, `"tomato"`, `"#ff8700"`), with inheritance and
-  composable extension/filename colour sets. Select via personality
-  settings or `--theme=NAME`.
+  Define themes (UI elements) and styles (file types) in your config
+  using human-readable colour names (`"bold dodgerblue"`, `"tomato"`,
+  `"#ff8700"`), with inheritance and composable style sets. Select
+  via personality settings or `--theme=NAME`.
 
 - **Unified VCS support, including Jujutsu!**
 
@@ -273,9 +273,14 @@ lx --columns=inode,perms,size,user,group,modified,vcs
 Or define your own named format in the config file.
 
 
-## Themes
+## Themes and styles
 
-Define named colour themes in the config file:
+Colour customisation uses two kinds of config section that work together:
+
+- **Themes** (`[theme.NAME]`) set colours for UI elements: directories,
+  permissions, dates, VCS status, etc.
+- **Styles** (`[style.NAME]`) set colours for files by name or extension,
+  using glob patterns.
 
 ```toml
 [theme.ocean]
@@ -283,12 +288,13 @@ inherits = "exa"                  # start from the compiled-in defaults
 directory = "bold dodgerblue"
 date = "steelblue"
 vcs-new = "bold mediumspringgreen"
-use-extensions = "dev"            # reference a named extension set
+use-style = "dev"                # reference a named style set
 
-[extensions.dev]
-rs = "#ff8700"
-toml = "sandybrown"
-md = "cornflowerblue"
+[style.dev]
+"*.rs" = "#ff8700"                # glob pattern: all .rs files
+"*.toml" = "sandybrown"
+"*.md" = "cornflowerblue"
+Makefile = "bold underline yellow" # exact match: Makefile only
 ```
 
 Select a theme through a personality or from the command line:
@@ -310,7 +316,7 @@ Themes can inherit from other themes. The special name `"exa"` refers to
 the compiled-in default theme. Without `inherits`, a theme starts from a
 blank slate.
 
-See `lxconfig.toml(5)` for the full list of theme keys.
+See `lxconfig.toml(5)` for the full list of theme and style keys.
 
 
 ## Sorting

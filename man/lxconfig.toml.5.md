@@ -39,11 +39,8 @@ top-level sections:
 **[theme.NAME]**
 : Named colour themes for UI elements.
 
-**[extensions.NAME]**
-: Named sets of per-extension colours.
-
-**[filenames.NAME]**
-: Named sets of per-filename colours.
+**[style.NAME]**
+: Named sets of file colour styles (glob patterns and exact filenames).
 
 
 VERSIONING
@@ -296,11 +293,8 @@ this theme's keys override. The special name `"exa"` refers to the
 compiled-in default theme. Without `inherits`, a theme starts from a
 blank slate.
 
-`use-extensions`
-: Name of an `[extensions.NAME]` set to apply.
-
-`use-filenames`
-: Name of a `[filenames.NAME]` set to apply.
+`use-style`
+: Name of a `[style.NAME]` set to apply.
 
 `reset-extensions`
 : Boolean. If `true`, discard the built-in file-type extension colour
@@ -351,30 +345,94 @@ sets all unit magnitudes), `size-major`, `size-minor`.
 : `punctuation`, `date`, `inode`, `blocks`, `header`, `octal`,
 `symlink-path`, `control-char`, `broken-symlink`, `broken-overlay`.
 
+The compiled-in "exa" theme
+---------------------------
 
-EXTENSIONS
-==========
+The special theme name `"exa"` provides the following defaults.  Use
+`inherits = "exa"` and override individual keys to customise:
 
-Named sets of per-extension colours, referenced from themes via
-`use-extensions = "NAME"`. Keys are file extensions (without the leading
-dot); values are colour strings.
+    [theme.exa]
+    # File kinds
+    normal = ""
+    directory = "bold blue"
+    symlink = "cyan"
+    pipe = "yellow"
+    block-device = "bold yellow"
+    char-device = "bold yellow"
+    socket = "bold red"
+    special = "yellow"
+    executable = "bold green"
 
-    [extensions.dev]
-    rs = "#ff8700"
-    toml = "sandybrown"
-    md = "cornflowerblue"
-    py = "38;5;33"
-    js = "38;5;220"
+    # Permissions
+    perm-user-read = "bold yellow"
+    perm-user-write = "bold red"
+    perm-user-exec = "bold underline green"
+    perm-user-exec-other = "bold green"
+    perm-group-read = "yellow"
+    perm-group-write = "red"
+    perm-group-exec = "green"
+    perm-other-read = "yellow"
+    perm-other-write = "red"
+    perm-other-exec = "green"
+    perm-special-user = "purple"
+    perm-special-other = "purple"
+    perm-attribute = ""
+
+    # Size (default: all green; see --colour-scale for gradients)
+    size-number = "bold green"
+    size-unit = "green"
+    size-major = "bold green"
+    size-minor = "green"
+
+    # Users and groups
+    user-you = "bold yellow"
+    user-other = ""
+    group-yours = "bold yellow"
+    group-other = ""
+
+    # Links
+    links = "bold red"
+    links-multi = "bold red"
+
+    # VCS status
+    vcs-new = "green"
+    vcs-modified = "blue"
+    vcs-deleted = "red"
+    vcs-renamed = "yellow"
+    vcs-typechange = "purple"
+    vcs-ignored = "dimmed"
+    vcs-conflicted = "red"
+
+    # UI elements
+    punctuation = "38;5;244"
+    date = "blue"
+    inode = "purple"
+    blocks = "cyan"
+    header = "underline"
+    octal = "purple"
+    symlink-path = "cyan"
+    control-char = "red"
+    broken-symlink = "red"
+    broken-overlay = "underline"
 
 
-FILENAMES
-=========
+STYLES
+======
 
-Named sets of per-filename colours, referenced from themes via
-`use-filenames = "NAME"`. Keys are exact file names; values are colour
-strings.
+Named sets of file colour styles, referenced from themes via
+`use-style = "NAME"`. Each key-value pair maps a file pattern to a
+colour string.
 
-    [filenames.dev]
+Keys containing glob metacharacters (`*`, `?`, `[`) are used as glob
+patterns directly. Keys without metacharacters are treated as exact
+filename matches.
+
+    [style.dev]
+    "*.rs" = "#ff8700"
+    "*.toml" = "sandybrown"
+    "*.md" = "cornflowerblue"
+    "*.py" = "38;5;33"
+    "*.js" = "38;5;220"
     Makefile = "bold underline yellow"
     Cargo.toml = "bold #ff8700"
     Dockerfile = "bold deepskyblue"
@@ -384,7 +442,7 @@ strings.
 COLOUR VALUES
 =============
 
-Colour values in themes, extensions, and filenames accept a
+Colour values in themes and style sets accept a
 space-separated string of modifiers and a colour specifier. Tokens may
 appear in any order.
 
@@ -442,14 +500,13 @@ highest priority:
 2. **LS_COLORS** -- standard file-type colour scheme.
 3. **LX_COLORS** -- extended colour scheme (overrides `LS_COLORS`).
 4. **Theme** -- config-file theme (selected via personality or
-   `--theme`). The theme's UI element keys, extension colours, and
-   filename colours override all environment variable settings.
+   `--theme`). The theme's UI element keys and style set colours
+   override all environment variable settings.
 
 Within a theme, `inherits` is resolved first (parent applied, then
-child overrides). Extension and filename sets referenced by
-`use-extensions` and `use-filenames` are applied after UI element keys.
-If `reset-extensions = true`, built-in extension mappings are discarded
-before the theme's own extensions are applied.
+child overrides). Style sets referenced by `use-style` are applied
+after UI element keys. If `reset-extensions = true`, built-in extension
+mappings are discarded before the theme's own styles are applied.
 
 
 SEE ALSO

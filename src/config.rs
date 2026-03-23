@@ -320,20 +320,16 @@ pub struct Config {
     #[serde(default)]
     pub theme: HashMap<String, ThemeDef>,
 
-    /// Named extension colour sets: `[extensions.NAME]`.
+    /// Named file colour style sets: `[style.NAME]`.
     #[serde(default)]
-    pub extensions: HashMap<String, HashMap<String, String>>,
-
-    /// Named filename colour sets: `[filenames.NAME]`.
-    #[serde(default)]
-    pub filenames: HashMap<String, HashMap<String, String>>,
+    pub style: HashMap<String, HashMap<String, String>>,
 }
 
 /// A named theme definition under `[theme.NAME]`.
 ///
 /// UI element keys are captured via `serde(flatten)` into a flat map.
-/// Extension and filename colours are referenced by name from
-/// separate `[extensions.NAME]` and `[filenames.NAME]` sections.
+/// File colour styles are referenced by name from `[style.NAME]`
+/// sections.
 ///
 /// Theme selection happens through personalities (`theme = "NAME"`)
 /// or the `--theme=NAME` CLI flag.
@@ -349,11 +345,8 @@ pub struct ThemeDef {
     /// refers to the compiled-in default theme.
     pub inherits: Option<String>,
 
-    /// Reference a named extension colour set.
-    pub use_extensions: Option<String>,
-
-    /// Reference a named filename colour set.
-    pub use_filenames: Option<String>,
+    /// Reference a named style set from `[style.NAME]`.
+    pub use_style: Option<String>,
 
     /// Disable built-in file-type extension mappings.
     pub reset_extensions: Option<bool>,

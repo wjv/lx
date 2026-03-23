@@ -187,48 +187,35 @@ impl Options {
             }
         }
 
-        // Referenced extension set.
-        if let Some(ref ext_name) = theme.use_extensions {
-            if let Some(ext_set) = cfg.extensions.get(ext_name) {
-                Self::apply_extensions(ext_set, exts);
+        // Referenced style set.
+        if let Some(ref style_name) = theme.use_style {
+            if let Some(style_set) = cfg.style.get(style_name) {
+                Self::apply_style(style_set, exts);
             } else {
-                warn!("Extension set '{ext_name}' not found in config; ignoring");
-            }
-        }
-
-        // Referenced filename set.
-        if let Some(ref fn_name) = theme.use_filenames {
-            if let Some(fn_set) = cfg.filenames.get(fn_name) {
-                Self::apply_filenames(fn_set, exts);
-            } else {
-                warn!("Filename set '{fn_name}' not found in config; ignoring");
+                warn!("Style set '{style_name}' not found in config; ignoring");
             }
         }
     }
 
-    fn apply_extensions(
-        ext_set: &std::collections::HashMap<String, String>,
+    /// Apply a named style set to the extension mappings.
+    ///
+    /// Keys containing glob metacharacters (`*`, `?`, `[`) are used as
+    /// glob patterns directly.  Keys without metacharacters are treated
+    /// as exact-match patterns.
+    fn apply_style(
+        style_set: &std::collections::HashMap<String, String>,
         exts: &mut ExtensionMappings,
     ) {
         use log::*;
-        for (ext, value) in ext_set {
-            let pattern = format!("*.{ext}");
+        for (key, value) in style_set {
+            let pattern = if key.contains('*') || key.contains('?') || key.contains('[') {
+                key.clone()
+            } else {
+                key.clone()
+            };
             match glob::Pattern::new(&pattern) {
                 Ok(pat) => exts.add(pat, lsc::parse_style(value)),
-                Err(e) => warn!("Bad extension glob '{pattern}': {e}"),
-            }
-        }
-    }
-
-    fn apply_filenames(
-        fn_set: &std::collections::HashMap<String, String>,
-        exts: &mut ExtensionMappings,
-    ) {
-        use log::*;
-        for (name, value) in fn_set {
-            match glob::Pattern::new(name) {
-                Ok(pat) => exts.add(pat, lsc::parse_style(value)),
-                Err(e) => warn!("Bad filename glob '{name}': {e}"),
+                Err(e) => warn!("Bad style glob '{pattern}': {e}"),
             }
         }
     }

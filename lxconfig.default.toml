@@ -145,8 +145,7 @@ across = true
 # vcs-new = "bold mediumspringgreen"
 # vcs-modified = "bold lightskyblue"
 # vcs-deleted = "bold salmon"
-# use-extensions = "dev"            ## apply [extensions.dev] colours
-# use-filenames = "dev"             ## apply [filenames.dev] colours
+# use-style = "dev"                ## apply [style.dev] colours
 
 # [theme.warm]
 # inherits = "exa"
@@ -157,8 +156,7 @@ across = true
 # header = "bold wheat"
 # user-you = "bold goldenrod"
 # punctuation = "dimmed sienna"
-# use-extensions = "dev"
-# use-filenames = "dev"
+# use-style = "dev"
 
 # [theme.minimal]                  ## no inherits — blank slate
 # directory = "bold"
@@ -168,35 +166,33 @@ across = true
 # punctuation = "dimmed"
 # header = "bold underline"
 
-## ── Extension colour sets ─────────────────────────────────────────
-## Named sets of per-extension colours.  Referenced from themes
-## via use-extensions = "NAME".
+## ── Style sets ───────────────────────────────────────────────────
+## Named sets of file-type colour rules.  Referenced from themes
+## via use-style = "NAME".
+##
+## Keys containing glob metacharacters (*, ?, [) are used as glob
+## patterns directly.  Keys without metacharacters are treated as
+## exact filename matches.
 
-# [extensions.dev]
-# rs = "#ff8700"
-# toml = "sandybrown"
-# md = "cornflowerblue"
-# py = "38;5;33"
-# js = "38;5;220"
-# ts = "38;5;33"
-# go = "38;5;81"
-
-# [extensions.media]
-# jpg = "bold purple"
-# png = "bold purple"
-# gif = "bold purple"
-# mp4 = "bold purple"
-# mp3 = "bold cyan"
-# zip = "red"
-# gz = "red"
-# tar = "red"
-
-## ── Filename colour sets ──────────────────────────────────────────
-## Named sets of per-filename colours.  Referenced from themes
-## via use-filenames = "NAME".
-
-# [filenames.dev]
+# [style.dev]
+# "*.rs" = "#ff8700"
+# "*.toml" = "sandybrown"
+# "*.md" = "cornflowerblue"
+# "*.py" = "38;5;33"
+# "*.js" = "38;5;220"
+# "*.ts" = "38;5;33"
+# "*.go" = "38;5;81"
 # Makefile = "bold underline yellow"
 # Cargo.toml = "bold #ff8700"
 # Dockerfile = "bold deepskyblue"
 # README.md = "bold cornflowerblue"
+
+# [style.media]
+# "*.jpg" = "bold purple"
+# "*.png" = "bold purple"
+# "*.gif" = "bold purple"
+# "*.mp4" = "bold purple"
+# "*.mp3" = "bold cyan"
+# "*.zip" = "red"
+# "*.gz" = "red"
+# "*.tar" = "red"

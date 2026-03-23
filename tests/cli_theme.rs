@@ -85,16 +85,16 @@ fn theme_hex_colour() {
 }
 
 
-// ── Extension and filename overrides ─────────────────────────────
+// ── Style set overrides ─────────────────────────────────────────
 
 #[test]
 fn theme_extension_colour() {
     let (_dir, mut cmd) = lx_with_theme(r#"
         version = "0.2"
         [theme.test]
-        use-extensions = "myexts"
-        [extensions.myexts]
-        txt = "bold magenta"
+        use-style = "myexts"
+        [style.myexts]
+        "*.txt" = "bold magenta"
     "#);
 
     let work = tempdir().expect("failed to create workdir");
@@ -112,8 +112,8 @@ fn theme_filename_colour() {
     let (_dir, mut cmd) = lx_with_theme(r#"
         version = "0.2"
         [theme.test]
-        use-filenames = "mynames"
-        [filenames.mynames]
+        use-style = "mynames"
+        [style.mynames]
         Makefile = "bold underline yellow"
     "#);
 
