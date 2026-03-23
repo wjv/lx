@@ -5,6 +5,12 @@ All notable changes to lx are documented here. lx is forked from
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-03-23
+
+### Fixed
+- Add compiled-in `default` and `lx` personalities so the tool
+  behaves the same with or without a config file
+
 ## [0.2.0] — 2026-03-23
 
 ### Added
