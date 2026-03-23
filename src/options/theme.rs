@@ -15,7 +15,9 @@ impl Options {
                 Definitions::deduce(vars)
             };
 
-        Ok(Self { use_colours, colour_scale, definitions })
+        let theme_override = matches.get(flags::THEME).map(String::from);
+
+        Ok(Self { use_colours, colour_scale, definitions, theme_override })
     }
 }
 

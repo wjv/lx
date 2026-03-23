@@ -8,7 +8,7 @@ rust-version = "1.94"
 readme = "README.md"
 license = "MIT"
 repository = "https://github.com/wjv/lx"
-version = "0.2.0-pre.2"
+version = "0.2.0-pre.3"
 
 [dependencies]
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
@@ -21,6 +21,7 @@ log = "0.4"
 natord-plus-plus = "2.0"
 nu-ansi-term = "0.50"
 rayon = "1.10"
+phf = { version = "0.13", features = ["macros"] }
 serde = { version = "1", features = ["derive"] }
 terminal_size = "0.4"
 thiserror = "2.0"

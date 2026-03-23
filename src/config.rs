@@ -144,6 +144,9 @@ static SETTING_FLAGS: &[SettingDef] = &[
     SettingDef { key: "vcs-status",    flag: "--vcs-status",     kind: SettingKind::Bool },
     SettingDef { key: "vcs-ignore",    flag: "--vcs-ignore",     kind: SettingKind::Bool },
 
+    // theme
+    SettingDef { key: "theme",         flag: "--theme",           kind: SettingKind::Str },
+
     // explicit column enablers
     SettingDef { key: "permissions",   flag: "--permissions",    kind: SettingKind::Bool },
     SettingDef { key: "filesize",      flag: "--filesize",       kind: SettingKind::Bool },
@@ -307,7 +310,51 @@ pub struct Config {
     #[serde(default)]
     pub personality: HashMap<String, PersonalityDef>,
 
-    // theme: deferred to a later iteration
+    /// Named theme definitions: `[theme.NAME]`.
+    #[serde(default)]
+    pub theme: HashMap<String, ThemeDef>,
+
+    /// Named extension colour sets: `[extensions.NAME]`.
+    #[serde(default)]
+    pub extensions: HashMap<String, HashMap<String, String>>,
+
+    /// Named filename colour sets: `[filenames.NAME]`.
+    #[serde(default)]
+    pub filenames: HashMap<String, HashMap<String, String>>,
+}
+
+/// A named theme definition under `[theme.NAME]`.
+///
+/// UI element keys are captured via `serde(flatten)` into a flat map.
+/// Extension and filename colours are referenced by name from
+/// separate `[extensions.NAME]` and `[filenames.NAME]` sections.
+///
+/// Theme selection happens through personalities (`theme = "NAME"`)
+/// or the `--theme=NAME` CLI flag.
+///
+/// Themes can inherit from other themes via `inherits = "NAME"`.
+/// The special name `"exa"` refers to the compiled-in default theme.
+/// Without `inherits`, a theme starts from a blank slate.
+#[derive(Debug, Default, Deserialize, Clone)]
+#[serde(default, rename_all = "kebab-case")]
+pub struct ThemeDef {
+    /// Inherit from another theme.  The parent's UI keys are applied
+    /// first; this theme's keys override.  The special name `"exa"`
+    /// refers to the compiled-in default theme.
+    pub inherits: Option<String>,
+
+    /// Reference a named extension colour set.
+    pub use_extensions: Option<String>,
+
+    /// Reference a named filename colour set.
+    pub use_filenames: Option<String>,
+
+    /// Disable built-in file-type extension mappings.
+    pub reset_extensions: Option<bool>,
+
+    /// UI element colour overrides (flat keys like `directory`, `date`, etc.)
+    #[serde(flatten)]
+    pub ui: HashMap<String, String>,
 }
 
 

@@ -214,4 +214,94 @@ impl UiStyles {
         self.size.unit_giga = style;
         self.size.unit_huge = style;
     }
+
+    /// Set a UI style from a human-readable config key and value.
+    ///
+    /// Returns `true` if the key was recognised.  The value is parsed
+    /// via `parse_style()`, which accepts named colours, hex, X11
+    /// names, modifiers, and raw ANSI codes.
+    pub fn set_config(&mut self, key: &str, value: &str) -> bool {
+        use super::lsc::parse_style;
+        let style = parse_style(value);
+
+        match key {
+            // File kinds
+            "normal"           => self.filekinds.normal       = style,
+            "directory"        => self.filekinds.directory     = style,
+            "symlink"          => self.filekinds.symlink       = style,
+            "pipe"             => self.filekinds.pipe          = style,
+            "block-device"     => self.filekinds.block_device  = style,
+            "char-device"      => self.filekinds.char_device   = style,
+            "socket"           => self.filekinds.socket        = style,
+            "special"          => self.filekinds.special       = style,
+            "executable"       => self.filekinds.executable    = style,
+
+            // Permissions
+            "perm-user-read"   => self.perms.user_read          = style,
+            "perm-user-write"  => self.perms.user_write         = style,
+            "perm-user-exec"   => self.perms.user_execute_file  = style,
+            "perm-user-exec-other" => self.perms.user_execute_other = style,
+            "perm-group-read"  => self.perms.group_read         = style,
+            "perm-group-write" => self.perms.group_write        = style,
+            "perm-group-exec"  => self.perms.group_execute      = style,
+            "perm-other-read"  => self.perms.other_read         = style,
+            "perm-other-write" => self.perms.other_write        = style,
+            "perm-other-exec"  => self.perms.other_execute      = style,
+            "perm-special-user" => self.perms.special_user_file = style,
+            "perm-special-other" => self.perms.special_other    = style,
+            "perm-attribute"   => self.perms.attribute          = style,
+
+            // Size (individual magnitudes)
+            "size-number-byte" => self.size.number_byte = style,
+            "size-number-kilo" => self.size.number_kilo = style,
+            "size-number-mega" => self.size.number_mega = style,
+            "size-number-giga" => self.size.number_giga = style,
+            "size-number-huge" => self.size.number_huge = style,
+            "size-unit-byte"   => self.size.unit_byte   = style,
+            "size-unit-kilo"   => self.size.unit_kilo   = style,
+            "size-unit-mega"   => self.size.unit_mega    = style,
+            "size-unit-giga"   => self.size.unit_giga    = style,
+            "size-unit-huge"   => self.size.unit_huge    = style,
+            // Size (bulk setters)
+            "size-number"      => self.set_number_style(style),
+            "size-unit"        => self.set_unit_style(style),
+            "size-major"       => self.size.major = style,
+            "size-minor"       => self.size.minor = style,
+
+            // Users
+            "user-you"         => self.users.user_you          = style,
+            "user-other"       => self.users.user_someone_else = style,
+            "group-yours"      => self.users.group_yours       = style,
+            "group-other"      => self.users.group_not_yours   = style,
+
+            // Links
+            "links"            => self.links.normal            = style,
+            "links-multi"      => self.links.multi_link_file   = style,
+
+            // VCS
+            "vcs-new"          => self.vcs.new         = style,
+            "vcs-modified"     => self.vcs.modified     = style,
+            "vcs-deleted"      => self.vcs.deleted      = style,
+            "vcs-renamed"      => self.vcs.renamed      = style,
+            "vcs-typechange"   => self.vcs.typechange    = style,
+            "vcs-ignored"      => self.vcs.ignored       = style,
+            "vcs-conflicted"   => self.vcs.conflicted    = style,
+
+            // UI elements
+            "punctuation"      => self.punctuation      = style,
+            "date"             => self.date              = style,
+            "inode"            => self.inode             = style,
+            "blocks"           => self.blocks            = style,
+            "header"           => self.header            = style,
+            "octal"            => self.octal             = style,
+            "symlink-path"     => self.symlink_path      = style,
+            "control-char"     => self.control_char      = style,
+            "broken-symlink"   => self.broken_symlink    = style,
+            "broken-overlay"   => self.broken_path_overlay = style,
+
+            _ => return false,
+        }
+
+        true
+    }
 }

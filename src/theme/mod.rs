@@ -21,6 +21,9 @@ pub struct Options {
     pub colour_scale: ColourScale,
 
     pub definitions: Definitions,
+
+    /// CLI override for theme selection (`--theme=NAME`).
+    pub theme_override: Option<String>,
 }
 
 /// Under what circumstances we should display coloured, rather than plain,
@@ -70,6 +73,7 @@ impl Options {
 
     #[allow(trivial_casts)]   // the `as Box<_>` stuff below warns about this for some reason
     pub fn to_theme(&self, isatty: bool) -> Theme {
+        use crate::config::CONFIG;
         use crate::info::filetype::FileExtensions;
 
         if self.use_colours == UseColours::Never || (self.use_colours == UseColours::Automatic && ! isatty) {
@@ -78,9 +82,23 @@ impl Options {
             return Theme { ui, exts };
         }
 
-        // Parse the environment variables into colours and extension mappings
-        let mut ui = UiStyles::default_theme(self.colour_scale);
-        let (exts, use_default_filetypes) = self.definitions.parse_colour_vars(&mut ui);
+        // Layer 1: base UI styles.
+        // If a theme is selected, start from plain — the theme
+        // provides colours (possibly via inherits = "exa").
+        // Without a theme, use compiled-in defaults directly.
+        let mut ui = if self.theme_override.is_some() {
+            UiStyles::plain()
+        } else {
+            UiStyles::default_theme(self.colour_scale)
+        };
+
+        // Layer 2–3: LS_COLORS and LX_COLORS environment variables.
+        let (mut exts, mut use_default_filetypes) = self.definitions.parse_colour_vars(&mut ui);
+
+        // Layer 4: [theme] from config file (highest priority).
+        if let Some(ref cfg) = *CONFIG {
+            self.apply_config_theme(cfg, &mut ui, &mut exts, &mut use_default_filetypes);
+        }
 
         // Use between 0 and 2 file name highlighters
         let exts = match (exts.is_non_empty(), use_default_filetypes) {
@@ -91,6 +109,128 @@ impl Options {
         };
 
         Theme { ui, exts }
+    }
+
+    /// Apply the selected theme from the config file, resolving
+    /// inheritance.
+    ///
+    /// Theme selection comes from `--theme=NAME` (set by CLI or
+    /// personality synthetic args).  The inheritance chain is walked
+    /// and themes are applied from root to leaf.  The special name
+    /// `"exa"` applies the compiled-in default theme.
+    fn apply_config_theme(
+        &self,
+        cfg: &crate::config::Config,
+        ui: &mut UiStyles,
+        exts: &mut ExtensionMappings,
+        use_default_filetypes: &mut bool,
+    ) {
+        use log::*;
+
+        let Some(ref name) = self.theme_override else {
+            return;  // no theme selected
+        };
+
+        // Build the inheritance chain: [leaf, ..., root].
+        let mut chain: Vec<&crate::config::ThemeDef> = Vec::new();
+        let mut visited: Vec<String> = Vec::new();
+        let mut current = Some(name.clone());
+
+        while let Some(ref tname) = current {
+            if visited.contains(tname) {
+                visited.push(tname.clone());
+                let path = visited.join(" \u{2192} ");
+                warn!("Theme inheritance cycle: {path}; ignoring");
+                return;
+            }
+            visited.push(tname.clone());
+
+            if tname == "exa" {
+                // Special: apply the compiled-in default theme.
+                *ui = UiStyles::default_theme(self.colour_scale);
+                current = None;
+            } else if let Some(theme) = cfg.theme.get(tname) {
+                chain.push(theme);
+                current = theme.inherits.clone();
+            } else {
+                warn!("Theme '{tname}' not found in config; ignoring");
+                return;
+            }
+        }
+
+        // Apply from root (last) to leaf (first).
+        for theme in chain.into_iter().rev() {
+            Self::apply_theme_def(theme, cfg, ui, exts, use_default_filetypes);
+        }
+    }
+
+    /// Apply a single ThemeDef's settings to the UI styles and
+    /// extension mappings.
+    fn apply_theme_def(
+        theme: &crate::config::ThemeDef,
+        cfg: &crate::config::Config,
+        ui: &mut UiStyles,
+        exts: &mut ExtensionMappings,
+        use_default_filetypes: &mut bool,
+    ) {
+        use log::*;
+
+        // reset-extensions control.
+        if theme.reset_extensions == Some(true) {
+            *use_default_filetypes = false;
+        }
+
+        // UI element overrides.
+        for (key, value) in &theme.ui {
+            if !ui.set_config(key, value) {
+                warn!("Unknown theme key '{key}'; ignoring");
+            }
+        }
+
+        // Referenced extension set.
+        if let Some(ref ext_name) = theme.use_extensions {
+            if let Some(ext_set) = cfg.extensions.get(ext_name) {
+                Self::apply_extensions(ext_set, exts);
+            } else {
+                warn!("Extension set '{ext_name}' not found in config; ignoring");
+            }
+        }
+
+        // Referenced filename set.
+        if let Some(ref fn_name) = theme.use_filenames {
+            if let Some(fn_set) = cfg.filenames.get(fn_name) {
+                Self::apply_filenames(fn_set, exts);
+            } else {
+                warn!("Filename set '{fn_name}' not found in config; ignoring");
+            }
+        }
+    }
+
+    fn apply_extensions(
+        ext_set: &std::collections::HashMap<String, String>,
+        exts: &mut ExtensionMappings,
+    ) {
+        use log::*;
+        for (ext, value) in ext_set {
+            let pattern = format!("*.{ext}");
+            match glob::Pattern::new(&pattern) {
+                Ok(pat) => exts.add(pat, lsc::parse_style(value)),
+                Err(e) => warn!("Bad extension glob '{pattern}': {e}"),
+            }
+        }
+    }
+
+    fn apply_filenames(
+        fn_set: &std::collections::HashMap<String, String>,
+        exts: &mut ExtensionMappings,
+    ) {
+        use log::*;
+        for (name, value) in fn_set {
+            match glob::Pattern::new(name) {
+                Ok(pat) => exts.add(pat, lsc::parse_style(value)),
+                Err(e) => warn!("Bad filename glob '{name}': {e}"),
+            }
+        }
     }
 }
 
