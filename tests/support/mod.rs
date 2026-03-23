@@ -19,6 +19,7 @@ pub fn lx_no_colour() -> Command {
 
 /// Return the primary group name of the current user.
 /// Used in tests that check for the group column being present.
+#[allow(dead_code)]
 pub fn current_group() -> String {
     use std::process::Command as StdCommand;
     let output = StdCommand::new("id")
