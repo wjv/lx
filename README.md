@@ -404,22 +404,14 @@ fly at shell startup.
   library. Install from GitHub instead (see [Installation](#installation)).
 
 
-## What's new in 0.2
+## Roadmap: 0.3
 
-- **Configuration redesign** — personality inheritance replaces the old
-  `[defaults]` section and `flags` arrays. Every CLI flag now has a
-  dedicated config key. Config files carry a `version` field;
-  `--upgrade-config` migrates 0.1 configs automatically.
-
-- **Theme system** — named themes in `[theme.NAME]` sections with
-  human-readable colour values (X11/CSS names like `"tomato"`,
-  `"cornflowerblue"`; hex `"#ff8700"`; ANSI 256-colour codes).
-  Themes can inherit from each other and layer on top of
-  `LS_COLORS`/`LX_COLORS`.
-
-- **New flags** — `--width` (explicit terminal width), `--absolute`
-  (show absolute paths), `--hyperlink` (OSC 8 clickable links),
-  `--quotes` (quote filenames containing spaces).
+- Unify built-in file-type colours with the `[style.*]` system
+- `--list-themes`, `--list-personalities`, `--list-formats` for
+  discoverability
+- `--time-style=relative` ("2 hours ago")
+- Symlink display flags (`--symlinks=show|hide|follow`)
+- Polish and bug fixes from daily driving 0.2
 
 
 ## User interface stability

@@ -158,41 +158,6 @@ fn git_vcs_ignore_hides_ignored_files() {
 }
 
 
-// ── Legacy --git / --git-ignore aliases ───────────────────────────
-
-#[test]
-fn legacy_git_flag_shows_status() {
-    let dir = git_fixture();
-    lx_no_colour()
-        .args(["--git", "-l"])
-        .arg(dir.path())
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("N"))
-        .stdout(predicate::str::contains("untracked.txt"));
-}
-
-#[test]
-fn legacy_git_ignore_flag() {
-    let dir = git_fixture();
-    let path = dir.path();
-
-    fs::write(path.join(".gitignore"), "*.tmp\n").unwrap();
-    StdCommand::new("git")
-        .args(["add", ".gitignore"])
-        .current_dir(path)
-        .output()
-        .expect("git add failed");
-
-    fs::write(path.join("scratch.tmp"), "temp").unwrap();
-
-    lx_no_colour()
-        .args(["--git-ignore", "-1"])
-        .arg(path)
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("scratch.tmp").not());
-}
 
 
 // ── --vcs-status without --long (silently ignored) ────────────────

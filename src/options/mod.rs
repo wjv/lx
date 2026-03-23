@@ -147,8 +147,7 @@ impl Options {
     /// Determines the complete set of options based on the given command-line
     /// arguments, after they've been parsed.
     fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
-        let wants_git = matches.has(flags::GIT) || matches.has(flags::GIT_IGNORE)
-            || matches.has(flags::VCS_STATUS) || matches.has(flags::VCS_IGNORE)
+        let wants_git = matches.has(flags::VCS_STATUS) || matches.has(flags::VCS_IGNORE)
             || matches.get(flags::VCS).is_some_and(|v| v != "none");
 
         if cfg!(not(feature = "git")) && wants_git {

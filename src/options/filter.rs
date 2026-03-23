@@ -218,7 +218,7 @@ impl IgnorePatterns {
 
 impl VcsIgnore {
     pub fn deduce(matches: &MatchedFlags) -> Self {
-        if matches.has(flags::GIT_IGNORE) || matches.has(flags::VCS_IGNORE) {
+        if matches.has(flags::VCS_IGNORE) {
             Self::CheckAndIgnore
         }
         else {
@@ -322,7 +322,6 @@ mod test {
         use super::*;
 
         test!(off:      VcsIgnore <- [];                VcsIgnore::Off);
-        test!(git_flag: VcsIgnore <- ["--git-ignore"];   VcsIgnore::CheckAndIgnore);
         test!(vcs_flag: VcsIgnore <- ["--vcs-ignore"];   VcsIgnore::CheckAndIgnore);
     }
 }

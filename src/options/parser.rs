@@ -229,16 +229,12 @@ Environment variables:\n  \
             .help("Glob patterns (pipe-separated) of files to ignore")
             .action(ArgAction::Set)
             .value_name("GLOB"))
-        .arg(Arg::new(flags::GIT_IGNORE)
-            .long("git-ignore")
-            .help("Hide files ignored by VCS (alias for --vcs-ignore)")
-            .action(ArgAction::Count)
-            .hide(true))
         .arg(Arg::new(flags::GROUP_DIRS)
             .long("group-dirs")
             .help("Group directories before or after other files")
             .action(ArgAction::Set)
             .value_name("WHEN")
+            .overrides_with(flags::DIRS_FIRST)
             .value_parser([
                 PossibleValue::new("first"),
                 PossibleValue::new("last"),
@@ -247,7 +243,8 @@ Environment variables:\n  \
         .arg(Arg::new(flags::DIRS_FIRST)
             .long("group-directories-first")
             .help("List directories first (alias for --group-dirs=first)")
-            .action(ArgAction::Count)
+            .action(ArgAction::SetTrue)
+            .overrides_with(flags::GROUP_DIRS)
             .hide(true))
         .arg(Arg::new(flags::ONLY_DIRS)
             .short('D').long("only-dirs")
@@ -468,11 +465,6 @@ Environment variables:\n  \
 
         // ── Optional features ───────────────────────────────────
 
-        .arg(Arg::new(flags::GIT)
-            .long("git")
-            .help("Show per-file Git status (alias for --vcs-status)")
-            .action(ArgAction::Count)
-            .hide(true))
         .arg(Arg::new(flags::EXTENDED)
             .short('@').long("extended")
             .help("List each file's extended attributes and sizes")

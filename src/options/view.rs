@@ -291,7 +291,7 @@ fn apply_individual_adds(matches: &MatchedFlags, columns: &mut Vec<Column>) {
         (matches.has(flags::BLOCKS),     Column::Blocks),
         (matches.has(flags::GROUP),      Column::Group),
         (matches.has(flags::OCTAL),      Column::Octal),
-        (matches.has(flags::GIT) || matches.has(flags::VCS_STATUS), Column::VcsStatus),
+        (matches.has(flags::VCS_STATUS), Column::VcsStatus),
     ];
 
     for &(enabled, col) in adds {
@@ -693,7 +693,6 @@ mod test {
         test!(just_numeric:  Mode <- ["--numeric"],  None;  like Ok(Mode::Grid(_)));
 
         #[cfg(feature = "git")]
-        test!(just_git:        Mode <- ["--git"],          None;  like Ok(Mode::Grid(_)));
         test!(just_vcs_status: Mode <- ["--vcs-status"],   None;  like Ok(Mode::Grid(_)));
 
         // Contradictions and combinations

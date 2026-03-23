@@ -22,7 +22,6 @@ pub const LEVEL: &str = "level";
 pub const REVERSE: &str = "reverse";
 pub const SORT: &str = "sort";
 pub const IGNORE_GLOB: &str = "ignore-glob";
-pub const GIT_IGNORE: &str = "git-ignore";
 pub const GROUP_DIRS: &str = "group-dirs";
 pub const DIRS_FIRST: &str = "group-directories-first";
 pub const ONLY_DIRS: &str = "only-dirs";
@@ -82,7 +81,6 @@ pub const ABSOLUTE: &str = "absolute";
 pub const HYPERLINK: &str = "hyperlink";
 pub const QUOTES: &str = "quotes";
 
-// optional feature options (GIT is a hidden alias for --vcs-status)
-pub const GIT: &str = "git";
+// optional feature options
 pub const EXTENDED: &str = "extended";
 pub const OCTAL: &str = "octal-permissions";
