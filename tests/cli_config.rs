@@ -11,10 +11,16 @@ use tempfile::tempdir;
 
 
 /// Helper: run lx with a given config file via LX_CONFIG env var.
+/// Automatically prepends the current config version if not present.
 fn lx_with_config(config_content: &str) -> (tempfile::TempDir, assert_cmd::Command) {
     let dir = tempdir().expect("failed to create tempdir");
     let config_path = dir.path().join("config.toml");
-    fs::write(&config_path, config_content).unwrap();
+    let content = if config_content.contains("version") {
+        config_content.to_string()
+    } else {
+        format!("version = \"0.3\"\n{config_content}")
+    };
+    fs::write(&config_path, content).unwrap();
 
     let mut cmd = lx_no_colour();
     cmd.env("LX_CONFIG", config_path);
@@ -453,7 +459,7 @@ fn init_config_creates_file() {
     // The generated file should be valid TOML (all commented out = empty)
     let contents = fs::read_to_string(&config_path).unwrap();
     assert!(contents.contains("## lx configuration file"));
-    assert!(contents.contains("version = \"0.2\""));
+    assert!(contents.contains("version = \"0.3\""));
     assert!(contents.contains("[personality.default]"));
     assert!(contents.contains("[personality.lx]"));
     assert!(contents.contains("inherits"));
@@ -481,6 +487,7 @@ fn lx_config_env_takes_priority() {
     let dir = tempdir().expect("failed to create tempdir");
     let config_path = dir.path().join("custom.toml");
     fs::write(&config_path, r#"
+        version = "0.3"
         [personality.lx]
         group-dirs = "first"
     "#).unwrap();

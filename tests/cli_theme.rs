@@ -29,7 +29,7 @@ fn lx_with_theme(config_content: &str) -> (tempfile::TempDir, assert_cmd::Comman
 #[test]
 fn theme_directory_colour() {
     let (_dir, mut cmd) = lx_with_theme(r#"
-        version = "0.2"
+        version = "0.3"
         [theme.test]
         directory = "bold red"
     "#);
@@ -47,7 +47,7 @@ fn theme_directory_colour() {
 #[test]
 fn theme_date_colour() {
     let (_dir, mut cmd) = lx_with_theme(r#"
-        version = "0.2"
+        version = "0.3"
         [theme.test]
         date = "bold cyan"
     "#);
@@ -61,7 +61,7 @@ fn theme_date_colour() {
 #[test]
 fn theme_x11_colour() {
     let (_dir, mut cmd) = lx_with_theme(r#"
-        version = "0.2"
+        version = "0.3"
         [theme.test]
         date = "tomato"
     "#);
@@ -75,7 +75,7 @@ fn theme_x11_colour() {
 #[test]
 fn theme_hex_colour() {
     let (_dir, mut cmd) = lx_with_theme(
-        "version = \"0.2\"\n[theme.test]\ndate = \"#ff8700\"\n"
+        "version = \"0.3\"\n[theme.test]\ndate = \"#ff8700\"\n"
     );
 
     cmd.args(["--theme=test", "-l", "Cargo.toml"])
@@ -90,7 +90,7 @@ fn theme_hex_colour() {
 #[test]
 fn theme_extension_colour() {
     let (_dir, mut cmd) = lx_with_theme(r#"
-        version = "0.2"
+        version = "0.3"
         [theme.test]
         use-style = "myexts"
         [style.myexts]
@@ -110,7 +110,7 @@ fn theme_extension_colour() {
 #[test]
 fn theme_filename_colour() {
     let (_dir, mut cmd) = lx_with_theme(r#"
-        version = "0.2"
+        version = "0.3"
         [theme.test]
         use-style = "mynames"
         [style.mynames]
@@ -133,7 +133,7 @@ fn theme_filename_colour() {
 #[test]
 fn theme_via_personality() {
     let (_dir, mut cmd) = lx_with_theme(r#"
-        version = "0.2"
+        version = "0.3"
         [personality.lx]
         theme = "ocean"
 
@@ -151,7 +151,7 @@ fn theme_via_personality() {
 #[test]
 fn theme_inherited_through_personality() {
     let (_dir, mut cmd) = lx_with_theme(r#"
-        version = "0.2"
+        version = "0.3"
         [personality.default]
         theme = "ocean"
 
@@ -172,7 +172,7 @@ fn theme_inherited_through_personality() {
 #[test]
 fn theme_cli_overrides_personality() {
     let (_dir, mut cmd) = lx_with_theme(r#"
-        version = "0.2"
+        version = "0.3"
         [personality.lx]
         theme = "ocean"
 
@@ -196,7 +196,7 @@ fn theme_cli_overrides_personality() {
 #[test]
 fn theme_overrides_env() {
     let (_dir, mut cmd) = lx_with_theme(r#"
-        version = "0.2"
+        version = "0.3"
         [theme.test]
         date = "bold red"
     "#);
@@ -214,7 +214,7 @@ fn theme_overrides_env() {
 #[test]
 fn style_class_reference() {
     let (_dir, mut cmd) = lx_with_theme(r#"
-        version = "0.2"
+        version = "0.3"
 
         [class]
         testclass = ["*.xyz"]
@@ -243,7 +243,7 @@ fn style_class_overrides_exa_default() {
     // User style with a class reference should override the
     // compiled-in exa style for the same files.
     let (_dir, mut cmd) = lx_with_theme(r#"
-        version = "0.2"
+        version = "0.3"
 
         [theme.test]
         inherits = "exa"
@@ -268,7 +268,7 @@ fn style_class_overrides_exa_default() {
 fn style_quoted_pattern_and_class() {
     // A style can mix class references and quoted file patterns.
     let (_dir, mut cmd) = lx_with_theme(r#"
-        version = "0.2"
+        version = "0.3"
 
         [class]
         data = ["*.csv"]
@@ -299,7 +299,7 @@ fn style_quoted_pattern_and_class() {
 fn user_class_overrides_compiled_in() {
     // A user-defined [class] entry overrides the compiled-in one.
     let (_dir, mut cmd) = lx_with_theme(r#"
-        version = "0.2"
+        version = "0.3"
 
         [class]
         compressed = ["*.myarc"]
@@ -330,7 +330,7 @@ fn theme_inherits_exa() {
     // A theme inheriting from "exa" should get the compiled-in
     // defaults, then override specific keys.
     let (_dir, mut cmd) = lx_with_theme(r#"
-        version = "0.2"
+        version = "0.3"
         [theme.custom]
         inherits = "exa"
         date = "bold red"
@@ -352,7 +352,7 @@ fn theme_without_inherits_is_blank() {
     // A theme without inherits starts from plain — only its own
     // keys apply.
     let (_dir, mut cmd) = lx_with_theme(r#"
-        version = "0.2"
+        version = "0.3"
         [theme.bare]
         date = "bold red"
     "#);
@@ -370,7 +370,7 @@ fn theme_without_inherits_is_blank() {
 #[test]
 fn theme_inherits_custom() {
     let (_dir, mut cmd) = lx_with_theme(r#"
-        version = "0.2"
+        version = "0.3"
         [theme.base]
         inherits = "exa"
         date = "bold cyan"
@@ -392,7 +392,7 @@ fn theme_inherits_custom() {
 #[test]
 fn theme_inheritance_cycle_detected() {
     let (_dir, mut cmd) = lx_with_theme(r#"
-        version = "0.2"
+        version = "0.3"
         [theme.a]
         inherits = "b"
         [theme.b]

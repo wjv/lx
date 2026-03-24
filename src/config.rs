@@ -40,10 +40,10 @@ pub enum ConfigError {
         source: toml::de::Error,
     },
 
-    /// The config file uses the legacy (pre-0.2) format.
-    #[error("config file {path} uses the legacy format.\n\
-             Run `lx --upgrade-config` to migrate it to the current format.")]
-    Legacy { path: PathBuf },
+    /// The config file uses an older format and needs upgrading.
+    #[error("config file {path} uses version {version} format.\n\
+             Run `lx --upgrade-config` to migrate it to version {CONFIG_VERSION}.")]
+    NeedsUpgrade { path: PathBuf, version: String },
 
     /// Personality inheritance forms a cycle.
     #[error("personality inheritance cycle: {chain}")]
@@ -53,10 +53,9 @@ pub enum ConfigError {
     #[error("personality '{child}' inherits from '{parent}', which does not exist")]
     MissingParent { child: String, parent: String },
 
-    /// `--upgrade-config` on a config that isn't legacy.
-    #[error("{path} does not appear to be a legacy config \
-             (already has a version field, or no [defaults] section)")]
-    NotLegacy { path: PathBuf },
+    /// `--upgrade-config` on a config that is already current.
+    #[error("{path} is already at version {CONFIG_VERSION}; no upgrade needed")]
+    AlreadyCurrent { path: PathBuf },
 }
 
 /// Extension trait for attaching path context to `io::Result`.
@@ -301,7 +300,7 @@ impl<'de> Deserialize<'de> for StringOrList {
 // ── Config types ────────────────────────────────────────────────
 
 /// The current config schema version.
-pub const CONFIG_VERSION: &str = "0.2";
+pub const CONFIG_VERSION: &str = "0.3";
 
 /// Top-level config file structure.
 #[derive(Debug, Default, Deserialize)]
@@ -488,8 +487,13 @@ fn try_load_config() -> Result<Option<Config>, ConfigError> {
 
     let contents = fs::read_to_string(&path).with_path(&path)?;
 
-    if is_legacy_config(&contents) {
-        return Err(ConfigError::Legacy { path });
+    // Check the version before full parsing.
+    let version = detect_config_version(&contents);
+    if version != CONFIG_VERSION {
+        return Err(ConfigError::NeedsUpgrade {
+            path,
+            version: version.to_string(),
+        });
     }
 
     let config: Config = toml::from_str(&contents)
@@ -511,24 +515,26 @@ fn load_config() -> Option<Config> {
     }
 }
 
-/// Check whether a config file is legacy (pre-0.2) format.
+/// Detect the config schema version from raw file contents.
 ///
-/// A legacy config has `[defaults]` and no `version` key.
-/// We check the raw text rather than parsing, so that even
-/// malformed legacy configs are detected.
-fn is_legacy_config(contents: &str) -> bool {
-    // Quick check: does it have a version line?
+/// Returns the version string, or `"0.1"` if no version field
+/// is found (legacy config).
+fn detect_config_version(contents: &str) -> &str {
     for line in contents.lines() {
         let trimmed = line.trim();
         if trimmed.starts_with("version") && trimmed.contains('=') {
-            return false;  // has a version field, not legacy
+            // Extract the value after '=', stripping quotes and whitespace.
+            if let Some(val) = trimmed.split('=').nth(1) {
+                let val = val.trim().trim_matches('"');
+                return match val {
+                    "0.2" => "0.2",
+                    "0.3" => "0.3",
+                    _ => val,  // unknown version — will fail the check
+                };
+            }
         }
     }
-    // No version field.  Is there a [defaults] section?
-    contents.lines().any(|line| {
-        let trimmed = line.trim();
-        trimmed == "[defaults]"
-    })
+    "0.1"  // no version field → legacy
 }
 
 
@@ -791,28 +797,28 @@ pub fn write_init_config(path: &PathBuf) -> std::io::Result<()> {
 }
 
 
-/// Upgrade a legacy config file to the current format.
+/// Upgrade an older config file to the current format.
 ///
-/// Reads the config at `path`, converts `[defaults]` to
-/// `[personality.default]`, ensures `[personality.lx]` inherits
-/// from it, stamps `version = "0.2"`, saves a `.bak` backup,
-/// and writes the new file.
+/// Detects the source version and applies the appropriate migration:
+/// - 0.1 (unversioned): convert `[defaults]`, flatten formats, stamp 0.3
+/// - 0.2: flatten `[format.NAME]` sub-tables, stamp 0.3
+/// - 0.3: already current, return error
 pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
     let contents = fs::read_to_string(path).with_path(path)?;
+    let version = detect_config_version(&contents);
 
-    if !is_legacy_config(&contents) {
-        return Err(ConfigError::NotLegacy { path: path.clone() });
+    if version == CONFIG_VERSION {
+        return Err(ConfigError::AlreadyCurrent { path: path.clone() });
     }
 
-    // Parse the old config with a permissive legacy struct.
+    // Parse with the permissive legacy struct (handles all old formats).
     let legacy: LegacyConfig = toml::from_str(&contents)
         .map_err(|source| ConfigError::Parse { path: path.clone(), source })?;
 
-    // Generate the new config.
     let mut out = String::new();
     out.push_str(&format!("version = \"{CONFIG_VERSION}\"\n"));
 
-    // Formats — flatten to [format] section.
+    // Formats — always emit as flat [format] section.
     if !legacy.format.is_empty() {
         out.push_str("\n[format]\n");
         for (name, columns) in &legacy.format {
@@ -826,19 +832,16 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
         }
     }
 
-    // Convert [defaults] → [personality.default].
-    if !legacy.defaults.is_empty() {
+    // 0.1-specific: convert [defaults] → [personality.default].
+    if version == "0.1" && !legacy.defaults.is_empty() {
         out.push_str("\n[personality.default]\n");
         for (key, value) in &legacy.defaults {
             out.push_str(&format!("{key} = {value}\n"));
         }
-    }
 
-    // Ensure [personality.lx] inherits from "default".
-    let has_lx = legacy.personality.contains_key("lx");
-    if !legacy.defaults.is_empty() {
+        // Ensure [personality.lx] inherits from "default".
+        let has_lx = legacy.personality.contains_key("lx");
         if has_lx {
-            // Existing [personality.lx] — add inherits if not present.
             out.push_str("\n[personality.lx]\n");
             out.push_str("inherits = \"default\"\n");
             if let Some(lx_p) = legacy.personality.get("lx") {
@@ -853,9 +856,9 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
         }
     }
 
-    // Other personalities (preserved, with flags converted if present).
+    // Personalities (preserved as-is, except lx handled above for 0.1).
     for (name, settings) in &legacy.personality {
-        if name == "lx" {
+        if version == "0.1" && name == "lx" {
             continue;  // already handled above
         }
         out.push_str(&format!("\n[personality.{name}]\n"));
@@ -872,7 +875,7 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
     fs::write(path, &out).with_path(path)?;
 
     eprintln!("Original config saved to {}", backup.display());
-    eprintln!("Upgraded {} to version {CONFIG_VERSION}", path.display());
+    eprintln!("Upgraded {} from version {version} to {CONFIG_VERSION}", path.display());
     eprintln!("Note: comments were not preserved. You may want to review the result.");
 
     Ok(())
