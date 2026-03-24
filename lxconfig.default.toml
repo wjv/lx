@@ -49,7 +49,7 @@ time-style = "default"        # default / iso / long-iso / full-iso
 group-dirs = "none"           # first / last / none
 icons = "never"               # always / auto / never
 classify = "never"            # always / auto / never
-# theme = "exa"               # named theme (see below)
+theme = "exa"                 # named theme (see below)
 
 ## The "lx" personality applies when the binary is invoked as "lx".
 [personality.lx]
@@ -166,33 +166,69 @@ across = true
 # punctuation = "dimmed"
 # header = "bold underline"
 
+## ── File-type classes ─────────────────────────────────────────────
+## A class is a named list of glob patterns representing a file
+## category.  Classes are referenced from styles (see below).
+##
+## These are the compiled-in defaults; override by editing or add
+## new custom classes.
+
+[class]
+# image      = ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.tiff",
+#                "*.webp", "*.svg", "*.ico", "*.heif", "*.avif", "*.jxl"]
+# video      = ["*.avi", "*.flv", "*.mkv", "*.mov", "*.mp4", "*.mpeg",
+#                "*.webm", "*.m4v", "*.wmv"]
+# music      = ["*.aac", "*.m4a", "*.mp3", "*.ogg", "*.wma", "*.opus"]
+# lossless   = ["*.alac", "*.ape", "*.flac", "*.wav"]
+# crypto     = ["*.asc", "*.enc", "*.gpg", "*.pgp", "*.sig", "*.pfx"]
+# document   = ["*.djvu", "*.doc", "*.docx", "*.pdf", "*.ppt", "*.pptx",
+#                "*.rtf", "*.xls", "*.xlsx", "*.odt", "*.odp"]
+# compressed = ["*.zip", "*.tar", "*.gz", "*.bz2", "*.7z", "*.xz",
+#                "*.zst", "*.rar", "*.deb", "*.rpm"]
+# compiled   = ["*.class", "*.elc", "*.hi", "*.o", "*.pyc", "*.ko"]
+# temp       = ["*.tmp", "*.swp", "*.swo", "*.bak", "*.bkp"]
+# immediate  = ["Makefile", "Cargo.toml", "SConstruct", "CMakeLists.txt",
+#                "build.gradle", "pom.xml", "Rakefile", "package.json",
+#                "Justfile", "Procfile", "Dockerfile", "Containerfile",
+#                "Vagrantfile", "Brewfile", "Gemfile", "Pipfile",
+#                "build.sbt", "mix.exs", "tsconfig.json"]
+
 ## ── Style sets ───────────────────────────────────────────────────
 ## Named sets of file-type colour rules.  Referenced from themes
 ## via use-style = "NAME".
 ##
-## Keys containing glob metacharacters (*, ?, [) are used as glob
-## patterns directly.  Keys without metacharacters are treated as
-## exact filename matches.
+## Styles can reference classes using bare dotted keys (class.NAME),
+## or match files directly using quoted keys ("*.ext" for globs,
+## "Makefile" for exact filenames).
+##
+## Note: all file pattern keys must be quoted.  Bare unquoted keys
+## are reserved for class references (class.NAME).
+
+## The "exa" style is the compiled-in default, applied by the "exa"
+## theme. Uncomment to customise.
+##
+## If two classes have overlapping patterns, the result is
+## unspecified.  The built-in classes have no overlaps.
+
+# [style.exa]
+# class.temp       = "38;5;244"
+# class.immediate  = "bold underline yellow"
+# class.image      = "38;5;133"
+# class.video      = "38;5;135"
+# class.music      = "38;5;92"
+# class.lossless   = "38;5;93"
+# class.crypto     = "38;5;109"
+# class.document   = "38;5;105"
+# class.compressed = "red"
+# class.compiled   = "38;5;137"
+
+## Custom styles — define your own and reference from a theme:
 
 # [style.dev]
-# "*.rs" = "#ff8700"
+# class.source = "#ff8700"
 # "*.toml" = "sandybrown"
 # "*.md" = "cornflowerblue"
-# "*.py" = "38;5;33"
-# "*.js" = "38;5;220"
-# "*.ts" = "38;5;33"
-# "*.go" = "38;5;81"
-# Makefile = "bold underline yellow"
-# Cargo.toml = "bold #ff8700"
-# Dockerfile = "bold deepskyblue"
-# README.md = "bold cornflowerblue"
-
-# [style.media]
-# "*.jpg" = "bold purple"
-# "*.png" = "bold purple"
-# "*.gif" = "bold purple"
-# "*.mp4" = "bold purple"
-# "*.mp3" = "bold cyan"
-# "*.zip" = "red"
-# "*.gz" = "red"
-# "*.tar" = "red"
+# "Makefile" = "bold underline yellow"
+# "Cargo.toml" = "bold #ff8700"
+# "Dockerfile" = "bold deepskyblue"
+# "README.md" = "bold cornflowerblue"

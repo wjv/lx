@@ -74,7 +74,6 @@ impl Options {
     #[allow(trivial_casts)]   // the `as Box<_>` stuff below warns about this for some reason
     pub fn to_theme(&self, isatty: bool) -> Theme {
         use crate::config::CONFIG;
-        use crate::info::filetype::FileExtensions;
 
         if self.use_colours == UseColours::Never || (self.use_colours == UseColours::Automatic && ! isatty) {
             let ui = UiStyles::plain();
@@ -93,19 +92,21 @@ impl Options {
         };
 
         // Layer 2–3: LS_COLORS and LX_COLORS environment variables.
-        let (mut exts, mut use_default_filetypes) = self.definitions.parse_colour_vars(&mut ui);
+        let (mut exts, _use_default_filetypes) = self.definitions.parse_colour_vars(&mut ui);
 
-        // Layer 4: [theme] from config file (highest priority).
+        // Layer 4: theme from config or compiled-in personality.
+        // The compiled-in "default" personality sets theme = "exa",
+        // which applies both UiStyles::default_theme() and the
+        // compiled-in exa style.  No magic fallback — the chain is
+        // fully explicit: personality → theme → style.
         if let Some(ref cfg) = *CONFIG {
-            self.apply_config_theme(cfg, &mut ui, &mut exts, &mut use_default_filetypes);
+            self.apply_config_theme(cfg, &mut ui, &mut exts);
         }
 
-        // Use between 0 and 2 file name highlighters
-        let exts = match (exts.is_non_empty(), use_default_filetypes) {
-            (false, false)  => Box::new(NoFileColours)           as Box<_>,
-            (false,  true)  => Box::new(FileExtensions)          as Box<_>,
-            ( true, false)  => Box::new(exts)                    as Box<_>,
-            ( true,  true)  => Box::new((exts, FileExtensions))  as Box<_>,
+        let exts: Box<dyn FileColours> = if exts.is_non_empty() {
+            Box::new(exts)
+        } else {
+            Box::new(NoFileColours)
         };
 
         Theme { ui, exts }
@@ -123,7 +124,6 @@ impl Options {
         cfg: &crate::config::Config,
         ui: &mut UiStyles,
         exts: &mut ExtensionMappings,
-        use_default_filetypes: &mut bool,
     ) {
         use log::*;
 
@@ -146,8 +146,11 @@ impl Options {
             visited.push(tname.clone());
 
             if tname == "exa" {
-                // Special: apply the compiled-in default theme.
+                // Special: apply the compiled-in default theme
+                // and the compiled-in "exa" style.
                 *ui = UiStyles::default_theme(self.colour_scale);
+                let exa_style = crate::config::compiled_exa_style();
+                Self::apply_style(&exa_style, cfg, exts);
                 current = None;
             } else if let Some(theme) = cfg.theme.get(tname) {
                 chain.push(theme);
@@ -160,7 +163,7 @@ impl Options {
 
         // Apply from root (last) to leaf (first).
         for theme in chain.into_iter().rev() {
-            Self::apply_theme_def(theme, cfg, ui, exts, use_default_filetypes);
+            Self::apply_theme_def(theme, cfg, ui, exts);
         }
     }
 
@@ -171,14 +174,8 @@ impl Options {
         cfg: &crate::config::Config,
         ui: &mut UiStyles,
         exts: &mut ExtensionMappings,
-        use_default_filetypes: &mut bool,
     ) {
         use log::*;
-
-        // reset-extensions control.
-        if theme.reset_extensions == Some(true) {
-            *use_default_filetypes = false;
-        }
 
         // UI element overrides.
         for (key, value) in &theme.ui {
@@ -189,33 +186,46 @@ impl Options {
 
         // Referenced style set.
         if let Some(ref style_name) = theme.use_style {
-            if let Some(style_set) = cfg.style.get(style_name) {
-                Self::apply_style(style_set, exts);
+            if let Some(style) = crate::config::resolve_style(style_name) {
+                Self::apply_style(&style, cfg, exts);
             } else {
                 warn!("Style set '{style_name}' not found in config; ignoring");
             }
         }
     }
 
-    /// Apply a named style set to the extension mappings.
+    /// Apply a style set to the extension mappings.
     ///
-    /// Keys containing glob metacharacters (`*`, `?`, `[`) are used as
-    /// glob patterns directly.  Keys without metacharacters are treated
-    /// as exact-match patterns.
+    /// Resolves class references (expanding each class's patterns)
+    /// and applies file pattern entries directly.
     fn apply_style(
-        style_set: &std::collections::HashMap<String, String>,
+        style: &crate::config::StyleDef,
+        _cfg: &crate::config::Config,
         exts: &mut ExtensionMappings,
     ) {
         use log::*;
-        for (key, value) in style_set {
-            let pattern = if key.contains('*') || key.contains('?') || key.contains('[') {
-                key.clone()
+
+        // Resolve class references.
+        let classes = crate::config::resolve_classes();
+        for (class_name, colour_str) in &style.classes {
+            if let Some(patterns) = classes.get(class_name) {
+                let colour = lsc::parse_style(colour_str);
+                for pattern in patterns {
+                    match glob::Pattern::new(pattern) {
+                        Ok(pat) => exts.add(pat, colour),
+                        Err(e) => warn!("Bad pattern '{pattern}' in class '{class_name}': {e}"),
+                    }
+                }
             } else {
-                key.clone()
-            };
-            match glob::Pattern::new(&pattern) {
+                warn!("Unknown class '{class_name}' in style; ignoring");
+            }
+        }
+
+        // Apply file patterns (quoted keys).
+        for (key, value) in &style.patterns {
+            match glob::Pattern::new(key) {
                 Ok(pat) => exts.add(pat, lsc::parse_style(value)),
-                Err(e) => warn!("Bad style glob '{pattern}': {e}"),
+                Err(e) => warn!("Bad style glob '{key}': {e}"),
             }
         }
     }

@@ -39,8 +39,12 @@ top-level sections:
 **[theme.NAME]**
 : Named colour themes for UI elements.
 
+**[class]**
+: File-type class definitions — named lists of glob patterns.
+
 **[style.NAME]**
-: Named sets of file colour styles (glob patterns and exact filenames).
+: Named sets of file colour rules.  Can reference classes by name
+and/or match files directly by glob pattern or exact filename.
 
 
 VERSIONING
@@ -225,7 +229,7 @@ prevents infinite loops.
 A common pattern is to define a shared base personality:
 
     default ---+---> lx ---+---> ll ---+---> lt
-               |           |          \---> la
+               |           |           \---> la
                |           \---> lll
                \---> tree
 
@@ -295,10 +299,6 @@ blank slate.
 
 `use-style`
 : Name of a `[style.NAME]` set to apply.
-
-`reset-extensions`
-: Boolean. If `true`, discard the built-in file-type extension colour
-mappings before applying the theme's own.
 
 UI element keys
 ---------------
@@ -416,27 +416,69 @@ The special theme name `"exa"` provides the following defaults.  Use
     broken-overlay = "underline"
 
 
+CLASSES
+=======
+
+The `[class]` section defines named lists of glob patterns that
+represent file-type categories. Classes are referenced from styles
+(see below).
+
+    [class]
+    media   = ["*.jpg", "*.png", "*.gif", "*.mp4", "*.mp3"]
+    source  = ["*.rs", "*.py", "*.js", "*.go", "*.c"]
+    archive = ["*.zip", "*.tar", "*.gz", "*.bz2", "*.7z"]
+
+lx ships with compiled-in class definitions for `image`, `video`,
+`music`, `lossless`, `crypto`, `document`, `compressed`, `compiled`,
+`temp`, and `immediate`. User-defined classes in `[class]` override
+the compiled-in definition of the same name.
+
+
 STYLES
 ======
 
-Named sets of file colour styles, referenced from themes via
-`use-style = "NAME"`. Each key-value pair maps a file pattern to a
-colour string.
+Named sets of file colour rules, referenced from themes via
+`use-style = "NAME"`.
 
-Keys containing glob metacharacters (`*`, `?`, `[`) are used as glob
-patterns directly. Keys without metacharacters are treated as exact
-filename matches.
+Styles can reference classes using bare dotted TOML keys, or match
+files directly using quoted keys:
+
+`class.NAME = "colour"`
+: Reference a named class.  Applies the colour to every pattern in
+the class definition.
+
+`"*.ext" = "colour"`
+: Glob pattern (quoted key containing metacharacters `*`, `?`, `[`).
+
+`"Makefile" = "colour"`
+: Exact filename match (quoted key without metacharacters).
+
+All file pattern keys **must be quoted**. Bare unquoted keys are
+reserved for class references.
+
+    [style.exa]
+    class.temp       = "38;5;244"
+    class.immediate  = "bold underline yellow"
+    class.image      = "38;5;133"
+    class.video      = "38;5;135"
+    class.music      = "38;5;92"
+    class.lossless   = "38;5;93"
+    class.crypto     = "38;5;109"
+    class.document   = "38;5;105"
+    class.compressed = "red"
+    class.compiled   = "38;5;137"
 
     [style.dev]
-    "*.rs" = "#ff8700"
-    "*.toml" = "sandybrown"
-    "*.md" = "cornflowerblue"
-    "*.py" = "38;5;33"
-    "*.js" = "38;5;220"
-    Makefile = "bold underline yellow"
-    Cargo.toml = "bold #ff8700"
-    Dockerfile = "bold deepskyblue"
-    README.md = "bold cornflowerblue"
+    class.source     = "#ff8700"
+    "*.toml"         = "sandybrown"
+    "*.md"           = "cornflowerblue"
+    "Makefile"       = "bold underline yellow"
+    "Cargo.toml"     = "bold #ff8700"
+
+The compiled-in `"exa"` style provides default file-type colouring.
+To disable it, use a theme that references a different style (or no
+style at all). If two classes have overlapping patterns, the result
+is unspecified.
 
 
 COLOUR VALUES
@@ -505,8 +547,9 @@ highest priority:
 
 Within a theme, `inherits` is resolved first (parent applied, then
 child overrides). Style sets referenced by `use-style` are applied
-after UI element keys. If `reset-extensions = true`, built-in extension
-mappings are discarded before the theme's own styles are applied.
+after UI element keys. The compiled-in "exa" style provides default
+file-type colouring; to disable it, use a theme that references a
+different style or no style at all.
 
 
 SEE ALSO

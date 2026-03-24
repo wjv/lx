@@ -322,7 +322,12 @@ pub struct Config {
 
     /// Named file colour style sets: `[style.NAME]`.
     #[serde(default)]
-    pub style: HashMap<String, HashMap<String, String>>,
+    pub style: HashMap<String, StyleDef>,
+
+    /// File-type class definitions: `[class]`.
+    /// Each key is a class name, each value a list of glob patterns.
+    #[serde(default)]
+    pub class: HashMap<String, Vec<String>>,
 }
 
 /// A named theme definition under `[theme.NAME]`.
@@ -348,9 +353,6 @@ pub struct ThemeDef {
     /// Reference a named style set from `[style.NAME]`.
     pub use_style: Option<String>,
 
-    /// Disable built-in file-type extension mappings.
-    pub reset_extensions: Option<bool>,
-
     /// UI element colour overrides (flat keys like `directory`, `date`, etc.)
     #[serde(flatten)]
     pub ui: HashMap<String, String>,
@@ -362,6 +364,27 @@ pub struct ThemeDef {
 pub struct FormatDef {
     pub columns: Vec<String>,
 }
+
+/// A named file colour style set under `[style.NAME]`.
+///
+/// Class references use bare dotted TOML keys (`class.media`),
+/// which serde deserialises into the `class` sub-table.  File
+/// patterns use quoted TOML keys (`"*.rs"`, `"Makefile"`), which
+/// land in the `patterns` map via `serde(flatten)`.
+#[derive(Debug, Default, Deserialize, Clone)]
+#[serde(default)]
+pub struct StyleDef {
+    /// Class references: `class.NAME = "colour"` (bare dotted keys).
+    #[serde(default, rename = "class")]
+    pub classes: HashMap<String, String>,
+
+    /// File patterns: `"*.rs" = "colour"` (quoted keys).
+    /// Keys with glob metacharacters are glob patterns; keys without
+    /// are exact filename matches.
+    #[serde(flatten)]
+    pub patterns: HashMap<String, String>,
+}
+
 
 /// A personality bundles format, columns, and settings.
 ///
@@ -596,11 +619,14 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
     use toml::Value::{Boolean, String as Str};
 
     match name {
-        // The "default" personality exists as a named anchor for
-        // inheritance.  Its settings in the config template document
-        // the built-in defaults but don't need to be injected — they
-        // match what lx does without any config.
-        "default" => Some(PersonalityDef::default()),
+        // The "default" personality sets theme = "exa" so that
+        // file-type colouring is explicit, not a magic fallback.
+        "default" => Some(PersonalityDef {
+            settings: HashMap::from([
+                ("theme".into(), toml::Value::String("exa".into())),
+            ]),
+            ..Default::default()
+        }),
         "lx" => Some(PersonalityDef {
             inherits: Some("default".into()),
             ..Default::default()
@@ -639,6 +665,115 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
             ]),
             ..Default::default()
         }),
+        _ => None,
+    }
+}
+
+
+/// Return the compiled-in file-type class definitions.
+///
+/// These correspond to the categories in `src/info/filetype.rs`.
+/// Config-defined `[class]` entries override these.
+pub fn compiled_classes() -> HashMap<String, Vec<String>> {
+    fn gl(exts: &[&str]) -> Vec<String> {
+        exts.iter().map(|e| format!("*.{e}")).collect()
+    }
+
+    HashMap::from([
+        ("image".into(), gl(&[
+            "png", "jfi", "jfif", "jif", "jpe", "jpeg", "jpg", "gif", "bmp",
+            "tiff", "tif", "ppm", "pgm", "pbm", "pnm", "webp", "raw", "arw",
+            "svg", "stl", "eps", "dvi", "ps", "cbr", "jpf", "cbz", "xpm",
+            "ico", "cr2", "orf", "nef", "heif", "avif", "jxl", "j2k", "jp2",
+            "j2c", "jpx",
+        ])),
+        ("video".into(), gl(&[
+            "avi", "flv", "m2v", "m4v", "mkv", "mov", "mp4", "mpeg",
+            "mpg", "ogm", "ogv", "vob", "wmv", "webm", "m2ts", "heic",
+        ])),
+        ("music".into(), gl(&[
+            "aac", "m4a", "mp3", "ogg", "wma", "mka", "opus",
+        ])),
+        ("lossless".into(), gl(&[
+            "alac", "ape", "flac", "wav",
+        ])),
+        ("crypto".into(), gl(&[
+            "asc", "enc", "gpg", "pgp", "sig", "signature", "pfx", "p12",
+        ])),
+        ("document".into(), gl(&[
+            "djvu", "doc", "docx", "dvi", "eml", "eps", "fotd", "key",
+            "keynote", "numbers", "odp", "odt", "pages", "pdf", "ppt",
+            "pptx", "rtf", "xls", "xlsx",
+        ])),
+        ("compressed".into(), gl(&[
+            "zip", "tar", "Z", "z", "gz", "bz2", "a", "ar", "7z",
+            "iso", "dmg", "tc", "rar", "par", "tgz", "xz", "txz",
+            "lz", "tlz", "lzma", "deb", "rpm", "zst", "lz4", "cpio",
+        ])),
+        ("compiled".into(), gl(&[
+            "class", "elc", "hi", "o", "pyc", "zwc", "ko",
+        ])),
+        ("temp".into(), gl(&[
+            "tmp", "swp", "swo", "swn", "bak", "bkp", "bk",
+        ])),
+        ("immediate".into(), vec![
+            "Makefile".into(), "Cargo.toml".into(), "SConstruct".into(),
+            "CMakeLists.txt".into(), "build.gradle".into(), "pom.xml".into(),
+            "Rakefile".into(), "package.json".into(), "Gruntfile.js".into(),
+            "Gruntfile.coffee".into(), "BUILD".into(), "BUILD.bazel".into(),
+            "WORKSPACE".into(), "build.xml".into(), "Podfile".into(),
+            "webpack.config.js".into(), "meson.build".into(),
+            "composer.json".into(), "RoboFile.php".into(), "PKGBUILD".into(),
+            "Justfile".into(), "Procfile".into(), "Dockerfile".into(),
+            "Containerfile".into(), "Vagrantfile".into(), "Brewfile".into(),
+            "Gemfile".into(), "Pipfile".into(), "build.sbt".into(),
+            "mix.exs".into(), "bsconfig.json".into(), "tsconfig.json".into(),
+        ]),
+    ])
+}
+
+/// Resolve class definitions: config overrides compiled-in defaults.
+pub fn resolve_classes() -> HashMap<String, Vec<String>> {
+    let mut classes = compiled_classes();
+    if let Some(ref cfg) = *CONFIG {
+        for (name, patterns) in &cfg.class {
+            classes.insert(name.clone(), patterns.clone());
+        }
+    }
+    classes
+}
+
+/// Return the compiled-in "exa" style definition.
+///
+/// This maps the built-in file-type classes to their default colours,
+/// matching the hard-coded values in `src/info/filetype.rs`.
+pub fn compiled_exa_style() -> StyleDef {
+    StyleDef {
+        classes: HashMap::from([
+            ("temp".into(),       "38;5;244".into()),
+            ("immediate".into(),  "bold underline yellow".into()),
+            ("image".into(),      "38;5;133".into()),
+            ("video".into(),      "38;5;135".into()),
+            ("music".into(),      "38;5;92".into()),
+            ("lossless".into(),   "38;5;93".into()),
+            ("crypto".into(),     "38;5;109".into()),
+            ("document".into(),   "38;5;105".into()),
+            ("compressed".into(), "red".into()),
+            ("compiled".into(),   "38;5;137".into()),
+        ]),
+        patterns: HashMap::new(),
+    }
+}
+
+/// Look up a style by name: config first, then compiled-in "exa".
+pub fn resolve_style(name: &str) -> Option<StyleDef> {
+    if let Some(ref cfg) = *CONFIG {
+        if let Some(s) = cfg.style.get(name) {
+            return Some(s.clone());
+        }
+    }
+    match name {
+        "exa" => Some(compiled_exa_style()),
         _ => None,
     }
 }

@@ -209,19 +209,117 @@ fn theme_overrides_env() {
 }
 
 
-// ── Reset extensions ─────────────────────────────────────────────
+// ── Class references in styles ────────────────────────────────────
 
 #[test]
-fn theme_reset_extensions() {
+fn style_class_reference() {
     let (_dir, mut cmd) = lx_with_theme(r#"
         version = "0.2"
+
+        [class]
+        testclass = ["*.xyz"]
+
         [theme.test]
-        reset-extensions = true
+        inherits = "exa"
+        use-style = "mystyle"
+
+        [style.mystyle]
+        class.testclass = "bold magenta"
     "#);
 
-    cmd.args(["--theme=test", "-1", "Cargo.toml"])
+    let work = tempdir().expect("failed to create workdir");
+    fs::write(work.path().join("data.xyz"), "").unwrap();
+
+    // Bold magenta = 1;35
+    cmd.args(["--theme=test", "-1"])
+        .arg(work.path())
         .assert()
-        .success();
+        .success()
+        .stdout(predicate::str::contains("\x1b[1;35m"));
+}
+
+#[test]
+fn style_class_overrides_exa_default() {
+    // User style with a class reference should override the
+    // compiled-in exa style for the same files.
+    let (_dir, mut cmd) = lx_with_theme(r#"
+        version = "0.2"
+
+        [theme.test]
+        inherits = "exa"
+        use-style = "custom"
+
+        [style.custom]
+        class.compressed = "bold cyan"
+    "#);
+
+    let work = tempdir().expect("failed to create workdir");
+    fs::write(work.path().join("archive.zip"), "").unwrap();
+
+    // Bold cyan = 1;36 (not red, which is the exa default)
+    cmd.args(["--theme=test", "-1"])
+        .arg(work.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\x1b[1;36m"));
+}
+
+#[test]
+fn style_quoted_pattern_and_class() {
+    // A style can mix class references and quoted file patterns.
+    let (_dir, mut cmd) = lx_with_theme(r#"
+        version = "0.2"
+
+        [class]
+        data = ["*.csv"]
+
+        [theme.test]
+        inherits = "exa"
+        use-style = "mixed"
+
+        [style.mixed]
+        class.data = "bold green"
+        "Makefile" = "bold red"
+    "#);
+
+    let work = tempdir().expect("failed to create workdir");
+    fs::write(work.path().join("results.csv"), "").unwrap();
+    fs::write(work.path().join("Makefile"), "").unwrap();
+
+    // Both should be coloured
+    cmd.args(["--theme=test", "-1"])
+        .arg(work.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\x1b[1;32m"))   // bold green
+        .stdout(predicate::str::contains("\x1b[1;31m"));   // bold red
+}
+
+#[test]
+fn user_class_overrides_compiled_in() {
+    // A user-defined [class] entry overrides the compiled-in one.
+    let (_dir, mut cmd) = lx_with_theme(r#"
+        version = "0.2"
+
+        [class]
+        compressed = ["*.myarc"]
+
+        [theme.test]
+        inherits = "exa"
+        use-style = "exa"
+    "#);
+
+    let work = tempdir().expect("failed to create workdir");
+    fs::write(work.path().join("data.myarc"), "").unwrap();
+    // .zip should NOT match compressed anymore (user redefined it)
+    fs::write(work.path().join("stuff.zip"), "").unwrap();
+
+    // .myarc gets the exa compressed colour (red = 31)
+    cmd.args(["--theme=test", "-1"])
+        .arg(work.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\x1b[31m"));
 }
 
 
