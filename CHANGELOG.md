@@ -6,14 +6,29 @@ All notable changes to lx are documented here. lx is forked from
 ## [Unreleased]
 
 ### Added
+- File-type classes: `[class]` section with named pattern lists and
+  compiled-in defaults (`image`, `video`, `music`, `lossless`, `crypto`,
+  `document`, `compressed`, `compiled`, `temp`, `immediate`)
+- Styles reference classes via bare dotted TOML keys (`class.NAME = "colour"`)
+  and file patterns via quoted keys (`"*.ext" = "colour"`)
+- Compiled-in `"exa"` style maps classes to default colours
+- Explicit exa chain: default personality → exa theme → exa style
+  (no magic fallback)
+- Config schema version bumped to `"0.3"`
+- Upgrade tool handles 0.1→0.3 and 0.2→0.3 migrations
 - Compiled-in `default` and `lx` personalities matching the
   default config template
-- `--group-directories-first` now properly overrides personality-
-  injected `--group-dirs` values
+
+### Changed
+- Formats are now flat `[format]` sections (was `[format.NAME]` with
+  `columns` sub-key)
+- `--group-directories-first` now uses `overrides_with` for proper
+  precedence against personality-injected `--group-dirs` values
 
 ### Removed
 - `--git` and `--git-ignore` legacy flags (use `--vcs-status`
   and `--vcs-ignore`)
+- `reset-extensions` option (replaced by explicit style references)
 
 ## [0.2.1] — 2026-03-23
 

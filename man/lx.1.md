@@ -267,8 +267,8 @@ Default: `auto` (prefers jj if `.jj/` exists, falls back to git).
 `--vcs-ignore`
 : Hide files ignored by VCS.
 
-Legacy aliases: `--git` (for `--vcs-status`), `--git-ignore` (for
-`--vcs-ignore`).
+Note: the legacy `--git` and `--git-ignore` flags have been removed.
+Use `--vcs-status` and `--vcs-ignore` instead.
 
 
 CONFIGURATION
@@ -283,9 +283,10 @@ lx reads a TOML configuration file from these locations (first found wins):
 
 Run `lx --init-config` to generate a commented starter file.
 
-The config file includes a `version = "0.2"` field to track the schema
+The config file includes a `version = "0.3"` field to track the schema
 version. If you have a legacy config from an earlier version, run
-`lx --upgrade-config` to migrate it to the current format.
+`lx --upgrade-config` to migrate it to the current format (0.1→0.3 and
+0.2→0.3 migrations are both supported).
 
 See **lxconfig.toml**(5) for full config file documentation.
 

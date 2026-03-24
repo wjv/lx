@@ -186,7 +186,7 @@ a different aspect of `lx`'s behaviour:
 
 | Section              | Purpose                                             | Example                                               |
 |----------------------|-----------------------------------------------------|-------------------------------------------------------|
-| `[format.NAME]`      | Column layouts for long view                        | `columns = ["perms", "size", "user", "modified"]`     |
+| `[format]`           | Column layouts for long view (flat keys)            | `long = ["perms", "size", "user", "modified"]`        |
 | `[personality.NAME]` | Bundles of settings, activated by name              | `inherits = "lx"`, `format = "long2"`, `sort = "age"` |
 | `[theme.NAME]`       | UI element colours (directories, dates, etc.)       | `directory = "bold blue"`, `date = "steelblue"`       |
 | `[style.NAME]`       | File-type colours (by class, glob, or filename)     | `class.source = "yellow"`, `"*.rs" = "#ff8700"`       |
@@ -208,14 +208,13 @@ For the full reference, see the
 
 ### Formats
 
-A format assigns a name to a column layout:
+Formats are defined as keys in a flat `[format]` section. Each key
+is a format name; its value is a list of column names:
 
 ```toml
-[format.compact]
-columns = ["perms", "size", "modified"]
-
-[format.hpc]
-columns = ["perms", "size", "user", "group", "modified", "vcs"]
+[format]
+compact = ["perms", "size", "modified"]
+hpc     = ["perms", "size", "user", "group", "modified", "vcs"]
 ```
 
 Available column names:
@@ -240,15 +239,11 @@ The built-in formats `long`, `long2`, and `long3` are used by the
 flags `-l`, `-ll`, and `-lll`.
 
 ```toml
-[format.long]
-columns = ["perms", "size", "user", "modified"]
-
-[format.long2]
-columns = ["perms", "size", "user", "group", "modified", "vcs"]
-
-[format.long3]
-columns = ["perms", "links", "size", "blocks", "user", "group",
-           "modified", "changed", "created", "accessed", "vcs"]
+[format]
+long  = ["perms", "size", "user", "modified"]
+long2 = ["perms", "size", "user", "group", "modified", "vcs"]
+long3 = ["perms", "links", "size", "blocks", "user", "group",
+         "modified", "changed", "created", "accessed", "vcs"]
 ```
 
 You can override the built-in defaults by simply redefining them.
@@ -301,8 +296,9 @@ reverse = true
 total-size = true
 ```
 
-> **Upgrading from 0.1:** if you have a config file with a `[defaults]`
-> section, run `lx --upgrade-config` to migrate it to the 0.2 format.
+> **Upgrading from 0.1 or 0.2:** run `lx --upgrade-config` to migrate
+> your config file to the current 0.3 format. Both 0.1→0.3 and 0.2→0.3
+> migrations are supported. A `.bak` backup of the original is saved.
 
 
 ### Config file locations
@@ -511,28 +507,44 @@ fly at shell startup.
   - Use `--vcs=git --vcs-ignore` in a colocated repository.
   - Use `-I` glob patterns to exclude specific files (e.g. `-I target`).
 
-- **0.1 config files need migrating** — the 0.2 config format is not
-  backwards-compatible. Run `lx --upgrade-config` to convert
+- **0.1 and 0.2 config files need migrating** — the 0.3 config format
+  is not backwards-compatible. Run `lx --upgrade-config` to convert
   automatically (a `.bak` backup is saved).
 
 - **The `lx` crate name on crates.io is taken** by an unrelated
   library. Install from GitHub instead (see [Installation](#installation)).
 
 
-## Roadmap: 0.3
+## What's new in 0.3
 
-- **File types and unified styles** — user-definable file-type
-  collections (`[type]`) replace the hard-coded categories.  Styles
-  reference types by name (`type.media = "bold purple"`), giving
-  full control over file-type colouring with the same expressive
-  power as the built-in theme.
+- **File-type classes** (`[class]`) — named lists of glob patterns
+  (`image`, `video`, `music`, `lossless`, `crypto`, `document`,
+  `compressed`, `compiled`, `temp`, `immediate`), with compiled-in
+  defaults that can be overridden in the config.
+- **Styles reference classes** via bare dotted TOML keys
+  (`class.NAME = "colour"`) and file patterns via quoted keys.
+- **Compiled-in "exa" style** maps classes to default colours.
+- **Flat formats** — the `[format]` section is now flat (keys are
+  format names, values are column lists), replacing the previous
+  `[format.NAME]` sub-tables with `columns` keys.
+- **Explicit exa chain** — default personality → exa theme → exa
+  style, with no magic fallback.
+- **Config version 0.3** — the upgrade tool handles 0.1→0.3 and
+  0.2→0.3 migrations.
+- `--git` and `--git-ignore` legacy flags removed (use
+  `--vcs-status` and `--vcs-ignore`).
+- `--group-directories-first` precedence fixed.
+
+## Roadmap: post-0.3
+
 - `--show-config` to display the active personality, format, theme,
   and their resolved definitions
 - `--list-themes`, `--list-personalities`, `--list-formats` for
   discoverability
 - `--time-style=relative` ("2 hours ago")
 - Symlink display flags (`--symlinks=show|hide|follow`)
-- Polish and bug fixes from daily driving 0.2
+- `--vcs-repos` (per-directory repo status)
+- Polish and bug fixes from daily driving
 
 
 ## User interface stability

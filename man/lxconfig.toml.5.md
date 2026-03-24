@@ -30,8 +30,9 @@ top-level sections:
 **version**
 : Config schema version (required).
 
-**[format.NAME]**
-: Named column layouts for long view.
+**[format]**
+: Named column layouts for long view (flat section; each key is a
+format name).
 
 **[personality.NAME]**
 : Named bundles of format, columns, and settings.
@@ -52,7 +53,7 @@ VERSIONING
 
 Every configuration file must declare a schema version at the top:
 
-    version = "0.2"
+    version = "0.3"
 
 This is the **config schema version**, not the lx release version. It
 only increments when the config format changes in a way that requires
@@ -62,35 +63,32 @@ migration.
 |:--------------:|:----------:|--------------------------------------------|
 | *(none)*       | 0.1.x      | Original format with `[defaults]`          |
 | `"0.2"`        | 0.2.0+     | Personalities replace `[defaults]`         |
+| `"0.3"`        | 0.3.0+     | Classes, flat formats, exa style chain     |
 
-If lx encounters a config file without a version field (or with a
-`[defaults]` section), it refuses to load it and prints a message
-directing the user to run:
+If lx encounters a config file with an older version (or no version
+field), it refuses to load it and prints a message directing the user
+to run:
 
     lx --upgrade-config
 
-This command converts `[defaults]` to `[personality.default]`, adds
-`inherits = "default"` to `[personality.lx]`, stamps `version = "0.2"`,
-and saves the original as `~/.lxconfig.toml.bak`.
+This command migrates the config to the current format (0.1→0.3 and
+0.2→0.3 are both supported), stamps `version = "0.3"`, and saves the
+original as `~/.lxconfig.toml.bak`.
 
 
 FORMATS
 =======
 
-A format defines a column layout for long view. Define formats under
-`[format.NAME]`:
+A format defines a column layout for long view. Formats are defined as
+keys in a flat `[format]` section. Each key is a format name; its value
+is either a TOML array or a comma-separated string of column names:
 
-    [format.long]
-    columns = ["perms", "size", "user", "modified"]
-
-    [format.long2]
-    columns = ["perms", "size", "user", "group", "modified", "vcs"]
-
-The `columns` field accepts either a TOML array or a comma-separated
-string:
-
-    columns = ["perms", "size", "user", "modified"]
-    columns = "perms,size,user,modified"
+    [format]
+    long  = ["perms", "size", "user", "modified"]
+    long2 = ["perms", "size", "user", "group", "modified", "vcs"]
+    long3 = ["perms", "links", "size", "blocks", "user", "group",
+             "modified", "changed", "created", "accessed", "vcs"]
+    compact = "perms,size,modified"
 
 Three compiled-in formats correspond to the `-l` tier system:
 
@@ -166,7 +164,7 @@ Structural fields
 : Name of a parent personality (see *Inheritance* below).
 
 `format`
-: Reference to a named format (looked up in `[format.*]`).
+: Reference to a named format (looked up in `[format]`).
 
 `columns`
 : Inline column list; overrides `format` if both are given. Accepts a
