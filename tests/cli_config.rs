@@ -90,8 +90,8 @@ fn config_lx_personality_time_style() {
 #[test]
 fn config_custom_format() {
     let (_dir, mut cmd) = lx_with_config(r#"
-        [format.tiny]
-        columns = ["size", "modified"]
+        [format]
+        tiny = ["size", "modified"]
     "#);
 
     cmd.args(["--format=tiny", "Cargo.toml"])
@@ -105,8 +105,8 @@ fn config_custom_format() {
 #[test]
 fn config_format_overrides_compiled_in() {
     let (_dir, mut cmd) = lx_with_config(r#"
-        [format.long]
-        columns = ["size", "modified"]
+        [format]
+        long = ["size", "modified"]
     "#);
 
     // -l uses "long" format, which is now overridden in config

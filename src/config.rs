@@ -311,7 +311,7 @@ pub struct Config {
     pub version: Option<String>,
 
     #[serde(default)]
-    pub format: HashMap<String, FormatDef>,
+    pub format: HashMap<String, Vec<String>>,
 
     #[serde(default)]
     pub personality: HashMap<String, PersonalityDef>,
@@ -358,12 +358,6 @@ pub struct ThemeDef {
     pub ui: HashMap<String, String>,
 }
 
-
-/// A named column layout.
-#[derive(Debug, Deserialize)]
-pub struct FormatDef {
-    pub columns: Vec<String>,
-}
 
 /// A named file colour style set under `[style.NAME]`.
 ///
@@ -818,16 +812,18 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
     let mut out = String::new();
     out.push_str(&format!("version = \"{CONFIG_VERSION}\"\n"));
 
-    // Formats (preserved as-is).
-    for (name, fmt) in &legacy.format {
-        out.push_str(&format!(
-            "\n[format.{}]\ncolumns = [{}]\n",
-            name,
-            fmt.columns.iter()
-                .map(|c| format!("\"{c}\""))
-                .collect::<Vec<_>>()
-                .join(", ")
-        ));
+    // Formats — flatten to [format] section.
+    if !legacy.format.is_empty() {
+        out.push_str("\n[format]\n");
+        for (name, columns) in &legacy.format {
+            out.push_str(&format!(
+                "{name} = [{}]\n",
+                columns.iter()
+                    .map(|c| format!("\"{c}\""))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
     }
 
     // Convert [defaults] → [personality.default].
@@ -891,7 +887,7 @@ struct LegacyConfig {
     defaults: HashMap<String, toml::Value>,
 
     #[serde(default)]
-    format: HashMap<String, FormatDef>,
+    format: HashMap<String, Vec<String>>,
 
     #[serde(default)]
     personality: HashMap<String, HashMap<String, toml::Value>>,

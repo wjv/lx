@@ -164,8 +164,8 @@ impl TableOptions {
 fn format_columns(name: &str) -> Option<Vec<Column>> {
     // Check config-defined formats first.
     if let Some(ref cfg) = *crate::config::CONFIG {
-        if let Some(fmt) = cfg.format.get(name) {
-            let cols: Vec<Column> = fmt.columns.iter()
+        if let Some(columns) = cfg.format.get(name) {
+            let cols: Vec<Column> = columns.iter()
                 .filter_map(|s| Column::from_name(s))
                 .collect();
             if !cols.is_empty() {

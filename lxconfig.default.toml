@@ -11,15 +11,11 @@ version = "0.2"
 ##   -ll  uses format "long2" (tier 2: adds group and VCS)
 ##   -lll uses format "long3" (tier 3: all timestamps and metadata)
 
-[format.long]
-columns = ["perms", "size", "user", "modified"]
-
-[format.long2]
-columns = ["perms", "size", "user", "group", "modified", "vcs"]
-
-[format.long3]
-columns = ["perms", "links", "size", "blocks", "user", "group",
-           "modified", "changed", "created", "accessed", "vcs"]
+[format]
+long  = ["perms", "size", "user", "modified"]
+long2 = ["perms", "size", "user", "group", "modified", "vcs"]
+long3 = ["perms", "links", "size", "blocks", "user", "group",
+         "modified", "changed", "created", "accessed", "vcs"]
 
 ## ── Personalities ─────────────────────────────────────────────────
 ## A personality bundles format, columns, and settings under a name.
