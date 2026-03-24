@@ -97,7 +97,10 @@ fn main() {
                     debug!("argv[0] dispatch: {bin_name}");
                     Some(bin_name)
                 }
-                Ok(None) => None,  // unknown name, not a personality
+                Ok(None) => {
+                    debug!("argv[0] is '{bin_name}' but no matching personality found; using default");
+                    None
+                }
             }
         });
 
