@@ -242,7 +242,7 @@ PERSONALITIES
 : Apply a named personality, which bundles columns, flags, and settings.
 Equivalent to invoking lx via an argv[0] symlink with that name.
 
-Compiled-in personalities: `ll`, `lll`, `tree`, `ls`.
+Compiled-in personalities: `ll`, `la`, `lll`, `tree`, `ls`.
 Additional personalities may be defined in the config file.
 
 Personalities support inheritance: a personality may include

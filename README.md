@@ -16,7 +16,7 @@ with a somewhat different approach to the command-line user interface.
 - **Personalities** — named profiles that bundle columns, flags, and
   settings
 
-  Create symlinks (`ll`, `lll`, `tree`) and `lx` adapts its behaviour to
+  Create symlinks (`ll`, `la`, `lll`, `tree`) and `lx` adapts its behaviour to
   the name it's invoked as!
 
 - **Fully configurable column layout**
@@ -143,6 +143,7 @@ all = true
 * `default` is base personality used to define default settings, inherited by other personalities. Note that there's nothing magical about the name `default`; you can define your own base personality with a different name.
 * `lx` is `lx`'s standard personality, and is used when no other personality has been invoked.
 * `ll` is a long file listing, like `lx -l`; it shows VCS information and groups directories first
+* `la` is like `ll` but also shows hidden files (like `ls -la`)
 * `lll` is an even more expansive file listing with headers, like `lx -lll`
 * `tree` is a recursive file listing showing a graphical file tree, with directories first
 * `ls` makes `lx`'s output look more like that of standard POSIX `ls`
@@ -261,7 +262,7 @@ has a corresponding config key (e.g. `--sort=age` becomes
 The built-in personalities form an inheritance tree:
 
 ```
-default ──┬──→ lx ──┬──→ ll
+default ──┬──→ lx ──┬──→ ll ──→ la
           │         └──→ lll
           └──→ tree
 

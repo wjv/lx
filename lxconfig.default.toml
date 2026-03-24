@@ -39,8 +39,7 @@ long3 = ["perms", "links", "size", "blocks", "user", "group",
 ## The child's format/columns override the parent; settings merge
 ## with the child's values winning.
 ##
-##   default ──┬──→ lx ──┬──→ ll ──┬──→ lt
-##             │         │         └──→ la
+##   default ──┬──→ lx ──┬──→ ll ──→ la
 ##             │         └──→ lll
 ##             └──→ tree
 ##
@@ -72,6 +71,10 @@ group-dirs = "first"
 header = true
 time-style = "long-iso"
 
+[personality.la]
+inherits = "ll"
+all = true
+
 [personality.tree]
 inherits = "default"
 format = "long2"
@@ -85,10 +88,6 @@ across = true
 
 ## Custom personalities — define your own and symlink lx to the name
 ## for argv[0] dispatch.
-
-# [personality.la]
-# inherits = "ll"
-# all = true
 
 # [personality.lt]
 # inherits = "ll"

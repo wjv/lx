@@ -45,9 +45,10 @@ install: release man
 # Create personality symlinks in ~/.local/bin
 install-personalities: install
     @ln -sf ~/.local/bin/lx ~/.local/bin/ll
+    @ln -sf ~/.local/bin/lx ~/.local/bin/la
     @ln -sf ~/.local/bin/lx ~/.local/bin/lll
     @ln -sf ~/.local/bin/lx ~/.local/bin/tree
-    @echo "Created personality symlinks in ~/.local/bin: ll lll tree"
+    @echo "Created personality symlinks in ~/.local/bin: ll la lll tree"
 
 # Generate shell completions
 completions:

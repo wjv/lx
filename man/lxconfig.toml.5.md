@@ -262,7 +262,7 @@ In this example, `lt` inherits `group-dirs = "first"` and
 and the other defaults from `lx` and `default`. The `ls` personality
 stands alone -- it has no `inherits` and receives no inherited settings.
 
-Compiled-in personalities (`ll`, `lll`, `tree`, `ls`) are used as
+Compiled-in personalities (`ll`, `la`, `lll`, `tree`, `ls`) are used as
 fallbacks when a name is not defined in the config file.
 
 argv[0] dispatch

@@ -649,6 +649,13 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
             ]),
             ..Default::default()
         }),
+        "la" => Some(PersonalityDef {
+            inherits: Some("ll".into()),
+            settings: HashMap::from([
+                ("all".into(), Boolean(true)),
+            ]),
+            ..Default::default()
+        }),
         "tree" => Some(PersonalityDef {
             inherits: Some("default".into()),
             format: Some("long2".into()),
