@@ -519,32 +519,32 @@ fly at shell startup.
 ## What's new in 0.3
 
 - **File-type classes** (`[class]`) — named lists of glob patterns
-  (`image`, `video`, `music`, `lossless`, `crypto`, `document`,
-  `compressed`, `compiled`, `temp`, `immediate`), with compiled-in
-  defaults that can be overridden in the config.
-- **Styles reference classes** via bare dotted TOML keys
-  (`class.NAME = "colour"`) and file patterns via quoted keys.
-- **Compiled-in "exa" style** maps classes to default colours.
-- **Flat formats** — the `[format]` section is now flat (keys are
-  format names, values are column lists), replacing the previous
-  `[format.NAME]` sub-tables with `columns` keys.
+  (`image`, `video`, `music`, etc.), with compiled-in defaults that
+  can be overridden in the config.
+- **Unified style system** — styles reference classes via bare
+  dotted TOML keys (`class.NAME = "colour"`) and file patterns via
+  quoted keys.  Compiled-in "exa" style maps classes to default
+  colours.
+- **`--show-config`** — diagnostic flag showing the active
+  personality, theme, style, classes, and formats with their source
+  (compiled-in vs config).
+- **`la` personality** — compiled-in, inherits from `ll` with
+  hidden files shown.
+- **Flat formats** — `[format]` section is now flat (keys are format
+  names, values are column lists).
 - **Explicit exa chain** — default personality → exa theme → exa
   style, with no magic fallback.
-- **Config version 0.3** — the upgrade tool handles 0.1→0.3 and
-  0.2→0.3 migrations.
-- `--git` and `--git-ignore` legacy flags removed (use
-  `--vcs-status` and `--vcs-ignore`).
+- **Config version 0.3** — upgrade tool handles 0.1→0.3 and 0.2→0.3
+  migrations.
+- `--git` and `--git-ignore` legacy flags removed.
 - `--group-directories-first` precedence fixed.
 
-## Roadmap: post-0.3
+## Roadmap: 0.4
 
-- `--show-config` to display the active personality, format, theme,
-  and their resolved definitions
-- `--list-themes`, `--list-personalities`, `--list-formats` for
-  discoverability
 - `--time-style=relative` ("2 hours ago")
 - Symlink display flags (`--symlinks=show|hide|follow`)
 - `--vcs-repos` (per-directory repo status)
+- Migrate icon assignment to use the class system
 - Polish and bug fixes from daily driving
 
 

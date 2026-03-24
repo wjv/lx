@@ -115,6 +115,7 @@ pub fn build_command() -> clap::Command {
         .version(env!("CARGO_PKG_VERSION"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .styles(STYLES)
+        .max_term_width(80)
         .disable_help_flag(true)
         .disable_version_flag(true)
         .args_override_self(true)
