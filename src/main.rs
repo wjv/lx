@@ -79,6 +79,7 @@ fn main() {
     let mut args: Vec<OsString> = Vec::new();
 
     // Layer 1: personality (skip when upgrading — config may be legacy).
+    let mut active_personality: Option<String> = None;
     if !upgrading {
         // Determine which personality to apply.
         // Explicit --personality/-p takes priority; if absent, check argv[0].
@@ -104,6 +105,7 @@ fn main() {
             match config::resolve_personality(personality_name) {
                 Ok(Some(personality)) => {
                     args.extend(personality.to_args());
+                    active_personality = Some(personality_name.clone());
                 }
                 Ok(None) => {}  // unknown personality, ignore
                 Err(e) => {
@@ -175,6 +177,11 @@ fn main() {
                     exit(exits::RUNTIME_ERROR);
                 }
             }
+        }
+
+        OptionsResult::ShowConfig => {
+            let name = active_personality.as_deref().unwrap_or("lx");
+            config::show_config(name);
         }
 
         OptionsResult::UpgradeConfig => {

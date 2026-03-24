@@ -422,14 +422,62 @@ represent file-type categories. Classes are referenced from styles
 (see below).
 
     [class]
-    media   = ["*.jpg", "*.png", "*.gif", "*.mp4", "*.mp3"]
-    source  = ["*.rs", "*.py", "*.js", "*.go", "*.c"]
-    archive = ["*.zip", "*.tar", "*.gz", "*.bz2", "*.7z"]
+    source = ["*.rs", "*.py", "*.js", "*.go", "*.c"]
+    data   = ["*.csv", "*.json", "*.xml", "*.yaml"]
 
-lx ships with compiled-in class definitions for `image`, `video`,
-`music`, `lossless`, `crypto`, `document`, `compressed`, `compiled`,
-`temp`, and `immediate`. User-defined classes in `[class]` override
-the compiled-in definition of the same name.
+User-defined classes in `[class]` override any compiled-in
+definition of the same name.
+
+Compiled-in class definitions
+-----------------------------
+
+lx ships with the following compiled-in classes. To override one,
+redefine it in `[class]` with the same name.
+
+    image:
+        *.png *.jfi *.jfif *.jif *.jpe *.jpeg *.jpg *.gif *.bmp
+        *.tiff *.tif *.ppm *.pgm *.pbm *.pnm *.webp *.raw *.arw
+        *.svg *.stl *.eps *.dvi *.ps *.cbr *.jpf *.cbz *.xpm
+        *.ico *.cr2 *.orf *.nef *.heif *.avif *.jxl *.j2k *.jp2
+        *.j2c *.jpx
+
+    video:
+        *.avi *.flv *.m2v *.m4v *.mkv *.mov *.mp4 *.mpeg *.mpg
+        *.ogm *.ogv *.vob *.wmv *.webm *.m2ts *.heic
+
+    music:
+        *.aac *.m4a *.mp3 *.ogg *.wma *.mka *.opus
+
+    lossless:
+        *.alac *.ape *.flac *.wav
+
+    crypto:
+        *.asc *.enc *.gpg *.pgp *.sig *.signature *.pfx *.p12
+
+    document:
+        *.djvu *.doc *.docx *.dvi *.eml *.eps *.fotd *.key
+        *.keynote *.numbers *.odp *.odt *.pages *.pdf *.ppt
+        *.pptx *.rtf *.xls *.xlsx
+
+    compressed:
+        *.zip *.tar *.Z *.z *.gz *.bz2 *.a *.ar *.7z *.iso *.dmg
+        *.tc *.rar *.par *.tgz *.xz *.txz *.lz *.tlz *.lzma
+        *.deb *.rpm *.zst *.lz4 *.cpio
+
+    compiled:
+        *.class *.elc *.hi *.o *.pyc *.zwc *.ko
+
+    temp:
+        *.tmp *.swp *.swo *.swn *.bak *.bkp *.bk
+
+    immediate:
+        Makefile Cargo.toml SConstruct CMakeLists.txt build.gradle
+        pom.xml Rakefile package.json Gruntfile.js Gruntfile.coffee
+        BUILD BUILD.bazel WORKSPACE build.xml Podfile
+        webpack.config.js meson.build composer.json RoboFile.php
+        PKGBUILD Justfile Procfile Dockerfile Containerfile
+        Vagrantfile Brewfile Gemfile Pipfile build.sbt mix.exs
+        bsconfig.json tsconfig.json
 
 
 STYLES

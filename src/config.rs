@@ -797,6 +797,182 @@ pub fn write_init_config(path: &PathBuf) -> std::io::Result<()> {
 }
 
 
+/// Display the active configuration to stdout.
+///
+/// Shows the resolved personality, format, theme, style, and classes,
+/// indicating for each whether it's compiled-in or from the config file.
+pub fn show_config(personality_name: &str) {
+    let config_path = find_config_path();
+    let has_config = CONFIG.is_some();
+
+    println!("lx configuration");
+    println!("================");
+    println!();
+
+    // Config file.
+    match &config_path {
+        Some(p) => println!("Config file:  {}", p.display()),
+        None    => println!("Config file:  (none)"),
+    }
+    println!("Config version: {CONFIG_VERSION}");
+    println!();
+
+    // Personality.
+    println!("Personality:  {personality_name}");
+    let source = if has_config
+        && CONFIG.as_ref().unwrap().personality.contains_key(personality_name)
+    {
+        "config"
+    } else {
+        "compiled-in"
+    };
+    println!("  source: {source}");
+
+    if let Ok(Some(p)) = resolve_personality(personality_name) {
+        if let Some(ref inherits) = p.inherits {
+            println!("  inherits: {inherits}");
+        }
+        if let Some(ref fmt) = p.format {
+            println!("  format: {fmt}");
+        }
+        if let Some(ref cols) = p.columns {
+            println!("  columns: {}", cols.to_csv());
+        }
+        if !p.settings.is_empty() {
+            println!("  settings:");
+            let mut keys: Vec<_> = p.settings.keys().collect();
+            keys.sort();
+            for key in keys {
+                println!("    {key} = {}", p.settings[key]);
+            }
+        }
+    }
+    println!();
+
+    // Theme.
+    let theme_name = resolve_personality(personality_name)
+        .ok()
+        .flatten()
+        .and_then(|p| p.settings.get("theme").and_then(|v| {
+            if let toml::Value::String(s) = v { Some(s.clone()) } else { None }
+        }));
+
+    if let Some(ref name) = theme_name {
+        println!("Theme:        {name}");
+        let source = if name == "exa" {
+            "compiled-in"
+        } else if has_config && CONFIG.as_ref().unwrap().theme.contains_key(name) {
+            "config"
+        } else {
+            "unknown"
+        };
+        println!("  source: {source}");
+
+        if name != "exa" {
+            if let Some(ref cfg) = *CONFIG {
+                if let Some(theme) = cfg.theme.get(name) {
+                    if let Some(ref inherits) = theme.inherits {
+                        println!("  inherits: {inherits}");
+                    }
+                    if let Some(ref style) = theme.use_style {
+                        println!("  use-style: {style}");
+                    }
+                }
+            }
+        } else {
+            println!("  use-style: exa (implicit)");
+        }
+    } else {
+        println!("Theme:        (none)");
+    }
+    println!();
+
+    // Style.
+    let style_name = theme_name.as_deref().and_then(|tn| {
+        if tn == "exa" {
+            Some("exa".to_string())
+        } else if let Some(ref cfg) = *CONFIG {
+            cfg.theme.get(tn).and_then(|t| t.use_style.clone())
+        } else {
+            None
+        }
+    });
+
+    if let Some(ref name) = style_name {
+        println!("Style:        {name}");
+        let source = if name == "exa" {
+            "compiled-in"
+        } else if has_config && CONFIG.as_ref().unwrap().style.contains_key(name) {
+            "config"
+        } else {
+            "unknown"
+        };
+        println!("  source: {source}");
+
+        if let Some(style) = resolve_style(name) {
+            if !style.classes.is_empty() {
+                println!("  class references:");
+                let mut keys: Vec<_> = style.classes.keys().collect();
+                keys.sort();
+                for key in keys {
+                    println!("    {key} = \"{}\"", style.classes[key]);
+                }
+            }
+            if !style.patterns.is_empty() {
+                println!("  file patterns:");
+                let mut keys: Vec<_> = style.patterns.keys().collect();
+                keys.sort();
+                for key in keys {
+                    println!("    \"{key}\" = \"{}\"", style.patterns[key]);
+                }
+            }
+        }
+    } else {
+        println!("Style:        (none)");
+    }
+    println!();
+
+    // Classes.
+    let classes = resolve_classes();
+    println!("Classes:      {} defined", classes.len());
+    let mut names: Vec<_> = classes.keys().collect();
+    names.sort();
+    for name in names {
+        let source = if has_config
+            && CONFIG.as_ref().unwrap().class.contains_key(name)
+        {
+            "config"
+        } else {
+            "compiled-in"
+        };
+        let patterns = &classes[name];
+        println!("  {name} ({source}): {} patterns", patterns.len());
+    }
+    println!();
+
+    // Formats.
+    println!("Formats:");
+    let compiled = vec!["long", "long2", "long3"];
+    for name in &compiled {
+        let source = if has_config
+            && CONFIG.as_ref().unwrap().format.contains_key(*name)
+        {
+            "config (overrides compiled-in)"
+        } else {
+            "compiled-in"
+        };
+        println!("  {name}: {source}");
+    }
+    if let Some(ref cfg) = *CONFIG {
+        for name in cfg.format.keys() {
+            if !compiled.contains(&name.as_str()) {
+                println!("  {name}: config");
+            }
+        }
+    }
+}
+
+
 /// Upgrade an older config file to the current format.
 ///
 /// Detects the source version and applies the appropriate migration:

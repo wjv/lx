@@ -31,11 +31,16 @@ test:
 lint:
     cargo clippy
 
-# Install lx to ~/.local/bin (XDG standard)
-install: release
+# Install lx to ~/.local/bin with man pages (XDG standard)
+install: release man
     @mkdir -p ~/.local/bin
+    @mkdir -p ~/.local/share/man/man1
+    @mkdir -p ~/.local/share/man/man5
     cp target/release/lx ~/.local/bin/lx
+    cp man/lx.1 ~/.local/share/man/man1/lx.1
+    cp man/lxconfig.toml.5 ~/.local/share/man/man5/lxconfig.toml.5
     @echo "Installed lx to ~/.local/bin/lx"
+    @echo "Installed man pages to ~/.local/share/man/"
 
 # Create personality symlinks in ~/.local/bin
 install-personalities: install

@@ -408,6 +408,8 @@ fn theme_inheritance_cycle_detected() {
 
 // ── No theme is fine ─────────────────────────────────────────────
 
+// ── Default theme smoke tests ────────────────────────────────────
+
 #[test]
 fn no_theme_works() {
     lx_no_colour()
@@ -415,4 +417,75 @@ fn no_theme_works() {
         .assert()
         .success()
         .stdout(predicate::str::contains("Cargo.toml"));
+}
+
+#[test]
+fn default_theme_produces_colour() {
+    // Without any config, the compiled-in exa theme (via the
+    // default personality) should produce coloured output.
+    // Bold blue (1;34) for directories is the exa default.
+    let mut cmd = assert_cmd::Command::cargo_bin("lx").expect("binary lx not found");
+    cmd.env("LX_CONFIG", "/nonexistent")
+       .env("HOME", "/nonexistent")
+       .env_remove("LS_COLORS")
+       .env_remove("LX_COLORS")
+       .arg("--colour=always")
+       .args(["-l", "src"])
+       .assert()
+       .success()
+       // Bold blue directory (from exa theme): 1;34
+       .stdout(predicate::str::contains("\x1b[1;34m"))
+       // Blue date (from exa theme): 34
+       .stdout(predicate::str::contains("\x1b[34m"));
+}
+
+#[test]
+fn default_theme_colours_filetypes() {
+    // The compiled-in exa style should colour compressed files red.
+    let mut cmd = assert_cmd::Command::cargo_bin("lx").expect("binary lx not found");
+    cmd.env("LX_CONFIG", "/nonexistent")
+       .env("HOME", "/nonexistent")
+       .env_remove("LS_COLORS")
+       .env_remove("LX_COLORS")
+       .arg("--colour=always");
+
+    let work = tempdir().expect("failed to create workdir");
+    fs::write(work.path().join("archive.zip"), "").unwrap();
+
+    // Red (31) for compressed files (from exa style).
+    cmd.args(["-1"])
+        .arg(work.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\x1b[31m"));
+}
+
+#[test]
+fn init_config_preserves_default_colours() {
+    // After --init-config, output should look identical to no-config.
+    // This is design invariant #2.
+    let dir = tempdir().expect("failed to create tempdir");
+
+    // Generate config.
+    let mut init = assert_cmd::Command::cargo_bin("lx").expect("binary lx not found");
+    init.args(["--init-config"])
+        .env("HOME", dir.path())
+        .env("LX_CONFIG", "/nonexistent")
+        .assert()
+        .success();
+
+    let config_path = dir.path().join(".lxconfig.toml");
+    assert!(config_path.exists());
+
+    // Run with generated config — should have bold blue directories.
+    let mut cmd = assert_cmd::Command::cargo_bin("lx").expect("binary lx not found");
+    cmd.env("LX_CONFIG", &config_path)
+       .env("HOME", dir.path())
+       .env_remove("LS_COLORS")
+       .env_remove("LX_COLORS")
+       .arg("--colour=always")
+       .args(["-l", "src"])
+       .assert()
+       .success()
+       .stdout(predicate::str::contains("\x1b[1;34m"));
 }

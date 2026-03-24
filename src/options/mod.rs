@@ -105,6 +105,10 @@ impl Options {
                     return OptionsResult::Completions(*shell);
                 }
 
+                if clap_matches.get_flag("show-config") {
+                    return OptionsResult::ShowConfig;
+                }
+
                 if clap_matches.get_flag("init-config") {
                     return OptionsResult::InitConfig;
                 }
@@ -191,6 +195,9 @@ pub enum OptionsResult {
 
     /// The user requested shell completions.
     Completions(clap_complete::Shell),
+
+    /// The user wants to see the active configuration.
+    ShowConfig,
 
     /// The user wants to generate a default config file.
     InitConfig,

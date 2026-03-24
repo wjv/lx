@@ -99,9 +99,12 @@ impl Options {
         // which applies both UiStyles::default_theme() and the
         // compiled-in exa style.  No magic fallback — the chain is
         // fully explicit: personality → theme → style.
-        if let Some(ref cfg) = *CONFIG {
-            self.apply_config_theme(cfg, &mut ui, &mut exts);
-        }
+        //
+        // apply_config_theme handles the "exa" theme as a special
+        // compiled-in case, so it works even without a config file.
+        let empty_cfg = crate::config::Config::default();
+        let cfg = CONFIG.as_ref().unwrap_or(&empty_cfg);
+        self.apply_config_theme(cfg, &mut ui, &mut exts);
 
         let exts: Box<dyn FileColours> = if exts.is_non_empty() {
             Box::new(exts)

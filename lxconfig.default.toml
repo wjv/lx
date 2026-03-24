@@ -166,33 +166,19 @@ across = true
 # header = "bold underline"
 
 
-## ── Filetype classes ──────────────────────────────────────────────
-##
+## ── File-type classes ─────────────────────────────────────────────
 ## A class is a named list of glob patterns representing a file
 ## category.  Classes are referenced from styles (see below).
 ##
-## These are the compiled-in defaults; override by editing or add
-## new custom classes.
+## The compiled-in classes are: image, video, music, lossless,
+## crypto, document, compressed, compiled, temp, immediate.
+## For the full definitions, see lxconfig.toml(5).
+##
+## Override a compiled-in class or define your own:
 
-[class]
-image      = ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.tiff",
-              "*.webp", "*.svg", "*.ico", "*.heif", "*.avif", "*.jxl"]
-video      = ["*.avi", "*.flv", "*.mkv", "*.mov", "*.mp4", "*.mpeg",
-              "*.webm", "*.m4v", "*.wmv"]
-music      = ["*.aac", "*.m4a", "*.mp3", "*.ogg", "*.wma", "*.opus"]
-lossless   = ["*.alac", "*.ape", "*.flac", "*.wav"]
-crypto     = ["*.asc", "*.enc", "*.gpg", "*.pgp", "*.sig", "*.pfx"]
-document   = ["*.djvu", "*.doc", "*.docx", "*.pdf", "*.ppt", "*.pptx",
-              "*.rtf", "*.xls", "*.xlsx", "*.odt", "*.odp"]
-compressed = ["*.zip", "*.tar", "*.gz", "*.bz2", "*.7z", "*.xz",
-              "*.zst", "*.rar", "*.deb", "*.rpm"]
-compiled   = ["*.class", "*.elc", "*.hi", "*.o", "*.pyc", "*.ko"]
-temp       = ["*.tmp", "*.swp", "*.swo", "*.bak", "*.bkp"]
-immediate  = ["Makefile", "Cargo.toml", "SConstruct", "CMakeLists.txt",
-              "build.gradle", "pom.xml", "Rakefile", "package.json",
-              "Justfile", "Procfile", "Dockerfile", "Containerfile",
-              "Vagrantfile", "Brewfile", "Gemfile", "Pipfile",
-              "build.sbt", "mix.exs", "tsconfig.json"]
+# [class]
+# source = ["*.rs", "*.py", "*.js", "*.go", "*.c", "*.cpp"]
+# data   = ["*.csv", "*.json", "*.xml", "*.yaml", "*.h5"]
 
 
 ## ── Style sets ───────────────────────────────────────────────────
