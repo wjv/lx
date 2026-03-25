@@ -5,6 +5,8 @@ All notable changes to lx are documented here. lx is forked from
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-03-25
+
 ### Added
 - File-type classes: `[class]` section with named pattern lists and
   compiled-in defaults (`image`, `video`, `music`, `lossless`, `crypto`,
@@ -14,10 +16,14 @@ All notable changes to lx are documented here. lx is forked from
 - Compiled-in `"exa"` style maps classes to default colours
 - Explicit exa chain: default personality → exa theme → exa style
   (no magic fallback)
+- `--show-config` flag to display the active personality, theme, style,
+  classes, and formats with their source (compiled-in vs config)
+- `la` compiled-in personality (inherits `ll`, shows hidden files)
 - Config schema version bumped to `"0.3"`
 - Upgrade tool handles 0.1→0.3 and 0.2→0.3 migrations
 - Compiled-in `default` and `lx` personalities matching the
   default config template
+- Clap `wrap_help` for readable `--help` on wide terminals
 
 ### Changed
 - Formats are now flat `[format]` sections (was `[format.NAME]` with
@@ -29,6 +35,7 @@ All notable changes to lx are documented here. lx is forked from
 - `--git` and `--git-ignore` legacy flags (use `--vcs-status`
   and `--vcs-ignore`)
 - `reset-extensions` option (replaced by explicit style references)
+- Dead `FileColours` impl and unused `is_*` methods from `filetype.rs`
 
 ## [0.2.1] — 2026-03-23
 
