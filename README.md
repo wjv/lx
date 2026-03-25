@@ -408,7 +408,8 @@ prefer to keep your dotfiles tidy under `~/.config/`, use option 3.
 ### Download a pre-compiled binary
 
 `lx` is just a single binary. You can download pre-built binaries of the latest
-release from GitHub, for both Linux and macOS:
+release from GitHub, for both Linux and macOS. These binaries all include
+jj support.
 
 | OS    | CPU architecture | filename                       |
 |-------|------------------|--------------------------------|
@@ -475,8 +476,8 @@ If you have [`just`](https://just.systems/) installed, the included
 Justfile automates building, installing, and setting up personalities:
 
 ```sh
-git clone https://github.com/wjv/lx && cd lx
-                            # clone source and `cd` to directory
+git clone https://github.com/wjv/lx
+cd lx                       # create local clone and `cd` to it
 
 just install                # build release + install binary and man pages
                             # to ~/.local/bin and ~/.local/share/man
@@ -487,8 +488,12 @@ just install-personalities  # create symlinks for ll, la, lll, tree
 just init-config            # generate ~/.lxconfig.toml
 ```
 
-For jj support, use the `-jj` variants: `just build-jj`, `just install-jj`,
-etc.
+To install with jj support, use the `install-jj` recipe instead:
+
+```sh
+just install-jj             # build release with jj support + install
+                            # to ~/.local/bin and ~/.local/share/man
+```
 
 Other useful recipes: `just test`, `just test-all`, `just lint`,
 `just completions`. List them all with `just -l`.
@@ -513,7 +518,8 @@ With `--vcs=auto` (the default), lx probes for a jj workspace first,
 then falls back to git — so co-located jj/git repositories are detected
 correctly.
 
-The column header shows which backend is active: **Git** or **JJ**.
+The column header (`-h`/`--header`) shows which backend is active: **Git** or 
+**JJ**.
 
 ### Status characters
 
@@ -532,17 +538,40 @@ The column header shows which backend is active: **Git** or **JJ**.
 
 ### Git vs jj display
 
-**Git** shows two columns: staged status + unstaged status.  When both
-are the same, lx collapses them into a single character.
+The VCS column is one or two characters wide, depending on the status.
 
-**jj** also shows two columns, but with different semantics (since jj has
-no staging area): column 1 is the *change status* (comparing the working
-copy commit against its parent), and column 2 is the *tracking status*
-(`U` = untracked, `I` = ignored, or a space for tracked files).
+**Git** uses two characters:
 
-`--vcs-ignore` works with both backends.  The jj backend walks the
-workspace directory tree and chains nested `.gitignore` files so that
-subdirectory ignore rules are respected.
+- character 1 is the staged status
+- character 2 is the unstaged status
+
+When both are the same, `lx` collapses them to one.  For example:
+
+| Column | File                | Meaning                                            |
+|--------|---------------------|----------------------------------------------------|
+| `-M`   | `committed.txt`     | Unstaged modification (staged: `-`, unstaged: `M`) |
+| `M-`   | `staged.txt`        | Staged modification (staged: `M`, unstaged: `-`)   |
+| `-N`   | `untracked.txt`     | Untracked file (staged: `-`, unstaged: `N`)        |
+| `M `   | `both-modified.txt` | Same in both columns (collapsed to one)            |
+
+**jj** also uses two characters, but with different semantics (jj has
+no staging area):
+
+- character 1 is the *change status* (working copy commit vs its parent)
+- character 2 is the *tracking status* — a space for tracked files, `U` for 
+  untracked, or `I` for ignored
+
+| Column | File               | Meaning                 |
+|--------|--------------------|-------------------------|
+| `A `   | `Cargo.lock`       | Added file, tracked     |
+| `M `   | `src/main.rs`      | Modified, tracked       |
+| `- `   | `README.md`        | Not modified, tracked   |
+| `-I`   | `Cargo.toml~`      | Not modified, ignored   |
+| `-U`   | `some-random-file` | Not modified, untracked |
+| `! `   | `conflicted.txt`   | Merge conflict          |
+
+`--vcs-ignore` works with both backends — it hides files showing `I` 
+completely.
 
 
 ## More on daily `lx` usage

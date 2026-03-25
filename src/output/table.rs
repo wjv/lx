@@ -383,7 +383,8 @@ impl<'a, 'f> Table<'a> {
                 file.group().render(self.theme, &*self.env.lock_users(), self.user_format)
             }
             Column::VcsStatus => {
-                self.vcs_status(file).render(self.theme)
+                let backend = self.vcs.map(|v| v.header_name()).unwrap_or("VCS");
+                self.vcs_status(file).render(self.theme, backend)
             }
             #[cfg(unix)]
             Column::Octal => {

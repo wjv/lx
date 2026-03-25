@@ -1,11 +1,16 @@
 //! Getting the VCS status of files in a Jujutsu (jj) repository using
 //! the `jj-lib` library directly.
 //!
-//! Uses jj-lib for workspace discovery, tree diffing, file tracking
-//! state, and gitignore rules.  Enabled by the `jj` feature flag.
+//! Uses jj-lib for workspace discovery, tree diffing, and file tracking
+//! state.  Gitignore rules are handled by `git2`, which correctly
+//! resolves all layers: `core.excludesFile`, `.git/info/exclude`, and
+//! per-directory `.gitignore` files.
+//!
+//! Enabled by the `jj` feature flag (which implies `git`).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use log::*;
 
@@ -26,8 +31,11 @@ pub struct JjCache {
     /// Set of absolute paths that are tracked in the working copy tree.
     tracked: std::collections::HashSet<PathBuf>,
 
-    /// Gitignore rules, for `--vcs-ignore` support.
-    gitignore: Option<std::sync::Arc<jj_lib::gitignore::GitIgnoreFile>>,
+    /// Git repository for gitignore queries.  jj repos are backed by git,
+    /// so we delegate ignore checking to git2 which handles all layers
+    /// (global excludes, info/exclude, per-directory .gitignore).
+    /// Wrapped in Mutex because git2::Repository is not Sync.
+    git_repo: Option<Mutex<git2::Repository>>,
 
     /// The workspace root, used to resolve relative paths.
     workdir: PathBuf,
@@ -47,6 +55,8 @@ impl JjCache {
             probe.canonicalize().unwrap_or(probe)
         } else {
             let p = probe.parent().unwrap_or(Path::new("."));
+            // An empty parent (from a bare filename like "foo.txt") means cwd.
+            let p = if p.as_os_str().is_empty() { Path::new(".") } else { p };
             p.canonicalize().unwrap_or_else(|_| p.to_path_buf())
         };
 
@@ -68,7 +78,8 @@ impl JjCache {
         let ws = loop {
             match Workspace::load(&settings, search_dir, &store_factories, &wc_factories) {
                 Ok(ws) => break ws,
-                Err(_) => {
+                Err(e) => {
+                    debug!("jj: Workspace::load({}) failed: {e}", search_dir.display());
                     match search_dir.parent() {
                         Some(parent) => search_dir = parent,
                         None => {
@@ -94,7 +105,7 @@ impl JjCache {
             Ok(repo) => repo,
             Err(e) => {
                 warn!("jj: failed to load repo: {e}");
-                return Some(Self { statuses: HashMap::new(), tracked: std::collections::HashSet::new(), gitignore: None, workdir });
+                return Some(Self::empty(workdir));
             }
         };
 
@@ -102,7 +113,7 @@ impl JjCache {
             Some(id) => id.clone(),
             None => {
                 warn!("jj: no working copy commit");
-                return Some(Self { statuses: HashMap::new(), tracked: std::collections::HashSet::new(), gitignore: None, workdir });
+                return Some(Self::empty(workdir));
             }
         };
 
@@ -110,7 +121,7 @@ impl JjCache {
             Ok(c) => c,
             Err(e) => {
                 warn!("jj: failed to get working copy commit: {e}");
-                return Some(Self { statuses: HashMap::new(), tracked: std::collections::HashSet::new(), gitignore: None, workdir });
+                return Some(Self::empty(workdir));
             }
         };
 
@@ -125,7 +136,7 @@ impl JjCache {
                     Ok(c) => c,
                     Err(e) => {
                         warn!("jj: failed to get parent commit: {e}");
-                        return Some(Self { statuses: HashMap::new(), tracked: std::collections::HashSet::new(), gitignore: None, workdir });
+                        return Some(Self::empty(workdir));
                     }
                 };
                 parent.tree()
@@ -148,11 +159,12 @@ impl JjCache {
 
                 let status = match &entry.values {
                     Ok(diff) => {
-                        let before_absent = diff.before.is_absent();
-                        let after_absent = diff.after.is_absent();
-                        if before_absent && !after_absent {
+                        if !diff.after.is_resolved() {
+                            // Unresolved merge conflict in the working copy.
+                            f::VcsStatus::Conflicted
+                        } else if diff.before.is_absent() && !diff.after.is_absent() {
                             f::VcsStatus::New
-                        } else if !before_absent && after_absent {
+                        } else if !diff.before.is_absent() && diff.after.is_absent() {
                             f::VcsStatus::Deleted
                         } else {
                             f::VcsStatus::Modified
@@ -173,23 +185,68 @@ impl JjCache {
             tracked.insert(abs_path);
         }
 
-        // Build gitignore chain for --vcs-ignore support.
-        let gitignore = {
-            use jj_lib::gitignore::GitIgnoreFile;
-            let base = GitIgnoreFile::empty();
-            // Chain the root .gitignore if it exists.
-            match base.chain_with_file("", workdir.join(".gitignore")) {
-                Ok(gi) => Some(gi),
-                Err(e) => {
-                    debug!("jj: failed to load .gitignore: {e}");
-                    None
-                }
+        // Open the underlying git repo for gitignore queries.
+        // git2 handles all ignore layers: core.excludesFile,
+        // .git/info/exclude, and per-directory .gitignore files.
+        //
+        // Try colocated (.git at workspace root) first, then read
+        // .jj/repo/store/git_target to find the backing git store
+        // (works for both colocated and non-colocated repos).
+        let git_repo = Self::open_git_repo(&workdir).map(Mutex::new);
+
+        debug!("jj cache: {} file statuses, {} tracked files",
+               statuses.len(), tracked.len());
+        Some(Self { statuses, tracked, git_repo, workdir })
+    }
+
+    /// Create an empty cache (used for error fallback paths).
+    fn empty(workdir: PathBuf) -> Self {
+        Self {
+            statuses: HashMap::new(),
+            tracked: std::collections::HashSet::new(),
+            git_repo: None,
+            workdir,
+        }
+    }
+
+    /// Open the git repo backing this jj workspace.  Reads
+    /// `.jj/repo/store/git_target` to find the backing store — this
+    /// works for colocated repos (points to `../../../.git`),
+    /// non-colocated repos (internal bare store), and external repos
+    /// (from `jj git init --git-repo <path>`).
+    fn open_git_repo(workdir: &Path) -> Option<git2::Repository> {
+        let git_target_path = workdir.join(".jj/repo/store/git_target");
+        let target = match std::fs::read_to_string(&git_target_path) {
+            Ok(t) => t,
+            Err(_) => {
+                debug!("jj: no git_target found (ignores will not work)");
+                return None;
             }
         };
 
-        debug!("jj cache: {} file statuses, {} tracked files, gitignore: {}",
-               statuses.len(), tracked.len(), gitignore.is_some());
-        Some(Self { statuses, tracked, gitignore, workdir })
+        let git_path = workdir.join(".jj/repo/store").join(target.trim());
+        match git2::Repository::open(&git_path) {
+            Ok(repo) => {
+                debug!("jj: opened backing git store at {}", git_path.display());
+                Some(repo)
+            }
+            Err(e) => {
+                debug!("jj: failed to open backing git store: {e}");
+                None
+            }
+        }
+    }
+
+    /// Check whether a path (relative to workdir) is ignored by
+    /// gitignore rules.  Delegates to git2 which handles all layers.
+    fn is_ignored(&self, rel_path: &Path) -> bool {
+        match &self.git_repo {
+            Some(mutex) => {
+                let repo = mutex.lock().unwrap();
+                repo.is_path_ignored(rel_path).unwrap_or(false)
+            }
+            None => false,
+        }
     }
 }
 
@@ -227,16 +284,12 @@ impl super::VcsCache for JjCache {
 
             // Check gitignore first — ignored files get Ignored in
             // the unstaged column, which --vcs-ignore uses to filter.
-            if let Some(ref gi) = self.gitignore {
-                let rel = abs.strip_prefix(&self.workdir)
-                    .unwrap_or(&abs);
-                let rel_str = rel.to_string_lossy();
-                if gi.matches(&rel_str) {
-                    return f::VcsFileStatus {
-                        staged: f::VcsStatus::NotModified,
-                        unstaged: f::VcsStatus::Ignored,
-                    };
-                }
+            let rel = abs.strip_prefix(&self.workdir).unwrap_or(&abs);
+            if self.is_ignored(rel) {
+                return f::VcsFileStatus {
+                    staged: f::VcsStatus::NotModified,
+                    unstaged: f::VcsStatus::Ignored,
+                };
             }
 
             let change = self.statuses.get(&abs)

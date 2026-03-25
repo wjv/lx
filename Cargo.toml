@@ -55,7 +55,7 @@ optional = true
 [features]
 default = ["git"]
 git = ["git2"]
-jj = ["dep:jj-lib", "dep:tokio", "dep:futures"]
+jj = ["dep:jj-lib", "dep:tokio", "dep:futures", "git"]
 vendored-openssl = ["git2/vendored-openssl"]
 
 [dev-dependencies]

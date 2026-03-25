@@ -5,13 +5,13 @@ use crate::fs::fields as f;
 
 
 impl f::VcsFileStatus {
-    pub fn render(self, colours: &dyn Colours) -> TextCell {
+    pub fn render(self, colours: &dyn Colours, backend: &str) -> TextCell {
         if self.staged == self.unstaged {
             // Single-column display (jj, or git with identical status).
             TextCell {
                 width: DisplayWidth::from(2),
                 contents: vec![
-                    self.unstaged.render(colours),
+                    self.unstaged.render(colours, backend),
                     colours.not_modified().paint(" "),
                 ].into(),
             }
@@ -20,8 +20,8 @@ impl f::VcsFileStatus {
             TextCell {
                 width: DisplayWidth::from(2),
                 contents: vec![
-                    self.staged.render(colours),
-                    self.unstaged.render(colours),
+                    self.staged.render(colours, backend),
+                    self.unstaged.render(colours, backend),
                 ].into(),
             }
         }
@@ -30,10 +30,10 @@ impl f::VcsFileStatus {
 
 
 impl f::VcsStatus {
-    fn render(self, colours: &dyn Colours) -> AnsiString<'static> {
+    fn render(self, colours: &dyn Colours, backend: &str) -> AnsiString<'static> {
         match self {
             Self::NotModified  => colours.not_modified().paint("-"),
-            Self::New          => colours.new().paint("N"),
+            Self::New          => colours.new().paint(if backend == "JJ" { "A" } else { "N" }),
             Self::Modified     => colours.modified().paint("M"),
             Self::Deleted      => colours.deleted().paint("D"),
             Self::Renamed      => colours.renamed().paint("R"),
@@ -100,7 +100,7 @@ pub mod test {
             ].into(),
         };
 
-        assert_eq!(expected, stati.render(&TestColours))
+        assert_eq!(expected, stati.render(&TestColours, "Git"))
     }
 
 
@@ -119,6 +119,24 @@ pub mod test {
             ].into(),
         };
 
-        assert_eq!(expected, stati.render(&TestColours))
+        assert_eq!(expected, stati.render(&TestColours, "Git"))
+    }
+
+    #[test]
+    fn vcs_jj_new_shows_a() {
+        let stati = f::VcsFileStatus {
+            staged:   f::VcsStatus::New,
+            unstaged: f::VcsStatus::New,
+        };
+
+        let expected = TextCell {
+            width: DisplayWidth::from(2),
+            contents: vec![
+                Fixed(91).paint("A"),
+                Fixed(90).paint(" "),
+            ].into(),
+        };
+
+        assert_eq!(expected, stati.render(&TestColours, "JJ"))
     }
 }
