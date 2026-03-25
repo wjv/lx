@@ -67,7 +67,7 @@ Alias: `--color-scale`.
 : Set the terminal width explicitly, overriding auto-detection and the
 `COLUMNS` environment variable.
 
-`--absolute`
+`-A`, `--absolute`
 : Display fully resolved absolute file paths.
 
 `--hyperlink`[`=WHEN`]
@@ -182,7 +182,7 @@ These options affect the columns displayed in long view (`-l`):
 `-@`, `--extended`
 : List each file's extended attributes and sizes.
 
-`--octal-permissions`
+`-o`, `--octal-permissions`
 : List each file's permissions in octal format.
 
 

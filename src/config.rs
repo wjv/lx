@@ -815,23 +815,32 @@ pub fn write_init_config(path: &PathBuf) -> std::io::Result<()> {
 /// Shows the resolved personality, format, theme, style, and classes,
 /// indicating for each whether it's compiled-in or from the config file.
 pub fn show_config(personality_name: &str) {
+    use nu_ansi_term::{Color, Style};
+
+    // Styling consistent with --help: yellow bold headers, cyan bold
+    // literals/names, green values/paths, dimmed for source annotations.
+    let heading = Style::new().bold().fg(Color::Yellow);
+    let label   = Style::new().bold();
+    let name    = Style::new().bold().fg(Color::Cyan);
+    let value   = Style::new().fg(Color::Green);
+    let dimmed  = Style::new().dimmed();
+
     let config_path = find_config_path();
     let has_config = CONFIG.is_some();
 
-    println!("lx configuration");
-    println!("================");
+    println!("{}", heading.paint("lx configuration"));
     println!();
 
     // Config file.
     match &config_path {
-        Some(p) => println!("Config file:  {}", p.display()),
-        None    => println!("Config file:  (none)"),
+        Some(p) => println!("{} {}", label.paint("Config file:"), value.paint(p.display().to_string())),
+        None    => println!("{} {}", label.paint("Config file:"), dimmed.paint("(none)")),
     }
-    println!("Config version: {CONFIG_VERSION}");
+    println!("{} {}", label.paint("Config version:"), value.paint(CONFIG_VERSION));
     println!();
 
     // Personality.
-    println!("Personality:  {personality_name}");
+    println!("{} {}", label.paint("Personality:"), name.paint(personality_name));
     let source = if has_config
         && CONFIG.as_ref().unwrap().personality.contains_key(personality_name)
     {
@@ -839,24 +848,24 @@ pub fn show_config(personality_name: &str) {
     } else {
         "compiled-in"
     };
-    println!("  source: {source}");
+    println!("  {} {}", label.paint("source:"), dimmed.paint(source));
 
     if let Ok(Some(p)) = resolve_personality(personality_name) {
         if let Some(ref inherits) = p.inherits {
-            println!("  inherits: {inherits}");
+            println!("  {} {}", label.paint("inherits:"), name.paint(inherits));
         }
         if let Some(ref fmt) = p.format {
-            println!("  format: {fmt}");
+            println!("  {} {}", label.paint("format:"), name.paint(fmt));
         }
         if let Some(ref cols) = p.columns {
-            println!("  columns: {}", cols.to_csv());
+            println!("  {} {}", label.paint("columns:"), value.paint(cols.to_csv()));
         }
         if !p.settings.is_empty() {
-            println!("  settings:");
+            println!("  {}",label.paint("settings:"));
             let mut keys: Vec<_> = p.settings.keys().collect();
             keys.sort();
             for key in keys {
-                println!("    {key} = {}", p.settings[key]);
+                println!("    {} = {}", name.paint(key), value.paint(p.settings[key].to_string()));
             }
         }
     }
@@ -870,33 +879,33 @@ pub fn show_config(personality_name: &str) {
             if let toml::Value::String(s) = v { Some(s.clone()) } else { None }
         }));
 
-    if let Some(ref name) = theme_name {
-        println!("Theme:        {name}");
-        let source = if name == "exa" {
+    if let Some(ref tname) = theme_name {
+        println!("{} {}", label.paint("Theme:"), name.paint(tname));
+        let source = if tname == "exa" {
             "compiled-in"
-        } else if has_config && CONFIG.as_ref().unwrap().theme.contains_key(name) {
+        } else if has_config && CONFIG.as_ref().unwrap().theme.contains_key(tname) {
             "config"
         } else {
             "unknown"
         };
-        println!("  source: {source}");
+        println!("  {} {}", label.paint("source:"), dimmed.paint(source));
 
-        if name != "exa" {
+        if tname != "exa" {
             if let Some(ref cfg) = *CONFIG {
-                if let Some(theme) = cfg.theme.get(name) {
+                if let Some(theme) = cfg.theme.get(tname) {
                     if let Some(ref inherits) = theme.inherits {
-                        println!("  inherits: {inherits}");
+                        println!("  {} {}", label.paint("inherits:"), name.paint(inherits));
                     }
                     if let Some(ref style) = theme.use_style {
-                        println!("  use-style: {style}");
+                        println!("  {} {}", label.paint("use-style:"), name.paint(style));
                     }
                 }
             }
         } else {
-            println!("  use-style: exa (implicit)");
+            println!("  {} {} {}", label.paint("use-style:"), name.paint("exa"), dimmed.paint("(implicit)"));
         }
     } else {
-        println!("Theme:        (none)");
+        println!("{} {}", label.paint("Theme:"), dimmed.paint("(none)"));
     }
     println!();
 
@@ -911,75 +920,77 @@ pub fn show_config(personality_name: &str) {
         }
     });
 
-    if let Some(ref name) = style_name {
-        println!("Style:        {name}");
-        let source = if name == "exa" {
+    if let Some(ref sname) = style_name {
+        println!("{} {}", label.paint("Style:"), name.paint(sname));
+        let source = if sname == "exa" {
             "compiled-in"
-        } else if has_config && CONFIG.as_ref().unwrap().style.contains_key(name) {
+        } else if has_config && CONFIG.as_ref().unwrap().style.contains_key(sname) {
             "config"
         } else {
             "unknown"
         };
-        println!("  source: {source}");
+        println!("  {} {}", label.paint("source:"), dimmed.paint(source));
 
-        if let Some(style) = resolve_style(name) {
+        if let Some(style) = resolve_style(sname) {
             if !style.classes.is_empty() {
-                println!("  class references:");
+                println!("  {}", label.paint("class references:"));
                 let mut keys: Vec<_> = style.classes.keys().collect();
                 keys.sort();
                 for key in keys {
-                    println!("    {key} = \"{}\"", style.classes[key]);
+                    println!("    {} = {}", name.paint(key), value.paint(format!("\"{}\"", style.classes[key])));
                 }
             }
             if !style.patterns.is_empty() {
-                println!("  file patterns:");
+                println!("  {}", label.paint("file patterns:"));
                 let mut keys: Vec<_> = style.patterns.keys().collect();
                 keys.sort();
                 for key in keys {
-                    println!("    \"{key}\" = \"{}\"", style.patterns[key]);
+                    println!("    {} = {}", name.paint(format!("\"{key}\"")), value.paint(format!("\"{}\"", style.patterns[key])));
                 }
             }
         }
     } else {
-        println!("Style:        (none)");
+        println!("{} {}", label.paint("Style:"), dimmed.paint("(none)"));
     }
     println!();
 
     // Classes.
     let classes = resolve_classes();
-    println!("Classes:      {} defined", classes.len());
+    println!("{} {} defined", label.paint("Classes:"), value.paint(classes.len().to_string()));
     let mut names: Vec<_> = classes.keys().collect();
     names.sort();
-    for name in names {
+    for cname in names {
         let source = if has_config
-            && CONFIG.as_ref().unwrap().class.contains_key(name)
+            && CONFIG.as_ref().unwrap().class.contains_key(cname)
         {
             "config"
         } else {
             "compiled-in"
         };
-        let patterns = &classes[name];
-        println!("  {name} ({source}): {} patterns", patterns.len());
+        let patterns = &classes[cname];
+        println!("  {} {}: {} patterns",
+            name.paint(cname), dimmed.paint(format!("({source})")),
+            value.paint(patterns.len().to_string()));
     }
     println!();
 
     // Formats.
-    println!("Formats:");
+    println!("{}", label.paint("Formats:"));
     let compiled = vec!["long", "long2", "long3"];
-    for name in &compiled {
+    for fname in &compiled {
         let source = if has_config
-            && CONFIG.as_ref().unwrap().format.contains_key(*name)
+            && CONFIG.as_ref().unwrap().format.contains_key(*fname)
         {
             "config (overrides compiled-in)"
         } else {
             "compiled-in"
         };
-        println!("  {name}: {source}");
+        println!("  {}: {}", name.paint(*fname), dimmed.paint(source));
     }
     if let Some(ref cfg) = *CONFIG {
-        for name in cfg.format.keys() {
-            if !compiled.contains(&name.as_str()) {
-                println!("  {name}: config");
+        for fname in cfg.format.keys() {
+            if !compiled.contains(&fname.as_str()) {
+                println!("  {}: {}", name.paint(fname), dimmed.paint("config"));
             }
         }
     }

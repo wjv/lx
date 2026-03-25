@@ -5,6 +5,40 @@ All notable changes to lx are documented here. lx is forked from
 
 ## [Unreleased]
 
+## [0.4.0] — unreleased (the jj release)
+
+### Added
+- First-class Jujutsu (jj) support via `jj-lib` crate (opt-in `jj`
+  feature flag):
+  - Two-column VCS display: change status + tracking status
+  - `A` (added) matches jj's own `jj diff --summary` output
+  - `--vcs-ignore` with full gitignore support via `git2` (all layers:
+    global `core.excludesFile`, `.git/info/exclude`, per-directory
+    `.gitignore`)
+  - Untracked (`U`) and conflicted (`!`) file detection
+  - Dynamic column header: **Git** or **JJ** depending on backend
+  - Works with colocated, non-colocated, and external git repos
+  - Conflict detection via `MergedTreeValue.is_resolved()`
+- `-F`/`-J` short flags for `--group-dirs=first`/`last`
+- `-o` short flag for `--octal-permissions`
+- `-A` short flag for `--absolute`
+- Canonical column insertion order for individual flags
+- Coloured `--show-config` output
+- CI tests both with and without `jj` feature
+- Release binaries include jj support
+- Justfile recipes for jj builds (`build-jj`, `install-jj`, `test-jj`,
+  etc.)
+
+### Changed
+- jj feature implies `git` (jj repos are backed by git)
+- jj is opt-in (`--features jj`) due to ~5 MB binary size impact;
+  `--vcs=jj` without the feature gives a clear error message
+- `--show-config` now uses colour (yellow headers, cyan names, green
+  values, dimmed source annotations)
+
+### Removed
+- CLI-based jj backend (replaced by jj-lib integration)
+
 ## [0.3.0] — 2026-03-25
 
 ### Added
