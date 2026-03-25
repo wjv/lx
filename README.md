@@ -13,8 +13,8 @@ What makes `lx` stand out from the crowd?
 - **Personalities** — named profiles that bundle columns, flags, and
   settings 🌟
 
-  `lx` is a file lister with personality!  Create symlinks (e.g. `ll`, `la`, 
-  `du`, `tree`) and `lx` adapts its behaviour to the name it's invoked as!
+  Create symlinks (e.g. `ll`, `la`, `du`, `tree`) and `lx` adapts its behaviour 
+  to the name it's invoked as! And all this without a shell alias in sight!
 
 - **Fully configurable column layout**
 
@@ -503,7 +503,10 @@ Other useful recipes: `just test`, `just test-all`, `just lint`,
 
 `lx` shows per-file version control status in long view, with built-in
 backends for both [Git](https://git-scm.com) and
-[Jujutsu](https://jj-vcs.dev/) (jj):
+[Jujutsu](https://jj-vcs.dev/) (jj).
+
+> Jujutsu support is optional and needs to be enabled at compile time —
+see [Installation](#installation).
 
 ```sh
 lx -ll                # tier 2 includes VCS status by default
@@ -547,12 +550,12 @@ The VCS column is one or two characters wide, depending on the status.
 
 When both are the same, `lx` collapses them to one.  For example:
 
-| Column | File                | Meaning                                            |
-|--------|---------------------|----------------------------------------------------|
-| `-M`   | `committed.txt`     | Unstaged modification (staged: `-`, unstaged: `M`) |
-| `M-`   | `staged.txt`        | Staged modification (staged: `M`, unstaged: `-`)   |
-| `-N`   | `untracked.txt`     | Untracked file (staged: `-`, unstaged: `N`)        |
-| `M `   | `both-modified.txt` | Same in both columns (collapsed to one)            |
+| Column | Meaning                                            |
+|--------|----------------------------------------------------|
+| `-M`   | Unstaged modification (staged: `-`, unstaged: `M`) |
+| `M-`   | Staged modification (staged: `M`, unstaged: `-`)   |
+| `-N`   | Untracked file (staged: `-`, unstaged: `N`)        |
+| `M `   | Same in both columns (collapsed to one)            |
 
 **jj** also uses two characters, but with different semantics (jj has
 no staging area):
@@ -561,14 +564,14 @@ no staging area):
 - character 2 is the *tracking status* — a space for tracked files, `U` for 
   untracked, or `I` for ignored
 
-| Column | File               | Meaning                 |
-|--------|--------------------|-------------------------|
-| `A `   | `Cargo.lock`       | Added file, tracked     |
-| `M `   | `src/main.rs`      | Modified, tracked       |
-| `- `   | `README.md`        | Not modified, tracked   |
-| `-I`   | `Cargo.toml~`      | Not modified, ignored   |
-| `-U`   | `some-random-file` | Not modified, untracked |
-| `! `   | `conflicted.txt`   | Merge conflict          |
+| Column | Meaning                 |
+|--------|-------------------------|
+| `A `   | Added file, tracked     |
+| `M `   | Modified, tracked       |
+| `- `   | Not modified, tracked   |
+| `-I`   | Not modified, ignored   |
+| `-U`   | Not modified, untracked |
+| `! `   | Merge conflict          |
 
 `--vcs-ignore` works with both backends — it hides files showing `I` 
 completely.
@@ -704,12 +707,22 @@ fly at shell startup.
 - `--git` and `--git-ignore` legacy flags removed.
 - `--group-directories-first` precedence fixed.
 
-### Planned for 0.4
+### What's new in 0.4
 
-- **jj-lib integration** — first-class Jujutsu support via `jj-lib`
-  crate (opt-in `jj` feature flag): two-column display, `--vcs-ignore`
-  with layered `.gitignore` support, untracked file detection, dynamic
-  VCS column header
+- **First-class Jujutsu support** — opt-in `jj` feature flag using
+  `jj-lib` for direct workspace access (no CLI subprocess):
+  - Two-column VCS display: change status + tracking status
+  - `A` (added) matches jj's own `diff --summary` output
+  - `--vcs-ignore` with full gitignore support (all layers:
+    global excludes, `.git/info/exclude`, per-directory `.gitignore`)
+  - Untracked (`U`) and conflicted (`!`) file detection
+  - Dynamic column header: **Git** or **JJ**
+  - Works with colocated, non-colocated, and external git repos
+- `-F`/`-J` short flags for `--group-dirs=first`/`last`
+- Canonical column insertion order for individual flags
+
+### Planned for 0.5
+
 - `--time-style=relative` ("2 hours ago")
 - Symlink display flags (`--symlinks=show|hide|follow`)
 - `--vcs-repos` (per-directory repo status)
