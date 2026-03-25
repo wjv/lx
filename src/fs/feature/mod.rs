@@ -56,9 +56,6 @@ pub mod git {
 #[cfg(feature = "jj")]
 pub mod jj;
 
-#[cfg(feature = "jj-lib")]
-pub mod jj_lib;
-
 #[cfg(not(feature = "jj"))]
 pub mod jj {
     use std::path::{Path, PathBuf};

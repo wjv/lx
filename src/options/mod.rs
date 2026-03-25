@@ -160,6 +160,12 @@ impl Options {
             )));
         }
 
+        if cfg!(not(feature = "jj")) && matches.get(flags::VCS) == Some("jj") {
+            return Err(OptionsError::Unsupported(String::from(
+                "--vcs=jj can't be used because the `jj` feature was disabled in this build of lx"
+            )));
+        }
+
         let vcs_backend = match matches.get(flags::VCS) {
             Some("git")  => VcsBackend::Git,
             Some("jj")   => VcsBackend::Jj,

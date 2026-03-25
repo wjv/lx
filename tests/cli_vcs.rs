@@ -67,6 +67,18 @@ fn jj_available() -> bool {
         .is_ok_and(|o| o.status.success())
 }
 
+/// Whether this lx binary was built with the `jj` feature.
+fn jj_feature_enabled() -> bool {
+    // Probe the binary: --vcs=jj with a non-existent path.  If the feature
+    // is disabled, lx exits with an error mentioning "disabled".
+    let output = lx_no_colour()
+        .args(["--vcs=jj", "/nonexistent"])
+        .output()
+        .expect("failed to run lx");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    !stderr.contains("disabled")
+}
+
 
 // ── --vcs flag validation ─────────────────────────────────────────
 
@@ -175,8 +187,8 @@ fn vcs_status_without_long_is_fine() {
 
 #[test]
 fn jj_vcs_status_in_this_repo() {
-    if !jj_available() {
-        eprintln!("skipping: jj not available");
+    if !jj_feature_enabled() || !jj_available() {
+        eprintln!("skipping: jj feature disabled or jj not available");
         return;
     }
 
@@ -190,8 +202,8 @@ fn jj_vcs_status_in_this_repo() {
 
 #[test]
 fn jj_single_column_display() {
-    if !jj_available() {
-        eprintln!("skipping: jj not available");
+    if !jj_feature_enabled() || !jj_available() {
+        eprintln!("skipping: jj feature disabled or jj not available");
         return;
     }
 
@@ -209,8 +221,8 @@ fn jj_single_column_display() {
 
 #[test]
 fn jj_auto_detection() {
-    if !jj_available() {
-        eprintln!("skipping: jj not available");
+    if !jj_feature_enabled() || !jj_available() {
+        eprintln!("skipping: jj feature disabled or jj not available");
         return;
     }
 

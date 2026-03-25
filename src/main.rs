@@ -34,8 +34,6 @@ use log::*;
 use crate::fs::{Dir, File};
 use crate::fs::feature::git::GitCache;
 use crate::fs::feature::jj::JjCache;
-#[cfg(feature = "jj-lib")]
-use crate::fs::feature::jj_lib::JjLibCache;
 use crate::fs::feature::VcsCache;
 use crate::fs::filter::VcsIgnore;
 use crate::options::{Options, VcsBackend, Vars, vars, OptionsResult};
@@ -247,19 +245,8 @@ impl Vars for LiveVars {
     }
 }
 
-/// Discover a jj workspace and create a VCS cache.
-///
-/// When the `jj-lib` feature is enabled, uses the library directly
-/// (faster, more features).  Otherwise falls back to the CLI.
+/// Discover a jj workspace and create a VCS cache using jj-lib.
 fn discover_jj(paths: &[PathBuf]) -> Option<Box<dyn VcsCache>> {
-    #[cfg(feature = "jj-lib")]
-    {
-        if let Some(cache) = JjLibCache::discover(paths) {
-            return Some(Box::new(cache));
-        }
-    }
-
-    // Fall back to CLI-based discovery.
     JjCache::discover(paths).map(|c| {
         let b: Box<dyn VcsCache> = Box::new(c);
         b

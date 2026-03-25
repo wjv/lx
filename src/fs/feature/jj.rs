@@ -1,34 +1,42 @@
-//! Getting the VCS status of files in a Jujutsu (jj) repository.
+//! Getting the VCS status of files in a Jujutsu (jj) repository using
+//! the `jj-lib` library directly.
 //!
-//! jj has no staging area, so both `staged` and `unstaged` fields of
-//! `VcsFileStatus` hold the same value.  We shell out to the `jj` CLI
-//! rather than linking against jj-lib (which would pull in tokio, gix,
-//! prost, and dozens of other heavy dependencies).
+//! Uses jj-lib for workspace discovery, tree diffing, file tracking
+//! state, and gitignore rules.  Enabled by the `jj` feature flag.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use log::*;
 
 use crate::fs::fields as f;
 
+use jj_lib::config::StackedConfig;
+use jj_lib::repo::Repo;
+use jj_lib::settings::UserSettings;
+use jj_lib::workspace::{self, Workspace};
+use jj_lib::matchers::EverythingMatcher;
 
-/// A cache of per-file jj status, built by running `jj diff --summary`.
+
+/// A cache of per-file jj status, built using the jj-lib crate.
 pub struct JjCache {
-    /// Map from absolute file path to VCS status.
+    /// Map from absolute file path to VCS change status.
     statuses: HashMap<PathBuf, f::VcsStatus>,
 
-    /// The workspace root, used to resolve relative paths from jj output.
+    /// Set of absolute paths that are tracked in the working copy tree.
+    tracked: std::collections::HashSet<PathBuf>,
+
+    /// Gitignore rules, for `--vcs-ignore` support.
+    gitignore: Option<std::sync::Arc<jj_lib::gitignore::GitIgnoreFile>>,
+
+    /// The workspace root, used to resolve relative paths.
     workdir: PathBuf,
 }
 
 impl JjCache {
-    /// Discover whether any of the given paths lie inside a jj workspace,
-    /// and if so, build a cache of file statuses.  Returns `None` if `jj`
-    /// is not installed or the paths are not inside a jj workspace.
+    /// Discover a jj workspace and build a cache of file statuses.
+    /// Returns `None` if the paths are not inside a jj workspace.
     pub fn discover(paths: &[PathBuf]) -> Option<Self> {
-        // Use the first path (or cwd) to probe for a jj workspace.
         let probe = if paths.is_empty() {
             PathBuf::from(".")
         } else {
@@ -36,90 +44,164 @@ impl JjCache {
         };
 
         let probe_dir = if probe.is_dir() {
-            &probe
+            probe.canonicalize().unwrap_or(probe)
         } else {
-            probe.parent().unwrap_or(Path::new("."))
+            let p = probe.parent().unwrap_or(Path::new("."));
+            p.canonicalize().unwrap_or_else(|_| p.to_path_buf())
         };
 
-        // Ask jj for the workspace root.
-        let root_output = Command::new("jj")
-            .args(["workspace", "root"])
-            .current_dir(probe_dir)
-            .output();
-
-        let root_output = match root_output {
-            Ok(o) if o.status.success() => o,
-            Ok(o) => {
-                debug!("jj workspace root failed: {}", String::from_utf8_lossy(&o.stderr).trim());
-                return None;
-            }
+        // Set up minimal jj configuration.
+        let config = StackedConfig::with_defaults();
+        let settings = match UserSettings::from_config(config) {
+            Ok(s) => s,
             Err(e) => {
-                debug!("jj not found or not executable: {e}");
+                debug!("jj: failed to create settings: {e}");
                 return None;
             }
         };
 
-        let workdir = PathBuf::from(String::from_utf8_lossy(&root_output.stdout).trim());
-        info!("Found jj workspace at {}", workdir.display());
+        let store_factories = jj_lib::repo::StoreFactories::default();
+        let wc_factories = workspace::default_working_copy_factories();
 
-        // Get the diff summary for the working copy.
-        let diff_output = Command::new("jj")
-            .args(["diff", "--summary", "--ignore-working-copy"])
-            .current_dir(&workdir)
-            .output();
-
-        let diff_output = match diff_output {
-            Ok(o) if o.status.success() => o,
-            Ok(o) => {
-                warn!("jj diff --summary failed: {}", String::from_utf8_lossy(&o.stderr).trim());
-                return Some(Self { statuses: HashMap::new(), workdir });
-            }
-            Err(e) => {
-                warn!("Failed to run jj diff: {e}");
-                return Some(Self { statuses: HashMap::new(), workdir });
+        // Walk up the directory tree to find the workspace root.
+        let mut search_dir = probe_dir.as_path();
+        let ws = loop {
+            match Workspace::load(&settings, search_dir, &store_factories, &wc_factories) {
+                Ok(ws) => break ws,
+                Err(_) => {
+                    match search_dir.parent() {
+                        Some(parent) => search_dir = parent,
+                        None => {
+                            debug!("jj: no jj workspace found");
+                            return None;
+                        }
+                    }
+                }
             }
         };
 
-        let stdout = String::from_utf8_lossy(&diff_output.stdout);
-        let mut statuses = HashMap::new();
+        let workdir = ws.workspace_root().to_path_buf();
+        info!("jj: found workspace at {}", workdir.display());
 
-        for line in stdout.lines() {
-            if let Some((status_char, path_str)) = line.split_once(' ') {
-                let status = match status_char {
-                    "M" => f::VcsStatus::Modified,
-                    "A" => f::VcsStatus::New,
-                    "D" => f::VcsStatus::Deleted,
-                    "C" => f::VcsStatus::Copied,
-                    "R" => f::VcsStatus::Renamed,
-                    other => {
-                        debug!("Unknown jj status char: {other}");
-                        f::VcsStatus::Modified
+        // Build a tokio runtime for async jj calls.
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("failed to create tokio runtime");
+
+        // Load the repo (async).
+        let repo = match rt.block_on(ws.repo_loader().load_at_head()) {
+            Ok(repo) => repo,
+            Err(e) => {
+                warn!("jj: failed to load repo: {e}");
+                return Some(Self { statuses: HashMap::new(), tracked: std::collections::HashSet::new(), gitignore: None, workdir });
+            }
+        };
+
+        let wc_commit_id = match repo.view().get_wc_commit_id(ws.workspace_name()) {
+            Some(id) => id.clone(),
+            None => {
+                warn!("jj: no working copy commit");
+                return Some(Self { statuses: HashMap::new(), tracked: std::collections::HashSet::new(), gitignore: None, workdir });
+            }
+        };
+
+        let wc_commit: jj_lib::commit::Commit = match repo.store().get_commit(&wc_commit_id) {
+            Ok(c) => c,
+            Err(e) => {
+                warn!("jj: failed to get working copy commit: {e}");
+                return Some(Self { statuses: HashMap::new(), tracked: std::collections::HashSet::new(), gitignore: None, workdir });
+            }
+        };
+
+        // Get parent tree and working copy tree.
+        let parent_tree = {
+            let parent_ids = wc_commit.parent_ids();
+            if parent_ids.is_empty() {
+                // Empty parent — use an empty tree.
+                repo.store().empty_merged_tree()
+            } else {
+                let parent: jj_lib::commit::Commit = match repo.store().get_commit(&parent_ids[0]) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        warn!("jj: failed to get parent commit: {e}");
+                        return Some(Self { statuses: HashMap::new(), tracked: std::collections::HashSet::new(), gitignore: None, workdir });
                     }
                 };
+                parent.tree()
+            }
+        };
 
+        let wc_tree = wc_commit.tree();
+
+        // Diff the trees to get per-file status.
+        let mut statuses = HashMap::new();
+        let matcher = EverythingMatcher;
+
+        use futures::StreamExt;
+        let mut stream = parent_tree.diff_stream(&wc_tree, &matcher);
+
+        rt.block_on(async {
+            while let Some(entry) = stream.next().await {
+                let path_str = entry.path.as_internal_file_string();
                 let abs_path = workdir.join(path_str);
+
+                let status = match &entry.values {
+                    Ok(diff) => {
+                        let before_absent = diff.before.is_absent();
+                        let after_absent = diff.after.is_absent();
+                        if before_absent && !after_absent {
+                            f::VcsStatus::New
+                        } else if !before_absent && after_absent {
+                            f::VcsStatus::Deleted
+                        } else {
+                            f::VcsStatus::Modified
+                        }
+                    }
+                    Err(_) => f::VcsStatus::Conflicted,
+                };
+
                 statuses.insert(abs_path, status);
             }
+        });
+
+        // Collect tracked files from the working copy tree.
+        let mut tracked = std::collections::HashSet::new();
+        for entry in wc_tree.entries() {
+            let (path, _value) = entry;
+            let abs_path = workdir.join(path.as_internal_file_string());
+            tracked.insert(abs_path);
         }
 
-        debug!("jj cache: {} file statuses", statuses.len());
-        Some(Self { statuses, workdir })
+        // Build gitignore chain for --vcs-ignore support.
+        let gitignore = {
+            use jj_lib::gitignore::GitIgnoreFile;
+            let base = GitIgnoreFile::empty();
+            // Chain the root .gitignore if it exists.
+            match base.chain_with_file("", workdir.join(".gitignore")) {
+                Ok(gi) => Some(gi),
+                Err(e) => {
+                    debug!("jj: failed to load .gitignore: {e}");
+                    None
+                }
+            }
+        };
+
+        debug!("jj cache: {} file statuses, {} tracked files, gitignore: {}",
+               statuses.len(), tracked.len(), gitignore.is_some());
+        Some(Self { statuses, tracked, gitignore, workdir })
     }
 }
 
+
 impl super::VcsCache for JjCache {
     fn has_anything_for(&self, path: &Path) -> bool {
-        // Return true if the path lies inside this jj workspace.
-        // Unlike the git backend, we don't check for actual statuses —
-        // the column should appear (showing "not modified") even in a
-        // clean working copy.
         let abs = if path.is_absolute() {
             path.to_path_buf()
         } else {
             self.workdir.join(path)
         };
         let abs = abs.canonicalize().unwrap_or(abs);
-
         abs.starts_with(&self.workdir)
     }
 
@@ -132,20 +214,43 @@ impl super::VcsCache for JjCache {
         let abs = abs.canonicalize().unwrap_or(abs);
 
         if prefix_lookup {
-            // Directory: aggregate child statuses (worst wins).
-            let mut worst = f::VcsStatus::NotModified;
+            // Directory: aggregate child statuses.
+            let mut worst_change = f::VcsStatus::NotModified;
             for (p, &status) in &self.statuses {
                 if p.starts_with(&abs) {
-                    worst = worse_status(worst, status);
+                    worst_change = worse_status(worst_change, status);
                 }
             }
-            f::VcsFileStatus { staged: worst, unstaged: worst }
+            f::VcsFileStatus { staged: worst_change, unstaged: worst_change }
         } else {
-            // Single file lookup.
-            let status = self.statuses.get(&abs)
+            // Single file: change status + tracking/ignore status.
+
+            // Check gitignore first — ignored files get Ignored in
+            // the unstaged column, which --vcs-ignore uses to filter.
+            if let Some(ref gi) = self.gitignore {
+                let rel = abs.strip_prefix(&self.workdir)
+                    .unwrap_or(&abs);
+                let rel_str = rel.to_string_lossy();
+                if gi.matches(&rel_str) {
+                    return f::VcsFileStatus {
+                        staged: f::VcsStatus::NotModified,
+                        unstaged: f::VcsStatus::Ignored,
+                    };
+                }
+            }
+
+            let change = self.statuses.get(&abs)
                 .copied()
                 .unwrap_or(f::VcsStatus::NotModified);
-            f::VcsFileStatus { staged: status, unstaged: status }
+
+            let tracking = if self.tracked.contains(&abs) {
+                change
+            } else {
+                // Untracked file — show U in the second column.
+                f::VcsStatus::Untracked
+            };
+
+            f::VcsFileStatus { staged: change, unstaged: tracking }
         }
     }
 
@@ -153,7 +258,6 @@ impl super::VcsCache for JjCache {
 }
 
 
-/// Return the "worse" of two statuses for directory aggregation.
 fn worse_status(a: f::VcsStatus, b: f::VcsStatus) -> f::VcsStatus {
     fn rank(s: f::VcsStatus) -> u8 {
         match s {
@@ -169,6 +273,5 @@ fn worse_status(a: f::VcsStatus, b: f::VcsStatus) -> f::VcsStatus {
             f::VcsStatus::Conflicted => 9,
         }
     }
-
     if rank(b) > rank(a) { b } else { a }
 }
