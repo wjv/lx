@@ -1,107 +1,96 @@
 # lx — file Lister eXtended
 
-**`lx`** ("alex") is a modern file lister for Unix. A replacement for the standard `ls`.
+**`lx`** ("alex") is a modern file lister for Unix; that is, a replacement for 
+the standard `ls` command.
 
-> `lx` is explicitly not a *drop-in* replacement for POSIX `ls`.
+But… `lx` is a file lister with *personality!* 🌟
 
-`lx` is forked from [`exa`](https://github.com/ogham/exa) by Benjamin Sago. `exa` appears to be unmaintained (and has been for some years).
 
-An active community fork of `exa` named
-[`eza`](https://github.com/eza-community/eza) exists, but `lx` is an experiment
-with a somewhat different approach to the command-line user interface.
+## History
+
+`lx` was forked from [`exa`](https://github.com/ogham/exa) by Benjamin Sago. 
+`exa` appears to be unmaintained (and has been dormant for some years).
+
+There exists an active community fork of `exa` named
+[`eza`](https://github.com/eza-community/eza), by Christina Sørensen and 
+collaborators. `eza` goes off in a slightly different direction than `lx`, but 
+is way more mature. You should go check it out!
 
 
 ## Highlights
 
 - **Personalities** — named profiles that bundle columns, flags, and
-  settings
+  settings 🌟
 
-  Create symlinks (`ll`, `la`, `lll`, `tree`) and `lx` adapts its behaviour to
-  the name it's invoked as!
+  `lx` is a file lister with personality!  Create symlinks (e.g. `ll`, `la`, 
+  `du`, `tree`) and `lx` adapts its behaviour to the name it's invoked as!
 
 - **Fully configurable column layout**
 
-  `--columns` gives you complete control over which columns are displayed *and*
-  their order: `--columns=perms,size,user,modified`.  
-  `--format` allows you to apply named sets of columns: `--format=long2`.
+  Complete control over displayed columns *and* their order
+  (`--columns=perms,size,user,modified`), as well as the ability to define
+  and use named column sets known as "formats".
 
 - **"Compounding" flags** — flags that compound their effect when repeated
 
-  Use `-l` for a long listing, `-ll` for more detail, and `-lll` for even more.  
-  No more remembering which combination of `-g`, `-H`, `-h`, and `--git` you 
-  need!
+  For example: Use `-l` for a long listing, `-ll` for more detail, and `-lll` 
+  for *even more*.  No more remembering which combination of `-g`, `-H`, `-h`, 
+  and `--git` you need!
 
-- **Configuration file**
+- **Configuration file** — optional, obviously
 
   One `lxconfig.toml` replaces all your shell aliases and environment
-  variables. Define formats, personalities, colour themes, styles,
-  and file-type classes — all with inheritance. Run
-  `lx --init-config` to get started.
+  variables. Define formats, personalities, and more! Run `lx --init-config` to 
+  get started.
 
 - **Named colour themes, styles, and file-type classes**
 
-  Define themes (UI elements), styles (file colours), and classes
-  (file-type categories) in your config using human-readable colour
-  names (`"bold dodgerblue"`, `"tomato"`, `"#ff8700"`).  Everything
-  inherits, composes, and can be overridden. Select via personality
-  settings or `--theme=NAME`.
+  The design-conscious power user can define themes, styles, and file-type 
+  classes in the config file using human-readable colour names. Everything 
+  inherits, composes, and can be overridden. Themes can be applied explicitly 
+  with the `--theme` flag, but they're designed to be assigned to 
+  personalities!
 
-- **Unified VCS support, including Jujutsu!**
+- **Unified VCS support** — including Jujutsu!
 
-  `--vcs=auto|git|jj|none` with built-in backends for both 
-  [Git](https://git-scm.com) and [Jujutsu](https://jj-vcs.dev/latest/). 
-  The VCS in use can be auto-detected.
-
-
-## Installation
-
-`lx` is built from source using [Cargo](https://doc.rust-lang.org/cargo/),
-Rust's package manager. `lx` requires Rust 1.94 or later.
-
-Install Rust if you don't have it already:
-```sh
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-
-Install `lx` from GitHub
-```sh
-cargo install --git https://github.com/wjv/lx
-```
-
-The binary is installed to `~/.cargo/bin/`.  Make sure this directory is on 
-your `$PATH`.
-
-Alternatively, build `lx` from a local clone:
-```sh
-git clone https://github.com/wjv/lx.git
-cd lx
-cargo build --release
-```
-
-The binary is at `target/release/lx`; you can optionally copy it somewhere on 
-your `$PATH`.
-
-> **Note:** The `lx` crate name on `crates.io` is taken by an unrelated
-> library. `cargo install lx` will *not* install this tool.
+  Built-in backends for both [Git](https://git-scm.com) and 
+  [Jujutsu](https://jj-vcs.dev/latest/).  VCS auto-detection supported.
 
 
 ## Quick start
 
-Just start using it. Do keep in mind that the flags differ from those of `ls`. When you get stuck, the `--help` flag is your friend.
+> Don't have `lx` yet? Jump to [Installation](#installation) to get it,
+> then come back here.
+
+The best way to start using `lx` is to… just start using it. Flags differ from
+those of `ls`, but if you get stuck, `--help` is your friend!
 
 ```sh
 lx                    # grid view (like ls)
-lx -l                 # long view: perms, size, user, modified
+
+lx -l                 # [l]ong view: perms, size, user, modified
 lx -ll                # + group, VCS status
 lx -lll               # + header, all timestamps, links, blocks
+
 lx --help             # display online help
-lx -T                 # tree view
-lx -T -L2             # tree, depth 2
+
+lx -T                 # [T]ree view
+lx -T -L2             # + [L]imit to depth 2
+lx -lTFZL2            # + [l]ong view, dirs [F]irst, show total si[Z]e of dirs
 ```
 
-## A file lister with personality
+If you feel `lx -lTFZL2` is perhaps a bit much to remember, the time has come 
+to define a new [personality](#a-file-lister-with-personality)!
 
-Since time immemorial (or at least since Unix shells supported command aliasing), Unix users have used shell aliases to call `ls` with certain options. For example, it's very common to alias `ll` to list files in the long format:
+> Note that `lx` is explicitly not a *drop-in* replacement for POSIX `ls`.
+
+
+## A file lister with personality 🌟
+
+Since time immemorial (or at least since Unix shells supported command 
+aliasing), Unix users have used shell aliases to call `ls` with certain 
+options. For example, it's very common to alias `ll` to list files in the long 
+format:
 
 ```sh
 alias ll="ls -l"
@@ -122,15 +111,20 @@ alias la="ls -la"
     format = "long"
     ```
 
-2. Invoke `lx` as `ll` by creating a [symlink](https://en.wikipedia.org/wiki/Symbolic_link#Unix-like) named `ll` that points to `lx`, for example:
+2. Invoke `lx` as `ll` by creating a
+   [symlink](https://en.wikipedia.org/wiki/Symbolic_link#Unix-like) named 
+   `ll` that points to `lx`, for example:
 
     ```sh
     ln -s $(which lx) ~/.local/bin/ll
     ```
 
-Whenever you invoke `lx` under a different name *and* a personality with that name is defined, `lx` behaves like that personality. (If no personality with the given name exists, `lx` adopts its default personality named `lx`.)
+Whenever you invoke `lx` under a different name *and* a personality with that 
+name is defined, `lx` behaves like that personality. (If no personality with 
+the given name exists, `lx` adopts its default personality named `lx`.)
 
-Personalities can inherit from each other. For instance, you can create an `la` personality that behaves just like `ll`, but shows hidden files as well:
+Personalities can inherit from each other. For instance, you can create an `la` 
+personality that behaves just like `ll`, but shows hidden files as well:
 
 ```toml
 [personality.la]
@@ -138,28 +132,37 @@ inherits = "ll"
 all = true
 ```
 
-`lx` ships with some default, built-in personalities. You can redefine these in the configuration file.
+`lx` ships with some default, built-in personalities. You can redefine these in 
+the configuration file.
 
-* `default` is base personality used to define default settings, inherited by other personalities. Note that there's nothing magical about the name `default`; you can define your own base personality with a different name.
-* `lx` is `lx`'s standard personality, and is used when no other personality has been invoked.
-* `ll` is a long file listing, like `lx -l`; it shows VCS information and groups directories first
+* `default` is the base personality used to define default settings, inherited 
+  by other personalities. Note that there's nothing magical about the name 
+  `default`; you can define your own base personality with a different name.
+* `lx` is `lx`'s standard personality, and is used when no other personality 
+  has been invoked.
+* `ll` is a long file listing, like `lx -l`; it shows VCS information and 
+  groups directories first
 * `la` is like `ll` but also shows hidden files (like `ls -la`)
 * `lll` is an even more expansive file listing with headers, like `lx -lll`
-* `tree` is a recursive file listing showing a graphical file tree, with directories first
+* `tree` is a recursive file listing showing a graphical file tree, with 
+  directories first
 * `ls` makes `lx`'s output look more like that of standard POSIX `ls`
 
-You can test personalities with the `-p`/`--personality` flag. To see what `ll` or `tree` will look like:
+You can test personalities with the `-p`/`--personality` flag. To see what `ll` 
+or `tree` will look like:
 
 ```sh
 lx -p ll
 lx --personality tree
 ```
 
-Of course, you can still use shell aliases with `lx`. Personalities are an alternative that offer you a more structured way of doing the same thing.
+Of course, you can still use shell aliases with `lx`. Personalities are an 
+alternative that offer you a more structured way of doing the same thing.
 
 For more on how personalities are configured — including the inheritance tree 
 and all available settings — see [Personalities](#personalities) in the 
 Configuration section below.
+
 
 ## Configuration
 
@@ -167,7 +170,7 @@ Personalities — and other aspects of `lx`'s behaviour — can be
 defined in a configuration file.
 
 > **Of course** the configuration file is **optional**. `lx` is
-> just a file lister, after all, and it's designed to work just
+> just a file lister after all, and it's designed to work just
 > fine with its compiled-in defaults. The configuration file is a
 > tool for the user who wants more flexibility!
 
@@ -177,10 +180,9 @@ Generate a starter config with:
 lx --init-config
 ```
 
-This creates `~/.lxconfig.toml` with commented examples.  The
-file is self-documenting — prose comments (starting with `##`)
-explain each section, while commented-out values (starting with
-`#`) show the compiled-in defaults you can customise.
+This creates `~/.lxconfig.toml`. The file is self-documenting — prose comments 
+(starting with `##`) explain each section, while commented-out values (starting 
+with `#`) show the compiled-in defaults you can customise.
 
 The configuration has five kinds of named section, each controlling
 a different aspect of `lx`'s behaviour:
@@ -193,8 +195,10 @@ a different aspect of `lx`'s behaviour:
 | `[style.NAME]`       | File-type colours (by class, glob, or filename)     | `class.source = "yellow"`, `"*.rs" = "#ff8700"`       |
 | `[class]`            | Named file-type categories (lists of glob patterns) | `media = ["*.jpg", "*.png", "*.mp4"]`                 |
 
-These sections compose naturally.  Personalities and themes support
-inheritance; styles and classes are simple flat definitions.
+These sections compose naturally:
+* personalities use formats and themes
+* themes use styles
+* styles use classes
 
 ```
 personality ──→ format  (column layout)
@@ -203,14 +207,18 @@ personality ──→ format  (column layout)
           (UI colours)  (file colours)  (pattern lists)
 ```
 
+Personalities and themes support *inheritance*. In other words, a personality 
+can be based on another personality, and a theme can be based on another theme. 
+Styles and classes, by contrast, are simple flat definitions.
+
 For the full reference, see the
 [`lxconfig.toml(5)`](man/lxconfig.toml.5.md) man page.
 
 
 ### Formats
 
-Formats are defined as keys in a flat `[format]` section. Each key
-is a format name; its value is a list of column names:
+Formats are defined as keys in a `[format]` section. Each key
+is a format name and its value is a list of column names:
 
 ```toml
 [format]
@@ -236,8 +244,8 @@ Available column names:
 | `created`  | Creation time           |
 | `vcs`      | VCS status              |
 
-The built-in formats `long`, `long2`, and `long3` are used by the
-flags `-l`, `-ll`, and `-lll`.
+The built-in formats `long`, `long2`, and `long3` are used by the flags
+`-l`, `-ll`, and `-lll`. You can override them by simply redefining them.
 
 ```toml
 [format]
@@ -247,10 +255,8 @@ long3 = ["perms", "links", "size", "blocks", "user", "group",
          "modified", "changed", "created", "accessed", "vcs"]
 ```
 
-You can override the built-in defaults by simply redefining them.
-
 You can explicitly use a format with `--format=NAME`, but more often
-you will want to use formats in personalities:
+you will want to use formats in personalities by using the `format` keyword.
 
 ### Personalities
 
@@ -302,69 +308,7 @@ total-size = true
 > migrations are supported. A `.bak` backup of the original is saved.
 
 
-### Config file locations
-
-`lx` searches for its config file in this order (first found wins):
-
-1. **`$LX_CONFIG`** — set this environment variable to point to a
-   config file at any path. Useful for testing or per-project configs.
-2. **`~/.lxconfig.toml`** — the simplest option; just drop a file in
-   your home directory. This is where `lx --init-config` writes by
-   default.
-3. **`$XDG_CONFIG_HOME/lx/config.toml`** — follows the
-   [XDG Base Directory](https://specifications.freedesktop.org/basedir-spec/latest/)
-   specification. Defaults to `~/.config/lx/config.toml` if
-   `$XDG_CONFIG_HOME` is not set. Preferred on Linux; also used on macOS.
-4. **`~/Library/Application Support/lx/config.toml`** — the standard
-   macOS application configuration location. Only checked on macOS,
-   after the XDG location.
-
-Most users will be fine with option 2 (`~/.lxconfig.toml`). If you
-prefer to keep your dotfiles tidy under `~/.config/`, use option 3.
-
-
-## VCS support
-
-`lx` shows per-file version control status in long view:
-
-```sh
-lx -ll                # tier 2 includes VCS status by default
-lx --vcs-status -l    # or explicitly
-lx --vcs=jj -ll       # force jj backend
-lx --vcs=git -ll      # force git backend
-lx --vcs=none -ll     # disable VCS
-```
-
-With `--vcs=auto` (the default), lx probes for a jj workspace first,
-then falls back to git. (This is so that co-located jj/git repositories
-are detected correctly.)
-
-Status characters: `-` not modified, `M` modified, `N` new, `D` deleted,
-`R` renamed, `C` copied, `I` ignored, `U` conflicted.
-
-Git shows two columns (staged + unstaged). jj shows one (since there is no staging area).
-
-
-## Column visibility
-
-Every column has both a positive and negative flag:
-
-```sh
-lx -ll --no-group              # remove group from tier 2
-lx -l --inode                  # add inode to tier 1
-lx -l --permissions --no-user  # explicit control
-```
-
-Or take full control with `--columns`:
-
-```sh
-lx --columns=inode,perms,size,user,group,modified,vcs
-```
-
-Or define your own named format in the config file.
-
-
-## Themes, styles, and classes
+### Themes, styles, and classes
 
 Colour customisation uses three kinds of config section that work
 together:
@@ -374,27 +318,36 @@ together:
 - **Styles** (`[style.NAME]`) set colours for files — either by
   referencing a named class or by matching a glob pattern / filename.
 - **Classes** (`[class]`) define named file-type categories as lists
-  of glob patterns: `media`, `source`, `archive`, etc.
+  of glob patterns: `media`, `source`, `archive`, etc. Once defined,
+  a class can be styled as a unit.
 
-The built-in `"exa"` theme and `"exa"` style provide sensible
-defaults out of the box.  To customise, define your own theme
-and/or style:
+`lx` provides a built-in theme named `"exa"`, and a built-in style, also named 
+`"exa"`. These provide sensible defaults out of the box, mirroring the old 
+`exa` app. You can redefine these, or define your own.
+
+The `"exa"` style is provided (commented-out) in the default `~/.lxconfig.toml` 
+created by `lx --init-config`. The `"exa"` theme was too large to be included, 
+but it is documented in the [`lxconfig.toml(5)`](man/lxconfig.toml.5.md) man 
+page.
+
+
+To define your own theme and/or style:
 
 ```toml
 [theme.ocean]
-inherits = "exa"                  # start from the compiled-in defaults
+inherits = "exa"                      # start from the compiled-in defaults
 directory = "bold dodgerblue"
 date = "steelblue"
 vcs-new = "bold mediumspringgreen"
-use-style = "dev"                 # reference a named style set
+use-style = "dev"                     # reference a named style set
 
 [style.dev]
-class.source = "#ff8700"          # class reference (bare dotted key)
-"*.toml" = "sandybrown"           # glob pattern (quoted key)
+class.source = "#ff8700"              # class reference (bare dotted key)
+"*.toml" = "sandybrown"               # glob pattern (quoted key)
 "Makefile" = "bold underline yellow"  # exact filename (quoted key)
 ```
 
-Classes let you group file types by category:
+Classes let you group file types by category in order to style them:
 
 ```toml
 [class]
@@ -404,8 +357,12 @@ data   = ["*.csv", "*.json", "*.xml"]
 
 `lx` ships with built-in classes for `image`, `video`, `music`,
 `lossless`, `crypto`, `document`, `compressed`, `compiled`, `temp`,
-and `immediate` (build/project files).  Override any of them by
-redefining the name in your `[class]` section.
+and `immediate` (build/project files). The definitions of these were left out 
+of the default `~/.lxconfig.toml` for the sake of brevity, but you can find 
+them in the [`lxconfig.toml(5)`](man/lxconfig.toml.5.md) man page.
+
+Override any of the defaults by redefining the name in your `[class]` section. 
+Or define your own file classes, as in the example above.
 
 Select a theme through a personality or from the command line:
 
@@ -431,7 +388,158 @@ See [`lxconfig.toml(5)`](man/lxconfig.toml.5.md) for the full
 list of theme keys, style syntax, and built-in class definitions.
 
 
-## Sorting
+### Config file locations
+
+`lx` searches for its config file in this order (first found wins):
+
+1. **`$LX_CONFIG`** — set this environment variable to point to a
+   config file at any path. Useful for testing or per-project configs.
+2. **`~/.lxconfig.toml`** — the simplest option; just drop a file in
+   your home directory. This is where `lx --init-config` writes by
+   default.
+3. **`$XDG_CONFIG_HOME/lx/config.toml`** — follows the
+   [XDG Base Directory](https://specifications.freedesktop.org/basedir-spec/latest/)
+   specification. Defaults to `~/.config/lx/config.toml` if
+   `$XDG_CONFIG_HOME` is not set. Preferred on Linux; also used on macOS.
+4. **`~/Library/Application Support/lx/config.toml`** — the standard
+   macOS application configuration location. Only checked on macOS,
+   after the XDG location.
+
+Most users will be fine with option 2 (`~/.lxconfig.toml`). If you
+prefer to keep your dotfiles tidy under `~/.config/`, use option 3.
+
+
+## Installation
+
+### Download a pre-compiled binary
+
+`lx` is just a single binary. You can download pre-built binaries of the latest
+release from GitHub, for both Linux and macOS:
+
+| OS    | CPU architecture | filename                       |
+|-------|------------------|--------------------------------|
+| Linux | ARM 64-bit       | `lx-aarch64-unknown-linux-gnu` |
+| Linux | Intel 64-bit     | `lx-x86_64-unknown-linux-gnu`  |
+| macOS | Apple Silicon    | `lx-aarch64-apple-darwin`      |
+| macOS | Intel 64-bit     | `lx-x86_64-apple-darwin`       |
+
+Just download the file, rename it to `lx`, and put it somewhere in your
+`$PATH`!
+
+### Build from source
+
+`lx` is built from source using [Cargo](https://doc.rust-lang.org/cargo/),
+Rust's package manager. `lx` requires Rust 1.94 or later.
+
+Install Rust if you don't have it already:
+```sh
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+Install `lx` from GitHub.
+```sh
+cargo install --git https://github.com/wjv/lx
+```
+
+The binary is installed to `~/.cargo/bin/`.  Make sure this directory is on
+your `$PATH`.
+
+Alternatively, build `lx` from a local clone:
+```sh
+git clone https://github.com/wjv/lx.git
+cd lx
+cargo build --release
+```
+
+The binary is at `target/release/lx`; copy it somewhere on your `$PATH`
+(e.g. `~/.local/bin/`).
+
+Man pages are built from Markdown source using
+[pandoc](https://pandoc.org/):
+
+```sh
+pandoc man/lx.1.md -s -t man -o man/lx.1
+pandoc man/lxconfig.toml.5.md -s -t man -o man/lxconfig.toml.5
+```
+
+Install them to the standard XDG location:
+
+```sh
+mkdir -p ~/.local/share/man/man1 ~/.local/share/man/man5
+cp man/lx.1 ~/.local/share/man/man1/
+cp man/lxconfig.toml.5 ~/.local/share/man/man5/
+```
+
+> **Note:** The `lx` crate name on `crates.io` is taken by an unrelated
+> library. `cargo install lx` will *not* install this tool.
+
+
+### Installing with `just`
+
+If you have [`just`](https://just.systems/) installed, the included
+Justfile automates building, installing, and setting up personalities:
+
+```sh
+git clone https://github.com/wjv/lx && cd lx
+                            # clone source and `cd` to directory
+
+just install                # build release + install binary and man pages
+                            # to ~/.local/bin and ~/.local/share/man
+
+just install-personalities  # create symlinks for ll, la, lll, tree
+                            # in ~/.local/bin
+
+just init-config            # generate ~/.lxconfig.toml
+```
+
+Other useful recipes: `just test`, `just lint`, `just completions`. List them
+all with `just -l`.
+
+
+## VCS support
+
+`lx` shows per-file version control status in long view:
+
+```sh
+lx -ll                # tier 2 includes VCS status by default
+lx --vcs-status -l    # or explicitly
+lx --vcs=jj -ll       # force jj backend
+lx --vcs=git -ll      # force git backend
+lx --vcs=none -ll     # disable VCS
+```
+
+With `--vcs=auto` (the default), lx probes for a jj workspace first,
+then falls back to git. (This is so that co-located jj/git repositories
+are detected correctly.)
+
+Status characters: `-` not modified, `M` modified, `N` new, `D` deleted,
+`R` renamed, `C` copied, `I` ignored, `U` conflicted.
+
+Git shows two columns (staged + unstaged). jj shows one (since there is no 
+staging area).
+
+
+## More on daily `lx` usage
+
+### Column visibility
+
+Every column has both a positive and negative flag:
+
+```sh
+lx -ll --no-group              # remove group from tier 2
+lx -l --inode                  # add inode to tier 1
+lx -l --permissions --no-user  # explicit control
+```
+
+Or take full control with `--columns`:
+
+```sh
+lx --columns=inode,perms,size,user,group,modified,vcs
+```
+
+Or define your own named format in the config file.
+
+### Sorting
 
 ```sh
 lx -s name            # sort by name (default, case-insensitive)
@@ -446,8 +554,7 @@ lx -s none            # unsorted (readdir order)
 
 With `--total-size`, `-s size` sorts by recursive directory size.
 
-
-## Environment variables
+### Environment variables
 
 | Variable          | Purpose                                                    |
 |-------------------|------------------------------------------------------------|
