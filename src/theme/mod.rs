@@ -484,6 +484,7 @@ fn apply_overlay(mut base: Style, overlay: Style) -> Style {
 
 
 #[cfg(test)]
+#[allow(unused_macro_rules)]
 mod customs_test {
     use super::*;
     use crate::theme::ui_styles::UiStyles;

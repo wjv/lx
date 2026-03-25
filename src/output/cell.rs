@@ -117,11 +117,9 @@ impl TextCell {
 // strings: it is only when the strings are concatenated together do we need a
 // growable, heap-allocated buffer.
 //
-// So it would be nice to abstract the `TextCell` type so instead of a `Vec`,
-// it can use anything of type `T: IntoIterator<Item=AnsiString<’static>>`.
+// TODO: it would be nice to abstract the `TextCell` type so instead of a
+// `Vec`, it can use anything of type `T: IntoIterator<Item=AnsiString<’static>>`.
 // This would allow us to still hold all the data, but allocate less.
-//
-// But exa still has bugs and I need to fix those first :(
 
 
 /// The contents of a text cell, as a vector of ANSI-styled strings.

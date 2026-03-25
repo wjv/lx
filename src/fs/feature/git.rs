@@ -14,7 +14,7 @@ use crate::fs::fields as f;
 /// A **Git cache** is assembled based on the user’s input arguments.
 ///
 /// This uses vectors to avoid the overhead of hashing: it’s not worth it when the
-/// expected number of Git repositories per exa invocation is 0 or 1...
+/// expected number of Git repositories per lx invocation is 0 or 1...
 pub struct GitCache {
 
     /// A list of discovered Git repositories and their paths.

@@ -6,17 +6,6 @@ the standard `ls` command.
 But… `lx` is a file lister with *personality!* 🌟
 
 
-## History
-
-`lx` was forked from [`exa`](https://github.com/ogham/exa) by Benjamin Sago. 
-`exa` appears to be unmaintained (and has been dormant for some years).
-
-There exists an active community fork of `exa` named
-[`eza`](https://github.com/eza-community/eza), by Christina Sørensen and 
-collaborators. `eza` goes off in a slightly different direction than `lx`, but 
-is way more mature. You should go check it out!
-
-
 ## Highlights
 
 What makes `lx` stand out from the crowd?
@@ -55,8 +44,10 @@ What makes `lx` stand out from the crowd?
 
 - **Unified VCS support** — including Jujutsu!
 
-  Built-in backends for both [Git](https://git-scm.com) and 
+  Built-in backends for both [Git](https://git-scm.com) and
   [Jujutsu](https://jj-vcs.dev/latest/).  VCS auto-detection supported.
+
+For the design principles behind the CLI, see [DESIGN.md](DESIGN.md).
 
 
 ## Quick start
@@ -202,7 +193,7 @@ These sections compose naturally:
 * themes use styles
 * styles use classes
 
-```
+```text
 personality ──→ format  (column layout)
      │
      └──→ theme ──────→ style ────────→ class
@@ -269,7 +260,7 @@ has a corresponding config key (e.g. `--sort=age` becomes
 
 The built-in personalities form an inheritance tree:
 
-```
+```text
 default ──┬──→ lx ──┬──→ ll ──→ la
           │         └──→ lll
           └──→ tree
@@ -324,8 +315,9 @@ together:
   a class can be styled as a unit.
 
 `lx` provides a built-in theme named `"exa"`, and a built-in style, also named 
-`"exa"`. These provide sensible defaults out of the box, mirroring the old 
-`exa` app. You can redefine these, or define your own.
+`"exa"`. These provide sensible defaults out of the box, mirroring the 
+[`exa`](https://github.com/ogham/exa) app. You can redefine these, or define 
+your own.
 
 The `"exa"` style is provided (commented-out) in the default `~/.lxconfig.toml` 
 created by `lx --init-config`. The `"exa"` theme was too large to be included, 
@@ -624,8 +616,12 @@ fly at shell startup.
 - **The `lx` crate name on crates.io is taken** by an unrelated
   library. Install from GitHub instead (see [Installation](#installation)).
 
+- `lx` is an experiment under active development. Literally anything may still 
+  change, including the details of the user interface!
 
-## What's new in 0.3
+## Roadmap
+
+### What's new in 0.3
 
 - **File-type classes** (`[class]`) — named lists of glob patterns
   (`image`, `video`, `music`, etc.), with compiled-in defaults that
@@ -648,7 +644,7 @@ fly at shell startup.
 - `--git` and `--git-ignore` legacy flags removed.
 - `--group-directories-first` precedence fixed.
 
-## Roadmap: 0.4
+### Planned for 0.4
 
 - `--time-style=relative` ("2 hours ago")
 - Symlink display flags (`--symlinks=show|hide|follow`)
@@ -657,9 +653,31 @@ fly at shell startup.
 - Polish and bug fixes from daily driving
 
 
-## User interface stability
+## Acknowledgements
 
-`lx` is under active development and literally anything may still change.
+`lx` is my own experiment to test some ideas I have about the user experience 
+of a Unix file listing utility. As such, being an experiment, it does not try 
+particularly hard to be compatible with anything else. That said, it stands on 
+the shoulders of giants!
+
+`lx` is built on the foundations of
+[`exa`](https://github.com/ogham/exa) by Benjamin Sago (ogham). The core file 
+system, output rendering, and column system are all his work. Thank you! 🌟
+
+Several features were inspired by
+[`eza`](https://github.com/eza-community/eza), the active community fork
+of `exa` maintained by Christina Sørensen and collaborators. These were 
+reimplemented from scratch for `lx` and sometimes differ from their `eza` 
+counterparts:
+
+| Feature                    | eza flag                   | lx flag                  |
+|----------------------------|----------------------------|--------------------------|
+| Recursive directory sizing | `--total-size`             | `--total-size` / `-Z`    |
+| List only files            | `--only-files`             | `--only-files` / `-f`    |
+| Filename quoting           | `--no-quotes` (default on) | `--quotes` (default off) |
+| Terminal hyperlinks        | `--hyperlink`              | `--hyperlink`            |
+| Explicit terminal width    | `--width`                  | `--width` / `-w`         |
+| Absolute paths             | `--absolute`               | `--absolute`             |
 
 
 ## Licence
