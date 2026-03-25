@@ -250,7 +250,8 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Vec<Column> {
             }
             // Unknown names are silently ignored (could warn in future).
         }
-        // Suppression flags still apply on top of --columns.
+        // Individual adds and suppression flags still apply.
+        apply_individual_adds(matches, &mut columns);
         apply_suppressions(matches, &mut columns);
         return columns;
     }
@@ -284,6 +285,52 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Vec<Column> {
 
 /// Add columns requested by individual flags (-i, -g, -H, -S, etc.)
 /// if not already present.
+/// The canonical column ordering.  When a column is added via an
+/// individual flag, it is inserted at its canonical position relative
+/// to the columns already present — after its nearest canonical
+/// predecessor.
+const CANONICAL_ORDER: &[Column] = &[
+    Column::Inode,
+    Column::Octal,
+    Column::Permissions,
+    Column::HardLinks,
+    Column::FileSize,
+    Column::Blocks,
+    Column::User,
+    Column::Group,
+    Column::Timestamp(TimeType::Modified),
+    Column::Timestamp(TimeType::Changed),
+    Column::Timestamp(TimeType::Created),
+    Column::Timestamp(TimeType::Accessed),
+    Column::VcsStatus,
+];
+
+/// Find the canonical insertion position for `col` within `columns`.
+///
+/// Looks up `col` in `CANONICAL_ORDER`, then finds the last column
+/// already present in `columns` that comes *before* `col` in the
+/// canonical order.  Inserts after that column.  If no predecessor
+/// is present, inserts at position 0 (or appends if `col` is last
+/// in the canonical order and nothing follows).
+fn canonical_insert_pos(columns: &[Column], col: Column) -> usize {
+    let canon_idx = CANONICAL_ORDER.iter()
+        .position(|c| *c == col)
+        .unwrap_or(CANONICAL_ORDER.len());
+
+    // Find the last column in `columns` whose canonical index is
+    // less than `col`'s.  Insert after it.
+    let mut best_pos = 0;
+    for (i, existing) in columns.iter().enumerate() {
+        let existing_idx = CANONICAL_ORDER.iter()
+            .position(|c| c == existing)
+            .unwrap_or(CANONICAL_ORDER.len());
+        if existing_idx < canon_idx {
+            best_pos = i + 1;
+        }
+    }
+    best_pos
+}
+
 fn apply_individual_adds(matches: &MatchedFlags, columns: &mut Vec<Column>) {
     let adds: &[(bool, Column)] = &[
         (matches.has(flags::INODE),      Column::Inode),
@@ -296,13 +343,10 @@ fn apply_individual_adds(matches: &MatchedFlags, columns: &mut Vec<Column>) {
 
     for &(enabled, col) in adds {
         if enabled && !columns.contains(&col) {
-            let pos = columns.iter()
-                .position(|c| *c == Column::VcsStatus)
-                .unwrap_or(columns.len());
+            let pos = canonical_insert_pos(columns, col);
             columns.insert(pos, col);
         }
     }
-
 }
 
 

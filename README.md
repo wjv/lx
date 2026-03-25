@@ -19,6 +19,8 @@ is way more mature. You should go check it out!
 
 ## Highlights
 
+What makes `lx` stand out from the crowd?
+
 - **Personalities** — named profiles that bundle columns, flags, and
   settings 🌟
 

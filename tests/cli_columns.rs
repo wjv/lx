@@ -131,6 +131,75 @@ fn format_with_suppression() {
 }
 
 
+// ── Canonical column insertion order ─────────────────────────────
+
+#[test]
+fn blocks_inserts_after_size() {
+    // -lS should put blocks right after size, not at the end.
+    // Header mode makes column order visible.
+    lx_no_colour()
+        .args(["-l", "-S", "-h", "Cargo.toml"])
+        .assert()
+        .success()
+        .stdout(predicate::str::is_match(r"Size\s+Blocks\s+User").unwrap());
+}
+
+#[test]
+fn inode_inserts_before_perms() {
+    // -li should put inode first (before permissions).
+    lx_no_colour()
+        .args(["-l", "-i", "-h", "Cargo.toml"])
+        .assert()
+        .success()
+        .stdout(predicate::str::is_match(r"(?i)inode\s+Permissions").unwrap());
+}
+
+#[test]
+fn multiple_adds_canonical_order() {
+    // -lSi should give: Inode, Permissions, Size, Blocks, User, Date
+    lx_no_colour()
+        .args(["-l", "-S", "-i", "-h", "Cargo.toml"])
+        .assert()
+        .success()
+        .stdout(predicate::str::is_match(r"(?i)inode\s+Permissions").unwrap())
+        .stdout(predicate::str::is_match(r"Size\s+Blocks").unwrap());
+}
+
+#[test]
+fn group_add_between_user_and_timestamp() {
+    // -lg should put group after user, before date.
+    lx_no_colour()
+        .args(["-l", "-g", "-h", "Cargo.toml"])
+        .assert()
+        .success()
+        .stdout(predicate::str::is_match(r"User\s+Group\s+Date").unwrap());
+}
+
+#[test]
+fn explicit_columns_with_add_inserts_canonically() {
+    // --columns in non-canonical order + -S should still put blocks
+    // after size (its nearest canonical predecessor).
+    lx_no_colour()
+        .args(["--columns=modified,user,size", "-S", "-h", "Cargo.toml"])
+        .assert()
+        .success()
+        .stdout(predicate::str::is_match(r"Size\s+Blocks").unwrap());
+}
+
+#[test]
+fn no_duplicate_when_already_present() {
+    // -llg: group is already in long2, should not duplicate.
+    let output = lx_no_colour()
+        .args(["-ll", "-g", "-h", "Cargo.toml"])
+        .output()
+        .expect("failed to run");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // Count occurrences of "Group" in header — should be exactly 1.
+    let count = stdout.matches("Group").count();
+    assert_eq!(count, 1, "Group should appear once, got {count}: {stdout}");
+}
+
+
 // ── --columns overrides --format ─────────────────────────────────
 
 #[test]
