@@ -260,12 +260,26 @@ VCS INTEGRATION
 `--vcs=BACKEND`
 : Select the VCS backend. BACKEND is `auto`, `git`, `jj`, or `none`.
 Default: `auto` (prefers jj if `.jj/` exists, falls back to git).
+The `jj` backend requires `lx` to be built with the `jj` feature flag.
 
 `--vcs-status`
-: Show per-file VCS status column.
+: Show per-file VCS status column. The column header shows the active
+backend: **Git** or **JJ**.
 
 `--vcs-ignore`
-: Hide files ignored by VCS.
+: Hide files ignored by VCS. Works with both git and jj backends.
+
+Status characters: `-` not modified, `M` modified, `A` added (jj) /
+`N` new (git), `D` deleted, `R` renamed, `C` copied, `I` ignored,
+`U` untracked, `!` conflicted.
+
+**Git display:** two columns showing staged and unstaged status. When both
+are the same, they collapse into a single character.
+
+**jj display:** two columns with different semantics. Column 1 is the
+change status (working copy commit vs parent). Column 2 is the tracking
+status: `U` for untracked files, `I` for ignored files, or a space for
+tracked files.
 
 Note: the legacy `--git` and `--git-ignore` flags have been removed.
 Use `--vcs-status` and `--vcs-ignore` instead.
@@ -336,13 +350,19 @@ EXIT STATUSES
 : Options error (invalid command-line arguments).
 
 
-KNOWN BUGS
-==========
+FEATURE FLAGS
+=============
 
-`--vcs-ignore` does not work with the jj backend.  The jj CLI
-currently has no way to report which files are gitignored (as distinct
-from untracked).  Workarounds: use `--vcs=git --vcs-ignore`, or use
-`-I` glob patterns to exclude specific files.
+`lx` has optional feature flags that control which VCS backends are
+compiled in.  These are selected at build time with `cargo build
+--features`.
+
+`git` (default)
+: Git support via the `git2` crate.
+
+`jj` (opt-in)
+: Jujutsu support via the `jj-lib` crate.  Adds approximately 5 MB to
+the binary size.  Build with: `cargo build --features jj`.
 
 
 SEE ALSO

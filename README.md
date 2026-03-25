@@ -432,7 +432,8 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 Install `lx` from GitHub.
 ```sh
-cargo install --git https://github.com/wjv/lx
+cargo install --git https://github.com/wjv/lx                # git support only
+cargo install --git https://github.com/wjv/lx --features jj  # + jj support
 ```
 
 The binary is installed to `~/.cargo/bin/`.  Make sure this directory is on
@@ -486,13 +487,18 @@ just install-personalities  # create symlinks for ll, la, lll, tree
 just init-config            # generate ~/.lxconfig.toml
 ```
 
-Other useful recipes: `just test`, `just lint`, `just completions`. List them
-all with `just -l`.
+For jj support, use the `-jj` variants: `just build-jj`, `just install-jj`,
+etc.
+
+Other useful recipes: `just test`, `just test-all`, `just lint`,
+`just completions`. List them all with `just -l`.
 
 
 ## VCS support
 
-`lx` shows per-file version control status in long view:
+`lx` shows per-file version control status in long view, with built-in
+backends for both [Git](https://git-scm.com) and
+[Jujutsu](https://jj-vcs.dev/) (jj):
 
 ```sh
 lx -ll                # tier 2 includes VCS status by default
@@ -500,17 +506,43 @@ lx --vcs-status -l    # or explicitly
 lx --vcs=jj -ll       # force jj backend
 lx --vcs=git -ll      # force git backend
 lx --vcs=none -ll     # disable VCS
+lx --vcs-ignore       # hide VCS-ignored files
 ```
 
 With `--vcs=auto` (the default), lx probes for a jj workspace first,
-then falls back to git. (This is so that co-located jj/git repositories
-are detected correctly.)
+then falls back to git — so co-located jj/git repositories are detected
+correctly.
 
-Status characters: `-` not modified, `M` modified, `N` new, `D` deleted,
-`R` renamed, `C` copied, `I` ignored, `U` conflicted.
+The column header shows which backend is active: **Git** or **JJ**.
 
-Git shows two columns (staged + unstaged). jj shows one (since there is no 
-staging area).
+### Status characters
+
+| Char | Meaning              |
+|------|----------------------|
+| `-`  | Not modified         |
+| `M`  | Modified             |
+| `A`  | Added (jj)           |
+| `N`  | New (git)            |
+| `D`  | Deleted              |
+| `R`  | Renamed              |
+| `C`  | Copied               |
+| `I`  | Ignored              |
+| `U`  | Untracked            |
+| `!`  | Conflicted           |
+
+### Git vs jj display
+
+**Git** shows two columns: staged status + unstaged status.  When both
+are the same, lx collapses them into a single character.
+
+**jj** also shows two columns, but with different semantics (since jj has
+no staging area): column 1 is the *change status* (comparing the working
+copy commit against its parent), and column 2 is the *tracking status*
+(`U` = untracked, `I` = ignored, or a space for tracked files).
+
+`--vcs-ignore` works with both backends.  The jj backend walks the
+workspace directory tree and chains nested `.gitignore` files so that
+subdirectory ignore rules are respected.
 
 
 ## More on daily `lx` usage
@@ -602,12 +634,11 @@ fly at shell startup.
 
 ## Known limitations
 
-- **`--vcs-ignore` does not work with the jj backend**
-
-  The `jj` CLI currently has no way to report which files are gitignored. 
-  Workarounds:
-  - Use `--vcs=git --vcs-ignore` in a colocated repository.
-  - Use `-I` glob patterns to exclude specific files (e.g. `-I target`).
+- **jj support is an opt-in feature** — the `jj` feature flag pulls in
+  `jj-lib`, which adds ~5 MB to the binary and ~550 extra crates to the
+  build.  Build with `cargo build --features jj` (or
+  `cargo install --features jj`) to enable it.  Without the feature,
+  `--vcs=jj` returns a clear error message.
 
 - **0.1 and 0.2 config files need migrating** — the 0.3 config format
   is not backwards-compatible. Run `lx --upgrade-config` to convert
@@ -616,7 +647,7 @@ fly at shell startup.
 - **The `lx` crate name on crates.io is taken** by an unrelated
   library. Install from GitHub instead (see [Installation](#installation)).
 
-- `lx` is an experiment under active development. Literally anything may still 
+- `lx` is an experiment under active development. Literally anything may still
   change, including the details of the user interface!
 
 ## Roadmap
@@ -646,6 +677,10 @@ fly at shell startup.
 
 ### Planned for 0.4
 
+- **jj-lib integration** — first-class Jujutsu support via `jj-lib`
+  crate (opt-in `jj` feature flag): two-column display, `--vcs-ignore`
+  with layered `.gitignore` support, untracked file detection, dynamic
+  VCS column header
 - `--time-style=relative` ("2 hours ago")
 - Symlink display flags (`--symlinks=show|hide|follow`)
 - `--vcs-repos` (per-directory repo status)

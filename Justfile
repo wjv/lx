@@ -15,23 +15,43 @@ man-preview: man
 man-config-preview: man
     man ./man/lxconfig.toml.5
 
-# Build debug binary
+# Build debug binary (git only)
 build:
     cargo build
 
-# Build release binary
+# Build debug binary with jj support
+build-jj:
+    cargo build --features jj
+
+# Build release binary (git only)
 release:
     cargo build --release
 
-# Run all tests
+# Build release binary with jj support
+release-jj:
+    cargo build --release --features jj
+
+# Run all tests (default features)
 test:
     cargo test --workspace -- --quiet
+
+# Run all tests including jj feature
+test-jj:
+    cargo test --workspace --features jj -- --quiet
+
+# Run all tests both with and without jj
+test-all: test test-jj
 
 # Run clippy
 lint:
     cargo clippy
 
-# Install lx to ~/.local/bin with man pages (XDG standard)
+# Run clippy on all feature sets
+lint-all:
+    cargo clippy
+    cargo clippy --features jj
+
+# Install lx to ~/.local/bin with man pages (git only)
 install: release man
     @mkdir -p ~/.local/bin
     @mkdir -p ~/.local/share/man/man1
@@ -40,6 +60,17 @@ install: release man
     cp man/lx.1 ~/.local/share/man/man1/lx.1
     cp man/lxconfig.toml.5 ~/.local/share/man/man5/lxconfig.toml.5
     @echo "Installed lx to ~/.local/bin/lx"
+    @echo "Installed man pages to ~/.local/share/man/"
+
+# Install lx with jj support
+install-jj: release-jj man
+    @mkdir -p ~/.local/bin
+    @mkdir -p ~/.local/share/man/man1
+    @mkdir -p ~/.local/share/man/man5
+    cp target/release/lx ~/.local/bin/lx
+    cp man/lx.1 ~/.local/share/man/man1/lx.1
+    cp man/lxconfig.toml.5 ~/.local/share/man/man5/lxconfig.toml.5
+    @echo "Installed lx (with jj support) to ~/.local/bin/lx"
     @echo "Installed man pages to ~/.local/share/man/"
 
 # Create personality symlinks in ~/.local/bin
