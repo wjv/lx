@@ -34,6 +34,8 @@ use log::*;
 use crate::fs::{Dir, File};
 use crate::fs::feature::git::GitCache;
 use crate::fs::feature::jj::JjCache;
+#[cfg(feature = "jj-lib")]
+use crate::fs::feature::jj_lib::JjLibCache;
 use crate::fs::feature::VcsCache;
 use crate::fs::filter::VcsIgnore;
 use crate::options::{Options, VcsBackend, Vars, vars, OptionsResult};
@@ -245,6 +247,25 @@ impl Vars for LiveVars {
     }
 }
 
+/// Discover a jj workspace and create a VCS cache.
+///
+/// When the `jj-lib` feature is enabled, uses the library directly
+/// (faster, more features).  Otherwise falls back to the CLI.
+fn discover_jj(paths: &[PathBuf]) -> Option<Box<dyn VcsCache>> {
+    #[cfg(feature = "jj-lib")]
+    {
+        if let Some(cache) = JjLibCache::discover(paths) {
+            return Some(Box::new(cache));
+        }
+    }
+
+    // Fall back to CLI-based discovery.
+    JjCache::discover(paths).map(|c| {
+        let b: Box<dyn VcsCache> = Box::new(c);
+        b
+    })
+}
+
 /// Create a VCS cache based on the selected backend and the paths that
 /// are going to be listed.
 fn vcs_cache(options: &Options, args: &[OsString]) -> Option<Box<dyn VcsCache>> {
@@ -263,17 +284,13 @@ fn vcs_cache(options: &Options, args: &[OsString]) -> Option<Box<dyn VcsCache>> 
         }
 
         VcsBackend::Jj => {
-            JjCache::discover(&paths).map(|c| {
-                let b: Box<dyn VcsCache> = Box::new(c);
-                b
-            })
+            discover_jj(&paths)
         }
 
         VcsBackend::Auto => {
             // Prefer jj if a workspace is detected, fall back to git.
-            if let Some(jj) = JjCache::discover(&paths) {
-                let b: Box<dyn VcsCache> = Box::new(jj);
-                Some(b)
+            if let Some(jj) = discover_jj(&paths) {
+                Some(jj)
             } else {
                 let cache: GitCache = paths.into_iter().collect();
                 Some(Box::new(cache))
