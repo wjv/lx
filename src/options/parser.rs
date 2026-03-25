@@ -235,18 +235,24 @@ Environment variables:\n  \
             .help("Group directories before or after other files")
             .action(ArgAction::Set)
             .value_name("WHEN")
-            .overrides_with(flags::DIRS_FIRST)
+            .overrides_with_all([flags::DIRS_FIRST, flags::DIRS_LAST])
             .value_parser([
                 PossibleValue::new("first"),
                 PossibleValue::new("last"),
                 PossibleValue::new("none"),
             ]))
         .arg(Arg::new(flags::DIRS_FIRST)
+            .short('F')
             .long("group-directories-first")
-            .help("List directories first (alias for --group-dirs=first)")
+            .help("List directories first (short for --group-dirs=first)")
             .action(ArgAction::SetTrue)
-            .overrides_with(flags::GROUP_DIRS)
-            .hide(true))
+            .overrides_with_all([flags::GROUP_DIRS, flags::DIRS_LAST]))
+        .arg(Arg::new(flags::DIRS_LAST)
+            .short('J')
+            .long("group-directories-last")
+            .help("List directories last (short for --group-dirs=last)")
+            .action(ArgAction::SetTrue)
+            .overrides_with_all([flags::GROUP_DIRS, flags::DIRS_FIRST]))
         .arg(Arg::new(flags::ONLY_DIRS)
             .short('D').long("only-dirs")
             .help("List only directories, not files")

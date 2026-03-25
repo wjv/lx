@@ -57,12 +57,12 @@ fn unknown_short_flag() {
 }
 
 #[test]
-fn uppercase_f_no_longer_accepted() {
-    // -F was removed as short form for --classify (freed for -f/--only-files)
+fn uppercase_f_groups_dirs_first() {
+    // -F is now short for --group-dirs=first (was --classify in exa)
     lx()
         .arg("-F")
         .assert()
-        .failure();
+        .success();
 }
 
 #[test]

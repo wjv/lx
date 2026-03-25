@@ -37,9 +37,12 @@ impl GroupDirs {
             };
         }
 
-        // Legacy --group-directories-first flag
+        // Short flags: -F (first), -J (last)
         if matches.has(flags::DIRS_FIRST) {
             return Self::First;
+        }
+        if matches.has(flags::DIRS_LAST) {
+            return Self::Last;
         }
 
         Self::None
