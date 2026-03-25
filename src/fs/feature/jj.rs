@@ -148,6 +148,8 @@ impl super::VcsCache for JjCache {
             f::VcsFileStatus { staged: status, unstaged: status }
         }
     }
+
+    fn header_name(&self) -> &'static str { "JJ" }
 }
 
 
@@ -157,13 +159,14 @@ fn worse_status(a: f::VcsStatus, b: f::VcsStatus) -> f::VcsStatus {
         match s {
             f::VcsStatus::NotModified => 0,
             f::VcsStatus::Ignored    => 1,
-            f::VcsStatus::Copied     => 2,
-            f::VcsStatus::Renamed    => 3,
-            f::VcsStatus::TypeChange => 4,
-            f::VcsStatus::Modified   => 5,
-            f::VcsStatus::New        => 6,
-            f::VcsStatus::Deleted    => 7,
-            f::VcsStatus::Conflicted => 8,
+            f::VcsStatus::Untracked  => 2,
+            f::VcsStatus::Copied     => 3,
+            f::VcsStatus::Renamed    => 4,
+            f::VcsStatus::TypeChange => 5,
+            f::VcsStatus::Modified   => 6,
+            f::VcsStatus::New        => 7,
+            f::VcsStatus::Deleted    => 8,
+            f::VcsStatus::Conflicted => 9,
         }
     }
 

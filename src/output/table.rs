@@ -307,7 +307,14 @@ impl<'a, 'f> Table<'a> {
 
     pub fn header_row(&self) -> Row {
         let cells = self.columns.iter()
-                        .map(|c| TextCell::paint_str(self.theme.ui.header, c.header()))
+                        .map(|c| {
+                            let name = if *c == Column::VcsStatus {
+                                self.vcs.map(|v| v.header_name()).unwrap_or("VCS")
+                            } else {
+                                c.header()
+                            };
+                            TextCell::paint_str(self.theme.ui.header, name)
+                        })
                         .collect();
 
         Row { cells }

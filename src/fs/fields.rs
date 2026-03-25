@@ -230,6 +230,9 @@ pub enum VcsStatus {
 
     /// A file that’s been copied (jj tracks copies).
     Copied,
+
+    /// A file that exists on disk but is not tracked by the VCS.
+    Untracked,
 }
 
 

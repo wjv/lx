@@ -53,7 +53,7 @@ version = "0.3"
 optional = true
 
 [features]
-default = ["git", "jj"]
+default = ["git", "jj", "jj-lib"]
 git = ["git2"]
 jj = []
 jj-lib = ["dep:jj-lib", "dep:tokio", "dep:futures"]

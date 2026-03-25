@@ -35,6 +35,8 @@ impl super::VcsCache for GitCache {
             .map(|repo| repo.search(path, prefix_lookup))
             .unwrap_or_default()
     }
+
+    fn header_name(&self) -> &'static str { "Git" }
 }
 
 use std::iter::FromIterator;

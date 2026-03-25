@@ -23,8 +23,14 @@ use jj_lib::matchers::EverythingMatcher;
 
 /// A cache of per-file jj status, built using jj-lib directly.
 pub struct JjLibCache {
-    /// Map from absolute file path to VCS status.
+    /// Map from absolute file path to VCS change status.
     statuses: HashMap<PathBuf, f::VcsStatus>,
+
+    /// Set of absolute paths that are tracked in the working copy tree.
+    tracked: std::collections::HashSet<PathBuf>,
+
+    /// Gitignore rules, for `--vcs-ignore` support.
+    gitignore: Option<std::sync::Arc<jj_lib::gitignore::GitIgnoreFile>>,
 
     /// The workspace root, used to resolve relative paths.
     workdir: PathBuf,
@@ -91,7 +97,7 @@ impl JjLibCache {
             Ok(repo) => repo,
             Err(e) => {
                 warn!("jj-lib: failed to load repo: {e}");
-                return Some(Self { statuses: HashMap::new(), workdir });
+                return Some(Self { statuses: HashMap::new(), tracked: std::collections::HashSet::new(), gitignore: None, workdir });
             }
         };
 
@@ -99,7 +105,7 @@ impl JjLibCache {
             Some(id) => id.clone(),
             None => {
                 warn!("jj-lib: no working copy commit");
-                return Some(Self { statuses: HashMap::new(), workdir });
+                return Some(Self { statuses: HashMap::new(), tracked: std::collections::HashSet::new(), gitignore: None, workdir });
             }
         };
 
@@ -107,7 +113,7 @@ impl JjLibCache {
             Ok(c) => c,
             Err(e) => {
                 warn!("jj-lib: failed to get working copy commit: {e}");
-                return Some(Self { statuses: HashMap::new(), workdir });
+                return Some(Self { statuses: HashMap::new(), tracked: std::collections::HashSet::new(), gitignore: None, workdir });
             }
         };
 
@@ -122,7 +128,7 @@ impl JjLibCache {
                     Ok(c) => c,
                     Err(e) => {
                         warn!("jj-lib: failed to get parent commit: {e}");
-                        return Some(Self { statuses: HashMap::new(), workdir });
+                        return Some(Self { statuses: HashMap::new(), tracked: std::collections::HashSet::new(), gitignore: None, workdir });
                     }
                 };
                 parent.tree()
@@ -162,8 +168,31 @@ impl JjLibCache {
             }
         });
 
-        debug!("jj-lib cache: {} file statuses", statuses.len());
-        Some(Self { statuses, workdir })
+        // Collect tracked files from the working copy tree.
+        let mut tracked = std::collections::HashSet::new();
+        for entry in wc_tree.entries() {
+            let (path, _value) = entry;
+            let abs_path = workdir.join(path.as_internal_file_string());
+            tracked.insert(abs_path);
+        }
+
+        // Build gitignore chain for --vcs-ignore support.
+        let gitignore = {
+            use jj_lib::gitignore::GitIgnoreFile;
+            let base = GitIgnoreFile::empty();
+            // Chain the root .gitignore if it exists.
+            match base.chain_with_file("", workdir.join(".gitignore")) {
+                Ok(gi) => Some(gi),
+                Err(e) => {
+                    debug!("jj-lib: failed to load .gitignore: {e}");
+                    None
+                }
+            }
+        };
+
+        debug!("jj-lib cache: {} file statuses, {} tracked files, gitignore: {}",
+               statuses.len(), tracked.len(), gitignore.is_some());
+        Some(Self { statuses, tracked, gitignore, workdir })
     }
 }
 
@@ -188,20 +217,50 @@ impl super::VcsCache for JjLibCache {
         let abs = abs.canonicalize().unwrap_or(abs);
 
         if prefix_lookup {
-            let mut worst = f::VcsStatus::NotModified;
+            // Directory: aggregate child statuses.
+            let mut worst_change = f::VcsStatus::NotModified;
+            let mut has_untracked = false;
             for (p, &status) in &self.statuses {
                 if p.starts_with(&abs) {
-                    worst = worse_status(worst, status);
+                    worst_change = worse_status(worst_change, status);
                 }
             }
-            f::VcsFileStatus { staged: worst, unstaged: worst }
+            // Check if any file under this directory is untracked.
+            // (We can't enumerate disk files here, so just use change status.)
+            f::VcsFileStatus { staged: worst_change, unstaged: worst_change }
         } else {
-            let status = self.statuses.get(&abs)
+            // Single file: change status + tracking/ignore status.
+
+            // Check gitignore first — ignored files get Ignored in
+            // the unstaged column, which --vcs-ignore uses to filter.
+            if let Some(ref gi) = self.gitignore {
+                let rel = abs.strip_prefix(&self.workdir)
+                    .unwrap_or(&abs);
+                let rel_str = rel.to_string_lossy();
+                if gi.matches(&rel_str) {
+                    return f::VcsFileStatus {
+                        staged: f::VcsStatus::NotModified,
+                        unstaged: f::VcsStatus::Ignored,
+                    };
+                }
+            }
+
+            let change = self.statuses.get(&abs)
                 .copied()
                 .unwrap_or(f::VcsStatus::NotModified);
-            f::VcsFileStatus { staged: status, unstaged: status }
+
+            let tracking = if self.tracked.contains(&abs) {
+                change
+            } else {
+                // Untracked file — show U in the second column.
+                f::VcsStatus::Untracked
+            };
+
+            f::VcsFileStatus { staged: change, unstaged: tracking }
         }
     }
+
+    fn header_name(&self) -> &'static str { "JJ" }
 }
 
 
@@ -210,13 +269,14 @@ fn worse_status(a: f::VcsStatus, b: f::VcsStatus) -> f::VcsStatus {
         match s {
             f::VcsStatus::NotModified => 0,
             f::VcsStatus::Ignored    => 1,
-            f::VcsStatus::Copied     => 2,
-            f::VcsStatus::Renamed    => 3,
-            f::VcsStatus::TypeChange => 4,
-            f::VcsStatus::Modified   => 5,
-            f::VcsStatus::New        => 6,
-            f::VcsStatus::Deleted    => 7,
-            f::VcsStatus::Conflicted => 8,
+            f::VcsStatus::Untracked  => 2,
+            f::VcsStatus::Copied     => 3,
+            f::VcsStatus::Renamed    => 4,
+            f::VcsStatus::TypeChange => 5,
+            f::VcsStatus::Modified   => 6,
+            f::VcsStatus::New        => 7,
+            f::VcsStatus::Deleted    => 8,
+            f::VcsStatus::Conflicted => 9,
         }
     }
     if rank(b) > rank(a) { b } else { a }

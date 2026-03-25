@@ -14,6 +14,9 @@ pub trait VcsCache: Sync {
     /// when querying a directory (returns the aggregate status of its
     /// contents).
     fn get(&self, path: &Path, prefix_lookup: bool) -> f::VcsFileStatus;
+
+    /// The name to display in the column header (e.g. "Git", "JJ").
+    fn header_name(&self) -> &'static str { "VCS" }
 }
 
 

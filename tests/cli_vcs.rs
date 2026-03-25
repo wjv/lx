@@ -130,7 +130,7 @@ fn git_vcs_status_header() {
         .arg(dir.path())
         .assert()
         .success()
-        .stdout(predicate::str::contains("VCS"));
+        .stdout(predicate::str::contains("Git"));
 }
 
 #[test]

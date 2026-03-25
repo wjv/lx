@@ -39,8 +39,9 @@ impl f::VcsStatus {
             Self::Renamed      => colours.renamed().paint("R"),
             Self::TypeChange   => colours.type_change().paint("T"),
             Self::Ignored      => colours.ignored().paint("I"),
-            Self::Conflicted   => colours.conflicted().paint("U"),
+            Self::Conflicted   => colours.conflicted().paint("!"),
             Self::Copied       => colours.renamed().paint("C"),
+            Self::Untracked    => colours.ignored().paint("U"),
         }
     }
 }
