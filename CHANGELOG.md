@@ -5,6 +5,11 @@ All notable changes to lx are documented here. lx is forked from
 
 ## [Unreleased]
 
+## [0.2.2] — 2026-03-25
+
+### Fixed
+- Update CHANGELOG for 0.2.1 (was missing from the 0.2.1 release)
+
 ## [0.2.1] — 2026-03-23
 
 ### Fixed
