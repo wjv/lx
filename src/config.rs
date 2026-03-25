@@ -430,13 +430,19 @@ impl PersonalityDef {
 
 /// Search for a config file and return its path, or `None`.
 pub fn find_config_path() -> Option<PathBuf> {
-    // 1. Explicit env var
+    // 1. Explicit env var.
+    // If the user sets LX_CONFIG, we trust it unconditionally.
+    // If it points to a file, use it.  If it doesn't exist or
+    // is not a regular file (e.g. /dev/null), use no config.
+    // We never fall through to the default search paths.
     if let Ok(path) = env::var("LX_CONFIG") {
-        let p = PathBuf::from(path);
+        let p = PathBuf::from(&path);
         if p.is_file() {
             debug!("Config from LX_CONFIG: {}", p.display());
             return Some(p);
         }
+        debug!("LX_CONFIG={path}: not a file, no config");
+        return None;
     }
 
     // 2. ~/.lxconfig.toml
