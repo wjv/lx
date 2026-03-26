@@ -256,7 +256,9 @@ impl super::VcsCache for JjCache {
         let abs = if path.is_absolute() {
             path.to_path_buf()
         } else {
-            self.workdir.join(path)
+            std::env::current_dir()
+                .unwrap_or_else(|_| self.workdir.clone())
+                .join(path)
         };
         let abs = abs.canonicalize().unwrap_or(abs);
         abs.starts_with(&self.workdir)
@@ -266,7 +268,10 @@ impl super::VcsCache for JjCache {
         let abs = if path.is_absolute() {
             path.to_path_buf()
         } else {
-            self.workdir.join(path)
+            // Relative paths are relative to cwd, not workdir.
+            std::env::current_dir()
+                .unwrap_or_else(|_| self.workdir.clone())
+                .join(path)
         };
         let abs = abs.canonicalize().unwrap_or(abs);
 
