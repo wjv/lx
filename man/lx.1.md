@@ -191,8 +191,8 @@ These options affect the columns displayed in long view (`-l`):
 `-@`, `--extended`
 : List each file's extended attributes and sizes.
 
-`-o`, `--octal-permissions`
-: List each file's permissions in octal format.
+`-o`, `--octal`
+: List each file's permissions in octal format. Alias: `--octal-permissions`.
 
 
 COLUMN VISIBILITY
