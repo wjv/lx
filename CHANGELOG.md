@@ -6,10 +6,28 @@ All notable changes to lx are documented here. lx is forked from
 ## [Unreleased]
 
 ### Added
+- `-P`/`--prune` — show directories but don't recurse into them
+  (tree pruning); same glob syntax as `-I`/`--ignore`
+- `--time-style=relative` — human-friendly durations ("2 hours ago")
+- `--time-style='+FORMAT'` — custom strftime format strings
 - `--dump-class`, `--dump-format`, `--dump-personality`, `--dump-theme`,
   `--dump-style` flags for copy-pasteable TOML output (bare = all,
   `=NAME` = single definition)
-- `--init-config` now visible in `--help` output
+- `--init-config`, `--upgrade-config`, `--completions` now visible in
+  `--help` output
+- Hero screenshot in README
+
+### Changed
+- `--help` reorganised with section headings (Display, Filtering,
+  Long view, Timestamps, Column visibility, VCS, Appearance,
+  Configuration)
+- `--ignore-glob` renamed to `--ignore` (old name kept as alias)
+- `--octal-permissions` renamed to `--octal` (old name kept as alias)
+- `--group-directories-first`/`last` shortened to `--dirs-first`/`last`
+  (old names kept as aliases)
+- `--vcs-ignore` now also hides VCS metadata directories (`.git`, `.jj`)
+- `--total-size` performance: cached recursive sizes avoid redundant
+  directory walks (~3x faster on large trees)
 
 ## [0.4.0] — 2026-03-26
 

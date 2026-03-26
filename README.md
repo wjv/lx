@@ -758,13 +758,21 @@ fly at shell startup.
 - Canonical column insertion order for individual flags
 - Coloured `--show-config` output
 
-### Planned for 0.5
+### What's new in 0.5
 
-- `-P`/`--prune` — show directories but don't recurse (tree pruning)
-- `--dump-*` flags for copy-pasteable TOML config output
+- **`-P`/`--prune`** — show directories but don't recurse (tree pruning)
+- **`--time-style=relative`** — "2 hours ago" style timestamps
+- **`--time-style='+FORMAT'`** — custom strftime format strings
+- **`--dump-*` flags** — copy-pasteable TOML for all config objects
+- **`--help` reorganised** with section headings
+- **`--total-size` performance** — ~3x faster on large trees
 - `--ignore` renamed from `--ignore-glob` (alias kept)
+- `--octal` renamed from `--octal-permissions` (alias kept)
+- `--dirs-first`/`--dirs-last` shortened from `--group-directories-*`
 - `--vcs-ignore` now hides VCS metadata directories (`.git`, `.jj`)
-- `--time-style=relative` ("2 hours ago")
+
+### Planned
+
 - Symlink display flags (`--symlinks=show|hide|follow`)
 - `--vcs-repos` (per-directory repo status)
 - Migrate icon assignment to use the class system

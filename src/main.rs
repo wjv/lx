@@ -104,8 +104,11 @@ fn main() {
             }
         });
 
-        if let Some(ref personality_name) = personality_name {
-            match config::resolve_personality(personality_name) {
+        // Apply the resolved personality, falling back to "lx" if argv[0]
+        // didn't match any personality and no explicit -p was given.
+        let personality_name = personality_name.unwrap_or_else(|| "lx".to_string());
+        {
+            match config::resolve_personality(&personality_name) {
                 Ok(Some(personality)) => {
                     args.extend(personality.to_args());
                     active_personality = Some(personality_name.clone());

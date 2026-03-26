@@ -130,10 +130,17 @@ recurse into. The directory itself is displayed (with metadata and
 meaningful with `-T` or `-R`; silently ignored otherwise.
 Alias: `--prune-glob`.
 
-`-F`, `-J`, `--group-dirs=WHEN`
+`--group-dirs=WHEN`
 : Group directories before or after other files. WHEN is `first`, `last`,
-or `none`. `-F` is short for `--group-dirs=first`, `-J` is short for
-`--group-dirs=last`. Legacy alias: `--group-directories-first`.
+or `none`.
+
+`-F`, `--dirs-first`
+: Directories first (short for `--group-dirs=first`).
+Legacy alias: `--group-directories-first`.
+
+`-J`, `--dirs-last`
+: Directories last (short for `--group-dirs=last`).
+Legacy alias: `--group-directories-last`.
 
 
 LONG VIEW OPTIONS
