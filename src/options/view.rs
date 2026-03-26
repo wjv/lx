@@ -484,6 +484,8 @@ impl TimeFormat {
             "iso"      => Self::ISOFormat,
             "long-iso" => Self::LongISO,
             "full-iso" => Self::FullISO,
+            "relative" => Self::Relative,
+            s if s.starts_with('+') => Self::Custom(s[1..].to_string()),
             _          => Self::DefaultFormat,
         }
     }
@@ -570,12 +572,13 @@ mod test {
         test!(actually:  TimeFormat <- ["--time-style=default", "--time-style", "iso"], None;  like Ok(TimeFormat::ISOFormat));
         test!(nevermind: TimeFormat <- ["--time-style", "long-iso", "--time-style=full-iso"], None;  like Ok(TimeFormat::FullISO));
 
-        // Errors — Clap rejects invalid values at parse time
-        #[test]
-        fn daily() {
-            let cmd = crate::options::parser::build_command();
-            assert!(cmd.try_get_matches_from(["lx", "--time-style=24-hour"]).is_err());
-        }
+        // New formats
+        test!(relative:  TimeFormat <- ["--time-style=relative"], None;  like Ok(TimeFormat::Relative));
+
+        test!(custom:    TimeFormat <- ["--time-style=+%Y-%m-%d"], None;  like Ok(TimeFormat::Custom(_)));
+
+        // Unknown values fall back to default
+        test!(unknown:   TimeFormat <- ["--time-style=24-hour"], None;  like Ok(TimeFormat::DefaultFormat));
 
         // `TIME_STYLE` environment variable is defined.
         // If the time-style argument is not given, `TIME_STYLE` is used.

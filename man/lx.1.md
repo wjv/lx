@@ -176,7 +176,10 @@ These options affect the columns displayed in long view (`-l`):
 `accessed`, `created`.
 
 `--time-style=STYLE`
-: How to format timestamps. Styles: `default`, `iso`, `long-iso`, `full-iso`.
+: How to format timestamps. Built-in styles: `default`, `iso`, `long-iso`,
+`full-iso`, `relative`. A custom strftime format can be specified with a
+leading `+` (e.g. `--time-style='+%d %b %Y'`). The `relative` style shows
+human-friendly durations such as "2 hours ago" or "3 days ago".
 
 `-n`, `--numeric`
 : List numeric user and group IDs.

@@ -353,16 +353,10 @@ Environment variables:\n  \
             ]))
         .arg(Arg::new(flags::TIME_STYLE)
             .long("time-style")
-            .help("How to format timestamps")
+            .help("How to format timestamps [default, iso, long-iso, full-iso, relative, +FORMAT]")
             .help_heading("Timestamps")
             .action(ArgAction::Set)
-            .value_name("STYLE")
-            .value_parser([
-                PossibleValue::new("default"),
-                PossibleValue::new("iso"),
-                PossibleValue::new("long-iso"),
-                PossibleValue::new("full-iso"),
-            ]))
+            .value_name("STYLE"))
 
         // ── Column visibility ─────────────────────────────────────
 

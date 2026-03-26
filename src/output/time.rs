@@ -16,10 +16,7 @@ use unicode_width::UnicodeWidthStr;
 /// - The current year, because certain formats will be less precise when
 ///   dealing with dates far in the past;
 /// - The formatting style that the user asked for on the command-line.
-///
-/// Currently lx does not support *custom* styles, where the user enters a
-/// format string in an environment variable or something. Just these four.
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum TimeFormat {
 
     /// The **default format** uses the user's locale to print month names,
@@ -40,16 +37,26 @@ pub enum TimeFormat {
     /// millisecond and includes its offset down to the minute. This too uses
     /// only numbers so doesn't require any special consideration.
     FullISO,
+
+    /// Use **relative format**, which shows how long ago the file was
+    /// modified: "2 hours ago", "3 days ago", "1 year ago", etc.
+    Relative,
+
+    /// Use a **custom strftime format** string, specified by the user
+    /// with a leading `+` (e.g. `+%Y-%m-%d`).
+    Custom(String),
 }
 
 impl TimeFormat {
-    pub fn format(self, time: SystemTime) -> String {
+    pub fn format(&self, time: SystemTime) -> String {
         let dt: DateTime<Local> = time.into();
         match self {
-            Self::DefaultFormat => default(dt),
-            Self::ISOFormat     => iso(dt),
-            Self::LongISO       => long(dt),
-            Self::FullISO       => full(dt),
+            Self::DefaultFormat  => default(dt),
+            Self::ISOFormat      => iso(dt),
+            Self::LongISO        => long(dt),
+            Self::FullISO        => full(dt),
+            Self::Relative       => relative(dt),
+            Self::Custom(fmt)    => dt.format(fmt).to_string(),
         }
     }
 }
@@ -108,6 +115,51 @@ fn iso(date: DateTime<Local>) -> String {
     else {
         format!("{:04}-{:02}-{:02}",
                 date.year(), date.month(), date.day())
+    }
+}
+
+fn relative(date: DateTime<Local>) -> String {
+    let now = Local::now();
+    let duration = now.signed_duration_since(date);
+
+    if duration.num_seconds() < 0 {
+        return "in the future".to_string();
+    }
+
+    let seconds = duration.num_seconds();
+    let minutes = duration.num_minutes();
+    let hours = duration.num_hours();
+    let days = duration.num_days();
+    let weeks = days / 7;
+    let months = days / 30;
+    let years = days / 365;
+
+    if seconds < 60 {
+        "just now".to_string()
+    } else if minutes == 1 {
+        "1 min ago".to_string()
+    } else if minutes < 60 {
+        format!("{minutes} mins ago")
+    } else if hours == 1 {
+        "1 hour ago".to_string()
+    } else if hours < 24 {
+        format!("{hours} hours ago")
+    } else if days == 1 {
+        "1 day ago".to_string()
+    } else if days < 7 {
+        format!("{days} days ago")
+    } else if weeks == 1 {
+        "1 week ago".to_string()
+    } else if weeks < 5 {
+        format!("{weeks} weeks ago")
+    } else if months == 1 {
+        "1 month ago".to_string()
+    } else if months < 12 {
+        format!("{months} months ago")
+    } else if years == 1 {
+        "1 year ago".to_string()
+    } else {
+        format!("{years} years ago")
     }
 }
 

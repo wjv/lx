@@ -14,7 +14,7 @@ fn help_flag() {
         .arg("--help")
         .assert()
         .success()
-        .stdout(predicate::str::contains("List eXtended"));
+        .stdout(predicate::str::contains("personality"));
 }
 
 #[test]
@@ -102,12 +102,13 @@ fn invalid_colour_value() {
 }
 
 #[test]
-fn invalid_time_style_value() {
-    lx()
-        .arg("--time-style=24-hour")
+fn unknown_time_style_falls_back_to_default() {
+    // Unknown time-style values fall back to the default format
+    // (they don't cause an error, unlike before custom formats).
+    lx_no_colour()
+        .args(["--time-style=24-hour", "-l", "Cargo.toml"])
         .assert()
-        .failure()
-        .stderr(predicate::str::contains("invalid value"));
+        .success();
 }
 
 #[test]

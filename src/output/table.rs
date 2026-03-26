@@ -321,7 +321,7 @@ impl<'a, 'f> Table<'a> {
             columns,
             vcs,
             env,
-            time_format: options.time_format,
+            time_format: options.time_format.clone(),
             size_format: options.size_format,
             user_format: options.user_format,
             total_size: options.total_size,
@@ -419,16 +419,16 @@ impl<'a, 'f> Table<'a> {
             }
 
             Column::Timestamp(TimeType::Modified)  => {
-                file.modified_time().render(self.theme.ui.date, self.time_format)
+                file.modified_time().render(self.theme.ui.date, &self.time_format)
             }
             Column::Timestamp(TimeType::Changed)   => {
-                file.changed_time().render(self.theme.ui.date, self.time_format)
+                file.changed_time().render(self.theme.ui.date, &self.time_format)
             }
             Column::Timestamp(TimeType::Created)   => {
-                file.created_time().render(self.theme.ui.date, self.time_format)
+                file.created_time().render(self.theme.ui.date, &self.time_format)
             }
             Column::Timestamp(TimeType::Accessed)  => {
-                file.accessed_time().render(self.theme.ui.date, self.time_format)
+                file.accessed_time().render(self.theme.ui.date, &self.time_format)
             }
         }
     }

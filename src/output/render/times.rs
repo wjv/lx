@@ -7,11 +7,11 @@ use crate::output::time::TimeFormat;
 
 
 pub trait Render {
-    fn render(self, style: Style, format: TimeFormat) -> TextCell;
+    fn render(self, style: Style, format: &TimeFormat) -> TextCell;
 }
 
 impl Render for Option<SystemTime> {
-    fn render(self, style: Style, format: TimeFormat) -> TextCell {
+    fn render(self, style: Style, format: &TimeFormat) -> TextCell {
         let datestamp = if let Some(time) = self {
             format.format(time)
         }
