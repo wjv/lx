@@ -617,6 +617,18 @@ lx --columns=inode,perms,size,user,group,modified,vcs
 
 Or define your own named format in the config file.
 
+### Filtering
+
+```sh
+lx -I '*.tmp|*.bak'          # hide files matching globs (-I / --ignore)
+lx -T -P 'target|node_modules'  # show dirs but don't recurse (-P / --prune)
+lx -TZ -P target              # pruned tree with total sizes — a du replacement!
+```
+
+`-I` hides files entirely.  `-P` shows the directory (with its size and
+metadata) but doesn't recurse into it — perfect for tree views of projects
+with large build or dependency directories.
+
 ### Sorting
 
 ```sh
@@ -746,6 +758,10 @@ fly at shell startup.
 
 ### Planned for 0.5
 
+- `-P`/`--prune` — show directories but don't recurse (tree pruning)
+- `--dump-*` flags for copy-pasteable TOML config output
+- `--ignore` renamed from `--ignore-glob` (alias kept)
+- `--vcs-ignore` now hides VCS metadata directories (`.git`, `.jj`)
 - `--time-style=relative` ("2 hours ago")
 - Symlink display flags (`--symlinks=show|hide|follow`)
 - `--vcs-repos` (per-directory repo status)

@@ -63,15 +63,24 @@ pub struct FileFilter {
     /// patterns won’t be displayed in the list.
     pub ignore_patterns: IgnorePatterns,
 
+    /// Glob patterns to prune. Matching directories are shown (with
+    /// metadata and total-size) but not recursed into.
+    pub prune_patterns: IgnorePatterns,
+
     /// Whether to ignore VCS-ignored patterns.
     pub vcs_ignore: VcsIgnore,
 }
 
 impl FileFilter {
+    /// Whether a directory should be pruned (shown but not recursed into).
+    pub fn is_pruned(&self, file: &File<'_>) -> bool {
+        file.is_directory() && self.prune_patterns.is_matched(&file.name)
+    }
+
     /// Remove every file in the given vector that does *not* pass the
     /// filter predicate for files found inside a directory.
     pub fn filter_child_files(&self, files: &mut Vec<File<'_>>) {
-        files.retain(|f| ! self.ignore_patterns.is_ignored(&f.name));
+        files.retain(|f| ! self.ignore_patterns.is_matched(&f.name));
 
         if self.only_dirs {
             files.retain(File::is_directory);
@@ -93,7 +102,7 @@ impl FileFilter {
     /// from the glob, even though the globbing is done by the shell!
     pub fn filter_argument_files(&self, files: &mut Vec<File<'_>>) {
         files.retain(|f| {
-            ! self.ignore_patterns.is_ignored(&f.name)
+            ! self.ignore_patterns.is_matched(&f.name)
         });
     }
 
@@ -347,8 +356,8 @@ impl IgnorePatterns {
         Self { patterns: Vec::new() }
     }
 
-    /// Test whether the given file should be hidden from the results.
-    fn is_ignored(&self, file: &str) -> bool {
+    /// Test whether the given filename matches any of the patterns.
+    pub fn is_matched(&self, file: &str) -> bool {
         self.patterns.iter().any(|p| p.matches(file))
     }
 }
@@ -387,31 +396,31 @@ mod test_ignores {
     #[test]
     fn empty_matches_nothing() {
         let pats = IgnorePatterns::empty();
-        assert!(!pats.is_ignored("nothing"));
-        assert!(!pats.is_ignored("test.mp3"));
+        assert!(!pats.is_matched("nothing"));
+        assert!(!pats.is_matched("test.mp3"));
     }
 
     #[test]
     fn ignores_a_glob() {
         let (pats, fails) = IgnorePatterns::parse_from_iter(vec![ "*.mp3" ]);
         assert!(fails.is_empty());
-        assert!(!pats.is_ignored("nothing"));
-        assert!(pats.is_ignored("test.mp3"));
+        assert!(!pats.is_matched("nothing"));
+        assert!(pats.is_matched("test.mp3"));
     }
 
     #[test]
     fn ignores_an_exact_filename() {
         let (pats, fails) = IgnorePatterns::parse_from_iter(vec![ "nothing" ]);
         assert!(fails.is_empty());
-        assert!(pats.is_ignored("nothing"));
-        assert!(!pats.is_ignored("test.mp3"));
+        assert!(pats.is_matched("nothing"));
+        assert!(!pats.is_matched("test.mp3"));
     }
 
     #[test]
     fn ignores_both() {
         let (pats, fails) = IgnorePatterns::parse_from_iter(vec![ "nothing", "*.mp3" ]);
         assert!(fails.is_empty());
-        assert!(pats.is_ignored("nothing"));
-        assert!(pats.is_ignored("test.mp3"));
+        assert!(pats.is_matched("nothing"));
+        assert!(pats.is_matched("test.mp3"));
     }
 }

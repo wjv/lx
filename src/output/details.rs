@@ -251,7 +251,8 @@ impl<'a> Render<'a> {
 
                     let mut dir = None;
                     if let Some(r) = self.recurse
-                        && file.is_directory() && r.tree && ! r.is_too_deep(depth.0) {
+                        && file.is_directory() && r.tree && ! r.is_too_deep(depth.0)
+                        && ! self.filter.is_pruned(&file) {
                             match file.to_dir() {
                                 Ok(d) => {
                                     dir = Some(d);

@@ -20,6 +20,7 @@ impl FileFilter {
             sort_by_total_size: matches.has(flags::TOTAL_SIZE),
             dot_filter:       DotFilter::deduce(matches)?,
             ignore_patterns:  IgnorePatterns::deduce(matches)?,
+            prune_patterns:   IgnorePatterns::deduce_from(matches, flags::PRUNE)?,
             vcs_ignore:       VcsIgnore::deduce(matches),
         })
     }
@@ -196,20 +197,19 @@ impl IgnorePatterns {
     /// `--ignore-glob` argument's value. This is a list of strings
     /// separated by pipe (`|`) characters, given in any order.
     pub fn deduce(matches: &MatchedFlags) -> Result<Self, OptionsError> {
+        Self::deduce_from(matches, flags::IGNORE_GLOB)
+    }
 
-        // If there are no inputs, we return a set of patterns that doesn't
-        // match anything, rather than, say, `None`.
-        let inputs = match matches.get(flags::IGNORE_GLOB) {
+    /// Parse glob patterns from an arbitrary flag (used for both
+    /// `--ignore-glob` and `--prune`).
+    pub fn deduce_from(matches: &MatchedFlags, flag: &str) -> Result<Self, OptionsError> {
+        let inputs = match matches.get(flag) {
             Some(is)  => is,
             None      => return Ok(Self::empty()),
         };
 
-        // Awkwardly, though, a glob pattern can be invalid, and we need to
-        // deal with invalid patterns somehow.
         let (patterns, mut errors) = Self::parse_from_iter(inputs.split('|'));
 
-        // It can actually return more than one glob error,
-        // but we only use one. (TODO)
         match errors.pop() {
             Some(e)  => Err(e.into()),
             None     => Ok(patterns),

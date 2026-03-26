@@ -22,6 +22,7 @@ pub const LEVEL: &str = "level";
 pub const REVERSE: &str = "reverse";
 pub const SORT: &str = "sort";
 pub const IGNORE_GLOB: &str = "ignore-glob";
+pub const PRUNE: &str = "prune";
 pub const GROUP_DIRS: &str = "group-dirs";
 pub const DIRS_FIRST: &str = "group-directories-first";
 pub const DIRS_LAST: &str = "group-directories-last";

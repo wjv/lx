@@ -406,7 +406,7 @@ impl Lx {
                 if ! recurse_opts.tree && ! recurse_opts.is_too_deep(depth) {
 
                     let mut child_dirs = Vec::new();
-                    for child_dir in children.iter().filter(|f| f.is_directory() && ! f.is_all_all) {
+                    for child_dir in children.iter().filter(|f| f.is_directory() && ! f.is_all_all && ! self.options.filter.is_pruned(f)) {
                         match child_dir.to_dir() {
                             Ok(d)   => child_dirs.push(d),
                             Err(e)  => writeln!(io::stderr(), "{}: {}", child_dir.path.display(), e)?,

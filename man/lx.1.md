@@ -119,8 +119,16 @@ lowercase letter mix them: 'A' then 'a' then 'B' then 'b'.
 With `-Z`/`--total-size`, sorting by `size` uses the recursive
 directory total instead of the inode size.
 
-`-I`, `--ignore-glob=GLOBS`
-: Glob patterns, pipe-separated, of files to ignore.
+`-I`, `--ignore=GLOBS`
+: Glob patterns, pipe-separated, of files to hide completely.
+Alias: `--ignore-glob`.
+
+`-P`, `--prune=GLOBS`
+: Glob patterns, pipe-separated, of directories to show but not
+recurse into. The directory itself is displayed (with metadata and
+`--total-size` if active), but its children are hidden. Only
+meaningful with `-T` or `-R`; silently ignored otherwise.
+Alias: `--prune-glob`.
 
 `-F`, `-J`, `--group-dirs=WHEN`
 : Group directories before or after other files. WHEN is `first`, `last`,
