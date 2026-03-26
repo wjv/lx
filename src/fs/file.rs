@@ -66,6 +66,11 @@ pub struct File<'dir> {
     /// directory’s children, and are in fact added specifically by lx; this
     /// means that they should be skipped when recursing.
     pub is_all_all: bool,
+
+    /// Cached recursive directory size (computed lazily on first call to
+    /// `total_size()`).  Avoids recomputing when sorting and rendering
+    /// both need the value.
+    cached_total_size: std::sync::OnceLock<u64>,
 }
 
 impl<'dir> File<'dir> {
@@ -81,7 +86,7 @@ impl<'dir> File<'dir> {
         let metadata   = std::fs::symlink_metadata(&path)?;
         let is_all_all = false;
 
-        Ok(File { name, ext, path, metadata, parent_dir, is_all_all })
+        Ok(File { name, ext, path, metadata, parent_dir, is_all_all, cached_total_size: std::sync::OnceLock::new() })
     }
 
     pub fn new_aa_current(parent_dir: &'dir Dir) -> io::Result<File<'dir>> {
@@ -93,7 +98,7 @@ impl<'dir> File<'dir> {
         let is_all_all = true;
         let parent_dir = Some(parent_dir);
 
-        Ok(File { path, parent_dir, metadata, ext, name: ".".into(), is_all_all })
+        Ok(File { path, parent_dir, metadata, ext, name: ".".into(), is_all_all, cached_total_size: std::sync::OnceLock::new() })
     }
 
     pub fn new_aa_parent(path: PathBuf, parent_dir: &'dir Dir) -> io::Result<File<'dir>> {
@@ -104,7 +109,7 @@ impl<'dir> File<'dir> {
         let is_all_all = true;
         let parent_dir = Some(parent_dir);
 
-        Ok(File { path, parent_dir, metadata, ext, name: "..".into(), is_all_all })
+        Ok(File { path, parent_dir, metadata, ext, name: "..".into(), is_all_all, cached_total_size: std::sync::OnceLock::new() })
     }
 
     /// A file’s name is derived from its string. This needs to handle directories
@@ -261,7 +266,7 @@ impl<'dir> File<'dir> {
             Ok(metadata) => {
                 let ext  = File::ext(&path);
                 let name = File::filename(&path);
-                let file = File { parent_dir: None, path, ext, metadata, name, is_all_all: false };
+                let file = File { parent_dir: None, path, ext, metadata, name, is_all_all: false, cached_total_size: std::sync::OnceLock::new() };
                 FileTarget::Ok(Box::new(file))
             }
             Err(e) => {
@@ -364,7 +369,8 @@ impl<'dir> File<'dir> {
     /// sizes of all contents.
     pub fn total_size(&self) -> f::Size {
         if self.is_directory() {
-            f::Size::Some(Self::dir_total_size(&self.path))
+            let size = *self.cached_total_size.get_or_init(|| Self::dir_total_size(&self.path));
+            f::Size::Some(size)
         } else {
             self.size()
         }
