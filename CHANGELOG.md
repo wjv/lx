@@ -18,6 +18,8 @@ All notable changes to lx are documented here. lx is forked from
 - `--symlinks=show|hide|follow` — control symlink display and
   dereferencing (combines eza's `--no-symlinks`, `--follow-symlinks`,
   and `-X`/`--dereference` into one flag)
+- `--vcs-repos` — show per-directory VCS repo indicator (`G`/`J`/`-`)
+  with branch name for git repos
 - Hero screenshot in README
 
 ### Changed

@@ -303,6 +303,7 @@ const CANONICAL_ORDER: &[Column] = &[
     Column::Timestamp(TimeType::Created),
     Column::Timestamp(TimeType::Accessed),
     Column::VcsStatus,
+    Column::VcsRepos,
 ];
 
 /// Find the canonical insertion position for `col` within `columns`.
@@ -339,6 +340,7 @@ fn apply_individual_adds(matches: &MatchedFlags, columns: &mut Vec<Column>) {
         (matches.has(flags::GROUP),      Column::Group),
         (matches.has(flags::OCTAL),      Column::Octal),
         (matches.has(flags::VCS_STATUS), Column::VcsStatus),
+        (matches.has(flags::VCS_REPOS), Column::VcsRepos),
     ];
 
     for &(enabled, col) in adds {

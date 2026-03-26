@@ -258,3 +258,20 @@ impl Default for VcsFileStatus {
 // continue to compile during the migration.
 pub type Git = VcsFileStatus;
 pub type GitStatus = VcsStatus;
+
+
+/// Per-directory VCS repository status, for the `--vcs-repos` column.
+#[derive(Debug, Clone)]
+pub enum VcsRepoStatus {
+    /// This directory is not a VCS repository root.
+    None,
+    /// This directory is a VCS repository root.
+    Repo {
+        /// Which backend: "git" or "jj".
+        backend: &'static str,
+        /// Whether the working copy is clean (no uncommitted changes).
+        clean: bool,
+        /// The current branch or bookmark name (if detectable).
+        branch: Option<String>,
+    },
+}

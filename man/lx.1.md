@@ -291,21 +291,23 @@ The `jj` backend requires `lx` to be built with the `jj` feature flag.
 `--vcs-status`
 : Show per-file VCS status column. The column header shows the active
 backend: **Git** or **JJ**.
-
-`--vcs-ignore`
-: Hide files ignored by VCS. Works with both git and jj backends.
-
 Status characters: `-` not modified, `M` modified, `A` added (jj) /
 `N` new (git), `D` deleted, `R` renamed, `C` copied, `I` ignored,
 `U` untracked, `!` conflicted.
+**Git** shows two columns (staged + unstaged); when both are the same,
+they collapse into one character.
+**jj** shows two columns: change status (@ vs @-) and tracking status
+(`U` untracked, `I` ignored, space = tracked).
 
-**Git display:** two columns showing staged and unstaged status. When both
-are the same, they collapse into a single character.
+`--vcs-ignore`
+: Hide files ignored by VCS and VCS metadata directories (`.git`,
+`.jj`). Works with both git and jj backends.
 
-**jj display:** two columns with different semantics. Column 1 is the
-change status (working copy commit vs parent). Column 2 is the tracking
-status: `U` for untracked files, `I` for ignored files, or a space for
-tracked files.
+`--vcs-repos`
+: Show a per-directory VCS repository indicator column. For each
+directory, shows `G` (git repo), `J` (jj repo), or `-` (not a repo).
+Git repos also show the current branch name. Useful for scanning
+workspace directories containing multiple repositories.
 
 Note: the legacy `--git` and `--git-ignore` flags have been removed.
 Use `--vcs-status` and `--vcs-ignore` instead.

@@ -147,6 +147,52 @@ impl<'dir> File<'dir> {
         self.metadata.is_dir()
     }
 
+    /// Detect whether this directory is a VCS repository root.
+    /// Returns the backend type and clean/dirty status.
+    pub fn vcs_repo_status(&self) -> f::VcsRepoStatus {
+        if !self.is_directory() {
+            return f::VcsRepoStatus::None;
+        }
+
+        // Check for jj first (preferred when colocated).
+        if self.path.join(".jj").is_dir() {
+            return f::VcsRepoStatus::Repo {
+                backend: "jj",
+                clean: true,  // jj has no dirty concept
+                branch: None, // TODO: nearest bookmark
+            };
+        }
+
+        // Check for git.
+        if self.path.join(".git").exists() {
+            let (clean, branch) = Self::git_repo_info(&self.path);
+            return f::VcsRepoStatus::Repo {
+                backend: "git",
+                clean,
+                branch,
+            };
+        }
+
+        f::VcsRepoStatus::None
+    }
+
+    /// Query a git repo for clean/dirty status and current branch.
+    fn git_repo_info(path: &std::path::Path) -> (bool, Option<String>) {
+        #[cfg(feature = "git")]
+        {
+            if let Ok(repo) = git2::Repository::open(path) {
+                let clean = repo.statuses(None)
+                    .map(|s| s.is_empty())
+                    .unwrap_or(true);
+                let branch = repo.head().ok()
+                    .and_then(|h| h.shorthand().map(String::from));
+                return (clean, branch);
+            }
+        }
+        let _ = path;
+        (true, None)
+    }
+
     /// Whether this file is a directory, or a symlink pointing to a directory.
     pub fn points_to_directory(&self) -> bool {
         if self.is_directory() {

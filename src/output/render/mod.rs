@@ -7,6 +7,9 @@ pub use self::filetype::Colours as FiletypeColours;
 mod vcs;
 pub use self::vcs::Colours as VcsColours;
 
+mod vcs_repos;
+pub use self::vcs_repos::Colours as VcsReposColours;
+
 #[cfg(unix)]
 mod groups;
 #[cfg(unix)]

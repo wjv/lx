@@ -373,6 +373,13 @@ impl render::VcsColours for Theme {
     fn conflicted(&self)    -> Style { self.ui.vcs.conflicted }
 }
 
+impl render::VcsReposColours for Theme {
+    fn not_a_repo(&self)   -> Style { self.ui.punctuation }
+    fn clean_repo(&self)   -> Style { self.ui.vcs.new }       // green-ish
+    fn dirty_repo(&self)   -> Style { self.ui.vcs.modified }  // yellow-ish
+    fn jj_repo(&self)      -> Style { self.ui.vcs.new }       // green-ish (neutral)
+}
+
 #[cfg(unix)]
 impl render::GroupColours for Theme {
     fn yours(&self)      -> Style { self.ui.users.group_yours }

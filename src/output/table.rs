@@ -45,6 +45,7 @@ pub enum Column {
     #[cfg(unix)]
     Inode,
     VcsStatus,
+    VcsRepos,
     #[cfg(unix)]
     Octal,
 }
@@ -70,6 +71,7 @@ impl Column {
             #[cfg(unix)]
             Self::Inode             => "inode",
             Self::VcsStatus         => "vcs",
+            Self::VcsRepos          => "repos",
             #[cfg(unix)]
             Self::Octal             => "octal",
         }
@@ -96,6 +98,7 @@ impl Column {
             #[cfg(unix)]
             "inode"                 => Some(Self::Inode),
             "vcs"                   => Some(Self::VcsStatus),
+            "repos"                 => Some(Self::VcsRepos),
             #[cfg(unix)]
             "octal"                 => Some(Self::Octal),
             _                       => None,
@@ -124,6 +127,7 @@ impl Column {
             #[cfg(unix)]
             Self::Inode                 => "inode",
             Self::VcsStatus             => "vcs",
+            Self::VcsRepos              => "repos",
             #[cfg(unix)]
             Self::Octal                 => "octal",
         }
@@ -183,6 +187,7 @@ impl Column {
             #[cfg(unix)]
             Self::Inode         => "inode",
             Self::VcsStatus     => "VCS",
+            Self::VcsRepos      => "Repo",
             #[cfg(unix)]
             Self::Octal         => "Octal",
         }
@@ -412,6 +417,9 @@ impl<'a, 'f> Table<'a> {
             Column::VcsStatus => {
                 let backend = self.vcs.map(|v| v.header_name()).unwrap_or("VCS");
                 self.vcs_status(file).render(self.theme, backend)
+            }
+            Column::VcsRepos => {
+                file.vcs_repo_status().render(self.theme)
             }
             #[cfg(unix)]
             Column::Octal => {

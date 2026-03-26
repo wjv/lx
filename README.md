@@ -771,11 +771,12 @@ fly at shell startup.
 - `--dirs-first`/`--dirs-last` shortened from `--group-directories-*`
 - **`--symlinks=show|hide|follow`** — control symlink display and
   dereferencing
+- **`--vcs-repos`** — per-directory VCS repo indicator (`G`/`J`/`-`)
+  with git branch name
 - `--vcs-ignore` now hides VCS metadata directories (`.git`, `.jj`)
 
 ### Planned
 
-- `--vcs-repos` (per-directory repo status)
 - Migrate icon assignment to use the class system
 - Polish and bug fixes from daily driving
 
@@ -797,14 +798,16 @@ of `exa` maintained by Christina Sørensen and collaborators. These were
 reimplemented from scratch for `lx` and sometimes differ from their `eza`
 counterparts:
 
-| Feature                    | eza flag                   | lx flag                  |
-|----------------------------|----------------------------|--------------------------|
-| Recursive directory sizing | `--total-size`             | `--total-size` / `-Z`    |
-| List only files            | `--only-files`             | `--only-files` / `-f`    |
-| Filename quoting           | `--no-quotes` (default on) | `--quotes` (default off) |
-| Terminal hyperlinks        | `--hyperlink`              | `--hyperlink`            |
-| Explicit terminal width    | `--width`                  | `--width` / `-w`         |
-| Absolute paths             | `--absolute`               | `--absolute` / `-A`      |
+| Feature                    | eza flag                                     | lx flag                         |
+|----------------------------|----------------------------------------------|---------------------------------|
+| Recursive directory sizing | `--total-size`                               | `--total-size` / `-Z`           |
+| List only files            | `--only-files`                               | `--only-files` / `-f`           |
+| Filename quoting           | `--no-quotes` (default on)                   | `--quotes` (default off)        |
+| Terminal hyperlinks        | `--hyperlink`                                | `--hyperlink`                   |
+| Explicit terminal width    | `--width`                                    | `--width` / `-w`                |
+| Absolute paths             | `--absolute`                                 | `--absolute` / `-A`             |
+| Symlink control            | `--no-symlinks` + `--follow-symlinks` + `-X` | `--symlinks=show\|hide\|follow` |
+| Per-directory repo status  | `--git-repos`                                | `--vcs-repos`                   |
 
 
 ## Licence

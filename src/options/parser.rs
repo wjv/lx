@@ -491,6 +491,11 @@ Environment variables:\n  \
             .help("Hide VCS-ignored files and metadata directories")
             .help_heading("VCS")
             .action(ArgAction::Count))
+        .arg(Arg::new(flags::VCS_REPOS)
+            .long("vcs-repos")
+            .help("Show per-directory VCS repo indicator")
+            .help_heading("VCS")
+            .action(ArgAction::Count))
 
         // ── Appearance ────────────────────────────────────────────
 

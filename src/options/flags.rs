@@ -74,6 +74,7 @@ pub const PERSONALITY: &str = "personality";
 pub const VCS: &str = "vcs";
 pub const VCS_STATUS: &str = "vcs-status";
 pub const VCS_IGNORE: &str = "vcs-ignore";
+pub const VCS_REPOS: &str = "vcs-repos";
 
 // theme selection
 pub const THEME: &str = "theme";
