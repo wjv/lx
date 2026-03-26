@@ -69,6 +69,23 @@ pub struct FileFilter {
 
     /// Whether to ignore VCS-ignored patterns.
     pub vcs_ignore: VcsIgnore,
+
+    /// How to handle symlinks.
+    pub symlink_mode: SymlinkMode,
+}
+
+
+/// How symlinks should be handled.
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Default)]
+pub enum SymlinkMode {
+    /// Show symlinks as-is (default).
+    #[default]
+    Show,
+    /// Hide symlinks from listings.
+    Hide,
+    /// Follow (dereference) symlinks: show target metadata, recurse
+    /// into symlinked directories.
+    Follow,
 }
 
 impl FileFilter {
@@ -81,6 +98,18 @@ impl FileFilter {
     /// filter predicate for files found inside a directory.
     pub fn filter_child_files(&self, files: &mut Vec<File<'_>>) {
         files.retain(|f| ! self.ignore_patterns.is_matched(&f.name));
+
+        match self.symlink_mode {
+            SymlinkMode::Hide => {
+                files.retain(|f| ! f.is_link());
+            }
+            SymlinkMode::Follow => {
+                for f in files.iter_mut() {
+                    f.deref_link();
+                }
+            }
+            SymlinkMode::Show => {}
+        }
 
         if self.only_dirs {
             files.retain(File::is_directory);
@@ -104,6 +133,12 @@ impl FileFilter {
         files.retain(|f| {
             ! self.ignore_patterns.is_matched(&f.name)
         });
+
+        if self.symlink_mode == SymlinkMode::Follow {
+            for f in files.iter_mut() {
+                f.deref_link();
+            }
+        }
     }
 
     /// Sort the files in the given vector based on the sort field option.

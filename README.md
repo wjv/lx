@@ -769,11 +769,12 @@ fly at shell startup.
 - `--ignore` renamed from `--ignore-glob` (alias kept)
 - `--octal` renamed from `--octal-permissions` (alias kept)
 - `--dirs-first`/`--dirs-last` shortened from `--group-directories-*`
+- **`--symlinks=show|hide|follow`** — control symlink display and
+  dereferencing
 - `--vcs-ignore` now hides VCS metadata directories (`.git`, `.jj`)
 
 ### Planned
 
-- Symlink display flags (`--symlinks=show|hide|follow`)
 - `--vcs-repos` (per-directory repo status)
 - Migrate icon assignment to use the class system
 - Polish and bug fixes from daily driving

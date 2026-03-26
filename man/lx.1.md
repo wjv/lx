@@ -130,6 +130,13 @@ recurse into. The directory itself is displayed (with metadata and
 meaningful with `-T` or `-R`; silently ignored otherwise.
 Alias: `--prune-glob`.
 
+`--symlinks=MODE`
+: How to handle symbolic links. MODE is `show` (default), `hide`, or
+`follow`.  `show` displays symlinks as-is.  `hide` removes symlinks
+from listings.  `follow` dereferences symlinks, showing the target's
+metadata, and recurses into symlinked directories in `-T`/`-R` mode.
+Broken symlinks are always shown regardless of mode.
+
 `--group-dirs=WHEN`
 : Group directories before or after other files. WHEN is `first`, `last`,
 or `none`.

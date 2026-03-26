@@ -1,7 +1,7 @@
 //! Parsing the options for `FileFilter`.
 
 use crate::fs::DotFilter;
-use crate::fs::filter::{FileFilter, SortField, SortCase, GroupDirs, IgnorePatterns, VcsIgnore};
+use crate::fs::filter::{FileFilter, SortField, SortCase, GroupDirs, IgnorePatterns, SymlinkMode, VcsIgnore};
 
 use crate::options::{flags, OptionsError};
 use crate::options::parser::MatchedFlags;
@@ -22,6 +22,7 @@ impl FileFilter {
             ignore_patterns:  IgnorePatterns::deduce(matches)?,
             prune_patterns:   IgnorePatterns::deduce_from(matches, flags::PRUNE)?,
             vcs_ignore:       VcsIgnore::deduce(matches),
+            symlink_mode:     SymlinkMode::deduce(matches),
         })
     }
 }
@@ -225,6 +226,16 @@ impl VcsIgnore {
         }
         else {
             Self::Off
+        }
+    }
+}
+
+impl SymlinkMode {
+    pub fn deduce(matches: &MatchedFlags) -> Self {
+        match matches.get(flags::SYMLINKS) {
+            Some("hide")   => Self::Hide,
+            Some("follow") => Self::Follow,
+            _              => Self::Show,
         }
     }
 }

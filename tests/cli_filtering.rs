@@ -1,4 +1,4 @@
-//! Tests for file filtering: --ignore (-I), --prune (-P).
+//! Tests for file filtering: --ignore (-I), --prune (-P), --symlinks.
 
 mod support;
 
@@ -179,4 +179,106 @@ fn ignore_and_prune_compose() {
         .stdout(predicate::str::contains("target"))
         .stdout(predicate::str::contains("debug").not())
         .stdout(predicate::str::contains("main.rs"));
+}
+
+
+// ── --symlinks ───────────────────────────────────────────────────
+
+/// Create a fixture with regular files and symlinks.
+fn symlink_fixture() -> tempfile::TempDir {
+    use std::os::unix::fs as unix_fs;
+
+    let dir = tempdir().expect("failed to create tempdir");
+    let root = dir.path();
+
+    fs::write(root.join("real.txt"), "content").unwrap();
+    fs::write(root.join("target.rs"), "fn main() {}").unwrap();
+    unix_fs::symlink("target.rs", root.join("link.rs")).unwrap();
+    // Broken symlink:
+    unix_fs::symlink("nonexistent", root.join("broken.rs")).unwrap();
+
+    dir
+}
+
+#[test]
+fn symlinks_show_is_default() {
+    let dir = symlink_fixture();
+
+    // Default: symlinks visible (including broken ones).
+    lx_no_colour()
+        .args(["-1"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("real.txt"))
+        .stdout(predicate::str::contains("link.rs"))
+        .stdout(predicate::str::contains("broken.rs"));
+}
+
+#[test]
+fn symlinks_hide() {
+    let dir = symlink_fixture();
+
+    lx_no_colour()
+        .args(["-1", "--symlinks=hide"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("real.txt"))
+        .stdout(predicate::str::contains("target.rs"))
+        .stdout(predicate::str::contains("link.rs").not())
+        .stdout(predicate::str::contains("broken.rs").not());
+}
+
+#[test]
+fn symlinks_follow_shows_target_metadata() {
+    let dir = symlink_fixture();
+
+    // With follow, a valid symlink should show the target's size,
+    // not the symlink's size (which is just the path length).
+    lx_no_colour()
+        .args(["-l", "--symlinks=follow"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        // link.rs should appear as a regular file (not 'l' prefix)
+        // and have the same size as target.rs
+        .stdout(predicate::str::contains("link.rs"))
+        // The broken symlink stays as-is (can't dereference)
+        .stdout(predicate::str::contains("broken.rs"));
+}
+
+#[test]
+fn symlinks_follow_recurses_into_linked_dirs() {
+    use std::os::unix::fs as unix_fs;
+
+    let dir = tempdir().expect("failed to create tempdir");
+    let root = dir.path();
+
+    fs::create_dir_all(root.join("real_dir")).unwrap();
+    fs::write(root.join("real_dir/inner.txt"), "inside").unwrap();
+    unix_fs::symlink("real_dir", root.join("linked_dir")).unwrap();
+
+    // Without follow, -T should NOT recurse into linked_dir.
+    lx_no_colour()
+        .args(["-T", "--symlinks=show"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("linked_dir"))
+        // inner.txt should appear under real_dir but NOT under linked_dir
+        .stdout(predicate::str::contains("inner.txt"));
+
+    // With follow, -T should recurse into linked_dir since it
+    // now looks like a real directory.
+    let output = lx_no_colour()
+        .args(["-T", "--symlinks=follow"])
+        .arg(dir.path())
+        .output()
+        .expect("failed to run lx");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // inner.txt should appear twice — once under real_dir, once under linked_dir
+    assert_eq!(stdout.matches("inner.txt").count(), 2,
+        "Expected inner.txt twice (under real_dir and linked_dir), got:\n{stdout}");
 }

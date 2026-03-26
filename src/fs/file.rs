@@ -193,6 +193,18 @@ impl<'dir> File<'dir> {
         self.metadata.file_type().is_symlink()
     }
 
+    /// Dereference this file if it is a symlink: replace its metadata with
+    /// the target's metadata (using `std::fs::metadata` which follows
+    /// symlinks).  No-op if the file is not a symlink or the target cannot
+    /// be stat'd.
+    pub fn deref_link(&mut self) {
+        if self.is_link() {
+            if let Ok(target_meta) = std::fs::metadata(&self.path) {
+                self.metadata = target_meta;
+            }
+        }
+    }
+
     /// Whether this file is a named pipe on the filesystem.
     #[cfg(unix)]
     pub fn is_pipe(&self) -> bool {

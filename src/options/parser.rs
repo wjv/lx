@@ -200,6 +200,17 @@ Environment variables:\n  \
             .help_heading("Filtering")
             .action(ArgAction::Set)
             .value_name("GLOB"))
+        .arg(Arg::new(flags::SYMLINKS)
+            .long("symlinks")
+            .help("How to handle symlinks [show, hide, follow]")
+            .help_heading("Filtering")
+            .action(ArgAction::Set)
+            .value_name("MODE")
+            .value_parser([
+                PossibleValue::new("show"),
+                PossibleValue::new("hide"),
+                PossibleValue::new("follow"),
+            ]))
         .arg(Arg::new(flags::PRUNE)
             .short('P').long("prune")
             .visible_alias("prune-glob")

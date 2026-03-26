@@ -15,6 +15,9 @@ All notable changes to lx are documented here. lx is forked from
   `=NAME` = single definition)
 - `--init-config`, `--upgrade-config`, `--completions` now visible in
   `--help` output
+- `--symlinks=show|hide|follow` — control symlink display and
+  dereferencing (combines eza's `--no-symlinks`, `--follow-symlinks`,
+  and `-X`/`--dereference` into one flag)
 - Hero screenshot in README
 
 ### Changed
