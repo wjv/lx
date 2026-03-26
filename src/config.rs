@@ -997,6 +997,388 @@ pub fn show_config(personality_name: &str) {
 }
 
 
+// ── dump-theme ──────────────────────────────────────────────────────
+
+/// Names of all known themes (compiled-in + config).
+fn all_theme_names() -> Vec<String> {
+    let mut names = vec!["exa".to_string()];
+    if let Some(ref cfg) = *CONFIG {
+        for name in cfg.theme.keys() {
+            if !names.contains(name) {
+                names.push(name.clone());
+            }
+        }
+    }
+    names.sort();
+    names
+}
+
+/// Format a theme definition as TOML.
+fn format_theme_toml(name: &str) -> Option<String> {
+    if name == "exa" {
+        // The "exa" theme is compiled-in from default_theme.rs and can't
+        // be round-tripped to TOML.  Show a helpful comment instead.
+        return Some(format!(
+            "# [theme.exa] is compiled-in and cannot be dumped as TOML.\n\
+             # To customise, create a new theme that inherits from it:\n\
+             #\n\
+             # [theme.custom]\n\
+             # inherits = \"exa\"\n\
+             # directory = \"bold dodgerblue\"\n\
+             # date = \"steelblue\""
+        ));
+    }
+
+    let cfg = CONFIG.as_ref()?;
+    let theme = cfg.theme.get(name)?;
+    let mut lines = vec![format!("[theme.{name}]")];
+
+    if let Some(ref inherits) = theme.inherits {
+        lines.push(format!("inherits = \"{inherits}\""));
+    }
+    if let Some(ref use_style) = theme.use_style {
+        lines.push(format!("use-style = \"{use_style}\""));
+    }
+
+    let mut keys: Vec<_> = theme.ui.keys().collect();
+    keys.sort();
+    for key in keys {
+        lines.push(format!("{key} = \"{}\"", theme.ui[key]));
+    }
+
+    Some(lines.join("\n"))
+}
+
+/// Print a single theme definition as copy-pasteable TOML.
+pub fn dump_theme(name: &str) {
+    match format_theme_toml(name) {
+        Some(toml) => println!("{toml}"),
+        None => {
+            eprintln!("lx: unknown theme '{name}'");
+            eprintln!("Known themes: {}", all_theme_names().join(", "));
+            std::process::exit(3);
+        }
+    }
+}
+
+/// Print all theme definitions as copy-pasteable TOML.
+pub fn dump_theme_all() {
+    let names = all_theme_names();
+    let mut first = true;
+    for name in &names {
+        if let Some(toml) = format_theme_toml(name) {
+            if !first { println!(); }
+            println!("{toml}");
+            first = false;
+        }
+    }
+}
+
+// ── dump-style ──────────────────────────────────────────────────────
+
+/// Names of all known styles (compiled-in + config).
+fn all_style_names() -> Vec<String> {
+    let mut names = vec!["exa".to_string()];
+    if let Some(ref cfg) = *CONFIG {
+        for name in cfg.style.keys() {
+            if !names.contains(name) {
+                names.push(name.clone());
+            }
+        }
+    }
+    names.sort();
+    names
+}
+
+/// Format a style definition as TOML.
+fn format_style_toml(name: &str) -> Option<String> {
+    let style = resolve_style(name)?;
+    let mut lines = vec![format!("[style.{name}]")];
+
+    // Class references.
+    let mut keys: Vec<_> = style.classes.keys().collect();
+    keys.sort();
+    for key in keys {
+        lines.push(format!("class.{key} = \"{}\"", style.classes[key]));
+    }
+
+    // File patterns.
+    let mut keys: Vec<_> = style.patterns.keys().collect();
+    keys.sort();
+    for key in keys {
+        lines.push(format!("\"{key}\" = \"{}\"", style.patterns[key]));
+    }
+
+    Some(lines.join("\n"))
+}
+
+/// Print a single style definition as copy-pasteable TOML.
+pub fn dump_style(name: &str) {
+    match format_style_toml(name) {
+        Some(toml) => println!("{toml}"),
+        None => {
+            eprintln!("lx: unknown style '{name}'");
+            eprintln!("Known styles: {}", all_style_names().join(", "));
+            std::process::exit(3);
+        }
+    }
+}
+
+/// Print all style definitions as copy-pasteable TOML.
+pub fn dump_style_all() {
+    let names = all_style_names();
+    let mut first = true;
+    for name in &names {
+        if let Some(toml) = format_style_toml(name) {
+            if !first { println!(); }
+            println!("{toml}");
+            first = false;
+        }
+    }
+}
+
+// ── dump-personality ────────────────────────────────────────────────
+
+/// Names of all compiled-in personalities.
+const COMPILED_PERSONALITIES: &[&str] = &[
+    "default", "lx", "ll", "lll", "la", "tree", "ls",
+];
+
+/// Return the names of all known personalities (compiled-in + config).
+fn all_personality_names() -> Vec<String> {
+    let mut names: Vec<String> = COMPILED_PERSONALITIES.iter()
+        .map(|s| (*s).into())
+        .collect();
+    if let Some(ref cfg) = *CONFIG {
+        for name in cfg.personality.keys() {
+            if !names.iter().any(|n| n == name) {
+                names.push(name.clone());
+            }
+        }
+    }
+    names.sort();
+    names
+}
+
+/// Format a personality definition as TOML.
+fn format_personality_toml(name: &str) -> Option<String> {
+    // Look up the *unresolved* definition (without inheritance merging)
+    // so the TOML output matches what you'd write in a config file.
+    let def = lookup_personality(name)?;
+    let mut lines = vec![format!("[personality.{name}]")];
+
+    if let Some(ref inherits) = def.inherits {
+        lines.push(format!("inherits = \"{inherits}\""));
+    }
+    if let Some(ref format) = def.format {
+        lines.push(format!("format = \"{format}\""));
+    }
+    if let Some(ref columns) = def.columns {
+        let entries: Vec<String> = columns.to_csv()
+            .split(',')
+            .map(|s| format!("\"{}\"", s.trim()))
+            .collect();
+        lines.push(format!("columns = [{}]", entries.join(", ")));
+    }
+
+    // Sort settings for stable output.
+    let mut keys: Vec<_> = def.settings.keys().collect();
+    keys.sort();
+    for key in keys {
+        let value = &def.settings[key];
+        match value {
+            toml::Value::String(s) => lines.push(format!("{key} = \"{s}\"")),
+            toml::Value::Boolean(b) => lines.push(format!("{key} = {b}")),
+            toml::Value::Integer(i) => lines.push(format!("{key} = {i}")),
+            toml::Value::Float(f) => lines.push(format!("{key} = {f}")),
+            _ => lines.push(format!("{key} = {value}")),
+        }
+    }
+
+    Some(lines.join("\n"))
+}
+
+/// Print a single personality definition as copy-pasteable TOML.
+pub fn dump_personality(name: &str) {
+    match format_personality_toml(name) {
+        Some(toml) => println!("{toml}"),
+        None => {
+            eprintln!("lx: unknown personality '{name}'");
+            eprintln!("Known personalities: {}", all_personality_names().join(", "));
+            std::process::exit(3);
+        }
+    }
+}
+
+/// Print all personality definitions as copy-pasteable TOML.
+pub fn dump_personality_all() {
+    let names = all_personality_names();
+    let mut first = true;
+    for name in &names {
+        if let Some(toml) = format_personality_toml(name) {
+            if !first { println!(); }
+            println!("{toml}");
+            first = false;
+        }
+    }
+}
+
+/// Format a single class definition as TOML.
+fn format_class_toml(name: &str, patterns: &[String]) -> String {
+    // Format as a TOML array that's readable — wrap at ~72 chars.
+    let indent = " ".repeat(name.len() + 4); // align continuation lines
+    let mut lines = vec![format!("{name} = [")];
+
+    for (i, pat) in patterns.iter().enumerate() {
+        let entry = format!("\"{}\"", pat);
+        let last = lines.last_mut().unwrap();
+
+        if i == 0 {
+            last.push_str(&entry);
+        } else {
+            // Would adding ", entry" exceed 72 chars?
+            let trial_len = last.len() + 2 + entry.len();
+            if trial_len > 72 {
+                last.push(',');
+                lines.push(format!("{indent}{entry}"));
+            } else {
+                last.push_str(", ");
+                last.push_str(&entry);
+            }
+        }
+    }
+    lines.last_mut().unwrap().push(']');
+    lines.join("\n")
+}
+
+/// Print a single class definition as copy-pasteable TOML.
+pub fn show_class(name: &str) {
+    let classes = resolve_classes();
+    match classes.get(name) {
+        Some(patterns) => {
+            println!("[class]");
+            println!("{}", format_class_toml(name, patterns));
+        }
+        None => {
+            eprintln!("lx: unknown class '{name}'");
+            eprintln!("Known classes: {}", {
+                let mut names: Vec<_> = classes.keys().collect();
+                names.sort();
+                names.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
+            });
+            std::process::exit(3);
+        }
+    }
+}
+
+/// Print all class definitions as copy-pasteable TOML.
+pub fn show_class_all() {
+    let classes = resolve_classes();
+    let mut names: Vec<_> = classes.keys().collect();
+    names.sort();
+
+    println!("[class]");
+    for name in names {
+        println!("{}", format_class_toml(name, &classes[name]));
+    }
+}
+
+/// The compiled-in format definitions as column name strings.
+fn compiled_formats() -> HashMap<String, Vec<String>> {
+    HashMap::from([
+        ("long".into(), vec![
+            "perms".into(), "size".into(), "user".into(), "modified".into(),
+        ]),
+        ("long2".into(), vec![
+            "perms".into(), "size".into(), "user".into(), "group".into(),
+            "modified".into(), "vcs".into(),
+        ]),
+        ("long3".into(), vec![
+            "perms".into(), "links".into(), "size".into(), "blocks".into(),
+            "user".into(), "group".into(), "modified".into(), "changed".into(),
+            "created".into(), "accessed".into(), "vcs".into(),
+        ]),
+    ])
+}
+
+/// Resolve all format definitions: compiled-in + config overrides.
+/// Returns a map of format name → list of column name strings.
+pub fn resolve_formats() -> HashMap<String, Vec<String>> {
+    let mut formats = compiled_formats();
+
+    // Config overrides.
+    if let Some(ref cfg) = *CONFIG {
+        for (name, columns) in &cfg.format {
+            formats.insert(name.clone(), columns.clone());
+        }
+    }
+
+    formats
+}
+
+/// Print a single format definition as copy-pasteable TOML.
+pub fn show_format(name: &str) {
+    let formats = resolve_formats();
+    match formats.get(name) {
+        Some(columns) => {
+            println!("[format]");
+            println!("{}", format_format_toml(name, columns));
+        }
+        None => {
+            eprintln!("lx: unknown format '{name}'");
+            eprintln!("Known formats: {}", {
+                let mut names: Vec<_> = formats.keys().collect();
+                names.sort();
+                names.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
+            });
+            std::process::exit(3);
+        }
+    }
+}
+
+/// Print all format definitions as copy-pasteable TOML.
+pub fn show_format_all() {
+    let formats = resolve_formats();
+    let mut names: Vec<_> = formats.keys().collect();
+    names.sort();
+
+    println!("[format]");
+    for name in names {
+        println!("{}", format_format_toml(name, &formats[name]));
+    }
+}
+
+/// Format a single format definition as TOML.
+fn format_format_toml(name: &str, columns: &[String]) -> String {
+    let entries: Vec<String> = columns.iter().map(|c| format!("\"{c}\"")).collect();
+    let body = entries.join(", ");
+    let line = format!("{name} = [{body}]");
+    if line.len() <= 72 {
+        line
+    } else {
+        // Wrap like class definitions.
+        let indent = " ".repeat(name.len() + 4);
+        let mut lines = vec![format!("{name} = [")];
+        for (i, entry) in entries.iter().enumerate() {
+            let last = lines.last_mut().unwrap();
+            if i == 0 {
+                last.push_str(entry);
+            } else {
+                let trial_len = last.len() + 2 + entry.len();
+                if trial_len > 72 {
+                    last.push(',');
+                    lines.push(format!("{indent}{entry}"));
+                } else {
+                    last.push_str(", ");
+                    last.push_str(entry);
+                }
+            }
+        }
+        lines.last_mut().unwrap().push(']');
+        lines.join("\n")
+    }
+}
+
 /// Upgrade an older config file to the current format.
 ///
 /// Detects the source version and applies the appropriate migration:

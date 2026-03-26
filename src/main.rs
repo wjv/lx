@@ -187,6 +187,46 @@ fn main() {
             config::show_config(name);
         }
 
+        OptionsResult::DumpClass(ref name) => {
+            if name.is_empty() {
+                config::show_class_all();
+            } else {
+                config::show_class(name);
+            }
+        }
+
+        OptionsResult::DumpFormat(ref name) => {
+            if name.is_empty() {
+                config::show_format_all();
+            } else {
+                config::show_format(name);
+            }
+        }
+
+        OptionsResult::DumpPersonality(ref name) => {
+            if name.is_empty() {
+                config::dump_personality_all();
+            } else {
+                config::dump_personality(name);
+            }
+        }
+
+        OptionsResult::DumpTheme(ref name) => {
+            if name.is_empty() {
+                config::dump_theme_all();
+            } else {
+                config::dump_theme(name);
+            }
+        }
+
+        OptionsResult::DumpStyle(ref name) => {
+            if name.is_empty() {
+                config::dump_style_all();
+            } else {
+                config::dump_style(name);
+            }
+        }
+
         OptionsResult::UpgradeConfig => {
             let Some(path) = config::find_config_path() else {
                 eprintln!("lx: no config file found to upgrade");

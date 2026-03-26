@@ -109,6 +109,51 @@ impl Options {
                     return OptionsResult::ShowConfig;
                 }
 
+                if clap_matches.contains_id("dump-class")
+                    && clap_matches.value_source("dump-class") == Some(clap::parser::ValueSource::CommandLine)
+                {
+                    let name = clap_matches.get_one::<String>("dump-class")
+                        .cloned()
+                        .unwrap_or_default();
+                    return OptionsResult::DumpClass(name);
+                }
+
+                if clap_matches.contains_id("dump-format")
+                    && clap_matches.value_source("dump-format") == Some(clap::parser::ValueSource::CommandLine)
+                {
+                    let name = clap_matches.get_one::<String>("dump-format")
+                        .cloned()
+                        .unwrap_or_default();
+                    return OptionsResult::DumpFormat(name);
+                }
+
+                if clap_matches.contains_id("dump-personality")
+                    && clap_matches.value_source("dump-personality") == Some(clap::parser::ValueSource::CommandLine)
+                {
+                    let name = clap_matches.get_one::<String>("dump-personality")
+                        .cloned()
+                        .unwrap_or_default();
+                    return OptionsResult::DumpPersonality(name);
+                }
+
+                if clap_matches.contains_id("dump-theme")
+                    && clap_matches.value_source("dump-theme") == Some(clap::parser::ValueSource::CommandLine)
+                {
+                    let name = clap_matches.get_one::<String>("dump-theme")
+                        .cloned()
+                        .unwrap_or_default();
+                    return OptionsResult::DumpTheme(name);
+                }
+
+                if clap_matches.contains_id("dump-style")
+                    && clap_matches.value_source("dump-style") == Some(clap::parser::ValueSource::CommandLine)
+                {
+                    let name = clap_matches.get_one::<String>("dump-style")
+                        .cloned()
+                        .unwrap_or_default();
+                    return OptionsResult::DumpStyle(name);
+                }
+
                 if clap_matches.get_flag("init-config") {
                     return OptionsResult::InitConfig;
                 }
@@ -204,6 +249,22 @@ pub enum OptionsResult {
 
     /// The user wants to see the active configuration.
     ShowConfig,
+
+    /// The user wants to see class definitions as TOML.
+    /// Empty string means all classes; otherwise a specific class name.
+    DumpClass(String),
+
+    /// The user wants to see format definitions as TOML.
+    DumpFormat(String),
+
+    /// The user wants to see personality definitions as TOML.
+    DumpPersonality(String),
+
+    /// The user wants to see theme definitions as TOML.
+    DumpTheme(String),
+
+    /// The user wants to see style definitions as TOML.
+    DumpStyle(String),
 
     /// The user wants to generate a default config file.
     InitConfig,

@@ -95,7 +95,8 @@ Or `la` for a long listing that also shows hidden files:
 alias la="ls -la"
 ```
 
-`lx` *embraces* the idea of being called by different names. It calls this "personalities". The idea is pretty simple:
+`lx` *embraces* the idea of being called by different names. It calls this 
+"personalities". The idea is pretty simple:
 
 1. Define a *personality* in `lx`'s configuration — `ll`, for instance:
 
@@ -172,6 +173,8 @@ Generate a starter config with:
 ```sh
 lx --init-config
 ```
+
+
 
 This creates `~/.lxconfig.toml`. The file is self-documenting — prose comments 
 (starting with `##`) explain each section, while commented-out values (starting 
@@ -380,6 +383,23 @@ refers to the compiled-in default theme and style.  Without
 
 See [`lxconfig.toml(5)`](man/lxconfig.toml.5.md) for the full
 list of theme keys, style syntax, and built-in class definitions.
+
+
+### Debugging your configuration
+
+To see the active configuration, use `lx --show-config`. To extract 
+copy-pasteable TOML definitions for any config object, use the `--dump-*` 
+flags:
+
+```sh
+lx --show-config              # overview of active config
+
+lx --dump-class               # dump all class definitions as TOML
+lx --dump-class=temp          # dump a single class
+lx --dump-format=long2        # dump a single format
+lx --dump-personality=ll      # dump a single personality
+lx --dump-style=exa           # dump the exa style
+```
 
 
 ### Config file locations
@@ -746,8 +766,8 @@ system, output rendering, and column system are all his work. Thank you! 🌟
 
 Several features were inspired by
 [`eza`](https://github.com/eza-community/eza), the active community fork
-of `exa` maintained by Christina Sørensen and collaborators. These were 
-reimplemented from scratch for `lx` and sometimes differ from their `eza` 
+of `exa` maintained by Christina Sørensen and collaborators. These were
+reimplemented from scratch for `lx` and sometimes differ from their `eza`
 counterparts:
 
 | Feature                    | eza flag                   | lx flag                  |
@@ -757,7 +777,7 @@ counterparts:
 | Filename quoting           | `--no-quotes` (default on) | `--quotes` (default off) |
 | Terminal hyperlinks        | `--hyperlink`              | `--hyperlink`            |
 | Explicit terminal width    | `--width`                  | `--width` / `-w`         |
-| Absolute paths             | `--absolute`               | `--absolute`             |
+| Absolute paths             | `--absolute`               | `--absolute` / `-A`      |
 
 
 ## Licence

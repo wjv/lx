@@ -101,6 +101,33 @@ impl Column {
             _                       => None,
         }
     }
+
+    /// Return the canonical name used in config files and `--columns`.
+    pub fn to_name(self) -> &'static str {
+        match self {
+            Self::Permissions           => "perms",
+            Self::FileSize              => "size",
+            Self::Timestamp(t)          => match t {
+                TimeType::Modified => "modified",
+                TimeType::Changed  => "changed",
+                TimeType::Accessed => "accessed",
+                TimeType::Created  => "created",
+            },
+            #[cfg(unix)]
+            Self::Blocks                => "blocks",
+            #[cfg(unix)]
+            Self::User                  => "user",
+            #[cfg(unix)]
+            Self::Group                 => "group",
+            #[cfg(unix)]
+            Self::HardLinks             => "links",
+            #[cfg(unix)]
+            Self::Inode                 => "inode",
+            Self::VcsStatus             => "vcs",
+            #[cfg(unix)]
+            Self::Octal                 => "octal",
+        }
+    }
 }
 
 /// Each column can pick its own **Alignment**. Usually, numbers are

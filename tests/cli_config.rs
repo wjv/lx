@@ -524,3 +524,170 @@ fn no_config_file_is_fine() {
         .success()
         .stdout(predicate::str::contains("Cargo.toml"));
 }
+
+
+// ── --dump-class ─────────────────────────────────────────────────
+
+#[test]
+fn dump_class_all() {
+    lx_no_colour()
+        .arg("--dump-class")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[class]"))
+        .stdout(predicate::str::contains("temp = ["))
+        .stdout(predicate::str::contains("image = ["));
+}
+
+#[test]
+fn dump_class_single() {
+    lx_no_colour()
+        .arg("--dump-class=temp")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[class]"))
+        .stdout(predicate::str::contains("temp = ["))
+        .stdout(predicate::str::contains("*.tmp"));
+}
+
+#[test]
+fn dump_class_unknown() {
+    lx_no_colour()
+        .arg("--dump-class=bogus")
+        .assert()
+        .failure()
+        .code(3)
+        .stderr(predicate::str::contains("unknown class"))
+        .stderr(predicate::str::contains("Known classes:"));
+}
+
+// ── --dump-format ────────────────────────────────────────────────
+
+#[test]
+fn dump_format_all() {
+    lx_no_colour()
+        .arg("--dump-format")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[format]"))
+        .stdout(predicate::str::contains("long = ["))
+        .stdout(predicate::str::contains("long3 = ["));
+}
+
+#[test]
+fn dump_format_single() {
+    lx_no_colour()
+        .arg("--dump-format=long2")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[format]"))
+        .stdout(predicate::str::contains("long2 = ["))
+        .stdout(predicate::str::contains("\"perms\""));
+}
+
+#[test]
+fn dump_format_unknown() {
+    lx_no_colour()
+        .arg("--dump-format=bogus")
+        .assert()
+        .failure()
+        .code(3)
+        .stderr(predicate::str::contains("unknown format"))
+        .stderr(predicate::str::contains("Known formats:"));
+}
+
+// ── --dump-personality ───────────────────────────────────────────
+
+#[test]
+fn dump_personality_all() {
+    lx_no_colour()
+        .arg("--dump-personality")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[personality.ll]"))
+        .stdout(predicate::str::contains("[personality.tree]"));
+}
+
+#[test]
+fn dump_personality_single() {
+    lx_no_colour()
+        .arg("--dump-personality=ll")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[personality.ll]"))
+        .stdout(predicate::str::contains("inherits = \"lx\""))
+        .stdout(predicate::str::contains("format = \"long2\""));
+}
+
+#[test]
+fn dump_personality_unknown() {
+    lx_no_colour()
+        .arg("--dump-personality=bogus")
+        .assert()
+        .failure()
+        .code(3)
+        .stderr(predicate::str::contains("unknown personality"))
+        .stderr(predicate::str::contains("Known personalities:"));
+}
+
+// ── --dump-theme ─────────────────────────────────────────────────
+
+#[test]
+fn dump_theme_exa() {
+    lx_no_colour()
+        .arg("--dump-theme=exa")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("compiled-in"))
+        .stdout(predicate::str::contains("inherits = \"exa\""));
+}
+
+#[test]
+fn dump_theme_unknown() {
+    lx_no_colour()
+        .arg("--dump-theme=bogus")
+        .assert()
+        .failure()
+        .code(3)
+        .stderr(predicate::str::contains("unknown theme"));
+}
+
+// ── --dump-style ─────────────────────────────────────────────────
+
+#[test]
+fn dump_style_exa() {
+    lx_no_colour()
+        .arg("--dump-style=exa")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[style.exa]"))
+        .stdout(predicate::str::contains("class.image"))
+        .stdout(predicate::str::contains("class.temp"));
+}
+
+#[test]
+fn dump_style_unknown() {
+    lx_no_colour()
+        .arg("--dump-style=bogus")
+        .assert()
+        .failure()
+        .code(3)
+        .stderr(predicate::str::contains("unknown style"));
+}
+
+// ── --dump with config overrides ─────────────────────────────────
+
+#[test]
+fn dump_class_shows_config_override() {
+    let (_dir, mut cmd) = lx_with_config(r#"
+[class]
+temp = ["*.tmp", "*.bak"]
+"#);
+
+    cmd.arg("--dump-class=temp")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"*.tmp\", \"*.bak\""))
+        // Should NOT contain the compiled-in patterns that were overridden
+        .stdout(predicate::str::contains("*.swp").not());
+}

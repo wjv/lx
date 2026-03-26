@@ -5,6 +5,12 @@ All notable changes to lx are documented here. lx is forked from
 
 ## [Unreleased]
 
+### Added
+- `--dump-class`, `--dump-format`, `--dump-personality`, `--dump-theme`,
+  `--dump-style` flags for copy-pasteable TOML output (bare = all,
+  `=NAME` = single definition)
+- `--init-config` now visible in `--help` output
+
 ## [0.4.0] — 2026-03-26
 
 ### Added

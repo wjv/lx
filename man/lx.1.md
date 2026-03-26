@@ -305,6 +305,34 @@ version. If you have a legacy config from an earlier version, run
 
 See **lxconfig.toml**(5) for full config file documentation.
 
+`--show-config`
+: Show a coloured summary of the active configuration and exit.
+
+`--init-config`
+: Generate a commented starter config file at `~/.lxconfig.toml`.
+
+`--upgrade-config`
+: Upgrade a legacy config file to the current format.
+
+The `--dump-*` flags output copy-pasteable TOML definitions. Each
+accepts an optional `=NAME` to dump a single definition, or dumps all
+when used bare:
+
+`--dump-class`[`=NAME`]
+: Dump file-type class definitions.
+
+`--dump-format`[`=NAME`]
+: Dump column format definitions.
+
+`--dump-personality`[`=NAME`]
+: Dump personality definitions (before inheritance merging).
+
+`--dump-theme`[`=NAME`]
+: Dump theme definitions.
+
+`--dump-style`[`=NAME`]
+: Dump style definitions.
+
 
 ENVIRONMENT VARIABLES
 =====================
