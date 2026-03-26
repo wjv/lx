@@ -5,7 +5,7 @@ All notable changes to lx are documented here. lx is forked from
 
 ## [Unreleased]
 
-## [0.4.0] — unreleased (the jj release)
+## [0.4.0] — 2026-03-26
 
 ### Added
 - First-class Jujutsu (jj) support via `jj-lib` crate (opt-in `jj`

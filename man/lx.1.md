@@ -122,9 +122,10 @@ directory total instead of the inode size.
 `-I`, `--ignore-glob=GLOBS`
 : Glob patterns, pipe-separated, of files to ignore.
 
-`--group-dirs=WHEN`
+`-F`, `-J`, `--group-dirs=WHEN`
 : Group directories before or after other files. WHEN is `first`, `last`,
-or `none`. Legacy alias: `--group-directories-first`.
+or `none`. `-F` is short for `--group-dirs=first`, `-J` is short for
+`--group-dirs=last`. Legacy alias: `--group-directories-first`.
 
 
 LONG VIEW OPTIONS
