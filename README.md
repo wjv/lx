@@ -719,7 +719,10 @@ fly at shell startup.
   - Dynamic column header: **Git** or **JJ**
   - Works with colocated, non-colocated, and external git repos
 - `-F`/`-J` short flags for `--group-dirs=first`/`last`
+- `-o` short flag for `--octal-permissions`
+- `-A` short flag for `--absolute`
 - Canonical column insertion order for individual flags
+- Coloured `--show-config` output
 
 ### Planned for 0.5
 
