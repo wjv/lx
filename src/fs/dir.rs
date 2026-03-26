@@ -123,6 +123,11 @@ impl<'dir> Files<'dir, '_> {
                     if git_status.unstaged == VcsStatus::Ignored {
                          continue;
                     }
+
+                    // Hide VCS metadata directories for compiled-in backends.
+                    if path.is_dir() && is_vcs_dir(&filename) {
+                        continue;
+                    }
                 }
 
                 return Some(File::from_args(path.clone(), self.dir, filename)
@@ -189,6 +194,22 @@ pub enum DotFilter {
     /// Just show files, hiding anything beginning with a dot.
     #[default]
     JustFiles,
+}
+
+
+/// Whether a directory name is a VCS metadata directory that should be
+/// hidden by `--vcs-ignore`.  Only includes directories for VCS backends
+/// that are compiled in.
+fn is_vcs_dir(name: &str) -> bool {
+    #[cfg(feature = "git")]
+    if name == ".git" { return true; }
+
+    #[cfg(feature = "jj")]
+    if name == ".jj" { return true; }
+
+    // Suppress unused-variable warning when no VCS features are enabled.
+    let _ = name;
+    false
 }
 
 
