@@ -5,6 +5,8 @@ the standard `ls` command.
 
 But… `lx` is a file lister with *personality!* 🌟
 
+<img src="docs/images/hero.svg" alt="lx output showing long view with VCS status, file type colours, and size gradient">
+
 
 ## Highlights
 
@@ -47,7 +49,7 @@ What makes `lx` stand out from the crowd?
   Built-in backends for both [Git](https://git-scm.com) and
   [Jujutsu](https://jj-vcs.dev/latest/).  VCS auto-detection supported.
 
-For the design principles behind the CLI, see [DESIGN.md](DESIGN.md).
+For the design principles behind the CLI, see [docs/DESIGN.md](DESIGN.md).
 
 
 ## Quick start
