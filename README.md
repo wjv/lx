@@ -775,9 +775,16 @@ fly at shell startup.
   with git branch name
 - `--vcs-ignore` now hides VCS metadata directories (`.git`, `.jj`)
 
+### What's new in 0.6
+
+- **Icon → class migration** — media-type icons now use the `[class]`
+  config system; custom class definitions affect icons too
+- **`--total-size` parallelised** — recursive directory sizing now uses
+  all available cores, making large tree listings significantly faster
+- Dead code removed (`src/info/` module)
+
 ### Planned
 
-- Migrate icon assignment to use the class system
 - Polish and bug fixes from daily driving
 
 

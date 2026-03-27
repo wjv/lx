@@ -5,6 +5,18 @@ All notable changes to lx are documented here. lx is forked from
 
 ## [Unreleased]
 
+### Changed
+- Icon assignment migrated to the class system: media-type icons
+  (audio, image, video) now use `[class]` config instead of hard-coded
+  extension checks.  Custom class definitions affect icons too.
+- `--total-size` parallelised with rayon
+
+### Removed
+- `src/info/` module (dead code: `filetype.rs` extension checks
+  superseded by class system, `sources.rs` never called)
+
+## [0.5.0] — 2026-03-27
+
 ### Added
 - `-P`/`--prune` — show directories but don't recurse into them
   (tree pruning); same glob syntax as `-I`/`--ignore`
