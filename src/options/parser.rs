@@ -107,11 +107,11 @@ pub fn build_command() -> Command {
         .after_help("\
 Environment variables:\n  \
   COLUMNS          Override terminal width (characters)\n  \
-  LX_GRID_ROWS    Minimum rows before grid-details view activates\n  \
-  LX_ICON_SPACING Spaces between icon and file name\n  \
+  LX_GRID_ROWS     Minimum rows before grid-details view activates\n  \
+  LX_ICON_SPACING  Spaces between icon and file name\n  \
   NO_COLOR         Disable colours (overridden by --colour)\n  \
   LS_COLORS        File-type colour scheme\n  \
-  LX_COLORS       Extended colour scheme (UI elements and metadata)\n  \
+  LX_COLORS        Extended colour scheme (UI elements and metadata)\n  \
   TIME_STYLE       Default timestamp style (overridden by --time-style)")
 
         // ── Display mode ──────────────────────────────────────────
@@ -158,10 +158,11 @@ Environment variables:\n  \
             .value_parser(clap::value_parser!(usize)))
         .arg(Arg::new(flags::CLASSIFY)
             .long("classify")
-            .help("Display file kind indicators")
+            .help("Display file kind indicators [always, auto, never]")
             .help_heading("Display")
             .action(ArgAction::Set)
             .value_name("WHEN")
+            .hide_possible_values(true)
             .value_parser([
                 PossibleValue::new("always"),
                 PossibleValue::new("auto"),
@@ -206,6 +207,7 @@ Environment variables:\n  \
             .help_heading("Filtering")
             .action(ArgAction::Set)
             .value_name("MODE")
+            .hide_possible_values(true)
             .value_parser([
                 PossibleValue::new("show"),
                 PossibleValue::new("hide"),
@@ -214,7 +216,7 @@ Environment variables:\n  \
         .arg(Arg::new(flags::PRUNE)
             .short('P').long("prune")
             .visible_alias("prune-glob")
-            .help("Glob patterns of directories to show but not recurse into")
+            .help("Glob patterns of directories to show but not recurse")
             .help_heading("Filtering")
             .action(ArgAction::Set)
             .value_name("GLOB"))
@@ -225,17 +227,20 @@ Environment variables:\n  \
             .action(ArgAction::Count))
         .arg(Arg::new(flags::SORT)
             .short('s').long("sort")
-            .help("Sort field")
+            .help("Sort field\n[name, Name, size, extension, Extension,\
+                  modified, changed, accessed, created, type, none, inode]")
             .help_heading("Filtering")
             .action(ArgAction::Set)
             .value_name("FIELD")
+            .hide_possible_values(true)
             .value_parser(sort_values()))
         .arg(Arg::new(flags::GROUP_DIRS)
             .long("group-dirs")
-            .help("Group directories before or after other files")
+            .help("Group directories before or after other files\n[first, last, none]")
             .help_heading("Filtering")
             .action(ArgAction::Set)
             .value_name("WHEN")
+            .hide_possible_values(true)
             .overrides_with_all([flags::DIRS_FIRST, flags::DIRS_LAST])
             .value_parser([
                 PossibleValue::new("first"),
@@ -246,7 +251,7 @@ Environment variables:\n  \
             .short('F')
             .long("dirs-first")
             .alias("group-directories-first")
-            .help("Directories first (short for --group-dirs=first)")
+            .help("Directories first [short for --group-dirs=first]")
             .help_heading("Filtering")
             .action(ArgAction::SetTrue)
             .overrides_with_all([flags::GROUP_DIRS, flags::DIRS_LAST]))
@@ -254,7 +259,7 @@ Environment variables:\n  \
             .short('J')
             .long("dirs-last")
             .alias("group-directories-last")
-            .help("Directories last (short for --group-dirs=last)")
+            .help("Directories last [short for --group-dirs=last]")
             .help_heading("Filtering")
             .action(ArgAction::SetTrue)
             .overrides_with_all([flags::GROUP_DIRS, flags::DIRS_FIRST]))
@@ -305,8 +310,8 @@ Environment variables:\n  \
             .action(ArgAction::Count))
         .arg(Arg::new(flags::OCTAL)
             .short('o').long("octal")
-            .visible_alias("octal-permissions")
-            .help("Show permissions in octal format")
+            .alias("octal-permissions")
+            .help("Show permissions in octal format\n[aliases: --octal-permissions]")
             .help_heading("Long view")
             .action(ArgAction::Count))
         .arg(Arg::new(flags::TOTAL_SIZE)
@@ -319,6 +324,34 @@ Environment variables:\n  \
             .help("Show extended attributes and sizes")
             .help_heading("Long view")
             .action(ArgAction::Count))
+
+        // ── Column / format / personality ─────────────────────────
+
+        .arg(Arg::new(flags::PERSONALITY)
+            .short('p').long("personality")
+            .help("Apply a named personality (columns + flags) 🌟\n[ll, lll, la, tree, ...]")
+            .help_heading("Personalities & Formats")
+            .action(ArgAction::Set)
+            .value_name("NAME"))
+        .arg(Arg::new(flags::COLUMNS)
+            .long("columns")
+            .help("Explicit column list (comma-separated)")
+            .help_heading("Personalities & Formats")
+            .action(ArgAction::Set)
+            .value_name("COLS"))
+        .arg(Arg::new(flags::FORMAT)
+            .long("format")
+            .help("Named column format [long, long2, long3, ...]")
+            .help_heading("Personalities & Formats")
+            .action(ArgAction::Set)
+            .value_name("NAME")
+            .hide_possible_values(true)
+            .value_parser({
+                let names = crate::options::view::format_names();
+                names.into_iter()
+                    .map(|s| { let leaked: &'static str = Box::leak(s.into_boxed_str()); PossibleValue::new(leaked) })
+                    .collect::<Vec<_>>()
+            }))
 
         // ── Timestamps ────────────────────────────────────────────
 
@@ -344,10 +377,11 @@ Environment variables:\n  \
             .action(ArgAction::Count))
         .arg(Arg::new(flags::TIME)
             .short('t').long("time")
-            .help("Which timestamp field to display")
+            .help("Which timestamp field to display\n[modified, changed, accessed, created]")
             .help_heading("Timestamps")
             .action(ArgAction::Set)
             .value_name("FIELD")
+            .hide_possible_values(true)
             .value_parser([
                 PossibleValue::new("modified"),
                 PossibleValue::new("changed"),
@@ -366,7 +400,7 @@ Environment variables:\n  \
             ]))
         .arg(Arg::new(flags::TIME_STYLE)
             .long("time-style")
-            .help("How to format timestamps [default, iso, long-iso, full-iso, relative, +FORMAT]")
+            .help("How to format timestamps\n[default, iso, long-iso, full-iso,\nrelative, +FORMAT]")
             .help_heading("Timestamps")
             .action(ArgAction::Set)
             .value_name("STYLE"))
@@ -440,33 +474,6 @@ Environment variables:\n  \
             .help_heading("Column visibility")
             .action(ArgAction::Count))
 
-        // ── Column / format / personality ─────────────────────────
-
-        .arg(Arg::new(flags::COLUMNS)
-            .long("columns")
-            .help("Explicit column list (comma-separated)")
-            .help_heading("Formats & personalities")
-            .action(ArgAction::Set)
-            .value_name("COLS"))
-        .arg(Arg::new(flags::FORMAT)
-            .long("format")
-            .help("Named column format")
-            .help_heading("Formats & personalities")
-            .action(ArgAction::Set)
-            .value_name("NAME")
-            .value_parser({
-                let names = crate::options::view::format_names();
-                names.into_iter()
-                    .map(|s| { let leaked: &'static str = Box::leak(s.into_boxed_str()); PossibleValue::new(leaked) })
-                    .collect::<Vec<_>>()
-            }))
-        .arg(Arg::new(flags::PERSONALITY)
-            .short('p').long("personality")
-            .help("Apply a named personality (columns + flags)")
-            .help_heading("Formats & personalities")
-            .action(ArgAction::Set)
-            .value_name("NAME"))
-
         // ── VCS ───────────────────────────────────────────────────
 
         .arg(Arg::new(flags::VCS)
@@ -475,6 +482,7 @@ Environment variables:\n  \
             .help_heading("VCS")
             .action(ArgAction::Set)
             .value_name("BACKEND")
+            .hide_possible_values(true)
             .value_parser([
                 PossibleValue::new("auto"),
                 PossibleValue::new("git"),
@@ -501,10 +509,11 @@ Environment variables:\n  \
 
         .arg(Arg::new(flags::COLOR)
             .long("colour").visible_alias("color")
-            .help("When to use terminal colours")
+            .help("When to use terminal colours\n[always, auto, never]")
             .help_heading("Appearance")
             .action(ArgAction::Set)
             .value_name("WHEN")
+            .hide_possible_values(true)
             .value_parser([
                 PossibleValue::new("always"),
                 PossibleValue::new("auto"),
@@ -513,10 +522,11 @@ Environment variables:\n  \
             ]))
         .arg(Arg::new(flags::COLOR_SCALE)
             .long("colour-scale").visible_alias("color-scale")
-            .help("Colour file sizes on a scale")
+            .help("Colour file sizes on a scale\n[16, 256, none]")
             .help_heading("Appearance")
             .action(ArgAction::Set)
             .value_name("MODE")
+            .hide_possible_values(true)
             .value_parser([
                 PossibleValue::new("16"),
                 PossibleValue::new("256"),
@@ -527,10 +537,11 @@ Environment variables:\n  \
             .default_missing_value("16"))
         .arg(Arg::new(flags::ICONS)
             .long("icons")
-            .help("Display icons next to file names")
+            .help("Display icons next to file names\n[always, auto, never]")
             .help_heading("Appearance")
             .action(ArgAction::Set)
             .value_name("WHEN")
+            .hide_possible_values(true)
             .value_parser([
                 PossibleValue::new("always"),
                 PossibleValue::new("auto"),
@@ -547,20 +558,22 @@ Environment variables:\n  \
             .value_name("NAME"))
         .arg(Arg::new("hyperlink")
             .long("hyperlink")
-            .help("File names as clickable hyperlinks")
+            .help("File names as clickable hyperlinks\n[always, auto, never]")
             .help_heading("Appearance")
             .action(ArgAction::Set)
             .value_name("WHEN")
+            .hide_possible_values(true)
             .default_missing_value("always")
             .require_equals(true)
             .num_args(0..=1)
             .value_parser(["always", "auto", "never"]))
         .arg(Arg::new("quotes")
             .long("quotes")
-            .help("Quote file names containing spaces")
+            .help("Quote file names containing spaces\n[always, auto, never]")
             .help_heading("Appearance")
             .action(ArgAction::Set)
             .value_name("WHEN")
+            .hide_possible_values(true)
             .default_missing_value("always")
             .require_equals(true)
             .num_args(0..=1)
@@ -639,10 +652,11 @@ Environment variables:\n  \
             .action(ArgAction::SetTrue))
         .arg(Arg::new("completions")
             .long("completions")
-            .help("Generate shell completions")
+            .help("Generate shell completions\n[bash, zsh, fish, elvish, powershell]")
             .help_heading("Shell completions")
             .action(ArgAction::Set)
             .value_name("SHELL")
+            .hide_possible_values(true)
             .value_parser(clap::value_parser!(clap_complete::Shell)))
 
         // ── Help & version ────────────────────────────────────────

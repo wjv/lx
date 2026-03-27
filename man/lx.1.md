@@ -107,8 +107,8 @@ Valid sort fields are '`name`', '`Name`', '`extension`', '`Extension`',
 '`inode`', '`type`', and '`none`'.
 
 The '`modified`' sort field has the aliases '`date`', '`time`', '`mod`',
-and '`newest`'.  Its reverse order has the aliases '`age`', '`old`',
-and '`oldest`'.  Other aliases: '`ext`' for `extension`, '`Ext`' for
+and '`newest`'.  Its reverse order has the aliases '`age`' and
+'`oldest`'.  Other aliases: '`ext`' for `extension`, '`Ext`' for
 `Extension`, '`ch`' for `changed`, '`acc`' for `accessed`, '`cr`' for
 `created`.
 
