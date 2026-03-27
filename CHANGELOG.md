@@ -3,7 +3,7 @@
 All notable changes to lx are documented here. lx is forked from
 [exa](https://github.com/ogham/exa) v0.10.1.
 
-## [Unreleased]
+## [0.5.0] — 2026-03-27
 
 ### Added
 - `-P`/`--prune` — show directories but don't recurse into them
