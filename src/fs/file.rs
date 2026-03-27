@@ -435,33 +435,32 @@ impl<'dir> File<'dir> {
     }
 
     /// Recursively sum file sizes in a directory.
+    ///
+    /// Uses rayon to parallelise subdirectory walks for performance
+    /// on multi-core systems.  The syscall overhead (many `stat()`
+    /// calls) dominates, so parallelism lets the kernel pipeline I/O.
     fn dir_total_size(path: &std::path::Path) -> u64 {
-        let mut total = 0u64;
+        use rayon::prelude::*;
 
-        let entries = match std::fs::read_dir(path) {
-            Ok(e) => e,
+        let entries: Vec<_> = match std::fs::read_dir(path) {
+            Ok(e) => e.filter_map(|e| e.ok()).collect(),
             Err(_) => return 0,
         };
 
-        for entry in entries {
-            let entry = match entry {
-                Ok(e) => e,
-                Err(_) => continue,
+        entries.par_iter().map(|entry| {
+            let ft = match entry.file_type() {
+                Ok(ft) => ft,
+                Err(_) => return 0,
             };
 
-            let metadata = match entry.metadata() {
-                Ok(m) => m,
-                Err(_) => continue,
-            };
-
-            if metadata.is_dir() {
-                total += Self::dir_total_size(&entry.path());
+            if ft.is_dir() {
+                Self::dir_total_size(&entry.path())
+            } else if ft.is_file() {
+                entry.metadata().map(|m| m.len()).unwrap_or(0)
             } else {
-                total += metadata.len();
+                0
             }
-        }
-
-        total
+        }).sum()
     }
 
     /// This file’s last modified timestamp, if available on this platform.

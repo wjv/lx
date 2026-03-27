@@ -42,7 +42,6 @@ use crate::theme::Theme;
 
 mod config;
 mod fs;
-mod info;
 mod logger;
 mod options;
 mod output;
