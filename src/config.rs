@@ -106,7 +106,9 @@ static SETTING_FLAGS: &[SettingDef] = &[
     SettingDef { key: "tree",          flag: "--tree",           kind: SettingKind::Bool },
     SettingDef { key: "classify",      flag: "--classify",       kind: SettingKind::Str },
     SettingDef { key: "colour",        flag: "--colour",         kind: SettingKind::Str },
+    SettingDef { key: "color",         flag: "--colour",         kind: SettingKind::Str },
     SettingDef { key: "colour-scale",  flag: "--colour-scale",   kind: SettingKind::Str },
+    SettingDef { key: "color-scale",   flag: "--colour-scale",   kind: SettingKind::Str },
     SettingDef { key: "icons",         flag: "--icons",          kind: SettingKind::Str },
 
     // filtering and sorting
