@@ -1,32 +1,14 @@
 use nu_ansi_term::Style;
 
 use crate::fs::File;
-use crate::info::filetype::FileExtensions;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
 
-pub trait FileIcon {
-    fn icon_file(&self, file: &File<'_>) -> Option<char>;
-}
-
-
-#[derive(Copy, Clone)]
-pub enum Icons {
-    Audio,
-    Image,
-    Video,
-}
-
-impl Icons {
-    pub fn value(self) -> char {
-        match self {
-            Self::Audio  => '\u{f001}',
-            Self::Image  => '\u{f1c5}',
-            Self::Video  => '\u{f03d}',
-        }
-    }
-}
+/// Icons for media-type classes (audio, image, video).
+const ICON_AUDIO: char = '\u{f001}'; //
+const ICON_IMAGE: char = '\u{f1c5}'; //
+const ICON_VIDEO: char = '\u{f03d}'; //
 
 
 /// Converts the style used to paint a file name into the style that should be
@@ -91,9 +73,39 @@ static MAP_BY_NAME: LazyLock<HashMap<&'static str, char>> = LazyLock::new(|| {
         m
 });
 
-pub fn icon_for_file(file: &File<'_>) -> char {
-    let extensions = Box::new(FileExtensions);
+/// Check if a file matches a media-type class and return its icon.
+/// Uses the class system from config, so user-defined classes are respected.
+fn class_icon(file: &File<'_>) -> Option<char> {
+    static CLASS_ICONS: LazyLock<Vec<(glob::Pattern, char)>> = LazyLock::new(|| {
+        let classes = crate::config::resolve_classes();
+        let mut mappings = Vec::new();
 
+        let class_to_icon: &[(&str, char)] = &[
+            ("music",    ICON_AUDIO),
+            ("lossless", ICON_AUDIO),
+            ("image",    ICON_IMAGE),
+            ("video",    ICON_VIDEO),
+        ];
+
+        for &(class_name, icon) in class_to_icon {
+            if let Some(patterns) = classes.get(class_name) {
+                for pat_str in patterns {
+                    if let Ok(pat) = glob::Pattern::new(pat_str) {
+                        mappings.push((pat, icon));
+                    }
+                }
+            }
+        }
+        mappings
+    });
+
+    let name = &file.name;
+    CLASS_ICONS.iter()
+        .find(|(pat, _)| pat.matches(name))
+        .map(|(_, icon)| *icon)
+}
+
+pub fn icon_for_file(file: &File<'_>) -> char {
     if let Some(icon) = MAP_BY_NAME.get(file.name.as_str()) { *icon }
     else if file.points_to_directory() {
         match file.name.as_str() {
@@ -103,7 +115,7 @@ pub fn icon_for_file(file: &File<'_>) -> char {
             _               => '\u{f115}'  // 
         }
     }
-    else if let Some(icon) = extensions.icon_file(file) { icon }
+    else if let Some(icon) = class_icon(file) { icon }
     else if let Some(ext) = file.ext.as_ref() {
         match ext.as_str() {
             "ai"            => '\u{e7b4}', // 
