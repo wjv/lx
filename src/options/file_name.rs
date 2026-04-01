@@ -1,3 +1,5 @@
+use std::io::IsTerminal;
+
 use crate::options::{flags, OptionsError, NumberSource};
 use crate::options::parser::MatchedFlags;
 use crate::options::vars::{self, Vars};
@@ -10,8 +12,11 @@ impl Options {
         let classify = Classify::deduce(matches);
         let show_icons = ShowIcons::deduce(matches, vars)?;
         let absolute = matches.has(flags::ABSOLUTE);
-        let hyperlink = matches!(matches.get(flags::HYPERLINK),
-            Some("always" | "auto"));
+        let hyperlink = match matches.get(flags::HYPERLINK) {
+            Some("always") => true,
+            Some("auto")   => std::io::stdout().is_terminal(),
+            _              => false,
+        };
         let quotes = match matches.get(flags::QUOTES) {
             Some("always" | "auto") => Quotes::Always,
             _ => Quotes::Never,
@@ -25,7 +30,7 @@ impl Classify {
     fn deduce(matches: &MatchedFlags) -> Self {
         match matches.get(flags::CLASSIFY) {
             Some("always")  => Self::AddFileIndicators,
-            Some("auto")    => Self::AddFileIndicators,  // TODO: check TTY
+            Some("auto")    => if std::io::stdout().is_terminal() { Self::AddFileIndicators } else { Self::JustFilenames },
             Some("never")   => Self::JustFilenames,
             _               => Self::JustFilenames,
         }
@@ -42,7 +47,7 @@ impl ShowIcons {
         // Check --icons=WHEN value.
         let show = match matches.get(flags::ICONS) {
             Some("always")  => true,
-            Some("auto")    => true,   // TODO: check TTY
+            Some("auto")    => std::io::stdout().is_terminal(),
             Some("never")   => false,
             _               => false,  // absent = off
         };
