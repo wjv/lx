@@ -6,6 +6,12 @@ All notable changes to lx are documented here. lx is forked from
 ## [Unreleased]
 
 ### Added
+- `-C`/`--count` — print the total number of items listed to stderr.
+  Works with all view modes including tree and recursive.
+
+## [0.6.0] — 2026-04-01
+
+### Added
 - **Drop-in config directory** (`conf.d/`): load additional TOML
   fragments from `~/.config/lx/conf.d/` (or XDG/macOS equivalent).
   Files loaded in alphabetical order; later files override earlier
@@ -16,14 +22,16 @@ All notable changes to lx are documented here. lx is forked from
   `conf.d/` to activate.
 - `--show-config` now lists loaded drop-in files.
 - Accept US spelling `color` and `color-scale` in config file.
+- Published on crates.io as `lx-ls` (`cargo install lx-ls`).
 
 ### Changed
 - Icon assignment migrated to the class system: media-type icons
   (audio, image, video) now use `[class]` config instead of hard-coded
   extension checks.  Custom class definitions affect icons too.
-- `--total-size` parallelised with rayon
+- `--total-size` parallelised with rayon — significantly faster on
+  large trees, especially on network filesystems.
 - `--help` tidied: possible values shown inline, noisy aliases hidden.
-- 33 clippy auto-fixes (collapsed ifs, if-let, unnested or-patterns).
+- Crate renamed from `lx` to `lx-ls` for crates.io (binary is still `lx`).
 
 ### Removed
 - `src/info/` module (dead code: `filetype.rs` extension checks

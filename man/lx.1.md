@@ -48,6 +48,12 @@ links, blocks).
 : Display file kind indicators next to file names. WHEN is `always`,
 `auto`, or `never`.
 
+`-C`, `--count`
+: Print the total number of items listed to stderr.  The count
+reflects the items actually displayed (after filtering), excluding
+header rows.  Works with all view modes including tree and recursive
+listings.
+
 `--colour=WHEN`
 : When to use terminal colours. WHEN is `always`, `auto`, or `never`.
 Alias: `--color`.

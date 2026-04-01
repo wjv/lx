@@ -776,80 +776,15 @@ fly at shell startup.
 - `lx` is an experiment under active development. Literally anything may still
   change, including the details of the user interface!
 
-## Roadmap
+## Recent highlights
 
-### What's new in 0.3
+- **`-C`/`--count`** — print item count to stderr (0.7)
+- **Drop-in config directory** (`conf.d/`) and curated theme library (0.6)
+- **`--total-size` parallelised** with rayon (0.6)
+- **First-class Jujutsu support** via `jj-lib` (0.4)
+- Published on [crates.io](https://crates.io/crates/lx-ls) as `lx-ls`
 
-- **File-type classes** (`[class]`) — named lists of glob patterns
-  (`image`, `video`, `music`, etc.), with compiled-in defaults that
-  can be overridden in the config.
-- **Unified style system** — styles reference classes via bare
-  dotted TOML keys (`class.NAME = "colour"`) and file patterns via
-  quoted keys.  Compiled-in "exa" style maps classes to default
-  colours.
-- **`--show-config`** — diagnostic flag showing the active
-  personality, theme, style, classes, and formats with their source
-  (compiled-in vs config).
-- **`la` personality** — compiled-in, inherits from `ll` with
-  hidden files shown.
-- **Flat formats** — `[format]` section is now flat (keys are format
-  names, values are column lists).
-- **Explicit exa chain** — default personality → exa theme → exa
-  style, with no magic fallback.
-- **Config version 0.3** — upgrade tool handles 0.1→0.3 and 0.2→0.3
-  migrations.
-- `--git` and `--git-ignore` legacy flags removed.
-- `--group-directories-first` precedence fixed.
-
-### What's new in 0.4
-
-- **First-class Jujutsu support** — opt-in `jj` feature flag using
-  `jj-lib` for direct workspace access (no CLI subprocess):
-  - Two-column VCS display: change status + tracking status
-  - `A` (added) matches jj's own `diff --summary` output
-  - `--vcs-ignore` with full gitignore support (all layers:
-    global excludes, `.git/info/exclude`, per-directory `.gitignore`)
-  - Untracked (`U`) and conflicted (`!`) file detection
-  - Dynamic column header: **Git** or **JJ**
-  - Works with colocated, non-colocated, and external git repos
-- `-F`/`-J` short flags for `--group-dirs=first`/`last`
-- `-o` short flag for `--octal-permissions`
-- `-A` short flag for `--absolute`
-- Canonical column insertion order for individual flags
-- Coloured `--show-config` output
-
-### What's new in 0.5
-
-- **`-P`/`--prune`** — show directories but don't recurse (tree pruning)
-- **`--time-style=relative`** — "2 hours ago" style timestamps
-- **`--time-style='+FORMAT'`** — custom strftime format strings
-- **`--dump-*` flags** — copy-pasteable TOML for all config objects
-- **`--help` reorganised** with section headings
-- **`--total-size` performance** — ~3x faster on large trees
-- `--ignore` renamed from `--ignore-glob` (alias kept)
-- `--octal` renamed from `--octal-permissions` (alias kept)
-- `--dirs-first`/`--dirs-last` shortened from `--group-directories-*`
-- **`--symlinks=show|hide|follow`** — control symlink display and
-  dereferencing
-- **`--vcs-repos`** — per-directory VCS repo indicator (`G`/`J`/`-`)
-  with git branch name
-- `--vcs-ignore` now hides VCS metadata directories (`.git`, `.jj`)
-
-### What's new in 0.6
-
-- **Drop-in config directory** (`conf.d/`) — install themes and styles
-  by dropping TOML files into `~/.config/lx/conf.d/`, no editing needed
-- **Curated theme library** — Catppuccin Mocha, Dracula, Gruvbox Dark,
-  Nord, Solarized Dark, Solarized Light (see `themes/`)
-- **Icon → class migration** — media-type icons now use the `[class]`
-  config system; custom class definitions affect icons too
-- **`--total-size` parallelised** — recursive directory sizing now uses
-  all available cores, making large tree listings significantly faster
-- Tidier `--help` output, clippy cleanup, dead code removal
-
-### Planned
-
-- Polish and bug fixes from daily driving
+See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 
 
 ## Acknowledgements
