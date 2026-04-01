@@ -169,8 +169,6 @@ impl<'a> Render<'a> {
             // This is weird, but I can’t find a way around it:
             // https://internals.rust-lang.org/t/should-option-mut-t-implement-copy/3715/6
             let mut table = Some(table);
-            self.add_files_to_table(&mut table, &mut rows, &self.files, TreeDepth::root());
-
             let rows_before = rows.len();
             self.add_files_to_table(&mut table, &mut rows, &self.files, TreeDepth::root());
             let file_count = rows.len() - rows_before;
