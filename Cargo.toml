@@ -1,6 +1,6 @@
 [package]
 name = "lx-ls"
-description = "file List eXtended (but call me alex!)"
+description = "The file lister with personality! 🌟"
 authors = ["Benjamin Sago <ogham@bsago.me>", "Johann Visagie <johann@visagie.za.net>"]
 categories = ["command-line-utilities"]
 keywords = ["ls", "files", "directory", "exa", "cli"]
@@ -9,7 +9,7 @@ rust-version = "1.94"
 readme = "README.md"
 license = "MIT"
 repository = "https://github.com/wjv/lx"
-version = "0.7.0-pre.0"
+version = "0.7.0-pre.1"
 
 [[bin]]
 name = "lx"

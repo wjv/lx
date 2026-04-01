@@ -155,7 +155,7 @@ impl<'a> Render<'a> {
             write!(w, "{grid}")
         }
         else {
-            self.give_up().render(w)
+            self.give_up().render(w).map(|_| ())
         }
     }
 

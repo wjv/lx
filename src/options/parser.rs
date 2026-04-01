@@ -95,7 +95,7 @@ impl MatchedFlags {
 pub fn build_command() -> Command {
     Command::new("lx")
         .version(env!("CARGO_PKG_VERSION"))
-        .about("The file lister with personality! 🌟")
+        .about(env!("CARGO_PKG_DESCRIPTION"))
         .styles(STYLES)
         .max_term_width(80)
         .disable_help_flag(true)
@@ -171,6 +171,11 @@ Environment variables:\n  \
             .num_args(0..=1)
             .require_equals(true)
             .default_missing_value("auto"))
+        .arg(Arg::new(flags::COUNT)
+            .short('C').long("count")
+            .help("Print the total number of items listed")
+            .help_heading("Display")
+            .action(ArgAction::Count))
 
         // ── Filtering and sorting ─────────────────────────────────
 

@@ -139,7 +139,7 @@ fn main() {
 
             let console_width = options.view.width.actual_terminal_width();
             let theme = options.theme.to_theme(console_width.is_some());
-            let lx = Lx { options, writer, input_paths, theme, console_width, vcs };
+            let lx = Lx { options, writer, input_paths, theme, console_width, vcs, item_count: 0 };
 
             match lx.run() {
                 Ok(exit_status) => {
@@ -275,6 +275,9 @@ pub struct Lx {
     /// This has to last the lifetime of the program, because the user might
     /// want to list several directories in the same repository.
     pub vcs: Option<Box<dyn VcsCache>>,
+
+    /// Running count of items listed (for `--count`).
+    pub item_count: usize,
 }
 
 /// The "real" environment variables type.
@@ -370,7 +373,13 @@ impl Lx {
         self.options.filter.filter_argument_files(&mut files);
         self.print_files(None, files)?;
 
-        self.print_dirs(dirs, no_files, is_only_dir, exit_status)
+        let result = self.print_dirs(dirs, no_files, is_only_dir, exit_status);
+
+        if self.options.count {
+            eprintln!("{} items", self.item_count);
+        }
+
+        result
     }
 
     fn print_dirs(&mut self, dir_files: Vec<Dir>, mut first: bool, is_only_dir: bool, exit_status: i32) -> io::Result<i32> {
@@ -441,6 +450,7 @@ impl Lx {
 
         match (mode, self.console_width) {
             (Mode::Grid(opts), Some(console_width)) => {
+                self.item_count += files.len();
                 let filter = &self.options.filter;
                 let r = grid::Render { files, theme, file_style, opts, console_width, filter };
                 r.render(&mut self.writer)
@@ -448,6 +458,7 @@ impl Lx {
 
             (Mode::Grid(_), None) |
             (Mode::Lines,   _)    => {
+                self.item_count += files.len();
                 let filter = &self.options.filter;
                 let r = lines::Render { files, theme, file_style, filter };
                 r.render(&mut self.writer)
@@ -460,10 +471,13 @@ impl Lx {
                 let vcs_ignoring = self.options.filter.vcs_ignore == VcsIgnore::CheckAndIgnore;
                 let vcs = self.vcs.as_deref();
                 let r = details::Render { dir, files, theme, file_style, opts, recurse, filter, vcs_ignoring, vcs };
-                r.render(&mut self.writer)
+                let count = r.render(&mut self.writer)?;
+                self.item_count += count;
+                Ok(())
             }
 
             (Mode::GridDetails(opts), Some(console_width)) => {
+                self.item_count += files.len();
                 let grid = &opts.grid;
                 let details = &opts.details;
                 let row_threshold = opts.row_threshold;
@@ -484,7 +498,9 @@ impl Lx {
 
                 let vcs = self.vcs.as_deref();
                 let r = details::Render { dir, files, theme, file_style, opts, recurse, filter, vcs_ignoring, vcs };
-                r.render(&mut self.writer)
+                let count = r.render(&mut self.writer)?;
+                self.item_count += count;
+                Ok(())
             }
         }
     }

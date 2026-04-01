@@ -72,6 +72,9 @@ pub struct Options {
 
     /// Which VCS backend to use for status display and ignore filtering.
     pub vcs_backend: VcsBackend,
+
+    /// Whether to print the total count of items listed (to stderr).
+    pub count: bool,
 }
 
 impl Options {
@@ -222,8 +225,9 @@ impl Options {
         let dir_action = DirAction::deduce(matches, matches!(view.mode, Mode::Details(_)))?;
         let filter = FileFilter::deduce(matches)?;
         let theme = ThemeOptions::deduce(matches, vars)?;
+        let count = matches.has(flags::COUNT);
 
-        Ok(Self { dir_action, filter, view, theme, vcs_backend })
+        Ok(Self { dir_action, filter, view, theme, vcs_backend, count })
     }
 }
 

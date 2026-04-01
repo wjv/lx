@@ -146,7 +146,9 @@ impl<'a> AsRef<File<'a>> for Egg<'a> {
 
 
 impl<'a> Render<'a> {
-    pub fn render<W: Write>(mut self, w: &mut W) -> io::Result<()> {
+    /// Render the file listing.  Returns the number of file items
+    /// rendered (excludes header and xattr rows).
+    pub fn render<W: Write>(mut self, w: &mut W) -> io::Result<usize> {
         let mut rows = Vec::new();
 
         if let Some(ref table) = self.opts.table {
@@ -169,19 +171,24 @@ impl<'a> Render<'a> {
             let mut table = Some(table);
             self.add_files_to_table(&mut table, &mut rows, &self.files, TreeDepth::root());
 
+            let rows_before = rows.len();
+            self.add_files_to_table(&mut table, &mut rows, &self.files, TreeDepth::root());
+            let file_count = rows.len() - rows_before;
+
             for row in self.iterate_with_table(table.unwrap(), rows) {
                 writeln!(w, "{}", row.strings())?;
             }
+            Ok(file_count)
         }
         else {
             self.add_files_to_table(&mut None, &mut rows, &self.files, TreeDepth::root());
 
+            let file_count = rows.len();
             for row in self.iterate(rows) {
                 writeln!(w, "{}", row.strings())?;
             }
+            Ok(file_count)
         }
-
-        Ok(())
     }
 
     /// Adds files to the table, possibly recursively. This is easily

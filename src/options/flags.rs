@@ -85,6 +85,9 @@ pub const ABSOLUTE: &str = "absolute";
 pub const HYPERLINK: &str = "hyperlink";
 pub const QUOTES: &str = "quotes";
 
+// output modifiers
+pub const COUNT: &str = "count";
+
 // optional feature options
 pub const EXTENDED: &str = "extended";
 pub const OCTAL: &str = "octal-permissions";
