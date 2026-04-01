@@ -506,14 +506,20 @@ Install Rust if you don't have it already:
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-Install `lx` from GitHub.
+Install `lx` from [crates.io](https://crates.io/crates/lx-ls):
+```sh
+cargo install lx-ls                # git support only
+cargo install lx-ls --features jj  # + jj support
+```
+
+Or install directly from GitHub:
 ```sh
 cargo install --git https://github.com/wjv/lx                # git support only
 cargo install --git https://github.com/wjv/lx --features jj  # + jj support
 ```
 
-The binary is installed to `~/.cargo/bin/`.  Make sure this directory is on
-your `$PATH`.
+The binary is installed to `~/.cargo/bin/` as `lx`.  Make sure this
+directory is on your `$PATH`.
 
 Alternatively, build `lx` from a local clone:
 ```sh
@@ -541,8 +547,9 @@ cp man/lx.1 ~/.local/share/man/man1/
 cp man/lxconfig.toml.5 ~/.local/share/man/man5/
 ```
 
-> **Note:** The `lx` crate name on `crates.io` is taken by an unrelated
-> library. `cargo install lx` will *not* install this tool.
+> **Note:** The crate is published as `lx-ls` on crates.io (the name
+> `lx` is taken by an unrelated library).  The installed binary is
+> still called `lx`.
 
 
 ### Installing with `just`
@@ -756,7 +763,7 @@ fly at shell startup.
 - **jj support is an opt-in feature** — the `jj` feature flag pulls in
   `jj-lib`, which adds ~5 MB to the binary and ~550 extra crates to the
   build.  Build with `cargo build --features jj` (or
-  `cargo install --features jj`) to enable it.  Without the feature,
+  `cargo install lx-ls --features jj`) to enable it.  Without the feature,
   `--vcs=jj` returns a clear error message.
 
 - **0.1 and 0.2 config files need migrating** — the 0.3 config format

@@ -1,14 +1,19 @@
 [package]
-name = "lx"
+name = "lx-ls"
 description = "file List eXtended (but call me alex!)"
 authors = ["Benjamin Sago <ogham@bsago.me>", "Johann Visagie <johann@visagie.za.net>"]
 categories = ["command-line-utilities"]
+keywords = ["ls", "files", "directory", "exa", "cli"]
 edition = "2024"
 rust-version = "1.94"
 readme = "README.md"
 license = "MIT"
 repository = "https://github.com/wjv/lx"
-version = "0.6.0-pre.6"
+version = "0.6.0-pre.7"
+
+[[bin]]
+name = "lx"
+path = "src/main.rs"
 
 [dependencies]
 chrono = { version = "0.4", default-features = false, features = ["clock"] }

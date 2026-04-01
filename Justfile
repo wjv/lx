@@ -1,6 +1,10 @@
 # lx project tasks
 # Run with: just <recipe>
 
+# List recipes
+default:
+    @just --list -u
+
 # Build man pages from markdown source
 man:
     pandoc man/lx.1.md -s -t man -o man/lx.1
