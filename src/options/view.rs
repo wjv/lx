@@ -163,8 +163,8 @@ impl TableOptions {
 /// Look up a format by name: config-defined first, then compiled-in.
 fn format_columns(name: &str) -> Option<Vec<Column>> {
     // Check config-defined formats first.
-    if let Some(ref cfg) = *crate::config::CONFIG {
-        if let Some(columns) = cfg.format.get(name) {
+    if let Some(ref cfg) = *crate::config::CONFIG
+        && let Some(columns) = cfg.format.get(name) {
             let cols: Vec<Column> = columns.iter()
                 .filter_map(|s| Column::from_name(s))
                 .collect();
@@ -172,7 +172,6 @@ fn format_columns(name: &str) -> Option<Vec<Column>> {
                 return Some(cols);
             }
         }
-    }
 
     // Compiled-in formats.
     let cols = match name {
@@ -243,11 +242,10 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Vec<Column> {
         let mut columns = Vec::new();
         for name in cols_str.split(',') {
             let name = name.trim();
-            if let Some(col) = Column::from_name(name) {
-                if !columns.contains(&col) {
+            if let Some(col) = Column::from_name(name)
+                && !columns.contains(&col) {
                     columns.push(col);
                 }
-            }
             // Unknown names are silently ignored (could warn in future).
         }
         // Individual adds and suppression flags still apply.
@@ -257,14 +255,13 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Vec<Column> {
     }
 
     // --format: named column set.
-    if let Some(fmt_name) = matches.get(flags::FORMAT) {
-        if let Some(cols) = format_columns(fmt_name) {
+    if let Some(fmt_name) = matches.get(flags::FORMAT)
+        && let Some(cols) = format_columns(fmt_name) {
             let mut columns = cols;
             apply_individual_adds(matches, &mut columns);
             apply_suppressions(matches, &mut columns);
             return columns;
         }
-    }
 
     // -l tier: compiled-in format.
     let tier_name = match long_count {
@@ -423,7 +420,7 @@ fn apply_suppressions(matches: &MatchedFlags, columns: &mut Vec<Column>) {
 }
 
 /// Find the position to insert a timestamp column — after existing
-/// timestamps but before VcsStatus.
+/// timestamps but before `VcsStatus`.
 fn timestamp_insert_pos(columns: &[Column]) -> usize {
     // After the last existing timestamp, or before VcsStatus, or at end.
     let last_ts = columns.iter().rposition(|c| matches!(c, Column::Timestamp(_)));

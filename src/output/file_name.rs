@@ -155,12 +155,11 @@ impl<C: Colours> FileName<'_, '_, C> {
         }
 
         // OSC 8 hyperlink opening.
-        if self.options.hyperlink {
-            if let Ok(abs) = std::fs::canonicalize(&self.file.path) {
+        if self.options.hyperlink
+            && let Ok(abs) = std::fs::canonicalize(&self.file.path) {
                 let uri = format!("file://{}", abs.display());
                 bits.push(Style::default().paint(format!("\x1b]8;;{uri}\x07")));
             }
-        }
 
         // Opening quote.
         let needs_quotes = self.options.quotes == Quotes::Always
@@ -172,11 +171,10 @@ impl<C: Colours> FileName<'_, '_, C> {
         // Absolute path: show the full resolved path instead of
         // just the parent directory.
         if self.options.absolute {
-            if let Ok(abs) = std::fs::canonicalize(&self.file.path) {
-                if let Some(parent) = abs.parent() {
+            if let Ok(abs) = std::fs::canonicalize(&self.file.path)
+                && let Some(parent) = abs.parent() {
                     self.add_parent_bits(&mut bits, parent);
                 }
-            }
         } else if self.file.parent_dir.is_none()
             && let Some(parent) = self.file.path.parent() {
                 self.add_parent_bits(&mut bits, parent);

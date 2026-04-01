@@ -499,17 +499,15 @@ fn find_personality_arg(args: &[OsString]) -> Option<String> {
         if let Some(name) = s.strip_prefix("--personality=") {
             return Some(name.to_string());
         }
-        if s == "--personality" || s == "-p" {
-            if let Some(next) = iter.next() {
+        if (s == "--personality" || s == "-p")
+            && let Some(next) = iter.next() {
                 return Some(next.to_string_lossy().to_string());
             }
-        }
         // Handle -pNAME (short flag with attached value)
-        if let Some(name) = s.strip_prefix("-p") {
-            if !name.is_empty() && !name.starts_with('-') {
+        if let Some(name) = s.strip_prefix("-p")
+            && !name.is_empty() && !name.starts_with('-') {
                 return Some(name.to_string());
             }
-        }
     }
     None
 }

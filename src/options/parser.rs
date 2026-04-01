@@ -76,7 +76,7 @@ impl MatchedFlags {
 
     /// Get the string value of a flag, if present.
     pub fn get(&self, flag: &str) -> Option<&str> {
-        self.matches.get_one::<String>(flag).map(|s| s.as_str())
+        self.matches.get_one::<String>(flag).map(std::string::String::as_str)
     }
 
     /// Get a usize value of a flag, if present.

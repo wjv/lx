@@ -34,7 +34,7 @@ pub struct JjCache {
     /// Git repository for gitignore queries.  jj repos are backed by git,
     /// so we delegate ignore checking to git2 which handles all layers
     /// (global excludes, info/exclude, per-directory .gitignore).
-    /// Wrapped in Mutex because git2::Repository is not Sync.
+    /// Wrapped in Mutex because `git2::Repository` is not Sync.
     git_repo: Option<Mutex<git2::Repository>>,
 
     /// The workspace root, used to resolve relative paths.
@@ -80,12 +80,9 @@ impl JjCache {
                 Ok(ws) => break ws,
                 Err(e) => {
                     debug!("jj: Workspace::load({}) failed: {e}", search_dir.display());
-                    match search_dir.parent() {
-                        Some(parent) => search_dir = parent,
-                        None => {
-                            debug!("jj: no jj workspace found");
-                            return None;
-                        }
+                    if let Some(parent) = search_dir.parent() { search_dir = parent } else {
+                        debug!("jj: no jj workspace found");
+                        return None;
                     }
                 }
             }
@@ -109,12 +106,9 @@ impl JjCache {
             }
         };
 
-        let wc_commit_id = match repo.view().get_wc_commit_id(ws.workspace_name()) {
-            Some(id) => id.clone(),
-            None => {
-                warn!("jj: no working copy commit");
-                return Some(Self::empty(workdir));
-            }
+        let wc_commit_id = if let Some(id) = repo.view().get_wc_commit_id(ws.workspace_name()) { id.clone() } else {
+            warn!("jj: no working copy commit");
+            return Some(Self::empty(workdir));
         };
 
         let wc_commit: jj_lib::commit::Commit = match repo.store().get_commit(&wc_commit_id) {
@@ -216,12 +210,9 @@ impl JjCache {
     /// (from `jj git init --git-repo <path>`).
     fn open_git_repo(workdir: &Path) -> Option<git2::Repository> {
         let git_target_path = workdir.join(".jj/repo/store/git_target");
-        let target = match std::fs::read_to_string(&git_target_path) {
-            Ok(t) => t,
-            Err(_) => {
-                debug!("jj: no git_target found (ignores will not work)");
-                return None;
-            }
+        let target = if let Ok(t) = std::fs::read_to_string(&git_target_path) { t } else {
+            debug!("jj: no git_target found (ignores will not work)");
+            return None;
         };
 
         let git_path = workdir.join(".jj/repo/store").join(target.trim());

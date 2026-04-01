@@ -202,12 +202,9 @@ fn settings_to_args(settings: &HashMap<String, toml::Value>, context: &str) -> V
                 }
             }
             SettingKind::Str => {
-                let s = match value {
-                    toml::Value::String(s) => s.as_str(),
-                    _ => {
-                        warn!("Expected string for '{key}' in {context}; ignoring");
-                        continue;
-                    }
+                let s = if let toml::Value::String(s) = value { s.as_str() } else {
+                    warn!("Expected string for '{key}' in {context}; ignoring");
+                    continue;
                 };
                 args.push(format!("{}={s}", def.flag).into());
             }
@@ -215,12 +212,9 @@ fn settings_to_args(settings: &HashMap<String, toml::Value>, context: &str) -> V
                 let n = match value {
                     toml::Value::Integer(n) => *n,
                     toml::Value::String(s) => {
-                        match s.parse::<i64>() {
-                            Ok(n) => n,
-                            Err(_) => {
-                                warn!("Expected integer for '{key}' in {context}; ignoring");
-                                continue;
-                            }
+                        if let Ok(n) = s.parse::<i64>() { n } else {
+                            warn!("Expected integer for '{key}' in {context}; ignoring");
+                            continue;
                         }
                     }
                     _ => {
@@ -611,11 +605,10 @@ pub fn resolve_personality(name: &str) -> Result<Option<PersonalityDef>, ConfigE
 
 /// Look up a single personality definition by name (no inheritance).
 fn lookup_personality(name: &str) -> Option<PersonalityDef> {
-    if let Some(ref cfg) = *CONFIG {
-        if let Some(p) = cfg.personality.get(name) {
+    if let Some(ref cfg) = *CONFIG
+        && let Some(p) = cfg.personality.get(name) {
             return Some(p.clone());
         }
-    }
     compiled_personality(name)
 }
 
@@ -782,11 +775,10 @@ pub fn compiled_exa_style() -> StyleDef {
 
 /// Look up a style by name: config first, then compiled-in "exa".
 pub fn resolve_style(name: &str) -> Option<StyleDef> {
-    if let Some(ref cfg) = *CONFIG {
-        if let Some(s) = cfg.style.get(name) {
+    if let Some(ref cfg) = *CONFIG
+        && let Some(s) = cfg.style.get(name) {
             return Some(s.clone());
         }
-    }
     match name {
         "exa" => Some(compiled_exa_style()),
         _ => None,
@@ -892,9 +884,11 @@ pub fn show_config(personality_name: &str) {
         };
         println!("  {} {}", label.paint("source:"), dimmed.paint(source));
 
-        if tname != "exa" {
-            if let Some(ref cfg) = *CONFIG {
-                if let Some(theme) = cfg.theme.get(tname) {
+        if tname == "exa" {
+            println!("  {} {} {}", label.paint("use-style:"), name.paint("exa"), dimmed.paint("(implicit)"));
+        } else {
+            if let Some(ref cfg) = *CONFIG
+                && let Some(theme) = cfg.theme.get(tname) {
                     if let Some(ref inherits) = theme.inherits {
                         println!("  {} {}", label.paint("inherits:"), name.paint(inherits));
                     }
@@ -902,9 +896,6 @@ pub fn show_config(personality_name: &str) {
                         println!("  {} {}", label.paint("use-style:"), name.paint(style));
                     }
                 }
-            }
-        } else {
-            println!("  {} {} {}", label.paint("use-style:"), name.paint("exa"), dimmed.paint("(implicit)"));
         }
     } else {
         println!("{} {}", label.paint("Theme:"), dimmed.paint("(none)"));
@@ -1020,15 +1011,13 @@ fn format_theme_toml(name: &str) -> Option<String> {
     if name == "exa" {
         // The "exa" theme is compiled-in from default_theme.rs and can't
         // be round-tripped to TOML.  Show a helpful comment instead.
-        return Some(format!(
-            "# [theme.exa] is compiled-in and cannot be dumped as TOML.\n\
+        return Some("# [theme.exa] is compiled-in and cannot be dumped as TOML.\n\
              # To customise, create a new theme that inherits from it:\n\
              #\n\
              # [theme.custom]\n\
              # inherits = \"exa\"\n\
              # directory = \"bold dodgerblue\"\n\
-             # date = \"steelblue\""
-        ));
+             # date = \"steelblue\"".to_string());
     }
 
     let cfg = CONFIG.as_ref()?;
@@ -1053,13 +1042,10 @@ fn format_theme_toml(name: &str) -> Option<String> {
 
 /// Print a single theme definition as copy-pasteable TOML.
 pub fn dump_theme(name: &str) {
-    match format_theme_toml(name) {
-        Some(toml) => println!("{toml}"),
-        None => {
-            eprintln!("lx: unknown theme '{name}'");
-            eprintln!("Known themes: {}", all_theme_names().join(", "));
-            std::process::exit(3);
-        }
+    if let Some(toml) = format_theme_toml(name) { println!("{toml}") } else {
+        eprintln!("lx: unknown theme '{name}'");
+        eprintln!("Known themes: {}", all_theme_names().join(", "));
+        std::process::exit(3);
     }
 }
 
@@ -1116,13 +1102,10 @@ fn format_style_toml(name: &str) -> Option<String> {
 
 /// Print a single style definition as copy-pasteable TOML.
 pub fn dump_style(name: &str) {
-    match format_style_toml(name) {
-        Some(toml) => println!("{toml}"),
-        None => {
-            eprintln!("lx: unknown style '{name}'");
-            eprintln!("Known styles: {}", all_style_names().join(", "));
-            std::process::exit(3);
-        }
+    if let Some(toml) = format_style_toml(name) { println!("{toml}") } else {
+        eprintln!("lx: unknown style '{name}'");
+        eprintln!("Known styles: {}", all_style_names().join(", "));
+        std::process::exit(3);
     }
 }
 
@@ -1202,13 +1185,10 @@ fn format_personality_toml(name: &str) -> Option<String> {
 
 /// Print a single personality definition as copy-pasteable TOML.
 pub fn dump_personality(name: &str) {
-    match format_personality_toml(name) {
-        Some(toml) => println!("{toml}"),
-        None => {
-            eprintln!("lx: unknown personality '{name}'");
-            eprintln!("Known personalities: {}", all_personality_names().join(", "));
-            std::process::exit(3);
-        }
+    if let Some(toml) = format_personality_toml(name) { println!("{toml}") } else {
+        eprintln!("lx: unknown personality '{name}'");
+        eprintln!("Known personalities: {}", all_personality_names().join(", "));
+        std::process::exit(3);
     }
 }
 
@@ -1232,7 +1212,7 @@ fn format_class_toml(name: &str, patterns: &[String]) -> String {
     let mut lines = vec![format!("{name} = [")];
 
     for (i, pat) in patterns.iter().enumerate() {
-        let entry = format!("\"{}\"", pat);
+        let entry = format!("\"{pat}\"");
         let last = lines.last_mut().unwrap();
 
         if i == 0 {
@@ -1256,20 +1236,17 @@ fn format_class_toml(name: &str, patterns: &[String]) -> String {
 /// Print a single class definition as copy-pasteable TOML.
 pub fn show_class(name: &str) {
     let classes = resolve_classes();
-    match classes.get(name) {
-        Some(patterns) => {
-            println!("[class]");
-            println!("{}", format_class_toml(name, patterns));
-        }
-        None => {
-            eprintln!("lx: unknown class '{name}'");
-            eprintln!("Known classes: {}", {
-                let mut names: Vec<_> = classes.keys().collect();
-                names.sort();
-                names.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
-            });
-            std::process::exit(3);
-        }
+    if let Some(patterns) = classes.get(name) {
+        println!("[class]");
+        println!("{}", format_class_toml(name, patterns));
+    } else {
+        eprintln!("lx: unknown class '{name}'");
+        eprintln!("Known classes: {}", {
+            let mut names: Vec<_> = classes.keys().collect();
+            names.sort();
+            names.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
+        });
+        std::process::exit(3);
     }
 }
 
@@ -1321,20 +1298,17 @@ pub fn resolve_formats() -> HashMap<String, Vec<String>> {
 /// Print a single format definition as copy-pasteable TOML.
 pub fn show_format(name: &str) {
     let formats = resolve_formats();
-    match formats.get(name) {
-        Some(columns) => {
-            println!("[format]");
-            println!("{}", format_format_toml(name, columns));
-        }
-        None => {
-            eprintln!("lx: unknown format '{name}'");
-            eprintln!("Known formats: {}", {
-                let mut names: Vec<_> = formats.keys().collect();
-                names.sort();
-                names.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
-            });
-            std::process::exit(3);
-        }
+    if let Some(columns) = formats.get(name) {
+        println!("[format]");
+        println!("{}", format_format_toml(name, columns));
+    } else {
+        eprintln!("lx: unknown format '{name}'");
+        eprintln!("Known formats: {}", {
+            let mut names: Vec<_> = formats.keys().collect();
+            names.sort();
+            names.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
+        });
+        std::process::exit(3);
     }
 }
 

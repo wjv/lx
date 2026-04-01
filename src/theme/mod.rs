@@ -170,7 +170,7 @@ impl Options {
         }
     }
 
-    /// Apply a single ThemeDef's settings to the UI styles and
+    /// Apply a single `ThemeDef`'s settings to the UI styles and
     /// extension mappings.
     fn apply_theme_def(
         theme: &crate::config::ThemeDef,

@@ -244,11 +244,10 @@ impl<'dir> File<'dir> {
     /// symlinks).  No-op if the file is not a symlink or the target cannot
     /// be stat'd.
     pub fn deref_link(&mut self) {
-        if self.is_link() {
-            if let Ok(target_meta) = std::fs::metadata(&self.path) {
+        if self.is_link()
+            && let Ok(target_meta) = std::fs::metadata(&self.path) {
                 self.metadata = target_meta;
             }
-        }
     }
 
     /// Whether this file is a named pipe on the filesystem.
@@ -443,7 +442,7 @@ impl<'dir> File<'dir> {
         use rayon::prelude::*;
 
         let entries: Vec<_> = match std::fs::read_dir(path) {
-            Ok(e) => e.filter_map(|e| e.ok()).collect(),
+            Ok(e) => e.filter_map(std::result::Result::ok).collect(),
             Err(_) => return 0,
         };
 

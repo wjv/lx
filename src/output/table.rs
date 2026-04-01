@@ -341,7 +341,7 @@ impl<'a, 'f> Table<'a> {
         let cells = self.columns.iter()
                         .map(|c| {
                             let name = if *c == Column::VcsStatus {
-                                self.vcs.map(|v| v.header_name()).unwrap_or("VCS")
+                                self.vcs.map(super::super::fs::feature::VcsCache::header_name).unwrap_or("VCS")
                             } else {
                                 c.header()
                             };
@@ -415,7 +415,7 @@ impl<'a, 'f> Table<'a> {
                 file.group().render(self.theme, &*self.env.lock_users(), self.user_format)
             }
             Column::VcsStatus => {
-                let backend = self.vcs.map(|v| v.header_name()).unwrap_or("VCS");
+                let backend = self.vcs.map(super::super::fs::feature::VcsCache::header_name).unwrap_or("VCS");
                 self.vcs_status(file).render(self.theme, backend)
             }
             Column::VcsRepos => {

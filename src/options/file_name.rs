@@ -11,9 +11,9 @@ impl Options {
         let show_icons = ShowIcons::deduce(matches, vars)?;
         let absolute = matches.has(flags::ABSOLUTE);
         let hyperlink = matches!(matches.get(flags::HYPERLINK),
-            Some("always") | Some("auto"));
+            Some("always" | "auto"));
         let quotes = match matches.get(flags::QUOTES) {
-            Some("always") | Some("auto") => Quotes::Always,
+            Some("always" | "auto") => Quotes::Always,
             _ => Quotes::Never,
         };
 
