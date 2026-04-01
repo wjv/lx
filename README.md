@@ -480,6 +480,18 @@ copy files in, no editing required.
 
 ## Installation
 
+### Homebrew (macOS and Linux)
+
+```sh
+brew tap wjv/tap
+brew install lx
+```
+
+This installs the `lx` binary (including jj support) and man pages.
+
+>Note that the man pages are unavailable in the v1.6.1 Homebrew release. They 
+will be in future releases.
+
 ### Download a pre-compiled binary
 
 `lx` is just a single binary. You can download pre-built binaries of the latest
