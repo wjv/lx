@@ -1,0 +1,41 @@
+# Dracula colour theme for lx
+# https://draculatheme.com/
+#
+# Copy to ~/.config/lx/conf.d/ to activate, then use:
+#   --theme=dracula  or  theme = "dracula" in a personality
+
+[theme.dracula]
+inherits = "exa"
+use-style = "dracula"
+
+# UI elements
+directory = "bold #bd93f9"
+symlink = "#8be9fd"
+executable = "#50fa7b"
+date = "#6272a4"
+user-you = "#f8f8f2"
+user-other = "#6272a4"
+group = "#6272a4"
+size-number = "#f8f8f2"
+size-unit = "#6272a4"
+permissions-user-read = "#50fa7b"
+permissions-user-write = "#ff79c6"
+permissions-user-execute = "#f1fa8c"
+permissions-group-read = "#50fa7b"
+permissions-group-write = "#ff79c6"
+permissions-group-execute = "#f1fa8c"
+permissions-other-read = "#50fa7b"
+permissions-other-write = "#ff79c6"
+permissions-other-execute = "#f1fa8c"
+
+[style.dracula]
+class.image = "#ff79c6"
+class.video = "#bd93f9"
+class.music = "#8be9fd"
+class.lossless = "#8be9fd"
+class.crypto = "#f1fa8c"
+class.document = "#f8f8f2"
+class.compressed = "#ff5555"
+class.compiled = "#ffb86c"
+class.temp = "#6272a4"
+class.immediate = "bold underline #f1fa8c"

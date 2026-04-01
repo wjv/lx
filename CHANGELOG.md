@@ -5,11 +5,25 @@ All notable changes to lx are documented here. lx is forked from
 
 ## [Unreleased]
 
+### Added
+- **Drop-in config directory** (`conf.d/`): load additional TOML
+  fragments from `~/.config/lx/conf.d/` (or XDG/macOS equivalent).
+  Files loaded in alphabetical order; later files override earlier
+  ones by name.  Useful for installing shared themes without editing
+  the main config.
+- **Curated theme library** in `themes/`: Catppuccin Mocha, Dracula,
+  Gruvbox Dark, Nord, Solarized Dark, Solarized Light.  Copy to
+  `conf.d/` to activate.
+- `--show-config` now lists loaded drop-in files.
+- Accept US spelling `color` and `color-scale` in config file.
+
 ### Changed
 - Icon assignment migrated to the class system: media-type icons
   (audio, image, video) now use `[class]` config instead of hard-coded
   extension checks.  Custom class definitions affect icons too.
 - `--total-size` parallelised with rayon
+- `--help` tidied: possible values shown inline, noisy aliases hidden.
+- 33 clippy auto-fixes (collapsed ifs, if-let, unnested or-patterns).
 
 ### Removed
 - `src/info/` module (dead code: `filetype.rs` extension checks

@@ -1,0 +1,41 @@
+# Gruvbox Dark colour theme for lx
+# https://github.com/morhetz/gruvbox
+#
+# Copy to ~/.config/lx/conf.d/ to activate, then use:
+#   --theme=gruvbox-dark  or  theme = "gruvbox-dark" in a personality
+
+[theme.gruvbox-dark]
+inherits = "exa"
+use-style = "gruvbox-dark"
+
+# UI elements — retro, warm colour palette
+directory = "bold #83a598"
+symlink = "#8ec07c"
+executable = "#b8bb26"
+date = "#665c54"
+user-you = "#ebdbb2"
+user-other = "#665c54"
+group = "#665c54"
+size-number = "#ebdbb2"
+size-unit = "#665c54"
+permissions-user-read = "#b8bb26"
+permissions-user-write = "#fb4934"
+permissions-user-execute = "#fabd2f"
+permissions-group-read = "#b8bb26"
+permissions-group-write = "#fb4934"
+permissions-group-execute = "#fabd2f"
+permissions-other-read = "#b8bb26"
+permissions-other-write = "#fb4934"
+permissions-other-execute = "#fabd2f"
+
+[style.gruvbox-dark]
+class.image = "#d3869b"
+class.video = "#d3869b"
+class.music = "#8ec07c"
+class.lossless = "#8ec07c"
+class.crypto = "#fabd2f"
+class.document = "#ebdbb2"
+class.compressed = "#fb4934"
+class.compiled = "#fe8019"
+class.temp = "#665c54"
+class.immediate = "bold underline #fabd2f"

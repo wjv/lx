@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::env;
 use std::ffi::OsString;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use log::*;
@@ -323,6 +323,22 @@ pub struct Config {
     /// Each key is a class name, each value a list of glob patterns.
     #[serde(default)]
     pub class: HashMap<String, Vec<String>>,
+
+    /// Paths of loaded drop-in fragments (for `--show-config`).
+    #[serde(skip)]
+    pub drop_in_paths: Vec<PathBuf>,
+}
+
+impl Config {
+    /// Merge a drop-in fragment into this config.  Each named entry
+    /// in the fragment overrides the same-named entry in `self`.
+    fn merge(&mut self, other: Config) {
+        for (k, v) in other.format    { self.format.insert(k, v); }
+        for (k, v) in other.personality { self.personality.insert(k, v); }
+        for (k, v) in other.theme     { self.theme.insert(k, v); }
+        for (k, v) in other.style     { self.style.insert(k, v); }
+        for (k, v) in other.class     { self.class.insert(k, v); }
+    }
 }
 
 /// A named theme definition under `[theme.NAME]`.
@@ -478,31 +494,129 @@ pub fn find_config_path() -> Option<PathBuf> {
 }
 
 
+/// Find the drop-in config directory.
+///
+/// The drop-in directory sits alongside the main config file:
+/// - `~/.lxconfig.toml` → `~/.config/lx/conf.d/` (XDG standard)
+/// - `$XDG_CONFIG_HOME/lx/config.toml` → `$XDG_CONFIG_HOME/lx/conf.d/`
+/// - macOS: `~/Library/Application Support/lx/conf.d/`
+///
+/// When `LX_CONFIG` is set, the drop-in directory is its parent's
+/// `conf.d/` subdirectory, or the XDG location if the config is a
+/// standalone file.
+fn find_drop_in_dir(main_config: Option<&Path>) -> Option<PathBuf> {
+    // If the main config is in a directory, look for conf.d/ there.
+    if let Some(config_path) = main_config {
+        if let Some(parent) = config_path.parent() {
+            let d = parent.join("conf.d");
+            if d.is_dir() {
+                return Some(d);
+            }
+        }
+    }
+
+    // Also check the XDG location (covers ~/.lxconfig.toml users).
+    let xdg = env::var("XDG_CONFIG_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            home_dir()
+                .map(|h| h.join(".config"))
+                .unwrap_or_default()
+        });
+    let d = xdg.join("lx").join("conf.d");
+    if d.is_dir() {
+        return Some(d);
+    }
+
+    #[cfg(target_os = "macos")]
+    if let Some(home) = home_dir() {
+        let d = home.join("Library/Application Support/lx/conf.d");
+        if d.is_dir() {
+            return Some(d);
+        }
+    }
+
+    None
+}
+
+/// Load sorted `*.toml` fragments from a drop-in directory.
+fn load_drop_ins(dir: &Path) -> Vec<(PathBuf, Config)> {
+    let mut entries: Vec<PathBuf> = match fs::read_dir(dir) {
+        Ok(rd) => rd
+            .filter_map(|e| e.ok())
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|ext| ext == "toml"))
+            .collect(),
+        Err(e) => {
+            warn!("conf.d: failed to read {}: {e}", dir.display());
+            return Vec::new();
+        }
+    };
+    entries.sort();
+
+    let mut fragments = Vec::new();
+    for path in entries {
+        match fs::read_to_string(&path) {
+            Ok(contents) => {
+                match toml::from_str::<Config>(&contents) {
+                    Ok(cfg) => {
+                        debug!("conf.d: loaded {}", path.display());
+                        fragments.push((path, cfg));
+                    }
+                    Err(e) => {
+                        warn!("conf.d: parse error in {}: {e}", path.display());
+                    }
+                }
+            }
+            Err(e) => {
+                warn!("conf.d: failed to read {}: {e}", path.display());
+            }
+        }
+    }
+    fragments
+}
+
 /// Load and parse the config file, if one is found.
 ///
 /// Returns `Ok(None)` if no config file exists.  Returns a typed
 /// `ConfigError` on I/O failures, parse errors, or legacy format.
 fn try_load_config() -> Result<Option<Config>, ConfigError> {
-    let Some(path) = find_config_path() else {
-        return Ok(None);
+    let config_path = find_config_path();
+
+    // Load the main config file, if any.
+    let mut config = if let Some(ref path) = config_path {
+        let contents = fs::read_to_string(path).with_path(path)?;
+
+        let version = detect_config_version(&contents);
+        if version != CONFIG_VERSION {
+            return Err(ConfigError::NeedsUpgrade {
+                path: path.clone(),
+                version: version.to_string(),
+            });
+        }
+
+        let cfg: Config = toml::from_str(&contents)
+            .map_err(|source| ConfigError::Parse { path: path.clone(), source })?;
+
+        info!("Loaded config from {}", path.display());
+        Some(cfg)
+    } else {
+        None
     };
 
-    let contents = fs::read_to_string(&path).with_path(&path)?;
-
-    // Check the version before full parsing.
-    let version = detect_config_version(&contents);
-    if version != CONFIG_VERSION {
-        return Err(ConfigError::NeedsUpgrade {
-            path,
-            version: version.to_string(),
-        });
+    // Load drop-in fragments from conf.d/.
+    if let Some(drop_in_dir) = find_drop_in_dir(config_path.as_deref()) {
+        let fragments = load_drop_ins(&drop_in_dir);
+        if !fragments.is_empty() {
+            let config = config.get_or_insert_with(Config::default);
+            for (path, fragment) in fragments {
+                config.drop_in_paths.push(path);
+                config.merge(fragment);
+            }
+        }
     }
 
-    let config: Config = toml::from_str(&contents)
-        .map_err(|source| ConfigError::Parse { path: path.clone(), source })?;
-
-    info!("Loaded config from {}", path.display());
-    Ok(Some(config))
+    Ok(config)
 }
 
 /// Load config for the `LazyLock` static.  Errors are printed to
@@ -831,6 +945,14 @@ pub fn show_config(personality_name: &str) {
         None    => println!("{} {}", label.paint("Config file:"), dimmed.paint("(none)")),
     }
     println!("{} {}", label.paint("Config version:"), value.paint(CONFIG_VERSION));
+    if let Some(ref cfg) = *CONFIG {
+        if !cfg.drop_in_paths.is_empty() {
+            println!("{} {} file(s) from conf.d/", label.paint("Drop-ins:"), value.paint(cfg.drop_in_paths.len().to_string()));
+            for p in &cfg.drop_in_paths {
+                println!("  {}", dimmed.paint(p.display().to_string()));
+            }
+        }
+    }
     println!();
 
     // Personality.

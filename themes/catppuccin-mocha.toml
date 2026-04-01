@@ -1,0 +1,41 @@
+# Catppuccin Mocha colour theme for lx
+# https://catppuccin.com/
+#
+# Copy to ~/.config/lx/conf.d/ to activate, then use:
+#   --theme=catppuccin-mocha  or  theme = "catppuccin-mocha" in a personality
+
+[theme.catppuccin-mocha]
+inherits = "exa"
+use-style = "catppuccin-mocha"
+
+# UI elements — warm, soothing pastels on dark background
+directory = "bold #89b4fa"
+symlink = "#94e2d5"
+executable = "#a6e3a1"
+date = "#585b70"
+user-you = "#cdd6f4"
+user-other = "#585b70"
+group = "#585b70"
+size-number = "#cdd6f4"
+size-unit = "#585b70"
+permissions-user-read = "#a6e3a1"
+permissions-user-write = "#f38ba8"
+permissions-user-execute = "#f9e2af"
+permissions-group-read = "#a6e3a1"
+permissions-group-write = "#f38ba8"
+permissions-group-execute = "#f9e2af"
+permissions-other-read = "#a6e3a1"
+permissions-other-write = "#f38ba8"
+permissions-other-execute = "#f9e2af"
+
+[style.catppuccin-mocha]
+class.image = "#f5c2e7"
+class.video = "#cba6f7"
+class.music = "#89dceb"
+class.lossless = "#89dceb"
+class.crypto = "#f9e2af"
+class.document = "#cdd6f4"
+class.compressed = "#f38ba8"
+class.compiled = "#fab387"
+class.temp = "#585b70"
+class.immediate = "bold underline #f9e2af"

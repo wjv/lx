@@ -1,0 +1,41 @@
+# Nord colour theme for lx
+# https://www.nordtheme.com/
+#
+# Copy to ~/.config/lx/conf.d/ to activate, then use:
+#   --theme=nord  or  theme = "nord" in a personality
+
+[theme.nord]
+inherits = "exa"
+use-style = "nord"
+
+# UI elements — Arctic, north-bluish palette
+directory = "bold #81a1c1"
+symlink = "#88c0d0"
+executable = "#a3be8c"
+date = "#4c566a"
+user-you = "#d8dee9"
+user-other = "#4c566a"
+group = "#4c566a"
+size-number = "#d8dee9"
+size-unit = "#4c566a"
+permissions-user-read = "#a3be8c"
+permissions-user-write = "#bf616a"
+permissions-user-execute = "#ebcb8b"
+permissions-group-read = "#a3be8c"
+permissions-group-write = "#bf616a"
+permissions-group-execute = "#ebcb8b"
+permissions-other-read = "#a3be8c"
+permissions-other-write = "#bf616a"
+permissions-other-execute = "#ebcb8b"
+
+[style.nord]
+class.image = "#b48ead"
+class.video = "#b48ead"
+class.music = "#88c0d0"
+class.lossless = "#88c0d0"
+class.crypto = "#ebcb8b"
+class.document = "#d8dee9"
+class.compressed = "#bf616a"
+class.compiled = "#d08770"
+class.temp = "#4c566a"
+class.immediate = "bold underline #ebcb8b"

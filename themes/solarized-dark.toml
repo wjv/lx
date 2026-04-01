@@ -1,0 +1,41 @@
+# Solarized Dark colour theme for lx
+# https://ethanschoonover.com/solarized/
+#
+# Copy to ~/.config/lx/conf.d/ to activate, then use:
+#   --theme=solarized-dark  or  theme = "solarized-dark" in a personality
+
+[theme.solarized-dark]
+inherits = "exa"
+use-style = "solarized-dark"
+
+# UI elements — uses the Solarized accent colours
+directory = "bold #268bd2"
+symlink = "#2aa198"
+executable = "#859900"
+date = "#586e75"
+user-you = "#93a1a1"
+user-other = "#586e75"
+group = "#586e75"
+size-number = "#93a1a1"
+size-unit = "#586e75"
+permissions-user-read = "#859900"
+permissions-user-write = "#cb4b16"
+permissions-user-execute = "#b58900"
+permissions-group-read = "#859900"
+permissions-group-write = "#cb4b16"
+permissions-group-execute = "#b58900"
+permissions-other-read = "#859900"
+permissions-other-write = "#cb4b16"
+permissions-other-execute = "#b58900"
+
+[style.solarized-dark]
+class.image = "#d33682"
+class.video = "#6c71c4"
+class.music = "#2aa198"
+class.lossless = "#2aa198"
+class.crypto = "#b58900"
+class.document = "#839496"
+class.compressed = "#dc322f"
+class.compiled = "#cb4b16"
+class.temp = "#586e75"
+class.immediate = "bold underline #b58900"

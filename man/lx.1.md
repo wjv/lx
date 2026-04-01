@@ -361,6 +361,28 @@ when used bare:
 : Dump style definitions.
 
 
+DROP-IN DIRECTORY
+=================
+
+After loading the main config file, lx scans a `conf.d/` directory for
+additional TOML fragments.  Each `*.toml` file in the directory is
+loaded in **alphabetical order** and merged into the configuration.
+Later files override earlier ones by name.
+
+The drop-in directory is searched at:
+
+1. The parent directory of the main config file, plus `conf.d/`
+2. `$XDG_CONFIG_HOME/lx/conf.d/` (default: `~/.config/lx/conf.d/`)
+3. `~/Library/Application Support/lx/conf.d/` (macOS)
+
+Drop-in files do not need a `version` field.  They may contain any
+combination of `[theme.*]`, `[style.*]`, `[class]`, `[personality.*]`,
+and `[format.*]` sections.
+
+lx ships with a library of curated themes in the `themes/` directory
+of the source tree — copy any of them to `conf.d/` to activate.
+
+
 ENVIRONMENT VARIABLES
 =====================
 

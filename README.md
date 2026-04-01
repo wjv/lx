@@ -383,6 +383,45 @@ Themes can inherit from other themes. The special name `"exa"`
 refers to the compiled-in default theme and style.  Without
 `inherits`, a theme starts from a blank slate.
 
+#### Curated themes
+
+lx ships with ready-made themes in the `themes/` directory:
+
+| theme           | filename               |
+|-----------------|------------------------|
+| Catpuccin Mocha | `catpuccin-mocha.toml` |
+| Dracula         | `dracula.toml`         |
+| Gruvbox Dark    | `gruvbox-dark.toml`    |
+| Nord            | `nord.toml`            |
+| Solarized Dark  | `solarized-dark.toml`  |
+| Solarized Light | `solarized-light.toml` |
+
+To install a theme, simply copy it to the drop-in configuration directory (See 
+[Config file locations](#config-file-locations) below).
+
+```sh
+mkdir -p ~/.config/lx/conf.d
+cp themes/dracula.toml ~/.config/lx/conf.d/
+```
+
+Activate a theme on the command line with the `--theme` flag:
+
+```sh
+lx -l `--theme=dracula`
+````
+
+Or associate the theme permanently with a specific personality in your 
+configuration. For instance, to set a theme as default for all personalities 
+that inherit from the default:
+
+```toml
+[personality.default]
+theme = "dracula"
+```
+
+See [`themes/README.md`](themes/README.md) for instructions for creating your 
+own.
+
 See [`lxconfig.toml(5)`](man/lxconfig.toml.5.md) for the full
 list of theme keys, style syntax, and built-in class definitions.
 
@@ -423,6 +462,20 @@ lx --dump-style=exa           # dump the exa style
 
 Most users will be fine with option 2 (`~/.lxconfig.toml`). If you
 prefer to keep your dotfiles tidy under `~/.config/`, use option 3.
+
+#### Drop-in directory
+
+After loading the main config, lx looks for a `conf.d/` directory
+and loads any `*.toml` files it finds there, in alphabetical order.
+Each file is a standalone TOML fragment that can contain theme,
+style, class, personality, or format definitions.  The drop-in
+directory is searched at:
+
+- `~/.config/lx/conf.d/` (or `$XDG_CONFIG_HOME/lx/conf.d/`)
+- `~/Library/Application Support/lx/conf.d/` (macOS)
+
+This is how you install themes from the `themes/` library — just
+copy files in, no editing required.
 
 
 ## Installation
@@ -777,11 +830,15 @@ fly at shell startup.
 
 ### What's new in 0.6
 
+- **Drop-in config directory** (`conf.d/`) — install themes and styles
+  by dropping TOML files into `~/.config/lx/conf.d/`, no editing needed
+- **Curated theme library** — Catppuccin Mocha, Dracula, Gruvbox Dark,
+  Nord, Solarized Dark, Solarized Light (see `themes/`)
 - **Icon → class migration** — media-type icons now use the `[class]`
   config system; custom class definitions affect icons too
 - **`--total-size` parallelised** — recursive directory sizing now uses
   all available cores, making large tree listings significantly faster
-- Dead code removed (`src/info/` module)
+- Tidier `--help` output, clippy cleanup, dead code removal
 
 ### Planned
 
