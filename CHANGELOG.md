@@ -3,6 +3,14 @@
 All notable changes to lx are documented here. lx is forked from
 [exa](https://github.com/ogham/exa) v0.10.1.
 
+## [0.6.2] — 2026-04-02
+
+### Added
+- CI: automatic publishing to crates.io and Homebrew tap on release.
+- CI: man pages built with pandoc and included in release assets.
+- Homebrew installation: `brew tap wjv/tap && brew install lx`.
+- `just release-check` recipe for pre-publish verification.
+
 ## [0.6.1] — 2026-04-02
 
 ### Fixed
