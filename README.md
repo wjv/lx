@@ -489,9 +489,6 @@ brew install lx
 
 This installs the `lx` binary (including jj support) and man pages.
 
->Note that the man pages are unavailable in the v1.6.1 Homebrew release. They 
-will be in future releases.
-
 ### Download a pre-compiled binary
 
 `lx` is just a single binary. You can download pre-built binaries of the latest
@@ -783,7 +780,7 @@ fly at shell startup.
   automatically (a `.bak` backup is saved).
 
 - **The `lx` crate name on crates.io is taken** by an unrelated
-  library. Install from GitHub instead (see [Installation](#installation)).
+  library. lx is published as [`lx-ls`](https://crates.io/crates/lx-ls).
 
 - `lx` is an experiment under active development. Literally anything may still
   change, including the details of the user interface!
@@ -795,6 +792,7 @@ fly at shell startup.
 - **`--total-size` parallelised** with rayon (0.6)
 - **First-class Jujutsu support** via `jj-lib` (0.4)
 - Published on [crates.io](https://crates.io/crates/lx-ls) as `lx-ls`
+- **Homebrew tap** — easy installation on macOS and Linux
 
 See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 
@@ -809,7 +807,6 @@ directions being explored:
   Ghostty, disable colour over SSH)
 - An option to display **platform file flags** (macOS `chflags`,
   Linux `chattr`)
-- **Homebrew tap** -- easy installation on macOS
 
 
 ## Acknowledgements
