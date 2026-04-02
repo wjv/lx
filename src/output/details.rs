@@ -146,9 +146,12 @@ impl<'a> AsRef<File<'a>> for Egg<'a> {
 
 
 impl<'a> Render<'a> {
-    /// Render the file listing.  Returns the number of file items
-    /// rendered (excludes header and xattr rows).
-    pub fn render<W: Write>(mut self, w: &mut W) -> io::Result<usize> {
+    /// Render the file listing.  Returns `(item_count, size_total)`:
+    /// item count excludes header/xattr rows; size total sums the
+    /// displayed file sizes (for unexpanded directories, uses the
+    /// total-size if active; expanded directories are skipped to
+    /// avoid double-counting).
+    pub fn render<W: Write>(mut self, w: &mut W) -> io::Result<(usize, u64)> {
         let mut rows = Vec::new();
 
         if let Some(ref table) = self.opts.table {
@@ -170,28 +173,30 @@ impl<'a> Render<'a> {
             // https://internals.rust-lang.org/t/should-option-mut-t-implement-copy/3715/6
             let mut table = Some(table);
             let rows_before = rows.len();
-            self.add_files_to_table(&mut table, &mut rows, &self.files, TreeDepth::root());
+            let mut size_total = 0u64;
+            self.add_files_to_table(&mut table, &mut rows, &self.files, TreeDepth::root(), &mut size_total);
             let file_count = rows.len() - rows_before;
 
             for row in self.iterate_with_table(table.unwrap(), rows) {
                 writeln!(w, "{}", row.strings())?;
             }
-            Ok(file_count)
+            Ok((file_count, size_total))
         }
         else {
-            self.add_files_to_table(&mut None, &mut rows, &self.files, TreeDepth::root());
+            let mut size_total = 0u64;
+            self.add_files_to_table(&mut None, &mut rows, &self.files, TreeDepth::root(), &mut size_total);
 
             let file_count = rows.len();
             for row in self.iterate(rows) {
                 writeln!(w, "{}", row.strings())?;
             }
-            Ok(file_count)
+            Ok((file_count, size_total))
         }
     }
 
     /// Adds files to the table, possibly recursively. This is easily
     /// parallelisable, and uses a pool of threads.
-    fn add_files_to_table<'dir>(&self, table: &mut Option<Table<'a>>, rows: &mut Vec<Row>, src: &[File<'dir>], depth: TreeDepth) {
+    fn add_files_to_table<'dir>(&self, table: &mut Option<Table<'a>>, rows: &mut Vec<Row>, src: &[File<'dir>], depth: TreeDepth, size_total: &mut u64) {
         use std::sync::{Arc, Mutex};
         use log::*;
         use crate::fs::feature::xattr;
@@ -299,6 +304,24 @@ impl<'a> Render<'a> {
 
             rows.push(row);
 
+            // Size accounting for -CZ summary.
+            if egg.file.is_directory() {
+                if egg.dir.is_none() {
+                    // Not expanded (pruned or depth-limited): use total
+                    // size if available, otherwise skip.
+                    let total_size_active = table.as_ref()
+                        .is_some_and(|t| t.total_size_active());
+                    if total_size_active {
+                        if let crate::fs::fields::Size::Some(s) = egg.file.total_size() {
+                            *size_total += s;
+                        }
+                    }
+                }
+                // Expanded directories: children account for themselves.
+            } else if egg.file.is_file() {
+                *size_total += egg.file.metadata.len();
+            }
+
             if let Some(ref dir) = egg.dir {
                 for file_to_add in dir.files(self.filter.dot_filter, self.vcs, self.vcs_ignoring) {
                     match file_to_add {
@@ -322,7 +345,7 @@ impl<'a> Render<'a> {
                         rows.push(self.render_error(&error, TreeParams::new(depth.deeper(), false), path));
                     }
 
-                    self.add_files_to_table(table, rows, &files, depth.deeper());
+                    self.add_files_to_table(table, rows, &files, depth.deeper(), size_total);
                     continue;
                 }
             }

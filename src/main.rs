@@ -139,7 +139,7 @@ fn main() {
 
             let console_width = options.view.width.actual_terminal_width();
             let theme = options.theme.to_theme(console_width.is_some());
-            let lx = Lx { options, writer, input_paths, theme, console_width, vcs, item_count: 0 };
+            let lx = Lx { options, writer, input_paths, theme, console_width, vcs, item_count: 0, size_total: 0 };
 
             match lx.run() {
                 Ok(exit_status) => {
@@ -278,6 +278,49 @@ pub struct Lx {
 
     /// Running count of items listed (for `--count`).
     pub item_count: usize,
+
+    /// Running total of displayed file sizes in bytes (for `-CZ`).
+    pub size_total: u64,
+}
+
+/// Format a byte count as a human-readable string for the `-CZ` summary.
+/// Respects the active size format (`-b` for binary, `-B` for bytes).
+fn format_size(bytes: u64, fmt: crate::output::table::SizeFormat) -> String {
+    use unit_prefix::NumberPrefix;
+    use crate::output::table::SizeFormat;
+    use locale::Numeric as NumericLocale;
+
+    let locale = NumericLocale::load_user_locale()
+        .unwrap_or_else(|_| NumericLocale::english());
+
+    match fmt {
+        SizeFormat::JustBytes => {
+            // Thousands-separated with "bytes" suffix for clarity.
+            let s = bytes.to_string();
+            let sep = &locale.thousands_sep;
+            let formatted = if sep.is_empty() || s.len() <= 3 {
+                s
+            } else {
+                let mut out = String::new();
+                for (i, c) in s.chars().rev().enumerate() {
+                    if i > 0 && i % 3 == 0 { out.insert_str(0, sep); }
+                    out.insert(0, c);
+                }
+                out
+            };
+            format!("{formatted} bytes")
+        }
+        SizeFormat::DecimalBytes => match NumberPrefix::decimal(bytes as f64) {
+            NumberPrefix::Standalone(n) => format!("{n} B"),
+            NumberPrefix::Prefixed(prefix, n) if n < 10.0 => format!("{n:.1} {prefix}B"),
+            NumberPrefix::Prefixed(prefix, n) => format!("{n:.0} {prefix}B"),
+        },
+        SizeFormat::BinaryBytes => match NumberPrefix::binary(bytes as f64) {
+            NumberPrefix::Standalone(n) => format!("{n} B"),
+            NumberPrefix::Prefixed(prefix, n) if n < 10.0 => format!("{n:.1} {prefix}B"),
+            NumberPrefix::Prefixed(prefix, n) => format!("{n:.0} {prefix}B"),
+        },
+    }
 }
 
 /// The "real" environment variables type.
@@ -376,7 +419,13 @@ impl Lx {
         let result = self.print_dirs(dirs, no_files, is_only_dir, exit_status);
 
         if self.options.count {
-            eprintln!("{} items", self.item_count);
+            if self.options.view.has_total_size() {
+                let fmt = self.options.view.size_format()
+                    .unwrap_or(crate::output::table::SizeFormat::DecimalBytes);
+                eprintln!("{} items shown, {}", self.item_count, format_size(self.size_total, fmt));
+            } else {
+                eprintln!("{} items shown", self.item_count);
+            }
         }
 
         result
@@ -448,9 +497,18 @@ impl Lx {
         let theme = &self.theme;
         let View { mode, file_style, .. } = &self.options.view;
 
+        // Sum file sizes for non-details modes (flat listing).
+        let sum_file_sizes = |files: &[File<'_>]| -> u64 {
+            files.iter()
+                .filter(|f| f.is_file())
+                .map(|f| f.metadata.len())
+                .sum()
+        };
+
         match (mode, self.console_width) {
             (Mode::Grid(opts), Some(console_width)) => {
                 self.item_count += files.len();
+                self.size_total += sum_file_sizes(&files);
                 let filter = &self.options.filter;
                 let r = grid::Render { files, theme, file_style, opts, console_width, filter };
                 r.render(&mut self.writer)
@@ -459,6 +517,7 @@ impl Lx {
             (Mode::Grid(_), None) |
             (Mode::Lines,   _)    => {
                 self.item_count += files.len();
+                self.size_total += sum_file_sizes(&files);
                 let filter = &self.options.filter;
                 let r = lines::Render { files, theme, file_style, filter };
                 r.render(&mut self.writer)
@@ -471,13 +530,15 @@ impl Lx {
                 let vcs_ignoring = self.options.filter.vcs_ignore == VcsIgnore::CheckAndIgnore;
                 let vcs = self.vcs.as_deref();
                 let r = details::Render { dir, files, theme, file_style, opts, recurse, filter, vcs_ignoring, vcs };
-                let count = r.render(&mut self.writer)?;
+                let (count, bytes) = r.render(&mut self.writer)?;
                 self.item_count += count;
+                self.size_total += bytes;
                 Ok(())
             }
 
             (Mode::GridDetails(opts), Some(console_width)) => {
                 self.item_count += files.len();
+                self.size_total += sum_file_sizes(&files);
                 let grid = &opts.grid;
                 let details = &opts.details;
                 let row_threshold = opts.row_threshold;
@@ -498,8 +559,9 @@ impl Lx {
 
                 let vcs = self.vcs.as_deref();
                 let r = details::Render { dir, files, theme, file_style, opts, recurse, filter, vcs_ignoring, vcs };
-                let count = r.render(&mut self.writer)?;
+                let (count, bytes) = r.render(&mut self.writer)?;
                 self.item_count += count;
+                self.size_total += bytes;
                 Ok(())
             }
         }

@@ -173,7 +173,7 @@ Environment variables:\n  \
             .default_missing_value("auto"))
         .arg(Arg::new(flags::COUNT)
             .short('C').long("count")
-            .help("Print the total number of items listed")
+            .help("Print item count to stderr (-CZ includes total size)")
             .help_heading("Display")
             .action(ArgAction::Count))
 
@@ -232,7 +232,7 @@ Environment variables:\n  \
             .action(ArgAction::Count))
         .arg(Arg::new(flags::SORT)
             .short('s').long("sort")
-            .help("Sort field\n[name, Name, size, extension, Extension,\
+            .help("Sort field\n[name, Name, size, extension, Extension, \
                   modified, changed, accessed, created, type, none, inode]")
             .help_heading("Filtering")
             .action(ArgAction::Set)

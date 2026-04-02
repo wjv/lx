@@ -316,6 +316,10 @@ pub struct Row {
 }
 
 impl<'a, 'f> Table<'a> {
+    pub fn total_size_active(&self) -> bool {
+        self.total_size
+    }
+
     pub fn new(options: &'a Options, vcs: Option<&'a dyn VcsCache>, theme: &'a Theme) -> Table<'a> {
         // Filter out VcsStatus column if no VCS cache is available.
         let columns: Vec<Column> = options.columns.iter()

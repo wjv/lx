@@ -10,8 +10,9 @@ All notable changes to lx are documented here. lx is forked from
   attributes (hidden, uchg, uappnd, nodump, uarch, etc.). Linux:
   `chattr` attributes via ioctl (immutable, append, nodump, noatime,
   etc.). Available as a column (`--columns=flags`).
-- `-C`/`--count` — print the total number of items listed to stderr.
-  Works with all view modes including tree and recursive.
+- `-C`/`--count` — print item count to stderr. Combined with `-Z`,
+  also shows total size of displayed items (no double-counting in
+  tree views). Respects `-b`/`-B` size formatting.
 - **Conditional config** — `[[personality.NAME.when]]` blocks that
   activate based on environment variables.  Conditions use `env.VAR = "value"` (exact match), `env.VAR = true`
   (must be set), or `env.VAR = false` (must be unset).  Enables per-terminal settings (e.g. icons in Ghostty,

@@ -49,10 +49,13 @@ links, blocks).
 `auto`, or `never`.
 
 `-C`, `--count`
-: Print the total number of items listed to stderr.  The count
-reflects the items actually displayed (after filtering), excluding
-header rows.  Works with all view modes including tree and recursive
-listings.
+: Print a summary to stderr showing the number of items displayed.
+When combined with `-Z`/`--total-size`, also shows the total size
+of displayed items.  In tree views, expanded directories are not
+counted towards the total (their children account for themselves);
+pruned or depth-limited directories use their recursive total.
+The size respects `-b` (binary) and `-B` (bytes) formatting.
+Works with all view modes including tree and recursive listings.
 
 `--colour=WHEN`
 : When to use terminal colours. WHEN is `always`, `auto`, or `never`.

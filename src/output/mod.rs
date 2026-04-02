@@ -23,6 +23,26 @@ pub struct View {
     pub file_style: file_name::Options,
 }
 
+impl View {
+    /// Whether `--total-size` is active in the current mode.
+    pub fn has_total_size(&self) -> bool {
+        match &self.mode {
+            Mode::Details(opts) => opts.table.as_ref().is_some_and(|t| t.total_size),
+            Mode::GridDetails(opts) => opts.details.table.as_ref().is_some_and(|t| t.total_size),
+            _ => false,
+        }
+    }
+
+    /// The size format from the active table options, if any.
+    pub fn size_format(&self) -> Option<table::SizeFormat> {
+        match &self.mode {
+            Mode::Details(opts) => opts.table.as_ref().map(|t| t.size_format),
+            Mode::GridDetails(opts) => opts.details.table.as_ref().map(|t| t.size_format),
+            _ => None,
+        }
+    }
+}
+
 
 /// The **mode** is the “type” of output.
 #[derive(PartialEq, Eq, Debug)]
