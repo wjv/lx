@@ -787,6 +787,19 @@ fly at shell startup.
 See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 
 
+## On the horizon
+
+Ideas under consideration for future releases; not promises, but
+directions being explored:
+
+- **Conditional config** — per-personality `[[when]]` blocks that
+  activate based on environment variables (e.g. enable icons only in
+  Ghostty, disable colour over SSH)
+- An option to display **platform file flags** (macOS `chflags`,
+  Linux `chattr`)
+- **Homebrew tap** -- easy installation on macOS
+
+
 ## Acknowledgements
 
 `lx` is my own experiment to test some ideas I have about the user experience 

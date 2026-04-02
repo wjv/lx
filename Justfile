@@ -101,6 +101,31 @@ completions:
     cargo run -- --completions fish > completions/lx.fish
     @echo "Generated completions/"
 
+# Extract version from Cargo.toml
+version := `grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/'`
+
+# Pre-publish release checklist
+release-check: _check-version _check-changelog _check-lockfile test-jj _check-publish
+    @echo "=== All checks passed for {{version}} ==="
+
+_check-version:
+    @echo "Version: {{version}}"
+    @echo "{{version}}" | grep -qvE '(pre|rc|feat|alpha|beta)' \
+        || (echo "WARNING: version contains a pre-release identifier!" && false)
+
+_check-changelog:
+    @grep -q '\[{{version}}\]' CHANGELOG.md \
+        && echo "CHANGELOG: OK" \
+        || (echo "WARNING: no CHANGELOG entry for [{{version}}]" && false)
+
+_check-lockfile:
+    @test -f Cargo.lock \
+        && echo "Cargo.lock: present" \
+        || (echo "WARNING: Cargo.lock not found" && false)
+
+_check-publish:
+    cargo publish --dry-run
+
 # Generate default config file
 init-config:
     cargo run -- --init-config
