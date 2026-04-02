@@ -155,6 +155,146 @@ fn quotes_never_no_wrapping() {
 }
 
 
+// ── --flags / -O ─────────────────────────────────────────────────
+
+#[test]
+fn flags_column_shows_dash_for_no_flags() {
+    let dir = display_fixture();
+
+    lx_no_colour()
+        .args(["-O", "-l"])
+        .arg(dir.path().join("hello.rs"))
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(" - "));
+}
+
+#[test]
+fn flags_column_with_header() {
+    let dir = display_fixture();
+
+    lx_no_colour()
+        .args(["-O", "-lh"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Flags"));
+}
+
+#[test]
+fn flags_via_columns() {
+    let dir = display_fixture();
+
+    lx_no_colour()
+        .args(["--columns=perms,flags,size"])
+        .arg(dir.path().join("hello.rs"))
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(" - "));
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn flags_shows_hidden_on_macos() {
+    let dir = tempdir().expect("failed to create tempdir");
+    fs::write(dir.path().join("test.txt"), "data").unwrap();
+
+    // Set the hidden flag.
+    let status = std::process::Command::new("chflags")
+        .args(["hidden", &dir.path().join("test.txt").to_string_lossy()])
+        .status()
+        .expect("failed to run chflags");
+    assert!(status.success());
+
+    lx_no_colour()
+        .args(["-O", "-la"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("hidden"));
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn flags_shows_uchg_on_macos() {
+    let dir = tempdir().expect("failed to create tempdir");
+    fs::write(dir.path().join("locked.txt"), "data").unwrap();
+
+    let path_str = dir.path().join("locked.txt").to_string_lossy().to_string();
+
+    // Set the immutable flag.
+    let status = std::process::Command::new("chflags")
+        .args(["uchg", &path_str])
+        .status()
+        .expect("failed to run chflags");
+    assert!(status.success());
+
+    lx_no_colour()
+        .args(["-O", "-l"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("uchg"));
+
+    // Clean up: remove the immutable flag so tempdir can delete it.
+    std::process::Command::new("chflags")
+        .args(["nouchg", &path_str])
+        .status()
+        .expect("failed to run chflags");
+}
+
+
+#[test]
+fn flags_short_flag() {
+    let dir = display_fixture();
+
+    lx_no_colour()
+        .args(["-O", "-l"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        // Should have a flags column (all dashes for this fixture)
+        .stdout(predicate::str::contains(" - "));
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn flags_shows_immutable_on_linux() {
+    let dir = tempdir().expect("failed to create tempdir");
+    fs::write(dir.path().join("test.txt"), "data").unwrap();
+
+    let path_str = dir.path().join("test.txt").to_string_lossy().to_string();
+
+    // chattr +i requires root; skip if not available.
+    let status = std::process::Command::new("sudo")
+        .args(["-n", "chattr", "+i", &path_str])
+        .status();
+
+    let ok = status.is_ok_and(|s| s.success());
+    if !ok {
+        eprintln!("skipping: chattr +i requires root");
+        // Clean up in case chattr partially succeeded.
+        let _ = std::process::Command::new("sudo")
+            .args(["-n", "chattr", "-i", &path_str])
+            .status();
+        return;
+    }
+
+    lx_no_colour()
+        .args(["-O", "-l"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("immutable"));
+
+    // Clean up.
+    std::process::Command::new("sudo")
+        .args(["-n", "chattr", "-i", &path_str])
+        .status()
+        .expect("failed to run chattr");
+}
+
+
 // ── --width / -w ─────────────────────────────────────────────────
 
 #[test]

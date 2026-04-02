@@ -260,6 +260,128 @@ pub type Git = VcsFileStatus;
 pub type GitStatus = VcsStatus;
 
 
+/// BSD/macOS file flags from `st_flags` (see `chflags(1)`).
+///
+/// On platforms without `st_flags`, the flags value is always 0.
+#[derive(Debug, Copy, Clone)]
+pub struct FileFlags(pub u32);
+
+impl FileFlags {
+    /// Well-known BSD file flag bits.
+    // User flags (UF_*)
+    pub const UF_NODUMP:     u32 = 0x0000_0001;
+    pub const UF_IMMUTABLE:  u32 = 0x0000_0002;
+    pub const UF_APPEND:     u32 = 0x0000_0004;
+    pub const UF_OPAQUE:     u32 = 0x0000_0008;
+    pub const UF_NOUNLINK:   u32 = 0x0000_0010;  // FreeBSD
+    pub const UF_COMPRESSED: u32 = 0x0000_0020;  // macOS/FreeBSD
+    pub const UF_TRACKED:    u32 = 0x0000_0040;  // FreeBSD
+    pub const UF_SYSTEM:     u32 = 0x0000_0080;  // FreeBSD: Windows system bit
+    pub const UF_SPARSE:     u32 = 0x0000_0100;  // FreeBSD
+    pub const UF_OFFLINE:    u32 = 0x0000_0200;  // FreeBSD
+    pub const UF_REPARSE:    u32 = 0x0000_0400;  // FreeBSD: Windows reparse point
+    pub const UF_ARCHIVE:    u32 = 0x0000_0800;  // FreeBSD: user archive
+    pub const UF_READONLY:   u32 = 0x0000_1000;  // FreeBSD: Windows readonly
+    pub const UF_HIDDEN:     u32 = 0x0000_8000;  // macOS/FreeBSD
+    // System flags (SF_*)
+    pub const SF_ARCHIVED:   u32 = 0x0001_0000;
+    pub const SF_IMMUTABLE:  u32 = 0x0002_0000;
+    pub const SF_APPEND:     u32 = 0x0004_0000;
+    pub const SF_NOUNLINK:   u32 = 0x0010_0000;  // FreeBSD
+    pub const SF_SNAPSHOT:   u32 = 0x0020_0000;  // FreeBSD
+
+    // Linux file attributes (FS_IOC_GETFLAGS) — different bit layout.
+    pub const FS_SECRM:       u32 = 0x0000_0001;
+    pub const FS_UNRM:        u32 = 0x0000_0002;
+    pub const FS_COMPR:       u32 = 0x0000_0004;
+    pub const FS_SYNC:        u32 = 0x0000_0008;
+    pub const FS_IMMUTABLE:   u32 = 0x0000_0010;
+    pub const FS_APPEND:      u32 = 0x0000_0020;
+    pub const FS_NODUMP:      u32 = 0x0000_0040;
+    pub const FS_NOATIME:     u32 = 0x0000_0080;
+    pub const FS_ENCRYPT:     u32 = 0x0000_0800;
+    pub const FS_JOURNAL:     u32 = 0x0000_4000;
+    pub const FS_NOTAIL:      u32 = 0x0000_8000;
+    pub const FS_DIRSYNC:     u32 = 0x0001_0000;
+    pub const FS_TOPDIR:      u32 = 0x0002_0000;
+    pub const FS_EXTENT:      u32 = 0x0008_0000;
+    pub const FS_VERITY:      u32 = 0x0010_0000;
+    pub const FS_NOCOW:       u32 = 0x0080_0000;
+    pub const FS_DAX:         u32 = 0x0200_0000;
+    pub const FS_PROJINHERIT: u32 = 0x2000_0000;
+    pub const FS_CASEFOLD:    u32 = 0x4000_0000;
+
+    /// Return a short string representation of the flags.
+    /// Returns "-" if no flags are set.
+    ///
+    /// On BSD/macOS, names match `chflags(1)` / `ls -lO` output.
+    /// On Linux, names match `chattr(1)` / `lsattr` conventions.
+    pub fn to_short_string(self) -> String {
+        if self.0 == 0 {
+            return "-".to_string();
+        }
+
+        let mut parts = Vec::new();
+
+        #[cfg(any(target_os = "macos", target_os = "freebsd"))]
+        {
+            // BSD user flags — names match chflags(1).
+            if self.0 & Self::UF_NODUMP     != 0 { parts.push("nodump"); }
+            if self.0 & Self::UF_IMMUTABLE  != 0 { parts.push("uchg"); }
+            if self.0 & Self::UF_APPEND     != 0 { parts.push("uappnd"); }
+            if self.0 & Self::UF_OPAQUE     != 0 { parts.push("opaque"); }
+            if self.0 & Self::UF_NOUNLINK   != 0 { parts.push("uunlnk"); }
+            if self.0 & Self::UF_COMPRESSED != 0 { parts.push("compressed"); }
+            if self.0 & Self::UF_TRACKED    != 0 { parts.push("tracked"); }
+            if self.0 & Self::UF_SYSTEM     != 0 { parts.push("system"); }
+            if self.0 & Self::UF_SPARSE     != 0 { parts.push("sparse"); }
+            if self.0 & Self::UF_OFFLINE    != 0 { parts.push("offline"); }
+            if self.0 & Self::UF_REPARSE    != 0 { parts.push("reparse"); }
+            if self.0 & Self::UF_ARCHIVE    != 0 { parts.push("uarch"); }
+            if self.0 & Self::UF_READONLY   != 0 { parts.push("rdonly"); }
+            if self.0 & Self::UF_HIDDEN     != 0 { parts.push("hidden"); }
+            // BSD system flags
+            if self.0 & Self::SF_ARCHIVED   != 0 { parts.push("arch"); }
+            if self.0 & Self::SF_IMMUTABLE  != 0 { parts.push("schg"); }
+            if self.0 & Self::SF_APPEND     != 0 { parts.push("sappnd"); }
+            if self.0 & Self::SF_NOUNLINK   != 0 { parts.push("sunlnk"); }
+            if self.0 & Self::SF_SNAPSHOT   != 0 { parts.push("snapshot"); }
+        }
+
+        #[cfg(target_os = "linux")]
+        {
+            // Linux attributes — names match chattr(1) conventions.
+            if self.0 & Self::FS_SECRM       != 0 { parts.push("secrm"); }
+            if self.0 & Self::FS_UNRM        != 0 { parts.push("unrm"); }
+            if self.0 & Self::FS_COMPR       != 0 { parts.push("compr"); }
+            if self.0 & Self::FS_SYNC        != 0 { parts.push("sync"); }
+            if self.0 & Self::FS_IMMUTABLE   != 0 { parts.push("immutable"); }
+            if self.0 & Self::FS_APPEND      != 0 { parts.push("append"); }
+            if self.0 & Self::FS_NODUMP      != 0 { parts.push("nodump"); }
+            if self.0 & Self::FS_NOATIME     != 0 { parts.push("noatime"); }
+            if self.0 & Self::FS_ENCRYPT     != 0 { parts.push("encrypt"); }
+            if self.0 & Self::FS_JOURNAL     != 0 { parts.push("journal"); }
+            if self.0 & Self::FS_NOTAIL      != 0 { parts.push("notail"); }
+            if self.0 & Self::FS_DIRSYNC     != 0 { parts.push("dirsync"); }
+            if self.0 & Self::FS_TOPDIR      != 0 { parts.push("topdir"); }
+            if self.0 & Self::FS_EXTENT      != 0 { parts.push("extent"); }
+            if self.0 & Self::FS_VERITY      != 0 { parts.push("verity"); }
+            if self.0 & Self::FS_NOCOW       != 0 { parts.push("nocow"); }
+            if self.0 & Self::FS_DAX         != 0 { parts.push("dax"); }
+            if self.0 & Self::FS_PROJINHERIT != 0 { parts.push("projinherit"); }
+            if self.0 & Self::FS_CASEFOLD    != 0 { parts.push("casefold"); }
+        }
+
+        if parts.is_empty() {
+            // Unknown flags — show hex.
+            format!("0x{:x}", self.0)
+        } else {
+            parts.join(",")
+        }
+    }
+}
+
+
 /// Per-directory VCS repository status, for the `--vcs-repos` column.
 #[derive(Debug, Clone)]
 pub enum VcsRepoStatus {

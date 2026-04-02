@@ -6,6 +6,10 @@ All notable changes to lx are documented here. lx is forked from
 ## [Unreleased]
 
 ### Added
+- `-O`/`--flags` — show platform file flags. macOS/FreeBSD: `chflags`
+  attributes (hidden, uchg, uappnd, nodump, uarch, etc.). Linux:
+  `chattr` attributes via ioctl (immutable, append, nodump, noatime,
+  etc.). Available as a column (`--columns=flags`).
 - `-C`/`--count` — print the total number of items listed to stderr.
   Works with all view modes including tree and recursive.
 

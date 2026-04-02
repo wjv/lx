@@ -20,6 +20,7 @@ pub struct UiStyles {
     pub blocks:       Style,
     pub header:       Style,
     pub octal:        Style,
+    pub flags:        Style,
 
     pub symlink_path:         Style,
     pub control_char:         Style,
@@ -294,6 +295,7 @@ impl UiStyles {
             "blocks"           => self.blocks            = style,
             "header"           => self.header            = style,
             "octal"            => self.octal             = style,
+            "flags"            => self.flags             = style,
             "symlink-path"     => self.symlink_path      = style,
             "control-char"     => self.control_char      = style,
             "broken-symlink"   => self.broken_symlink    = style,

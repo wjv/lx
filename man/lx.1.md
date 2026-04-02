@@ -217,6 +217,15 @@ human-friendly durations such as "2 hours ago" or "3 days ago".
 `-o`, `--octal`
 : List each file's permissions in octal format. Alias: `--octal-permissions`.
 
+`-O`, `--flags`
+: Show platform file flags. On macOS and FreeBSD, these are the flags
+set by `chflags(1)` and shown by `ls -lO` (macOS) or `ls -lo` (FreeBSD)
+(e.g. `hidden`, `uchg`,
+`uappnd`, `nodump`, `uarch`). On Linux, these are the file attributes
+set by `chattr(1)` and shown by `lsattr` (e.g. `immutable`, `append`,
+`nodump`, `noatime`). Shows `-` when no flags are set. Available via
+`--columns=flags`.
+
 
 COLUMN VISIBILITY
 =================
@@ -256,8 +265,8 @@ COLUMN AND FORMAT SELECTION
 `--columns=COLS`
 : Comma-separated list of columns to display. Overrides the `-l` tier.
 Implies long view. Valid names: `perms`, `size`, `user`, `group`,
-`links`, `inode`, `blocks`, `octal`, `modified`, `changed`, `accessed`,
-`created`, `vcs`.
+`links`, `inode`, `blocks`, `octal`, `flags`, `modified`, `changed`,
+`accessed`, `created`, `vcs`.
 
 `--format=NAME`
 : Select a named column format. Compiled-in formats: `long`, `long2`,

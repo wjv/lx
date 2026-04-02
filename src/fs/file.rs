@@ -369,6 +369,49 @@ impl<'dir> File<'dir> {
         }
     }
 
+    /// BSD/macOS file flags (from `st_flags`).
+    #[cfg(target_os = "macos")]
+    pub fn flags(&self) -> f::FileFlags {
+        use std::os::darwin::fs::MetadataExt;
+        f::FileFlags(self.metadata.st_flags())
+    }
+
+    /// BSD/FreeBSD file flags (from `st_flags`).
+    #[cfg(target_os = "freebsd")]
+    pub fn flags(&self) -> f::FileFlags {
+        use std::os::freebsd::fs::MetadataExt;
+        f::FileFlags(self.metadata.st_flags())
+    }
+
+    /// Linux file attributes via `ioctl(FS_IOC_GETFLAGS)`.
+    #[cfg(target_os = "linux")]
+    pub fn flags(&self) -> f::FileFlags {
+        use std::os::unix::io::AsRawFd;
+
+        // FS_IOC_GETFLAGS = _IOR('f', 1, long) = 0x80086601
+        const FS_IOC_GETFLAGS: libc::c_ulong = 0x8008_6601;
+
+        let file = match std::fs::File::open(&self.path) {
+            Ok(f) => f,
+            Err(_) => return f::FileFlags(0),
+        };
+
+        let mut flags: libc::c_long = 0;
+        let ret = unsafe {
+            libc::ioctl(file.as_raw_fd(), FS_IOC_GETFLAGS, &mut flags)
+        };
+        if ret < 0 {
+            return f::FileFlags(0);
+        }
+        f::FileFlags(flags as u32)
+    }
+
+    /// File flags are not available on this platform.
+    #[cfg(not(any(target_os = "macos", target_os = "freebsd", target_os = "linux")))]
+    pub fn flags(&self) -> f::FileFlags {
+        f::FileFlags(0)
+    }
+
     /// The ID of the user that own this file.
     #[cfg(unix)]
     pub fn user(&self) -> f::User {

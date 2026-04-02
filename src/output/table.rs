@@ -48,6 +48,7 @@ pub enum Column {
     VcsRepos,
     #[cfg(unix)]
     Octal,
+    Flags,
 }
 
 impl Column {
@@ -74,6 +75,7 @@ impl Column {
             Self::VcsRepos          => "repos",
             #[cfg(unix)]
             Self::Octal             => "octal",
+            Self::Flags             => "flags",
         }
     }
 
@@ -101,6 +103,7 @@ impl Column {
             "repos"                 => Some(Self::VcsRepos),
             #[cfg(unix)]
             "octal"                 => Some(Self::Octal),
+            "flags"                 => Some(Self::Flags),
             _                       => None,
         }
     }
@@ -130,6 +133,7 @@ impl Column {
             Self::VcsRepos              => "repos",
             #[cfg(unix)]
             Self::Octal                 => "octal",
+            Self::Flags                 => "flags",
         }
     }
 }
@@ -190,6 +194,7 @@ impl Column {
             Self::VcsRepos      => "Repo",
             #[cfg(unix)]
             Self::Octal         => "Octal",
+            Self::Flags         => "Flags",
         }
     }
 }
@@ -424,6 +429,9 @@ impl<'a, 'f> Table<'a> {
             #[cfg(unix)]
             Column::Octal => {
                 self.octal_permissions(file).render(self.theme.ui.octal)
+            }
+            Column::Flags => {
+                file.flags().render(self.theme.ui.flags)
             }
 
             Column::Timestamp(TimeType::Modified)  => {

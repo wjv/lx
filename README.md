@@ -787,6 +787,8 @@ fly at shell startup.
 
 ## Recent highlights
 
+- **`-O`/`--flags`** — platform file flags: macOS/FreeBSD `chflags`,
+  Linux `chattr` (0.7)
 - **`-C`/`--count`** — print item count to stderr (0.7)
 - **Drop-in config directory** (`conf.d/`) and curated theme library (0.6)
 - **`--total-size` parallelised** with rayon (0.6)
@@ -826,16 +828,17 @@ of `exa` maintained by Christina Sørensen and collaborators. These were
 reimplemented from scratch for `lx` and sometimes differ from their `eza`
 counterparts:
 
-| Feature                    | eza flag                                     | lx flag                         |
-|----------------------------|----------------------------------------------|---------------------------------|
-| Recursive directory sizing | `--total-size`                               | `--total-size` / `-Z`           |
-| List only files            | `--only-files`                               | `--only-files` / `-f`           |
-| Filename quoting           | `--no-quotes` (default on)                   | `--quotes` (default off)        |
-| Terminal hyperlinks        | `--hyperlink`                                | `--hyperlink`                   |
-| Explicit terminal width    | `--width`                                    | `--width` / `-w`                |
-| Absolute paths             | `--absolute`                                 | `--absolute` / `-A`             |
-| Symlink control            | `--no-symlinks` + `--follow-symlinks` + `-X` | `--symlinks=show\|hide\|follow` |
-| Per-directory repo status  | `--git-repos`                                | `--vcs-repos`                   |
+| Feature                    | eza flag                                     | lx flag                              |
+|----------------------------|----------------------------------------------|--------------------------------------|
+| Recursive directory sizing | `--total-size`                               | `--total-size` / `-Z`                |
+| List only files            | `--only-files`                               | `--only-files` / `-f`                |
+| Filename quoting           | `--no-quotes` (default on)                   | `--quotes` (default off)             |
+| Terminal hyperlinks        | `--hyperlink`                                | `--hyperlink`                        |
+| Explicit terminal width    | `--width`                                    | `--width` / `-w`                     |
+| Absolute paths             | `--absolute`                                 | `--absolute` / `-A`                  |
+| Symlink control            | `--no-symlinks` + `--follow-symlinks` + `-X` | `--symlinks=show\|hide\|follow`      |
+| Per-directory repo status  | `--git-repos`                                | `--vcs-repos`                        |
+| Platform file flags        | `--flags` / `-O` (macOS, BSD, Windows)       | `--flags` / `-O` (macOS, BSD, Linux) |
 
 
 ## Licence

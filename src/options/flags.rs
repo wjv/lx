@@ -91,3 +91,4 @@ pub const COUNT: &str = "count";
 // optional feature options
 pub const EXTENDED: &str = "extended";
 pub const OCTAL: &str = "octal-permissions";
+pub const FILE_FLAGS: &str = "flags";

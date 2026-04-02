@@ -290,6 +290,7 @@ const CANONICAL_ORDER: &[Column] = &[
     Column::Inode,
     Column::Octal,
     Column::Permissions,
+    Column::Flags,
     Column::HardLinks,
     Column::FileSize,
     Column::Blocks,
@@ -336,6 +337,7 @@ fn apply_individual_adds(matches: &MatchedFlags, columns: &mut Vec<Column>) {
         (matches.has(flags::BLOCKS),     Column::Blocks),
         (matches.has(flags::GROUP),      Column::Group),
         (matches.has(flags::OCTAL),      Column::Octal),
+        (matches.has(flags::FILE_FLAGS), Column::Flags),
         (matches.has(flags::VCS_STATUS), Column::VcsStatus),
         (matches.has(flags::VCS_REPOS), Column::VcsRepos),
     ];

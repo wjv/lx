@@ -2,7 +2,6 @@
 
 #![allow(trivial_casts)]  // for ARM
 
-use std::cmp::Ordering;
 use std::io;
 use std::path::Path;
 
@@ -48,6 +47,7 @@ pub struct Attribute {
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub fn list_attrs(lister: &lister::Lister, path: &Path) -> io::Result<Vec<Attribute>> {
+    use std::cmp::Ordering;
     use std::ffi::CString;
 
     let c_path = match path.to_str().and_then(|s| CString::new(s).ok()) {
