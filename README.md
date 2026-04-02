@@ -780,7 +780,7 @@ fly at shell startup.
   automatically (a `.bak` backup is saved).
 
 - **The `lx` crate name on crates.io is taken** by an unrelated
-  library. Install from GitHub instead (see [Installation](#installation)).
+  library. lx is published as [`lx-ls`](https://crates.io/crates/lx-ls).
 
 - `lx` is an experiment under active development. Literally anything may still
   change, including the details of the user interface!

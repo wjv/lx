@@ -42,8 +42,25 @@ jobs:
           name: lx-${{ matrix.target }}
           path: dist/lx-${{ matrix.target }}
 
+  man-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pandoc/core@2.19
+        with:
+          args: man/lx.1.md -s -t man -o man/lx.1
+      - uses: pandoc/core@2.19
+        with:
+          args: man/lxconfig.toml.5.md -s -t man -o man/lxconfig.toml.5
+      - uses: actions/upload-artifact@v4
+        with:
+          name: man-pages
+          path: |
+            man/lx.1
+            man/lxconfig.toml.5
+
   release:
-    needs: build
+    needs: [build, man-pages]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -53,5 +70,100 @@ jobs:
           merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
-          files: lx-*
+          files: |
+            lx-*
+            man/lx.1
+            man/lxconfig.toml.5
           generate_release_notes: true
+
+  publish-crate:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_LX_LS }}
+
+  update-homebrew:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: wjv/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      - name: Update formula
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${TAG#v}"
+          BASE="https://github.com/wjv/lx/releases/download/${TAG}"
+
+          # Fetch checksums for release assets.
+          for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-apple-darwin aarch64-apple-darwin; do
+            sha=$(curl -sL "${BASE}/lx-${target}" | sha256sum | cut -d' ' -f1)
+            eval "SHA_$(echo "$target" | tr '-' '_')=$sha"
+          done
+          SHA_MAN1=$(curl -sL "${BASE}/lx.1" | sha256sum | cut -d' ' -f1)
+          SHA_MAN5=$(curl -sL "${BASE}/lxconfig.toml.5" | sha256sum | cut -d' ' -f1)
+
+          cat > Formula/lx.rb <<RUBY
+          class Lx < Formula
+            desc "A modern file lister with personality"
+            homepage "https://github.com/wjv/lx"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "${BASE}/lx-aarch64-apple-darwin"
+                sha256 "${SHA_aarch64_apple_darwin}"
+              else
+                url "${BASE}/lx-x86_64-apple-darwin"
+                sha256 "${SHA_x86_64_apple_darwin}"
+              end
+            end
+
+            on_linux do
+              if Hardware::CPU.arm?
+                url "${BASE}/lx-aarch64-unknown-linux-gnu"
+                sha256 "${SHA_aarch64_unknown_linux_gnu}"
+              else
+                url "${BASE}/lx-x86_64-unknown-linux-gnu"
+                sha256 "${SHA_x86_64_unknown_linux_gnu}"
+              end
+            end
+
+            resource "man-lx" do
+              url "${BASE}/lx.1"
+              sha256 "${SHA_MAN1}"
+            end
+
+            resource "man-lxconfig" do
+              url "${BASE}/lxconfig.toml.5"
+              sha256 "${SHA_MAN5}"
+            end
+
+            def install
+              bin.install Dir["lx-*"].first => "lx"
+              man1.install resource("man-lx") => "lx.1"
+              man5.install resource("man-lxconfig") => "lxconfig.toml.5"
+            end
+
+            test do
+              assert_match "lx #{version}", shell_output("#{bin}/lx --version")
+            end
+          end
+          RUBY
+
+          # Remove leading whitespace from heredoc.
+          sed -i 's/^          //' Formula/lx.rb
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/lx.rb
+          git commit -m "Update lx to ${TAG#v}"
+          git push
