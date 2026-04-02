@@ -53,7 +53,7 @@ VERSIONING
 
 Every configuration file must declare a schema version at the top:
 
-    version = "0.3"
+    version = "0.4"
 
 This is the **config schema version**, not the lx release version. It
 only increments when the config format changes in a way that requires
@@ -64,6 +64,11 @@ migration.
 | *(none)*       | 0.1.x      | Original format with `[defaults]`          |
 | `"0.2"`        | 0.2.0+     | Personalities replace `[defaults]`         |
 | `"0.3"`        | 0.3.0+     | Classes, flat formats, exa style chain     |
+| `"0.4"`        | 0.7.0+     | Conditional overrides (`[[when]]` blocks)  |
+
+Version `"0.3"` configs are accepted by lx 0.7+ (0.4 is a superset of
+0.3).  If `[[when]]` blocks are found in a `"0.3"` config, a warning
+is printed.
 
 If lx encounters a config file with an older version (or no version
 field), it refuses to load it and prints a message directing the user
@@ -71,9 +76,10 @@ to run:
 
     lx --upgrade-config
 
-This command migrates the config to the current format (0.1→0.3 and
-0.2→0.3 are both supported), stamps `version = "0.3"`, and saves the
-original as `~/.lxconfig.toml.bak`.
+This command migrates the config to the current format (0.1→0.4,
+0.2→0.4, and 0.3→0.4 are all supported) and saves the original as
+`~/.lxconfig.toml.bak`.  The 0.3→0.4 migration only bumps the version
+string; earlier migrations also restructure the file.
 
 
 FORMATS
@@ -264,6 +270,54 @@ stands alone -- it has no `inherits` and receives no inherited settings.
 
 Compiled-in personalities (`ll`, `la`, `lll`, `tree`, `ls`) are used as
 fallbacks when a name is not defined in the config file.
+
+Conditional overrides
+---------------------
+
+A personality's settings can vary based on environment variables using
+`[[personality.NAME.when]]` blocks.  Each block specifies conditions
+and settings to overlay when all conditions match.
+
+Conditions use `env.VAR = value` where the TOML value type determines
+the check:
+
+`env.VAR = "string"`
+: Exact string match against the variable's value.
+
+`env.VAR = true`
+: Variable must be set (to any value, including empty).
+
+`env.VAR = false`
+: Variable must be truly unset (not just empty).
+
+All conditions within a single block must match (AND logic).
+
+**Examples:**
+
+    # Icons only in terminals with Nerd Font support.
+    [personality.lx]
+    icons = "never"
+
+    [[personality.lx.when]]
+    env.TERM_PROGRAM = "ghostty"
+    icons = "always"
+
+    # Disable colour over SSH.
+    [[personality.lx.when]]
+    env.SSH_CONNECTION = true
+    colour = "never"
+
+**Evaluation rules:**
+
+- All conditions in a block must match (AND logic).
+- Multiple `when` blocks are tried in order; all matching blocks
+  apply, with later blocks overriding earlier ones.
+- The base personality (without `when`) is the default when no
+  block matches.
+- `when` blocks are inherited: a parent personality's `when` blocks
+  are applied first, then the child's.
+
+Requires `version = "0.4"` in the config file.
 
 argv[0] dispatch
 ----------------

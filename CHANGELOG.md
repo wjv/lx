@@ -12,6 +12,12 @@ All notable changes to lx are documented here. lx is forked from
   etc.). Available as a column (`--columns=flags`).
 - `-C`/`--count` — print the total number of items listed to stderr.
   Works with all view modes including tree and recursive.
+- **Conditional config** — `[[personality.NAME.when]]` blocks that
+  activate based on environment variables.  Conditions use `env.VAR = "value"` (exact match), `env.VAR = true`
+  (must be set), or `env.VAR = false` (must be unset).  Enables per-terminal settings (e.g. icons in Ghostty,
+  disable colour over SSH).
+  Config schema version bumped to 0.4 (0.3 configs still accepted;
+  `--upgrade-config` handles 0.3→0.4).
 
 ## [0.6.2] — 2026-04-02
 

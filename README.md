@@ -787,6 +787,8 @@ fly at shell startup.
 
 ## Recent highlights
 
+- **Conditional config** — `[[personality.*.when]]` blocks that
+  activate based on environment variables (0.7)
 - **`-O`/`--flags`** — platform file flags: macOS/FreeBSD `chflags`,
   Linux `chattr` (0.7)
 - **`-C`/`--count`** — print item count to stderr (0.7)
@@ -804,11 +806,10 @@ See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 Ideas under consideration for future releases; not promises, but
 directions being explored:
 
-- **Conditional config** — per-personality `[[when]]` blocks that
-  activate based on environment variables (e.g. enable icons only in
-  Ghostty, disable colour over SSH)
-- An option to display **platform file flags** (macOS `chflags`,
-  Linux `chattr`)
+- A fairly extensive internal refactoring
+- A performance enhancement for deep traversal
+- Spit and polish
+- Currently no major user-facing items for this list; is that a… good thing?
 
 
 ## Acknowledgements

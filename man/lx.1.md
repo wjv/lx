@@ -340,12 +340,38 @@ lx reads a TOML configuration file from these locations (first found wins):
 
 Run `lx --init-config` to generate a commented starter file.
 
-The config file includes a `version = "0.3"` field to track the schema
-version. If you have a legacy config from an earlier version, run
-`lx --upgrade-config` to migrate it to the current format (0.1→0.3 and
-0.2→0.3 migrations are both supported).
+The config file includes a `version` field to track the schema version.
+The current version is `"0.4"` (version `"0.3"` configs are also
+accepted).  If you have a legacy config from an earlier version, run
+`lx --upgrade-config` to migrate it (0.1→0.3 and 0.2→0.3 migrations
+are supported).
 
 See **lxconfig.toml**(5) for full config file documentation.
+
+## Conditional overrides
+
+Personality settings can vary based on environment variables using
+`[[personality.NAME.when]]` blocks.  Conditions use `env.VAR = value`
+where the TOML type determines the check: a string (`"ghostty"`) for
+exact match, `true` for "must be set", `false` for "must be unset".
+All conditions in a block must match (AND).  Multiple blocks are tried
+in order; all matching blocks apply (later wins).  The base personality
+is the default.
+
+    [personality.lx]
+    icons = "never"
+
+    [[personality.lx.when]]
+    env.TERM_PROGRAM = "ghostty"
+    icons = "always"
+
+    [[personality.lx.when]]
+    env.SSH_CONNECTION = true
+    colour = "never"
+
+Requires `version = "0.4"` in the config file.  If `when` blocks are
+found in a `"0.3"` config, a warning is printed.
+See **lxconfig.toml**(5) for full details.
 
 `--show-config`
 : Show a coloured summary of the active configuration and exit.

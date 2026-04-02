@@ -296,7 +296,10 @@ impl<'de> Deserialize<'de> for StringOrList {
 // ── Config types ────────────────────────────────────────────────
 
 /// The current config schema version.
-pub const CONFIG_VERSION: &str = "0.3";
+pub const CONFIG_VERSION: &str = "0.4";
+
+/// Accepted config versions (0.3 is a valid subset of 0.4).
+const ACCEPTED_VERSIONS: &[&str] = &["0.3", "0.4"];
 
 /// Top-level config file structure.
 #[derive(Debug, Default, Deserialize)]
@@ -391,12 +394,65 @@ pub struct StyleDef {
 }
 
 
+/// A conditional override block: `[[personality.NAME.when]]`.
+///
+/// Each block has environment variable conditions and settings to
+/// apply when all conditions match.  Multiple `when` blocks on the
+/// same personality are tried in order; all matching blocks are
+/// applied (later wins).
+/// A conditional override block: `[[personality.NAME.when]]`.
+///
+/// Environment conditions use `env.VAR = value` where the value type
+/// determines the check:
+/// - **String** (`env.TERM_PROGRAM = "ghostty"`) — exact match
+/// - **`true`** (`env.SSH_CONNECTION = true`) — variable must be set
+///   (to any value, including empty)
+/// - **`false`** (`env.DISPLAY = false`) — variable must be truly
+///   unset (not just empty)
+///
+/// All conditions in a block must match (AND logic).
+#[derive(Debug, Default, Deserialize, Clone)]
+#[serde(default)]
+pub struct ConditionalOverride {
+    /// Environment variable conditions.  Values are either strings
+    /// (exact match), `true` (must be set), or `false` (must be unset).
+    #[serde(default)]
+    pub env: HashMap<String, toml::Value>,
+
+    /// Settings to overlay when conditions match.
+    #[serde(flatten)]
+    pub settings: HashMap<String, toml::Value>,
+}
+
+impl ConditionalOverride {
+    /// Check whether all `env` conditions are satisfied.
+    fn matches(&self) -> bool {
+        self.env.iter().all(|(key, condition)| {
+            let actual = env::var(key).unwrap_or_default();
+            match condition {
+                // String: exact match (including "" for empty).
+                toml::Value::String(expected) => actual == *expected,
+                // true: variable must be set (to anything, even "").
+                toml::Value::Boolean(true) => env::var(key).is_ok(),
+                // false: variable must be truly unset.
+                toml::Value::Boolean(false) => env::var(key).is_err(),
+                // Anything else: ignore (treat as always-true).
+                _ => true,
+            }
+        })
+    }
+}
+
+
 /// A personality bundles format, columns, and settings.
 ///
 /// `format` and `columns` are structural fields (they define the
 /// column layout).  `inherits` controls how personalities compose.
 /// All other settings are captured via `serde(flatten)` and
 /// converted to CLI args via `SETTING_FLAGS`.
+///
+/// Conditional overrides (`[[personality.NAME.when]]`) allow settings
+/// to vary based on environment variables.
 #[derive(Debug, Default, Deserialize, Clone)]
 #[serde(default)]
 pub struct PersonalityDef {
@@ -411,6 +467,10 @@ pub struct PersonalityDef {
     /// Inline column list (overrides `format` if both given).
     /// Accepts a TOML array or a comma-separated string.
     pub columns: Option<StringOrList>,
+
+    /// Conditional overrides: `[[personality.NAME.when]]` blocks.
+    #[serde(default)]
+    pub when: Vec<ConditionalOverride>,
 
     /// All other settings, converted to CLI args via `SETTING_FLAGS`.
     #[serde(flatten)]
@@ -588,7 +648,7 @@ fn try_load_config() -> Result<Option<Config>, ConfigError> {
         let contents = fs::read_to_string(path).with_path(path)?;
 
         let version = detect_config_version(&contents);
-        if version != CONFIG_VERSION {
+        if !ACCEPTED_VERSIONS.contains(&version) {
             return Err(ConfigError::NeedsUpgrade {
                 path: path.clone(),
                 version: version.to_string(),
@@ -597,6 +657,15 @@ fn try_load_config() -> Result<Option<Config>, ConfigError> {
 
         let cfg: Config = toml::from_str(&contents)
             .map_err(|source| ConfigError::Parse { path: path.clone(), source })?;
+
+        // Warn if when blocks are used but version is still 0.3.
+        if version == "0.3" {
+            let has_when = cfg.personality.values().any(|p| !p.when.is_empty());
+            if has_when {
+                eprintln!("lx: config has [[personality.*.when]] blocks but version is \"0.3\".");
+                eprintln!("    Change version to \"0.4\" to enable conditional config.");
+            }
+        }
 
         info!("Loaded config from {}", path.display());
         Some(cfg)
@@ -711,6 +780,18 @@ pub fn resolve_personality(name: &str) -> Result<Option<PersonalityDef>, ConfigE
         // Settings: child values override parent values.
         for (key, value) in def.settings {
             effective.settings.insert(key, value);
+        }
+        // Collect all when blocks (parent first, child later).
+        effective.when.extend(def.when);
+    }
+
+    // Apply matching conditional overrides (in order; later wins).
+    for cond in &effective.when {
+        if cond.matches() {
+            debug!("conditional override matched: env = {:?}", cond.env);
+            for (key, value) in &cond.settings {
+                effective.settings.insert(key.clone(), value.clone());
+            }
         }
     }
 
@@ -1480,15 +1561,28 @@ fn format_format_toml(name: &str, columns: &[String]) -> String {
 /// Upgrade an older config file to the current format.
 ///
 /// Detects the source version and applies the appropriate migration:
-/// - 0.1 (unversioned): convert `[defaults]`, flatten formats, stamp 0.3
-/// - 0.2: flatten `[format.NAME]` sub-tables, stamp 0.3
-/// - 0.3: already current, return error
+/// - 0.1 (unversioned): convert `[defaults]`, flatten formats, stamp 0.4
+/// - 0.2: flatten `[format.NAME]` sub-tables, stamp 0.4
+/// - 0.3: bump version string to 0.4 (no structural changes)
 pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
     let contents = fs::read_to_string(path).with_path(path)?;
     let version = detect_config_version(&contents);
 
     if version == CONFIG_VERSION {
         return Err(ConfigError::AlreadyCurrent { path: path.clone() });
+    }
+
+    // 0.3 → 0.4: just bump the version string in place (no structural changes).
+    if version == "0.3" {
+        let backup = path.with_extension("toml.bak");
+        fs::copy(path, &backup).with_path(&backup)?;
+
+        let updated = contents.replacen("version = \"0.3\"", &format!("version = \"{CONFIG_VERSION}\""), 1);
+        fs::write(path, &updated).with_path(path)?;
+
+        eprintln!("Original config saved to {}", backup.display());
+        eprintln!("Upgraded {} from version 0.3 to {CONFIG_VERSION}", path.display());
+        return Ok(());
     }
 
     // Parse with the permissive legacy struct (handles all old formats).
