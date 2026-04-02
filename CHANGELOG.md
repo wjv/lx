@@ -3,6 +3,14 @@
 All notable changes to lx are documented here. lx is forked from
 [exa](https://github.com/ogham/exa) v0.10.1.
 
+## [0.6.1] — 2026-04-02
+
+### Fixed
+- `--icons=auto`, `--classify=auto`, and `--hyperlink=auto` now
+  check whether stdout is a terminal.  Previously `auto` behaved
+  identically to `always`, emitting icons, file indicators, and
+  OSC 8 hyperlinks even when piped.
+
 ## [0.6.0] — 2026-04-01
 
 ### Added
