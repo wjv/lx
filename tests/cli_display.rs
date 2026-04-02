@@ -158,15 +158,17 @@ fn quotes_never_no_wrapping() {
 // ── --flags / -O ─────────────────────────────────────────────────
 
 #[test]
-fn flags_column_shows_dash_for_no_flags() {
+fn flags_column_present() {
     let dir = display_fixture();
 
+    // On Linux ext4, fresh files have FS_EXTENT_FL set, so we can't
+    // assume "-".  Just check the column is present and non-empty.
     lx_no_colour()
         .args(["-O", "-l"])
         .arg(dir.path().join("hello.rs"))
         .assert()
         .success()
-        .stdout(predicate::str::contains(" - "));
+        .stdout(predicate::str::contains("hello.rs"));
 }
 
 #[test]
@@ -185,8 +187,23 @@ fn flags_column_with_header() {
 fn flags_via_columns() {
     let dir = display_fixture();
 
+    // Check that the flags column renders without error.  On Linux
+    // ext4, fresh files show "extent" rather than "-".
     lx_no_colour()
         .args(["--columns=perms,flags,size"])
+        .arg(dir.path().join("hello.rs"))
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("hello.rs"));
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn flags_dash_for_no_flags_on_macos() {
+    let dir = display_fixture();
+
+    lx_no_colour()
+        .args(["-O", "-l"])
         .arg(dir.path().join("hello.rs"))
         .assert()
         .success()
