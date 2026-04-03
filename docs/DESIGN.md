@@ -18,6 +18,9 @@ good base UI means personalities become a power-user tool for presets,
 not a crutch for a confusing interface.  Both are better for existing;
 they complement one another.
 
+A third layer — **conditional config** — lets personalities adapt to
+context (terminal emulator, SSH session) without shell-level scripting.
+
 
 ## Design goals
 
@@ -89,11 +92,14 @@ making them easier to remember:
 | Recursion          | `-T` (tree) / `-R` (recurse) / `-L` (level limit)                   | Related group             |
 | Dir grouping       | `-F` (first) / `-J` (last)                                          | Opposites on the home row |
 | Dir/file filtering | `-D` (only dirs) / `-f` (only files)                                | Opposites                 |
+| Filtering          | `-I` (ignore glob) / `-P` (prune glob)                              | Related: hide vs show-but-skip |
 | Timestamps         | `-m` (modified) / `-c` (changed) / `-u` (accessed) / `-U` (created) | Full set                  |
 | Size display       | `-b` (binary prefixes) / `-B` (bytes) / `-Z` (total size)           | Related group             |
 | Users              | `-g` (group) / `-n` (numeric IDs)                                   | Related                   |
 | Visibility         | `-a` (show hidden) / `-I` (ignore glob)                             | Opposite intent           |
 | Sort               | `-s` (sort field) / `-r` (reverse)                                  | Compose together          |
+| Summary            | `-C` (count) / `-Z` (total size)                                    | Compose: `-CZ` = count + size |
+| Metadata           | `-o` (octal) / `-O` (flags)                                         | Uppercase/lowercase pair  |
 
 The uppercase/lowercase pairing is deliberate where feasible:
 `-D`/`-d` (dirs only / dirs as files), `-U`/`-u` (created / accessed),
@@ -106,6 +112,10 @@ Flags that control conditional behaviour use a standard `=WHEN` vocabulary:
 `always`, `auto`, `never`.  This applies to `--colour`, `--icons`,
 `--classify`, `--hyperlink`, and `--quotes`.
 
+`auto` checks whether stdout is a terminal: enabled on a TTY, disabled
+when piped.  (`--quotes=auto` is the exception — quoting is useful in
+both contexts, so `auto` behaves like `always`.)
+
 ### Compounding flags
 
 `-l` compounds: `-l` (basic), `-ll` (more detail), `-lll` (everything).
@@ -114,21 +124,49 @@ overridden in the config file. This mirrors the behaviour of `-a` and
 `-aa` in `exa`. Further compounding flags were and are still under
 consideration.
 
-### Column visibility: symmetric pairs
+### Positive / negative flag symmetry
 
-Every column has both a positive and negative flag:
+Every column and display option has both a positive and negative form.
+The positive form adds or enables; the negative form suppresses or
+overrides.  This is how CLI flags and personalities work together:
+a personality sets your defaults, and `--no-*` flags override them
+per invocation.
 
-| Show              | Hide               | Column          |
-|-------------------|--------------------|-----------------|
-| `--permissions`   | `--no-permissions` | Permission bits |
-| `--filesize`      | `--no-filesize`    | File size       |
-| `--user`          | `--no-user`        | Owner           |
-| `--group` / `-g`  | `--no-group`       | Group           |
-| `--inode` / `-i`  | `--no-inode`       | Inode           |
-| `--links` / `-H`  | `--no-links`       | Hard links      |
-| `--blocks` / `-S` | `--no-blocks`      | Blocks          |
-| `--header` / `-h` |                    | Header row      |
-| `--icons`         | `--no-icons`       | File icons      |
+| Show                | Hide                 | Feature          |
+|---------------------|----------------------|------------------|
+| `--permissions`     | `--no-permissions`   | Permission bits  |
+| `--filesize`        | `--no-filesize`      | File size        |
+| `--user`            | `--no-user`          | Owner            |
+| `--group` / `-g`    | `--no-group`         | Group            |
+| `--inode` / `-i`    | `--no-inode`         | Inode            |
+| `--links` / `-H`    | `--no-links`         | Hard links       |
+| `--blocks` / `-S`   | `--no-blocks`        | Blocks           |
+| `--octal` / `-o`    | `--no-octal`         | Octal perms      |
+| `--header` / `-h`   | `--no-header`        | Header row       |
+| `--count` / `-C`    | `--no-count`         | Item count       |
+| `--total-size`/`-Z` | `--no-total-size`    | Recursive sizes  |
+| `--icons`           | `--no-icons`         | File icons       |
+
+### `--no-X` short aliases
+
+For any flag with a short form, the negation accepts a `--no-X` alias
+where `X` is the short flag letter.  This is deliberately non-standard
+but internally consistent: if you've memorised `-Z` for total sizes,
+`--no-Z` is the obvious way to suppress it.
+
+| Alias     | Expands to         |
+|-----------|--------------------|
+| `--no-h`  | `--no-header`      |
+| `--no-g`  | `--no-group`       |
+| `--no-i`  | `--no-inode`       |
+| `--no-H`  | `--no-links`       |
+| `--no-S`  | `--no-blocks`      |
+| `--no-o`  | `--no-octal`       |
+| `--no-C`  | `--no-count`       |
+| `--no-Z`  | `--no-total-size`  |
+
+These aliases are hidden from `--help` (power users discover them
+naturally) but documented in the man page.
 
 ### Directory grouping
 
@@ -150,13 +188,39 @@ it is inserted at its canonical position relative to the columns already
 present — not appended at the end.  The canonical order is:
 
 ```text
-inode, octal, perms, links, size, blocks, user, group,
-modified, changed, created, accessed, vcs
+inode, octal, perms, flags, links, size, blocks, user, group,
+modified, changed, created, accessed, vcs, repos
 ```
 
 This means `-lS` places blocks after size (where it belongs), not after
 the date column.  If you want full control over column position, use
 `--columns=...` or define a format.
+
+
+## Three layers of configuration
+
+lx's configuration model has three layers, applied in order:
+
+1. **Personality** — defines defaults: which columns, what format,
+   which theme.  Comes from the config file or compiled-in definitions.
+   Activated by name (`-p NAME`, argv[0] symlink, or the `lx` default).
+
+2. **CLI flags** — override the personality for this invocation.
+   `-g` adds the group column, `--no-g` removes it. `--theme=dark`
+   overrides the personality's theme.  Last flag wins.
+
+3. **Conditional overrides** (`[[when]]` blocks) — personality settings
+   that vary by environment.  Evaluated between layers 1 and 2: the
+   personality resolves, conditionals overlay, then CLI flags override.
+
+This means a user can:
+- Define `ll` with `header = true` and `total-size = true` (layer 1)
+- Add `[[personality.ll.when]] env.SSH_CONNECTION = true` /
+  `colour = "never"` (layer 3)
+- Run `ll --no-h` to suppress the header for one listing (layer 2)
+
+Each layer has a clear role: config defines *what*, conditionals
+adapt to *where*, CLI flags handle *this time*.
 
 
 ## Short flag reference
@@ -170,6 +234,7 @@ the date column.  If you want full control over column position, use
 | `-T` | `--tree`        | Tree view                                |
 | `-R` | `--recurse`     | Recurse into directories                 |
 | `-L` | `--level`       | Depth limit for `-T`/`-R`                |
+| `-C` | `--count`       | Item count to stderr (`-CZ` + size)      |
 | `-a` | `--all`         | Show hidden files (`-aa` for `.`/`..`)   |
 | `-d` | `--list-dirs`   | Treat directories as files               |
 | `-D` | `--only-dirs`   | Show only directories                    |
@@ -178,7 +243,9 @@ the date column.  If you want full control over column position, use
 | `-J` |                 | Directories last (`--group-dirs=last`)   |
 | `-r` | `--reverse`     | Reverse sort order                       |
 | `-s` | `--sort`        | Sort field                               |
-| `-I` | `--ignore-glob` | Glob patterns to ignore                  |
+| `-I` | `--ignore`      | Glob patterns to hide                    |
+| `-P` | `--prune`       | Glob patterns to show but not recurse    |
+| `-A` | `--absolute`    | Show absolute paths                      |
 | `-b` | `--binary`      | Binary size prefixes (KiB)               |
 | `-B` | `--bytes`       | Size in bytes                            |
 | `-g` | `--group`       | Show group column                        |
@@ -186,6 +253,8 @@ the date column.  If you want full control over column position, use
 | `-H` | `--links`       | Show hard link count                     |
 | `-i` | `--inode`       | Show inode number                        |
 | `-S` | `--blocks`      | Show block count                         |
+| `-o` | `--octal`       | Show octal permissions                   |
+| `-O` | `--flags`       | Show platform file flags                 |
 | `-Z` | `--total-size`  | Recursive directory size                 |
 | `-n` | `--numeric`     | Numeric user/group IDs                   |
 | `-m` | `--modified`    | Show modified time                       |

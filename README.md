@@ -17,39 +17,47 @@ What makes `lx` stand out from the crowd?
 
   Create symlinks (e.g. `ll`, `la`, `du`, `tree`) and `lx` adapts its behaviour 
   to the name it's invoked as! And all this without a shell alias in sight!
+  What's more, personalities are fully configurable.
 
-- **Fully configurable column layout**
+- **A sane CLI** — or at least, *saner*
 
-  Complete control over displayed columns *and* their order
-  (`--columns=perms,size,user,modified`), as well as the ability to define
-  and use named column sets known as "formats".
+  The command-line user interface tries to be orthogonal and symmetrical, while 
+  not entirely abandoning all familial resemblance to POSIX `ls` and other 
+  ls-likes. This is a big ask, and `lx`'s implementation is still evolving!
+
+And more:
+
+- **Configurable column layout**
+
+  Complete control over displayed columns *and* their order using `--columns`, 
+  as well as the ability to define and use named column sets known as 
+  "formats".
 
 - **"Compounding" flags** — flags that compound their effect when repeated
 
   For example: Use `-l` for a long listing, `-ll` for more detail, and `-lll` 
   for *even more*.  No more remembering which combination of `-g`, `-H`, `-h`, 
-  and `--git` you need!
+  and `--vcs` you need!
 
 - **Configuration file** — optional, obviously
 
   One `lxconfig.toml` replaces all your shell aliases and environment
-  variables. Define formats, personalities, and more! Run `lx --init-config` to 
-  get started.
+  variables. Define simple column formats or entire *personalities*… and more! 
+  Run `lx --init-config` to get started.
 
 - **Named colour themes, styles, and file-type classes**
 
   The design-conscious power user can define themes, styles, and file-type 
-  classes in the config file using human-readable colour names. Everything 
-  inherits, composes, and can be overridden. Themes can be applied explicitly 
-  with the `--theme` flag, but they're designed to be assigned to 
-  personalities!
+  classes using human-readable colour names. Everything inherits, composes, and 
+  can be overridden. Themes can be applied explicitly with `--theme`, but 
+  they're designed to be assigned to *personalities*!
 
 - **Unified VCS support** — including Jujutsu!
 
   Built-in backends for both [Git](https://git-scm.com) and
   [Jujutsu](https://jj-vcs.dev/latest/).  VCS auto-detection supported.
 
-For the design principles behind the CLI, see [docs/DESIGN.md](DESIGN.md).
+For the design principles behind the CLI, see [docs/DESIGN.md](docs/DESIGN.md).
 
 
 ## Quick start
@@ -176,8 +184,6 @@ Generate a starter config with:
 lx --init-config
 ```
 
-
-
 This creates `~/.lxconfig.toml`. The file is self-documenting — prose comments 
 (starting with `##`) explain each section, while commented-out values (starting 
 with `#`) show the compiled-in defaults you can customise.
@@ -236,11 +242,13 @@ Available column names:
 | `inode`    | Inode number            |
 | `blocks`   | Block count             |
 | `octal`    | Octal permissions       |
+| `flags`    | Platform file flags     |
 | `modified` | Last modified time      |
 | `changed`  | Last status change time |
 | `accessed` | Last access time        |
 | `created`  | Creation time           |
 | `vcs`      | VCS status              |
+| `repos`    | VCS repo indicator      |
 
 The built-in formats `long`, `long2`, and `long3` are used by the flags
 `-l`, `-ll`, and `-lll`. You can override them by simply redefining them.
@@ -301,9 +309,10 @@ reverse = true
 total-size = true
 ```
 
-> **Upgrading from 0.1 or 0.2:** run `lx --upgrade-config` to migrate
-> your config file to the current 0.3 format. Both 0.1→0.3 and 0.2→0.3
-> migrations are supported. A `.bak` backup of the original is saved.
+> **Upgrading from an older config:** run `lx --upgrade-config` to
+> migrate your config file to the current format (0.4). Migrations
+> from 0.1, 0.2, and 0.3 are all supported. A `.bak` backup of the
+> original is saved.
 
 
 ### Themes, styles, and classes
@@ -385,16 +394,16 @@ refers to the compiled-in default theme and style.  Without
 
 #### Curated themes
 
-lx ships with ready-made themes in the `themes/` directory:
+`lx` ships with ready-made themes in the `themes/` directory:
 
-| theme           | filename               |
-|-----------------|------------------------|
-| Catpuccin Mocha | `catpuccin-mocha.toml` |
-| Dracula         | `dracula.toml`         |
-| Gruvbox Dark    | `gruvbox-dark.toml`    |
-| Nord            | `nord.toml`            |
-| Solarized Dark  | `solarized-dark.toml`  |
-| Solarized Light | `solarized-light.toml` |
+| theme           | filename                 |
+|-----------------|--------------------------|
+| Catppuccin Mocha | `catppuccin-mocha.toml` |
+| Dracula         | `dracula.toml`           |
+| Gruvbox Dark    | `gruvbox-dark.toml`      |
+| Nord            | `nord.toml`              |
+| Solarized Dark  | `solarized-dark.toml`    |
+| Solarized Light | `solarized-light.toml`   |
 
 To install a theme, simply copy it to the drop-in configuration directory (See 
 [Config file locations](#config-file-locations) below).
@@ -407,7 +416,7 @@ cp themes/dracula.toml ~/.config/lx/conf.d/
 Activate a theme on the command line with the `--theme` flag:
 
 ```sh
-lx -l `--theme=dracula`
+lx -l --theme=dracula
 ````
 
 Or associate the theme permanently with a specific personality in your 
@@ -775,8 +784,8 @@ fly at shell startup.
   `cargo install lx-ls --features jj`) to enable it.  Without the feature,
   `--vcs=jj` returns a clear error message.
 
-- **0.1 and 0.2 config files need migrating** — the 0.3 config format
-  is not backwards-compatible. Run `lx --upgrade-config` to convert
+- **Old config files need migrating** — the current config format is
+  0.4. Run `lx --upgrade-config` to convert from 0.1, 0.2, or 0.3
   automatically (a `.bak` backup is saved).
 
 - **The `lx` crate name on crates.io is taken** by an unrelated
