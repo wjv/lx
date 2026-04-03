@@ -191,7 +191,9 @@ Filtering and sorting:
 
 : `all` (bool), `list-dirs` (bool), `level` (integer), `reverse` (bool),
 `sort` (string), `group-dirs` (string: `first`/`last`/`none`),
-`only-dirs` (bool), `only-files` (bool).
+`only-dirs` (bool), `only-files` (bool), `ignore` (string: pipe-separated
+globs), `prune` (string: pipe-separated globs),
+`symlinks` (string: `show`/`hide`/`follow`).
 
 Long view options:
 
@@ -205,7 +207,7 @@ Long view options:
 VCS:
 
 : `vcs` (string: `auto`/`git`/`jj`/`none`), `vcs-status` (bool),
-`vcs-ignore` (bool).
+`vcs-ignore` (bool), `vcs-repos` (bool).
 
 Column visibility:
 

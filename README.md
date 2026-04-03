@@ -28,7 +28,7 @@ What makes `lx` stand out from the crowd?
 
   For example: Use `-l` for a long listing, `-ll` for more detail, and `-lll` 
   for *even more*.  No more remembering which combination of `-g`, `-H`, `-h`, 
-  and `--git` you need!
+  and `--vcs` you need!
 
 - **Configuration file** — optional, obviously
 
@@ -49,7 +49,7 @@ What makes `lx` stand out from the crowd?
   Built-in backends for both [Git](https://git-scm.com) and
   [Jujutsu](https://jj-vcs.dev/latest/).  VCS auto-detection supported.
 
-For the design principles behind the CLI, see [docs/DESIGN.md](DESIGN.md).
+For the design principles behind the CLI, see [docs/DESIGN.md](docs/DESIGN.md).
 
 
 ## Quick start
