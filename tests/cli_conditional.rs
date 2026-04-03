@@ -1,7 +1,5 @@
 //! Tests for conditional config: [[personality.NAME.when]] blocks.
 
-mod support;
-
 use std::fs;
 use predicates::prelude::*;
 use tempfile::tempdir;
