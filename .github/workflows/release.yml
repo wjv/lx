@@ -50,14 +50,14 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y pandoc
       - name: Build man pages
         run: |
-          pandoc man/lx.1.md -s -t man -o man/lx.1
-          pandoc man/lxconfig.toml.5.md -s -t man -o man/lxconfig.toml.5
+          pandoc man/lx.1.md -s -t man -o lx.1
+          pandoc man/lxconfig.toml.5.md -s -t man -o lxconfig.toml.5
       - uses: actions/upload-artifact@v4
         with:
           name: man-pages
           path: |
-            man/lx.1
-            man/lxconfig.toml.5
+            lx.1
+            lxconfig.toml.5
 
   release:
     needs: [build, man-pages]
@@ -72,8 +72,8 @@ jobs:
         with:
           files: |
             lx-*
-            man/lx.1
-            man/lxconfig.toml.5
+            lx.1
+            lxconfig.toml.5
           generate_release_notes: true
 
   publish-crate:
@@ -93,7 +93,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: wjv/homebrew-tap
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          token: ${{ secrets.HOMEBREW_LX_LS }}
       - name: Update formula
         env:
           TAG: ${{ github.ref_name }}
