@@ -91,7 +91,7 @@ impl details::Options {
     fn deduce_long<V: Vars>(matches: &MatchedFlags, vars: &V, long_count: u8) -> Result<Self, OptionsError> {
         Ok(Self {
             table: Some(TableOptions::deduce(matches, vars, long_count)?),
-            header: matches.has(flags::HEADER) || long_count >= 3,
+            header: (matches.has(flags::HEADER) || long_count >= 3) && !matches.has(flags::NO_HEADER),
             xattr: xattr::ENABLED && matches.has(flags::EXTENDED),
         })
     }
@@ -154,7 +154,7 @@ impl TableOptions {
         let size_format = SizeFormat::deduce(matches);
         let user_format = UserFormat::deduce(matches);
         let columns = deduce_columns(matches, long_count);
-        let total_size = matches.has(flags::TOTAL_SIZE);
+        let total_size = matches.has(flags::TOTAL_SIZE) && !matches.has(flags::NO_TOTAL_SIZE);
         Ok(Self { size_format, time_format, user_format, columns, total_size })
     }
 }

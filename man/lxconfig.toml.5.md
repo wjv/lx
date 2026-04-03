@@ -191,7 +191,7 @@ Display options:
 `none`/`16`/`256`), `icons` (string: `always`/`auto`/`never`),
 `width` (integer), `absolute` (bool), `hyperlink` (string:
 `always`/`auto`/`never`), `quotes` (string: `always`/`auto`/`never`),
-`theme` (string: named theme).
+`theme` (string: named theme), `count` (bool).
 
 Filtering and sorting:
 
@@ -203,22 +203,27 @@ Long view options:
 
 : `binary` (bool), `bytes` (bool), `header` (bool), `inode` (bool),
 `links` (bool), `blocks` (bool), `group` (bool), `numeric` (bool),
-`time-style` (string: `default`/`iso`/`long-iso`/`full-iso`),
+`time-style` (string: `default`/`iso`/`long-iso`/`full-iso`/`relative`/`+FORMAT`),
 `time` (string), `modified` (bool), `changed` (bool),
 `accessed` (bool), `created` (bool), `total-size` (bool),
-`extended` (bool), `octal-permissions` (bool).
+`extended` (bool), `octal-permissions` (bool), `flags` (bool).
 
 VCS:
 
 : `vcs` (string: `auto`/`git`/`jj`/`none`), `vcs-status` (bool),
-`vcs-ignore` (bool).
+`vcs-ignore` (bool), `vcs-repos` (bool).
 
-Column visibility:
+Negation (override personality defaults):
 
-: `permissions` (bool), `filesize` (bool), `user` (bool),
-`no-permissions` (bool), `no-filesize` (bool), `no-user` (bool),
+: `no-permissions` (bool), `no-filesize` (bool), `no-user` (bool),
 `no-time` (bool), `no-icons` (bool), `no-inode` (bool),
-`no-group` (bool), `no-links` (bool), `no-blocks` (bool).
+`no-group` (bool), `no-links` (bool), `no-blocks` (bool),
+`no-octal` (bool), `no-header` (bool), `no-count` (bool),
+`no-total-size` (bool).
+
+Column visibility (positive):
+
+: `permissions` (bool), `filesize` (bool), `user` (bool).
 
 Inheritance
 -----------

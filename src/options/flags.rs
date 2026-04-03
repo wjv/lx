@@ -62,6 +62,10 @@ pub const NO_INODE: &str = "no-inode";
 pub const NO_GROUP: &str = "no-group";
 pub const NO_LINKS: &str = "no-links";
 pub const NO_BLOCKS: &str = "no-blocks";
+pub const NO_HEADER: &str = "no-header";
+pub const NO_OCTAL: &str = "no-octal";
+pub const NO_COUNT: &str = "no-count";
+pub const NO_TOTAL_SIZE: &str = "no-total-size";
 
 pub const TOTAL_SIZE: &str = "total-size";
 

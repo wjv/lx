@@ -137,6 +137,7 @@ static SETTING_FLAGS: &[SettingDef] = &[
     SettingDef { key: "accessed",      flag: "--accessed",       kind: SettingKind::Bool },
     SettingDef { key: "created",       flag: "--created",        kind: SettingKind::Bool },
     SettingDef { key: "total-size",    flag: "--total-size",     kind: SettingKind::Bool },
+    SettingDef { key: "count",         flag: "--count",          kind: SettingKind::Bool },
     SettingDef { key: "extended",      flag: "--extended",       kind: SettingKind::Bool },
     SettingDef { key: "octal-permissions", flag: "--octal-permissions", kind: SettingKind::Bool },
 
@@ -169,6 +170,10 @@ static SETTING_FLAGS: &[SettingDef] = &[
     SettingDef { key: "no-group",      flag: "--no-group",       kind: SettingKind::Bool },
     SettingDef { key: "no-links",      flag: "--no-links",       kind: SettingKind::Bool },
     SettingDef { key: "no-blocks",     flag: "--no-blocks",      kind: SettingKind::Bool },
+    SettingDef { key: "no-octal",      flag: "--no-octal",       kind: SettingKind::Bool },
+    SettingDef { key: "no-header",     flag: "--no-header",      kind: SettingKind::Bool },
+    SettingDef { key: "no-count",      flag: "--no-count",       kind: SettingKind::Bool },
+    SettingDef { key: "no-total-size", flag: "--no-total-size",  kind: SettingKind::Bool },
 ];
 
 /// Look up a setting definition by config key name.

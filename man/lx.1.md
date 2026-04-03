@@ -230,38 +230,6 @@ set by `chattr(1)` and shown by `lsattr` (e.g. `immutable`, `append`,
 `--columns=flags`.
 
 
-COLUMN VISIBILITY
-=================
-
-Every column has both a positive and negative form. Negative flags
-suppress columns; positive flags re-enable them (useful for overriding
-a personality's defaults).
-
-`--permissions`, `--no-permissions`
-: Show or suppress the permissions field.
-
-`--filesize`, `--no-filesize`
-: Show or suppress the file size field.
-
-`--user`, `--no-user`
-: Show or suppress the user field.
-
-`--no-time`
-: Suppress the time field.
-
-`--no-inode`
-: Suppress the inode field.
-
-`--no-group`
-: Suppress the group field.
-
-`--no-links`
-: Suppress the hard links field.
-
-`--no-blocks`
-: Suppress the blocks field.
-
-
 COLUMN AND FORMAT SELECTION
 ===========================
 
@@ -296,6 +264,53 @@ A personality may also set `theme = "NAME"` to select a named theme.
 When lx is invoked via a symlink whose name matches a personality, that
 personality is applied automatically. For example, if `ll` is a symlink
 to `lx`, running `ll` is equivalent to `lx -pll`.
+
+
+COLUMN OVERRIDES
+================
+
+Every column and display option has a negative form for overriding
+personality defaults.  For flags with a short form, a `--no-X` alias
+is also accepted (e.g. `--no-h` for `--no-header`, `--no-Z` for
+`--no-total-size`, `--no-C` for `--no-count`, `--no-g` for
+`--no-group`, `--no-i` for `--no-inode`, `--no-H` for `--no-links`,
+`--no-S` for `--no-blocks`, `--no-o` for `--no-octal`).
+
+`--permissions`, `--no-permissions`
+: Show or suppress the permissions field.
+
+`--filesize`, `--no-filesize`
+: Show or suppress the file size field.
+
+`--user`, `--no-user`
+: Show or suppress the user field.
+
+`--no-time`
+: Suppress the time field.
+
+`--no-inode`
+: Suppress the inode field.
+
+`--no-group`
+: Suppress the group field.
+
+`--no-links`
+: Suppress the hard links field.
+
+`--no-blocks`
+: Suppress the blocks field.
+
+`--no-octal`
+: Suppress the octal permissions column.
+
+`--no-header`
+: Suppress the header row.
+
+`--no-count`
+: Suppress the `-C`/`--count` summary.
+
+`--no-total-size`
+: Suppress `-Z`/`--total-size`.
 
 
 VCS INTEGRATION

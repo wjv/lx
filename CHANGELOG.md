@@ -19,6 +19,15 @@ All notable changes to lx are documented here. lx is forked from
   disable colour over SSH).
   Config schema version bumped to 0.4 (0.3 configs still accepted;
   `--upgrade-config` handles 0.3→0.4).
+- `--no-count`, `--no-total-size`, `--no-header`, `--no-octal` — override
+  flags for suppressing personality defaults. Hidden `--no-X` short aliases
+  (e.g. `--no-C`, `--no-Z`, `--no-h`) also accepted.
+
+### Changed
+- `--help` reorganised: Long view before Filtering, positive enablers
+  (`--permissions`, `--filesize`, `--user`) moved to Long view, negation
+  flags in "Column overrides" section. Personality-only `--no-*` flags
+  hidden from `--help` (documented in man page).
 
 ## [0.6.2] — 2026-04-02
 
