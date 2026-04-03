@@ -17,7 +17,8 @@ What makes `lx` stand out from the crowd?
 
   Create symlinks (e.g. `ll`, `la`, `du`, `tree`) and `lx` adapts its behaviour 
   to the name it's invoked as! And all this without a shell alias in sight!
-  What's more, personalities are fully configurable.
+  
+  Builtin personalities are fully configurable, and custom ones can be defined.
 
 - **A sane CLI** — or at least, *saner*
 

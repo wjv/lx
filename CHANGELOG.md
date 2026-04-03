@@ -3,36 +3,55 @@
 All notable changes to lx are documented here. lx is forked from
 [exa](https://github.com/ogham/exa) v0.10.1.
 
-## [Unreleased]
+## [0.7.0] — 2026-04-04
+
+### Added
+- **Conditional config** — `[[personality.NAME.when]]` blocks that
+  activate based on environment variables. Conditions use
+  `env.VAR = "value"` (exact match), `env.VAR = true` (must be set),
+  or `env.VAR = false` (must be unset). Enables per-terminal settings
+  (e.g. icons in Ghostty, disable colour over SSH). Config schema
+  version bumped to 0.4 (0.3 configs still accepted;
+  `--upgrade-config` handles 0.3→0.4).
+- `-C`/`--count` — print item count to stderr. Combined with `-Z`,
+  also shows total size of displayed items (no double-counting in
+  tree views). Respects `-b`/`-B` size formatting.
+- `-O`/`--flags` — show platform file flags. macOS/FreeBSD: `chflags`
+  attributes (hidden, uchg, uappnd, nodump, uarch, etc.). Linux:
+  `chattr` attributes via ioctl (immutable, append, nodump, noatime,
+  etc.). Available as a column (`--columns=flags`).
+- `--no-count`, `--no-total-size`, `--no-header`, `--no-octal` —
+  override flags for suppressing personality defaults. Hidden
+  `--no-X` short aliases (e.g. `--no-C`, `--no-Z`, `--no-h`) also
+  accepted.
+- CI: automatic publishing to crates.io and Homebrew tap on release.
+- CI: man pages built with pandoc and included in release assets.
+- Homebrew installation: `brew tap wjv/tap && brew install lx`.
+- `just release-check` recipe for pre-publish verification.
+
+### Fixed
+- `--icons=auto`, `--classify=auto`, and `--hyperlink=auto` now
+  check whether stdout is a terminal. Previously `auto` behaved
+  identically to `always`.
+- Config personality settings: `ignore`, `prune`, `symlinks`,
+  `classify`, `flags`, and `vcs-repos` were accepted on the CLI but
+  rejected in personality definitions.
+- Cargo.toml: use `dep:git2` to prevent implicit feature exposure;
+  pin `serde` to `1.0`, `toml` to `1.1`.
+
+### Changed
+- `--help` reorganised: Long view before Filtering, positive enablers
+  (`--permissions`, `--filesize`, `--user`) moved to Long view,
+  negation flags in "Column overrides" section. Personality-only
+  `--no-*` flags hidden from `--help` (documented in man page).
+- Bump jj-lib dependency to 0.40.
+
+## [0.6.3] — 2026-04-03
 
 ### Fixed
 - Config personality settings: `ignore`, `prune`, `symlinks`, `classify`,
   `flags`, and `vcs-repos` were accepted on the CLI but rejected in
   personality definitions. All CLI flags are now available as config keys.
-
-### Added
-- `-O`/`--flags` — show platform file flags. macOS/FreeBSD: `chflags`
-  attributes (hidden, uchg, uappnd, nodump, uarch, etc.). Linux:
-  `chattr` attributes via ioctl (immutable, append, nodump, noatime,
-  etc.). Available as a column (`--columns=flags`).
-- `-C`/`--count` — print item count to stderr. Combined with `-Z`,
-  also shows total size of displayed items (no double-counting in
-  tree views). Respects `-b`/`-B` size formatting.
-- **Conditional config** — `[[personality.NAME.when]]` blocks that
-  activate based on environment variables.  Conditions use `env.VAR = "value"` (exact match), `env.VAR = true`
-  (must be set), or `env.VAR = false` (must be unset).  Enables per-terminal settings (e.g. icons in Ghostty,
-  disable colour over SSH).
-  Config schema version bumped to 0.4 (0.3 configs still accepted;
-  `--upgrade-config` handles 0.3→0.4).
-- `--no-count`, `--no-total-size`, `--no-header`, `--no-octal` — override
-  flags for suppressing personality defaults. Hidden `--no-X` short aliases
-  (e.g. `--no-C`, `--no-Z`, `--no-h`) also accepted.
-
-### Changed
-- `--help` reorganised: Long view before Filtering, positive enablers
-  (`--permissions`, `--filesize`, `--user`) moved to Long view, negation
-  flags in "Column overrides" section. Personality-only `--no-*` flags
-  hidden from `--help` (documented in man page).
 
 ## [0.6.2] — 2026-04-02
 
