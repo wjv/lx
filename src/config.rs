@@ -141,10 +141,19 @@ static SETTING_FLAGS: &[SettingDef] = &[
     SettingDef { key: "extended",      flag: "--extended",       kind: SettingKind::Bool },
     SettingDef { key: "octal-permissions", flag: "--octal-permissions", kind: SettingKind::Bool },
 
+    SettingDef { key: "flags",         flag: "--flags",          kind: SettingKind::Bool },
+
+    // filtering
+    SettingDef { key: "ignore",        flag: "--ignore",         kind: SettingKind::Str },
+    SettingDef { key: "prune",         flag: "--prune",          kind: SettingKind::Str },
+    SettingDef { key: "symlinks",      flag: "--symlinks",       kind: SettingKind::Str },
+    SettingDef { key: "classify",      flag: "--classify",       kind: SettingKind::Str },
+
     // VCS
     SettingDef { key: "vcs",           flag: "--vcs",            kind: SettingKind::Str },
     SettingDef { key: "vcs-status",    flag: "--vcs-status",     kind: SettingKind::Bool },
     SettingDef { key: "vcs-ignore",    flag: "--vcs-ignore",     kind: SettingKind::Bool },
+    SettingDef { key: "vcs-repos",     flag: "--vcs-repos",      kind: SettingKind::Bool },
 
     // theme
     SettingDef { key: "theme",         flag: "--theme",           kind: SettingKind::Str },

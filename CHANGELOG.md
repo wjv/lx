@@ -5,6 +5,11 @@ All notable changes to lx are documented here. lx is forked from
 
 ## [Unreleased]
 
+### Fixed
+- Config personality settings: `ignore`, `prune`, `symlinks`, `classify`,
+  `flags`, and `vcs-repos` were accepted on the CLI but rejected in
+  personality definitions. All CLI flags are now available as config keys.
+
 ### Added
 - `-O`/`--flags` — show platform file flags. macOS/FreeBSD: `chflags`
   attributes (hidden, uchg, uappnd, nodump, uarch, etc.). Linux:
