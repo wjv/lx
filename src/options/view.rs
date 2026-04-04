@@ -282,70 +282,37 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Vec<Column> {
 
 /// Add columns requested by individual flags (-i, -g, -H, -S, etc.)
 /// if not already present.
-/// The canonical column ordering.  When a column is added via an
-/// individual flag, it is inserted at its canonical position relative
-/// to the columns already present — after its nearest canonical
-/// predecessor.
-const CANONICAL_ORDER: &[Column] = &[
-    Column::Inode,
-    Column::Octal,
-    Column::Permissions,
-    Column::Flags,
-    Column::HardLinks,
-    Column::FileSize,
-    Column::Blocks,
-    Column::User,
-    Column::Group,
-    Column::Timestamp(TimeType::Modified),
-    Column::Timestamp(TimeType::Changed),
-    Column::Timestamp(TimeType::Created),
-    Column::Timestamp(TimeType::Accessed),
-    Column::VcsStatus,
-    Column::VcsRepos,
-];
-
 /// Find the canonical insertion position for `col` within `columns`.
 ///
-/// Looks up `col` in `CANONICAL_ORDER`, then finds the last column
-/// already present in `columns` that comes *before* `col` in the
-/// canonical order.  Inserts after that column.  If no predecessor
-/// is present, inserts at position 0 (or appends if `col` is last
-/// in the canonical order and nothing follows).
+/// Uses `canonical_position` from the column registry to determine
+/// ordering.  Finds the last column already present in `columns`
+/// whose canonical position is less than `col`'s, and inserts after it.
 fn canonical_insert_pos(columns: &[Column], col: Column) -> usize {
-    let canon_idx = CANONICAL_ORDER.iter()
-        .position(|c| *c == col)
-        .unwrap_or(CANONICAL_ORDER.len());
+    use crate::output::column_registry::ColumnDef;
 
-    // Find the last column in `columns` whose canonical index is
-    // less than `col`'s.  Insert after it.
+    let canon_pos = ColumnDef::for_column(col).canonical_position;
+
     let mut best_pos = 0;
     for (i, existing) in columns.iter().enumerate() {
-        let existing_idx = CANONICAL_ORDER.iter()
-            .position(|c| c == existing)
-            .unwrap_or(CANONICAL_ORDER.len());
-        if existing_idx < canon_idx {
+        let existing_pos = ColumnDef::for_column(*existing).canonical_position;
+        if existing_pos < canon_pos {
             best_pos = i + 1;
         }
     }
     best_pos
 }
 
+/// Add columns whose CLI flags are set, inserting at canonical positions.
+/// Driven by the column registry — columns with an `add_flag` are checked.
 fn apply_individual_adds(matches: &MatchedFlags, columns: &mut Vec<Column>) {
-    let adds: &[(bool, Column)] = &[
-        (matches.has(flags::INODE),      Column::Inode),
-        (matches.has(flags::LINKS),      Column::HardLinks),
-        (matches.has(flags::BLOCKS),     Column::Blocks),
-        (matches.has(flags::GROUP),      Column::Group),
-        (matches.has(flags::OCTAL),      Column::Octal),
-        (matches.has(flags::FILE_FLAGS), Column::Flags),
-        (matches.has(flags::VCS_STATUS), Column::VcsStatus),
-        (matches.has(flags::VCS_REPOS), Column::VcsRepos),
-    ];
+    use crate::output::column_registry::COLUMN_REGISTRY;
 
-    for &(enabled, col) in adds {
-        if enabled && !columns.contains(&col) {
-            let pos = canonical_insert_pos(columns, col);
-            columns.insert(pos, col);
+    for def in COLUMN_REGISTRY.iter() {
+        if let Some(flag) = def.add_flag {
+            if matches.has(flag) && !columns.contains(&def.column) {
+                let pos = canonical_insert_pos(columns, def.column);
+                columns.insert(pos, def.column);
+            }
         }
     }
 }
@@ -379,45 +346,34 @@ fn apply_timestamp_overrides(matches: &MatchedFlags, columns: &mut Vec<Column>) 
 
 
 /// Apply --no-* suppression flags and --show-* re-enable flags.
+/// Driven by the column registry — columns with suppress/show flags
+/// are checked automatically.
 fn apply_suppressions(matches: &MatchedFlags, columns: &mut Vec<Column>) {
-    if matches.has(flags::NO_PERMISSIONS) && !matches.has(flags::SHOW_PERMISSIONS) {
-        columns.retain(|c| *c != Column::Permissions);
-    }
-    if matches.has(flags::NO_FILESIZE) && !matches.has(flags::SHOW_FILESIZE) {
-        columns.retain(|c| *c != Column::FileSize);
-    }
-    #[cfg(unix)]
-    if matches.has(flags::NO_USER) && !matches.has(flags::SHOW_USER) {
-        columns.retain(|c| *c != Column::User);
-    }
+    use crate::output::column_registry::COLUMN_REGISTRY;
+
+    // --no-time is special: it suppresses all timestamp variants.
     if matches.has(flags::NO_TIME) {
         columns.retain(|c| !matches!(c, Column::Timestamp(_)));
     }
-    #[cfg(unix)]
-    if matches.has(flags::NO_INODE)  { columns.retain(|c| *c != Column::Inode); }
-    #[cfg(unix)]
-    if matches.has(flags::NO_GROUP)  { columns.retain(|c| *c != Column::Group); }
-    #[cfg(unix)]
-    if matches.has(flags::NO_LINKS)  { columns.retain(|c| *c != Column::HardLinks); }
-    #[cfg(unix)]
-    if matches.has(flags::NO_BLOCKS) { columns.retain(|c| *c != Column::Blocks); }
 
-    // Re-enable flags
-    if matches.has(flags::SHOW_PERMISSIONS) && !columns.contains(&Column::Permissions) {
-        columns.insert(0, Column::Permissions);
+    // Registry-driven suppressions.
+    for def in COLUMN_REGISTRY.iter() {
+        if let Some(flag) = def.suppress_flag {
+            let show_overrides = def.show_flag.is_some_and(|sf| matches.has(sf));
+            if matches.has(flag) && !show_overrides {
+                columns.retain(|c| *c != def.column);
+            }
+        }
     }
-    if matches.has(flags::SHOW_FILESIZE) && !columns.contains(&Column::FileSize) {
-        let pos = columns.iter()
-            .position(|c| matches!(c, Column::User | Column::Group | Column::Timestamp(_) | Column::VcsStatus))
-            .unwrap_or(columns.len());
-        columns.insert(pos, Column::FileSize);
-    }
-    #[cfg(unix)]
-    if matches.has(flags::SHOW_USER) && !columns.contains(&Column::User) {
-        let pos = columns.iter()
-            .position(|c| matches!(c, Column::Group | Column::Timestamp(_) | Column::VcsStatus))
-            .unwrap_or(columns.len());
-        columns.insert(pos, Column::User);
+
+    // Registry-driven re-enables.
+    for def in COLUMN_REGISTRY.iter() {
+        if let Some(flag) = def.show_flag {
+            if matches.has(flag) && !columns.contains(&def.column) {
+                let pos = canonical_insert_pos(columns, def.column);
+                columns.insert(pos, def.column);
+            }
+        }
     }
 }
 
