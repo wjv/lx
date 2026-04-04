@@ -183,20 +183,24 @@ These options affect the columns displayed in long view (`-l`):
 : List each file's inode number.
 
 `-m`, `--modified`
-: Show the modified timestamp.
+: Add the modified timestamp column to the long listing.
 
 `-c`, `--changed`
-: Show the changed timestamp.
+: Add the changed timestamp column to the long listing.
 
-`-u`, `--accessed`
-: Show the accessed timestamp.
+`--accessed`
+: Add the accessed timestamp column to the long listing.
 
-`-U`, `--created`
-: Show the created timestamp.
+`--created`
+: Add the created timestamp column to the long listing.
 
-`-t`, `--time=FIELD`
-: Which timestamp field to display. Fields: `modified`, `changed`,
-`accessed`, `created`.
+`-t`
+: Compounding timestamp shortcut. `-t` adds `modified`, `-tt` adds
+`modified` and `changed`, `-ttt` adds all four timestamps
+(`modified`, `changed`, `created`, `accessed`). Composes with
+`-l`, `--format`, and `--columns`. Unlike the individual flags,
+`-t` has no long form — its only sensible spelling is the
+compounding short.
 
 `--time-style=STYLE`
 : How to format timestamps. Built-in styles: `default`, `iso`, `long-iso`,
@@ -286,7 +290,16 @@ is also accepted (e.g. `--no-h` for `--no-header`, `--no-Z` for
 : Show or suppress the user field.
 
 `--no-time`
-: Suppress the time field.
+: Clear all timestamp columns from the base format. Runs *before*
+individual timestamp adds, so `--no-time --accessed` leaves just
+the accessed column. Accepts `--no-timestamps` as a hidden alias.
+
+`--no-modified`, `--no-changed`, `--no-accessed`, `--no-created`
+: Suppress individual timestamp columns. `--no-m` and `--no-c` are
+accepted as hidden short-letter aliases for `--no-modified` and
+`--no-changed` respectively. Unlike `--no-time`, these run *after*
+individual adds, so they beat an explicit `--modified` on the same
+command line.
 
 `--no-inode`
 : Suppress the inode field.

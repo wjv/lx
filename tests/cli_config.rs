@@ -459,7 +459,7 @@ fn init_config_creates_file() {
     // The generated file should be valid TOML (all commented out = empty)
     let contents = fs::read_to_string(&config_path).unwrap();
     assert!(contents.contains("## lx configuration file"));
-    assert!(contents.contains("version = \"0.4\""));
+    assert!(contents.contains("version = \"0.5\""));
     assert!(contents.contains("[personality.default]"));
     assert!(contents.contains("[personality.lx]"));
     assert!(contents.contains("inherits"));

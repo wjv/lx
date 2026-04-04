@@ -131,7 +131,6 @@ static SETTING_FLAGS: &[SettingDef] = &[
     SettingDef { key: "group",         flag: "--group",          kind: SettingKind::Bool },
     SettingDef { key: "numeric",       flag: "--numeric",        kind: SettingKind::Bool },
     SettingDef { key: "time-style",    flag: "--time-style",     kind: SettingKind::Str },
-    SettingDef { key: "time",          flag: "--time",           kind: SettingKind::Str },
     SettingDef { key: "modified",      flag: "--modified",       kind: SettingKind::Bool },
     SettingDef { key: "changed",       flag: "--changed",        kind: SettingKind::Bool },
     SettingDef { key: "accessed",      flag: "--accessed",       kind: SettingKind::Bool },
@@ -174,6 +173,10 @@ static SETTING_FLAGS: &[SettingDef] = &[
     SettingDef { key: "no-filesize",   flag: "--no-filesize",    kind: SettingKind::Bool },
     SettingDef { key: "no-user",       flag: "--no-user",        kind: SettingKind::Bool },
     SettingDef { key: "no-time",       flag: "--no-time",        kind: SettingKind::Bool },
+    SettingDef { key: "no-modified",   flag: "--no-modified",    kind: SettingKind::Bool },
+    SettingDef { key: "no-changed",    flag: "--no-changed",     kind: SettingKind::Bool },
+    SettingDef { key: "no-accessed",   flag: "--no-accessed",    kind: SettingKind::Bool },
+    SettingDef { key: "no-created",    flag: "--no-created",     kind: SettingKind::Bool },
     SettingDef { key: "no-icons",      flag: "--no-icons",       kind: SettingKind::Bool },
     SettingDef { key: "no-inode",      flag: "--no-inode",       kind: SettingKind::Bool },
     SettingDef { key: "no-group",      flag: "--no-group",       kind: SettingKind::Bool },
@@ -190,6 +193,20 @@ fn find_setting(key: &str) -> Option<&'static SettingDef> {
     SETTING_FLAGS.iter().find(|s| s.key == key)
 }
 
+/// Settings that used to exist but were removed in a later config
+/// version.  Emits a targeted warning with a migration hint.
+/// Returning `None` means "not a known removed setting".
+fn removed_setting_hint(key: &str) -> Option<&'static str> {
+    match key {
+        "time" => Some(
+            "the `time` setting was removed in config version 0.5; \
+             use `modified`, `changed`, `accessed`, or `created` \
+             (each a boolean) to add timestamp columns"
+        ),
+        _ => None,
+    }
+}
+
 /// Convert a settings map (from `[defaults]` or `[personality.*]`)
 /// into synthetic CLI arguments.  Unknown keys are warned about.
 fn settings_to_args(settings: &HashMap<String, toml::Value>, context: &str) -> Vec<OsString> {
@@ -197,7 +214,11 @@ fn settings_to_args(settings: &HashMap<String, toml::Value>, context: &str) -> V
 
     for (key, value) in settings {
         let Some(def) = find_setting(key) else {
-            eprintln!("lx: unknown setting '{key}' in {context}");
+            if let Some(hint) = removed_setting_hint(key) {
+                eprintln!("lx: setting '{key}' in {context}: {hint}");
+            } else {
+                eprintln!("lx: unknown setting '{key}' in {context}");
+            }
             continue;
         };
 
@@ -310,10 +331,13 @@ impl<'de> Deserialize<'de> for StringOrList {
 // ── Config types ────────────────────────────────────────────────
 
 /// The current config schema version.
-pub const CONFIG_VERSION: &str = "0.4";
+pub const CONFIG_VERSION: &str = "0.5";
 
-/// Accepted config versions (0.3 is a valid subset of 0.4).
-const ACCEPTED_VERSIONS: &[&str] = &["0.3", "0.4"];
+/// Accepted config versions.  0.3 and 0.4 are valid subsets of 0.5
+/// *except* for the `time = "..."` setting, which is removed in 0.5.
+/// Config files at 0.3 or 0.4 load fine; a `time` key in them just
+/// triggers a warning and is ignored.
+const ACCEPTED_VERSIONS: &[&str] = &["0.3", "0.4", "0.5"];
 
 /// Top-level config file structure.
 #[derive(Debug, Default, Deserialize)]
@@ -728,6 +752,7 @@ fn detect_config_version(contents: &str) -> &str {
                 return match val {
                     "0.2" => "0.2",
                     "0.3" => "0.3",
+                    "0.4" => "0.4",
                     _ => val,  // unknown version — will fail the check
                 };
             }
@@ -1575,9 +1600,10 @@ fn format_format_toml(name: &str, columns: &[String]) -> String {
 /// Upgrade an older config file to the current format.
 ///
 /// Detects the source version and applies the appropriate migration:
-/// - 0.1 (unversioned): convert `[defaults]`, flatten formats, stamp 0.4
-/// - 0.2: flatten `[format.NAME]` sub-tables, stamp 0.4
-/// - 0.3: bump version string to 0.4 (no structural changes)
+/// - 0.1 (unversioned): convert `[defaults]`, flatten formats, stamp current
+/// - 0.2: flatten `[format.NAME]` sub-tables, stamp current
+/// - 0.3 or 0.4: bump version string to current (no structural changes;
+///   the `time = "..."` setting, removed in 0.5, warns at load time)
 pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
     let contents = fs::read_to_string(path).with_path(path)?;
     let version = detect_config_version(&contents);
@@ -1586,16 +1612,36 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
         return Err(ConfigError::AlreadyCurrent { path: path.clone() });
     }
 
-    // 0.3 → 0.4: just bump the version string in place (no structural changes).
-    if version == "0.3" {
+    // Warn if the file contains `time = "..."` — removed in 0.5.
+    if version == "0.3" || version == "0.4" {
+        for line in contents.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("time") && trimmed.contains('=')
+                && !trimmed.starts_with("time-style")
+            {
+                eprintln!(
+                    "lx: warning: `time = \"...\"` is removed in config \
+                     version 0.5; use `modified`, `changed`, `accessed`, \
+                     or `created` booleans instead. Upgrading anyway."
+                );
+                break;
+            }
+        }
+    }
+
+    // 0.3 or 0.4 → current: bump the version string in place
+    // (no structural changes).
+    if version == "0.3" || version == "0.4" {
         let backup = path.with_extension("toml.bak");
         fs::copy(path, &backup).with_path(&backup)?;
 
-        let updated = contents.replacen("version = \"0.3\"", &format!("version = \"{CONFIG_VERSION}\""), 1);
+        let old_version_line = format!("version = \"{version}\"");
+        let new_version_line = format!("version = \"{CONFIG_VERSION}\"");
+        let updated = contents.replacen(&old_version_line, &new_version_line, 1);
         fs::write(path, &updated).with_path(path)?;
 
         eprintln!("Original config saved to {}", backup.display());
-        eprintln!("Upgraded {} from version 0.3 to {CONFIG_VERSION}", path.display());
+        eprintln!("Upgraded {} from version {version} to {CONFIG_VERSION}", path.display());
         return Ok(());
     }
 

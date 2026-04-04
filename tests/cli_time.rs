@@ -81,7 +81,7 @@ fn time_modified_flag() {
 #[test]
 fn time_accessed_flag() {
     lx_no_colour()
-        .args(["-lu", "Cargo.toml"])
+        .args(["-l", "--accessed", "Cargo.toml"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Cargo.toml"));
@@ -90,34 +90,38 @@ fn time_accessed_flag() {
 #[test]
 fn time_created_flag() {
     lx_no_colour()
-        .args(["-lU", "Cargo.toml"])
+        .args(["-l", "--created", "Cargo.toml"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Cargo.toml"));
 }
 
 #[test]
-fn time_param_modified() {
+fn time_tier_1() {
+    // -lt — base long format already includes modified, so -t is a no-op
+    // but the command must still parse and run.
     lx_no_colour()
-        .args(["-l", "--time=modified", "Cargo.toml"])
+        .args(["-lt", "Cargo.toml"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Cargo.toml"));
 }
 
 #[test]
-fn time_param_accessed() {
+fn time_tier_2() {
+    // -ltt adds a changed timestamp on top of modified.
     lx_no_colour()
-        .args(["-l", "--time=accessed", "Cargo.toml"])
+        .args(["-ltt", "Cargo.toml"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Cargo.toml"));
 }
 
 #[test]
-fn time_param_created() {
+fn time_tier_3() {
+    // -lttt shows all four timestamps.
     lx_no_colour()
-        .args(["-l", "--time=created", "Cargo.toml"])
+        .args(["-lttt", "Cargo.toml"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Cargo.toml"));
@@ -139,10 +143,25 @@ fn no_time_suppresses_date() {
 }
 
 #[test]
-fn multiple_time_flags_combine() {
-    // -m and -u together should show both modified and accessed
+fn no_modified_suppresses_only_modified() {
+    let dir = tempdir().expect("failed to create tempdir");
+    fs::write(dir.path().join("file.txt"), "content").unwrap();
+
+    // -lll shows all four timestamps; --no-modified removes the modified
+    // column but the others should still render dates.
     lx_no_colour()
-        .args(["-lmu", "Cargo.toml"])
+        .args(["-lll", "--no-modified", "--time-style=long-iso"])
+        .arg(dir.path().join("file.txt"))
+        .assert()
+        .success()
+        .stdout(predicate::str::is_match(r"\d{4}-\d{2}-\d{2}").unwrap());
+}
+
+#[test]
+fn multiple_time_flags_combine() {
+    // -m and --accessed together should show both modified and accessed
+    lx_no_colour()
+        .args(["-lm", "--accessed", "Cargo.toml"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Cargo.toml"));

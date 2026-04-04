@@ -248,8 +248,10 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Vec<Column> {
                 }
             // Unknown names are silently ignored (could warn in future).
         }
-        // Individual adds and suppression flags still apply.
+        // Individual adds, `-t` tier, and suppression flags still apply.
+        apply_bulk_time_clear(matches, &mut columns);
         apply_individual_adds(matches, &mut columns);
+        apply_time_tier(matches, &mut columns);
         apply_suppressions(matches, &mut columns);
         return columns;
     }
@@ -258,7 +260,9 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Vec<Column> {
     if let Some(fmt_name) = matches.get(flags::FORMAT)
         && let Some(cols) = format_columns(fmt_name) {
             let mut columns = cols;
+            apply_bulk_time_clear(matches, &mut columns);
             apply_individual_adds(matches, &mut columns);
+            apply_time_tier(matches, &mut columns);
             apply_suppressions(matches, &mut columns);
             return columns;
         }
@@ -272,8 +276,9 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Vec<Column> {
     let mut columns = format_columns(tier_name)
         .expect("compiled-in format always exists");
 
+    apply_bulk_time_clear(matches, &mut columns);
     apply_individual_adds(matches, &mut columns);
-    apply_timestamp_overrides(matches, &mut columns);
+    apply_time_tier(matches, &mut columns);
     apply_suppressions(matches, &mut columns);
 
     columns
@@ -318,29 +323,44 @@ fn apply_individual_adds(matches: &MatchedFlags, columns: &mut Vec<Column>) {
 }
 
 
-/// If explicit timestamp flags are given, override the base timestamp set.
-fn apply_timestamp_overrides(matches: &MatchedFlags, columns: &mut Vec<Column>) {
-    let has_explicit_time = matches.has(flags::MODIFIED) || matches.has(flags::CHANGED)
-        || matches.has(flags::ACCESSED) || matches.has(flags::CREATED)
-        || matches.get(flags::TIME).is_some();
+/// `--no-time` clears all timestamp columns the base format brought
+/// in.  It runs *before* individual adds and `-t` tiers so that
+/// explicit additions (e.g. `--accessed`) survive the clear —
+/// the user's intent is "start from no timestamps, then add these".
+fn apply_bulk_time_clear(matches: &MatchedFlags, columns: &mut Vec<Column>) {
+    if matches.has(flags::NO_TIME) {
+        columns.retain(|c| !matches!(c, Column::Timestamp(_)));
+    }
+}
 
-    if !has_explicit_time {
+/// Apply the compounding `-t` timestamp tier.  Counting how many
+/// times the flag was passed, add the corresponding timestamp columns
+/// at their canonical positions.  `-t` adds modified, `-tt` adds
+/// modified + changed, `-ttt` adds all four.  Like other adds,
+/// columns that are already present are left alone.
+fn apply_time_tier(matches: &MatchedFlags, columns: &mut Vec<Column>) {
+    let tier = matches.count(flags::TIME_TIER);
+    if tier == 0 {
         return;
     }
 
-    columns.retain(|c| !matches!(c, Column::Timestamp(_)));
+    let to_add: &[TimeType] = match tier {
+        1 => &[TimeType::Modified],
+        2 => &[TimeType::Modified, TimeType::Changed],
+        _ => &[
+            TimeType::Modified,
+            TimeType::Changed,
+            TimeType::Created,
+            TimeType::Accessed,
+        ],
+    };
 
-    if matches.has(flags::MODIFIED) || matches.get(flags::TIME).is_some_and(|v| v == "modified" || v == "mod") {
-        columns.insert(timestamp_insert_pos(columns), Column::Timestamp(TimeType::Modified));
-    }
-    if matches.has(flags::CHANGED) || matches.get(flags::TIME).is_some_and(|v| v == "changed" || v == "ch") {
-        columns.insert(timestamp_insert_pos(columns), Column::Timestamp(TimeType::Changed));
-    }
-    if matches.has(flags::ACCESSED) || matches.get(flags::TIME).is_some_and(|v| v == "accessed" || v == "acc") {
-        columns.insert(timestamp_insert_pos(columns), Column::Timestamp(TimeType::Accessed));
-    }
-    if matches.has(flags::CREATED) || matches.get(flags::TIME).is_some_and(|v| v == "created" || v == "cr") {
-        columns.insert(timestamp_insert_pos(columns), Column::Timestamp(TimeType::Created));
+    for tt in to_add {
+        let col = Column::Timestamp(*tt);
+        if !columns.contains(&col) {
+            let pos = canonical_insert_pos(columns, col);
+            columns.insert(pos, col);
+        }
     }
 }
 
@@ -348,13 +368,13 @@ fn apply_timestamp_overrides(matches: &MatchedFlags, columns: &mut Vec<Column>) 
 /// Apply --no-* suppression flags and --show-* re-enable flags.
 /// Driven by the column registry — columns with suppress/show flags
 /// are checked automatically.
+///
+/// Note: `--no-time` is handled earlier in the pipeline by
+/// `apply_bulk_time_clear` so that explicit timestamp adds survive
+/// it.  Per-timestamp `--no-modified`/`--no-changed`/etc. are normal
+/// registry-driven suppressions that run here.
 fn apply_suppressions(matches: &MatchedFlags, columns: &mut Vec<Column>) {
     use crate::output::column_registry::COLUMN_REGISTRY;
-
-    // --no-time is special: it suppresses all timestamp variants.
-    if matches.has(flags::NO_TIME) {
-        columns.retain(|c| !matches!(c, Column::Timestamp(_)));
-    }
 
     // Registry-driven suppressions.
     for def in COLUMN_REGISTRY.iter() {
@@ -376,20 +396,6 @@ fn apply_suppressions(matches: &MatchedFlags, columns: &mut Vec<Column>) {
         }
     }
 }
-
-/// Find the position to insert a timestamp column — after existing
-/// timestamps but before `VcsStatus`.
-fn timestamp_insert_pos(columns: &[Column]) -> usize {
-    // After the last existing timestamp, or before VcsStatus, or at end.
-    let last_ts = columns.iter().rposition(|c| matches!(c, Column::Timestamp(_)));
-    if let Some(pos) = last_ts {
-        return pos + 1;
-    }
-    columns.iter()
-        .position(|c| *c == Column::VcsStatus)
-        .unwrap_or(columns.len())
-}
-
 
 impl SizeFormat {
 
@@ -573,34 +579,65 @@ mod test {
         }
 
         #[test]
-        fn explicit_accessed() {
-            let ts = timestamps(&["-u"], 1);
-            assert_eq!(ts, vec![Column::Timestamp(TimeType::Accessed)]);
+        fn explicit_accessed_composes() {
+            // `-l --accessed` now adds accessed on top of the base
+            // `long` format's modified, rather than replacing.
+            let ts = timestamps(&["--accessed"], 1);
+            assert_eq!(ts, vec![
+                Column::Timestamp(TimeType::Modified),
+                Column::Timestamp(TimeType::Accessed),
+            ]);
         }
 
         #[test]
-        fn explicit_created() {
-            let ts = timestamps(&["-U"], 1);
-            assert_eq!(ts, vec![Column::Timestamp(TimeType::Created)]);
+        fn explicit_created_composes() {
+            let ts = timestamps(&["--created"], 1);
+            assert_eq!(ts, vec![
+                Column::Timestamp(TimeType::Modified),
+                Column::Timestamp(TimeType::Created),
+            ]);
         }
 
         #[test]
-        fn time_param_modified() {
-            let ts = timestamps(&["--time=modified"], 1);
-            assert_eq!(ts, vec![Column::Timestamp(TimeType::Modified)]);
-        }
-
-        #[test]
-        fn time_param_accessed() {
-            let ts = timestamps(&["-t", "acc"], 1);
-            assert_eq!(ts, vec![Column::Timestamp(TimeType::Accessed)]);
-        }
-
-        #[test]
-        fn multiple_timestamps() {
-            let ts = timestamps(&["-u", "--modified"], 1);
+        fn multiple_individual_timestamps() {
+            let ts = timestamps(&["--accessed", "--modified"], 1);
             assert!(ts.contains(&Column::Timestamp(TimeType::Modified)));
             assert!(ts.contains(&Column::Timestamp(TimeType::Accessed)));
+        }
+
+        #[test]
+        fn time_tier_1_adds_modified() {
+            // -t on top of long2 (which has no timestamps in this test context)
+            // should ensure modified is present.  In -l (long) it's already
+            // there, so `-t` is a no-op in that case.
+            let ts = timestamps(&["-t"], 1);
+            assert!(ts.contains(&Column::Timestamp(TimeType::Modified)));
+        }
+
+        #[test]
+        fn time_tier_2_adds_changed() {
+            let ts = timestamps(&["-tt"], 1);
+            assert!(ts.contains(&Column::Timestamp(TimeType::Modified)));
+            assert!(ts.contains(&Column::Timestamp(TimeType::Changed)));
+        }
+
+        #[test]
+        fn time_tier_3_adds_all() {
+            let ts = timestamps(&["-ttt"], 1);
+            assert_eq!(ts.len(), 4);
+            assert!(ts.contains(&Column::Timestamp(TimeType::Modified)));
+            assert!(ts.contains(&Column::Timestamp(TimeType::Changed)));
+            assert!(ts.contains(&Column::Timestamp(TimeType::Accessed)));
+            assert!(ts.contains(&Column::Timestamp(TimeType::Created)));
+        }
+
+        #[test]
+        fn time_tier_composes_with_long2() {
+            // `long2` has no timestamps beyond modified; `-tt` should
+            // add changed while leaving the rest of the format intact.
+            let ts = timestamps(&["-tt"], 2);
+            assert!(ts.contains(&Column::Timestamp(TimeType::Modified)));
+            assert!(ts.contains(&Column::Timestamp(TimeType::Changed)));
         }
 
         #[test]
@@ -617,6 +654,15 @@ mod test {
         fn no_time_suppresses_all() {
             let ts = timestamps(&["--no-time"], 3);
             assert!(ts.is_empty());
+        }
+
+        #[test]
+        fn no_modified_suppresses_only_modified() {
+            let ts = timestamps(&["--no-modified"], 3);
+            assert!(!ts.contains(&Column::Timestamp(TimeType::Modified)));
+            assert!(ts.contains(&Column::Timestamp(TimeType::Changed)));
+            assert!(ts.contains(&Column::Timestamp(TimeType::Accessed)));
+            assert!(ts.contains(&Column::Timestamp(TimeType::Created)));
         }
 
         #[test]
@@ -642,16 +688,25 @@ mod test {
             assert!(!cols.contains(&Column::Group));
         }
 
-        // Clap rejects invalid --time values
+        // `--time=X` is removed — the flag no longer exists.
         #[test]
-        fn time_tea() {
+        fn time_equals_rejected() {
             let cmd = crate::options::parser::build_command();
-            assert!(cmd.try_get_matches_from(["lx", "--time=tea"]).is_err());
+            assert!(cmd.try_get_matches_from(["lx", "--time=modified"]).is_err());
         }
+
+        // `-u` is no longer a short for --accessed (batch B repurposes it).
+        // For batch A it's simply gone: clap should reject it.
         #[test]
-        fn t_ea() {
+        fn short_u_rejected() {
             let cmd = crate::options::parser::build_command();
-            assert!(cmd.try_get_matches_from(["lx", "-tea"]).is_err());
+            assert!(cmd.try_get_matches_from(["lx", "-u"]).is_err());
+        }
+
+        #[test]
+        fn short_upper_u_rejected() {
+            let cmd = crate::options::parser::build_command();
+            assert!(cmd.try_get_matches_from(["lx", "-U"]).is_err());
         }
     }
 

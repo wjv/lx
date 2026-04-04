@@ -84,12 +84,14 @@ fn invalid_sort_value() {
 }
 
 #[test]
-fn invalid_time_value() {
+fn removed_time_flag_is_rejected() {
+    // --time=X was removed in 0.8; it is no longer a valid flag.
     lx()
-        .arg("--time=tea")
+        .arg("--time=modified")
         .assert()
         .failure()
-        .stderr(predicate::str::contains("invalid value"));
+        .stderr(predicate::str::contains("unexpected argument")
+            .or(predicate::str::contains("unrecognized")));
 }
 
 #[test]
@@ -121,12 +123,13 @@ fn invalid_level_not_a_number() {
 }
 
 #[test]
-fn time_conflicts_with_modified() {
-    lx()
-        .args(["-ltmod", "-m"])
+fn time_tier_compounds() {
+    // -t is now a compounding flag like -l; -tt adds changed on top
+    // of modified and should succeed.
+    lx_no_colour()
+        .args(["-ltt", "Cargo.toml"])
         .assert()
-        .failure()
-        .stderr(predicate::str::contains("cannot be used with"));
+        .success();
 }
 
 #[test]

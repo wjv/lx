@@ -53,7 +53,7 @@ VERSIONING
 
 Every configuration file must declare a schema version at the top:
 
-    version = "0.4"
+    version = "0.5"
 
 This is the **config schema version**, not the lx release version. It
 only increments when the config format changes in a way that requires
@@ -65,10 +65,13 @@ migration.
 | `"0.2"`        | 0.2.0+     | Personalities replace `[defaults]`         |
 | `"0.3"`        | 0.3.0+     | Classes, flat formats, exa style chain     |
 | `"0.4"`        | 0.7.0+     | Conditional overrides (`[[when]]` blocks)  |
+| `"0.5"`        | 0.8.0+     | `time = "..."` setting removed; timestamps now ordinary add/suppress columns |
 
-Version `"0.3"` configs are accepted by lx 0.7+ (0.4 is a superset of
-0.3).  If `[[when]]` blocks are found in a `"0.3"` config, a warning
-is printed.
+Version `"0.3"` and `"0.4"` configs are still accepted by lx 0.8+
+(0.5 is a superset of both), with two caveats: `[[when]]` blocks in
+a `"0.3"` config trigger a warning, and the `time = "..."` setting
+(valid in 0.3/0.4) triggers a deprecation warning at load time and
+is ignored.
 
 If lx encounters a config file with an older version (or no version
 field), it refuses to load it and prints a message directing the user
@@ -76,10 +79,11 @@ to run:
 
     lx --upgrade-config
 
-This command migrates the config to the current format (0.1→0.4,
-0.2→0.4, and 0.3→0.4 are all supported) and saves the original as
-`~/.lxconfig.toml.bak`.  The 0.3→0.4 migration only bumps the version
-string; earlier migrations also restructure the file.
+This command migrates the config to the current format (0.1→0.5,
+0.2→0.5, 0.3→0.5, and 0.4→0.5 are all supported) and saves the
+original as `~/.lxconfig.toml.bak`. The 0.3→0.5 and 0.4→0.5
+migrations only bump the version string (and warn if `time = "..."`
+is present); earlier migrations also restructure the file.
 
 
 FORMATS
@@ -206,9 +210,15 @@ Long view options:
 : `binary` (bool), `bytes` (bool), `header` (bool), `inode` (bool),
 `links` (bool), `blocks` (bool), `group` (bool), `numeric` (bool),
 `time-style` (string: `default`/`iso`/`long-iso`/`full-iso`/`relative`/`+FORMAT`),
-`time` (string), `modified` (bool), `changed` (bool),
-`accessed` (bool), `created` (bool), `total-size` (bool),
-`extended` (bool), `octal-permissions` (bool), `flags` (bool).
+`modified` (bool), `changed` (bool), `accessed` (bool),
+`created` (bool), `total-size` (bool), `extended` (bool),
+`octal-permissions` (bool), `flags` (bool).
+
+The `time` setting (a string naming a single timestamp field)
+existed in config versions 0.3 and 0.4. It was removed in 0.5; use
+the individual `modified`/`changed`/`accessed`/`created` booleans
+(which are additive in 0.8+) to show the timestamps you want, and
+set `no-time = true` to start from an empty timestamp set if needed.
 
 VCS:
 
@@ -218,10 +228,17 @@ VCS:
 Negation (override personality defaults):
 
 : `no-permissions` (bool), `no-filesize` (bool), `no-user` (bool),
-`no-time` (bool), `no-icons` (bool), `no-inode` (bool),
-`no-group` (bool), `no-links` (bool), `no-blocks` (bool),
-`no-octal` (bool), `no-header` (bool), `no-count` (bool),
-`no-total-size` (bool).
+`no-time` (bool), `no-modified` (bool), `no-changed` (bool),
+`no-accessed` (bool), `no-created` (bool), `no-icons` (bool),
+`no-inode` (bool), `no-group` (bool), `no-links` (bool),
+`no-blocks` (bool), `no-octal` (bool), `no-header` (bool),
+`no-count` (bool), `no-total-size` (bool).
+
+`no-time` clears all timestamp columns from the base format as a
+bulk shortcut; it runs before individual adds, so combining it
+with e.g. `accessed = true` leaves just the accessed column.
+`no-modified`/`no-changed`/`no-accessed`/`no-created` suppress
+individual timestamp columns after adds have been applied.
 
 Column visibility (positive):
 
@@ -324,7 +341,7 @@ All conditions within a single block must match (AND logic).
 - `when` blocks are inherited: a parent personality's `when` blocks
   are applied first, then the child's.
 
-Requires `version = "0.4"` in the config file.
+Requires `version = "0.4"` or later in the config file.
 
 argv[0] dispatch
 ----------------

@@ -369,49 +369,33 @@ Environment variables:\n  \
 
         // ── Timestamps ────────────────────────────────────────────
 
+        .arg(Arg::new(flags::TIME_TIER)
+            .short('t')
+            .help("Show timestamps — compounds like -l:\n\
+                   -t adds modified, -tt adds changed,\n\
+                   -ttt adds created and accessed")
+            .help_heading("Timestamps")
+            .action(ArgAction::Count))
         .arg(Arg::new(flags::MODIFIED)
             .short('m').long("modified")
-            .help("Use the modified timestamp")
+            .help("Show the modified timestamp column")
             .help_heading("Timestamps")
             .action(ArgAction::Count))
         .arg(Arg::new(flags::CHANGED)
             .short('c').long("changed")
-            .help("Use the changed timestamp")
+            .help("Show the changed timestamp column")
             .help_heading("Timestamps")
             .action(ArgAction::Count))
         .arg(Arg::new(flags::ACCESSED)
-            .short('u').long("accessed")
-            .help("Use the accessed timestamp")
+            .long("accessed")
+            .help("Show the accessed timestamp column")
             .help_heading("Timestamps")
             .action(ArgAction::Count))
         .arg(Arg::new(flags::CREATED)
-            .short('U').long("created")
-            .help("Use the created timestamp")
+            .long("created")
+            .help("Show the created timestamp column")
             .help_heading("Timestamps")
             .action(ArgAction::Count))
-        .arg(Arg::new(flags::TIME)
-            .short('t').long("time")
-            .help("Which timestamp field to display\n[modified, changed, accessed, created]")
-            .help_heading("Timestamps")
-            .action(ArgAction::Set)
-            .value_name("FIELD")
-            .hide_possible_values(true)
-            .value_parser([
-                PossibleValue::new("modified"),
-                PossibleValue::new("changed"),
-                PossibleValue::new("accessed"),
-                PossibleValue::new("created"),
-                PossibleValue::new("mod").hide(true),
-                PossibleValue::new("ch").hide(true),
-                PossibleValue::new("acc").hide(true),
-                PossibleValue::new("cr").hide(true),
-            ])
-            .conflicts_with_all([
-                flags::MODIFIED,
-                flags::CHANGED,
-                flags::ACCESSED,
-                flags::CREATED,
-            ]))
         .arg(Arg::new(flags::TIME_STYLE)
             .long("time-style")
             .help("How to format timestamps\n[default, iso, long-iso, full-iso,\nrelative, +FORMAT]")
@@ -458,8 +442,8 @@ Environment variables:\n  \
             .action(ArgAction::Count)
             .overrides_with(flags::SHOW_USER))
         .arg(Arg::new(flags::NO_TIME)
-            .long("no-time")
-            .help("Suppress the time field")
+            .long("no-time").alias("no-timestamps")
+            .help("Clear all timestamp columns from the base format")
             .help_heading("Column overrides")
             .action(ArgAction::Count))
         .arg(Arg::new(flags::NO_ICONS)
@@ -503,6 +487,26 @@ Environment variables:\n  \
             .hide(true)
             .action(ArgAction::Count)
             .overrides_with(flags::TOTAL_SIZE))
+        .arg(Arg::new(flags::NO_MODIFIED)
+            .long("no-modified").alias("no-m")
+            .hide(true)
+            .action(ArgAction::Count)
+            .overrides_with(flags::MODIFIED))
+        .arg(Arg::new(flags::NO_CHANGED)
+            .long("no-changed").alias("no-c")
+            .hide(true)
+            .action(ArgAction::Count)
+            .overrides_with(flags::CHANGED))
+        .arg(Arg::new(flags::NO_ACCESSED)
+            .long("no-accessed")
+            .hide(true)
+            .action(ArgAction::Count)
+            .overrides_with(flags::ACCESSED))
+        .arg(Arg::new(flags::NO_CREATED)
+            .long("no-created")
+            .hide(true)
+            .action(ArgAction::Count)
+            .overrides_with(flags::CREATED))
 
         // ── VCS ───────────────────────────────────────────────────
 
