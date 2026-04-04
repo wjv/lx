@@ -126,7 +126,6 @@ fn render_group(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> Text
 }
 
 fn render_vcs_status(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
-    use crate::fs::fields as f;
     let status = ctx.vcs
         .map(|g| g.get(&file.path, file.is_directory()))
         .unwrap_or_default();

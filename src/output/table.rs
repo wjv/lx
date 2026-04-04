@@ -4,14 +4,12 @@ use std::sync::LazyLock;
 #[cfg(unix)]
 use std::sync::{Mutex, MutexGuard};
 
-use log::*;
 #[cfg(unix)]
 use uzers::UsersCache;
 
-use crate::fs::{File, fields as f};
+use crate::fs::File;
 use crate::fs::feature::VcsCache;
 use crate::output::cell::TextCell;
-use crate::output::render::TimeRender;
 use crate::output::time::TimeFormat;
 use crate::theme::Theme;
 
@@ -54,87 +52,18 @@ pub enum Column {
 impl Column {
     /// The canonical name used in `--columns` and config files.
     pub fn name(self) -> &'static str {
-        match self {
-            Self::Permissions       => "perms",
-            Self::FileSize          => "size",
-            Self::Timestamp(TimeType::Modified) => "modified",
-            Self::Timestamp(TimeType::Changed)  => "changed",
-            Self::Timestamp(TimeType::Accessed) => "accessed",
-            Self::Timestamp(TimeType::Created)  => "created",
-            #[cfg(unix)]
-            Self::Blocks            => "blocks",
-            #[cfg(unix)]
-            Self::User              => "user",
-            #[cfg(unix)]
-            Self::Group             => "group",
-            #[cfg(unix)]
-            Self::HardLinks         => "links",
-            #[cfg(unix)]
-            Self::Inode             => "inode",
-            Self::VcsStatus         => "vcs",
-            Self::VcsRepos          => "repos",
-            #[cfg(unix)]
-            Self::Octal             => "octal",
-            Self::Flags             => "flags",
-        }
+        super::column_registry::ColumnDef::for_column(self).name
     }
 
     /// Parse a column name from `--columns` or a config file.
     /// Returns `None` for unrecognised names.
     pub fn from_name(s: &str) -> Option<Self> {
-        match s {
-            "perms" | "permissions" => Some(Self::Permissions),
-            "size" | "filesize"     => Some(Self::FileSize),
-            "modified"              => Some(Self::Timestamp(TimeType::Modified)),
-            "changed"               => Some(Self::Timestamp(TimeType::Changed)),
-            "accessed"              => Some(Self::Timestamp(TimeType::Accessed)),
-            "created"               => Some(Self::Timestamp(TimeType::Created)),
-            #[cfg(unix)]
-            "blocks"                => Some(Self::Blocks),
-            #[cfg(unix)]
-            "user"                  => Some(Self::User),
-            #[cfg(unix)]
-            "group"                 => Some(Self::Group),
-            #[cfg(unix)]
-            "links"                 => Some(Self::HardLinks),
-            #[cfg(unix)]
-            "inode"                 => Some(Self::Inode),
-            "vcs"                   => Some(Self::VcsStatus),
-            "repos"                 => Some(Self::VcsRepos),
-            #[cfg(unix)]
-            "octal"                 => Some(Self::Octal),
-            "flags"                 => Some(Self::Flags),
-            _                       => None,
-        }
+        super::column_registry::ColumnDef::column_from_name(s)
     }
 
     /// Return the canonical name used in config files and `--columns`.
     pub fn to_name(self) -> &'static str {
-        match self {
-            Self::Permissions           => "perms",
-            Self::FileSize              => "size",
-            Self::Timestamp(t)          => match t {
-                TimeType::Modified => "modified",
-                TimeType::Changed  => "changed",
-                TimeType::Accessed => "accessed",
-                TimeType::Created  => "created",
-            },
-            #[cfg(unix)]
-            Self::Blocks                => "blocks",
-            #[cfg(unix)]
-            Self::User                  => "user",
-            #[cfg(unix)]
-            Self::Group                 => "group",
-            #[cfg(unix)]
-            Self::HardLinks             => "links",
-            #[cfg(unix)]
-            Self::Inode                 => "inode",
-            Self::VcsStatus             => "vcs",
-            Self::VcsRepos              => "repos",
-            #[cfg(unix)]
-            Self::Octal                 => "octal",
-            Self::Flags                 => "flags",
-        }
+        self.name()
     }
 }
 
@@ -149,53 +78,14 @@ pub enum Alignment {
 impl Column {
 
     /// Get the alignment this column should use.
-    #[cfg(unix)]
     pub fn alignment(self) -> Alignment {
-        match self {
-            Self::FileSize   |
-            Self::HardLinks  |
-            Self::Inode      |
-            Self::Blocks     |
-            Self::VcsStatus  => Alignment::Right,
-            _                => Alignment::Left,
-        }
-    }
-
-    #[cfg(windows)]
-    pub fn alignment(&self) -> Alignment {
-        match self {
-            Self::FileSize   |
-            Self::VcsStatus  => Alignment::Right,
-            _                => Alignment::Left,
-        }
+        super::column_registry::ColumnDef::for_column(self).alignment
     }
 
     /// Get the text that should be printed at the top, when the user elects
     /// to have a header row printed.
     pub fn header(self) -> &'static str {
-        match self {
-            #[cfg(unix)]
-            Self::Permissions   => "Permissions",
-            #[cfg(windows)]
-            Self::Permissions   => "Mode",
-            Self::FileSize      => "Size",
-            Self::Timestamp(t)  => t.header(),
-            #[cfg(unix)]
-            Self::Blocks        => "Blocks",
-            #[cfg(unix)]
-            Self::User          => "User",
-            #[cfg(unix)]
-            Self::Group         => "Group",
-            #[cfg(unix)]
-            Self::HardLinks     => "Links",
-            #[cfg(unix)]
-            Self::Inode         => "inode",
-            Self::VcsStatus     => "VCS",
-            Self::VcsRepos      => "Repo",
-            #[cfg(unix)]
-            Self::Octal         => "Octal",
-            Self::Flags         => "Flags",
-        }
+        super::column_registry::ColumnDef::for_column(self).header
     }
 }
 
@@ -373,92 +263,19 @@ impl<'a, 'f> Table<'a> {
         self.widths.add_widths(row);
     }
 
-    fn permissions_plus(&self, file: &File<'_>, xattrs: bool) -> f::PermissionsPlus {
-        f::PermissionsPlus {
-            file_type: file.type_char(),
-            #[cfg(unix)]
-            permissions: file.permissions(),
-            #[cfg(windows)]
-            attributes: file.attributes(),
-            xattrs,
-        }
-    }
-
-    #[cfg(unix)]
-    fn octal_permissions(&self, file: &File<'_>) -> f::OctalPermissions {
-        f::OctalPermissions {
-            permissions: file.permissions(),
-        }
-    }
-
     fn display(&self, file: &File<'_>, column: Column, xattrs: bool) -> TextCell {
-        match column {
-            Column::Permissions => {
-                self.permissions_plus(file, xattrs).render(self.theme)
-            }
-            Column::FileSize => {
-                if self.total_size {
-                    file.total_size().render(self.theme, self.size_format, &self.env.numeric)
-                } else {
-                    file.size().render(self.theme, self.size_format, &self.env.numeric)
-                }
-            }
-            #[cfg(unix)]
-            Column::HardLinks => {
-                file.links().render(self.theme, &self.env.numeric)
-            }
-            #[cfg(unix)]
-            Column::Inode => {
-                file.inode().render(self.theme.ui.inode)
-            }
-            #[cfg(unix)]
-            Column::Blocks => {
-                file.blocks().render(self.theme)
-            }
-            #[cfg(unix)]
-            Column::User => {
-                file.user().render(self.theme, &*self.env.lock_users(), self.user_format)
-            }
-            #[cfg(unix)]
-            Column::Group => {
-                file.group().render(self.theme, &*self.env.lock_users(), self.user_format)
-            }
-            Column::VcsStatus => {
-                let backend = self.vcs.map(super::super::fs::feature::VcsCache::header_name).unwrap_or("VCS");
-                self.vcs_status(file).render(self.theme, backend)
-            }
-            Column::VcsRepos => {
-                file.vcs_repo_status().render(self.theme)
-            }
-            #[cfg(unix)]
-            Column::Octal => {
-                self.octal_permissions(file).render(self.theme.ui.octal)
-            }
-            Column::Flags => {
-                file.flags().render(self.theme.ui.flags)
-            }
-
-            Column::Timestamp(TimeType::Modified)  => {
-                file.modified_time().render(self.theme.ui.date, &self.time_format)
-            }
-            Column::Timestamp(TimeType::Changed)   => {
-                file.changed_time().render(self.theme.ui.date, &self.time_format)
-            }
-            Column::Timestamp(TimeType::Created)   => {
-                file.created_time().render(self.theme.ui.date, &self.time_format)
-            }
-            Column::Timestamp(TimeType::Accessed)  => {
-                file.accessed_time().render(self.theme.ui.date, &self.time_format)
-            }
-        }
-    }
-
-    fn vcs_status(&self, file: &File<'_>) -> f::VcsFileStatus {
-        debug!("Getting VCS status for file {}", file.path.display());
-
-        self.vcs
-            .map(|g| g.get(&file.path, file.is_directory()))
-            .unwrap_or_default()
+        use super::column_registry::{ColumnDef, RenderContext};
+        let def = ColumnDef::for_column(column);
+        let ctx = RenderContext {
+            theme: self.theme,
+            size_format: self.size_format,
+            time_format: &self.time_format,
+            user_format: self.user_format,
+            env: self.env,
+            vcs: self.vcs,
+            total_size: self.total_size,
+        };
+        (def.render)(&ctx, file, xattrs)
     }
 
     pub fn render(&self, row: Row) -> TextCell {
