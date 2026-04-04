@@ -83,6 +83,7 @@ fn main() {
         // Determine which personality to apply.
         // Explicit --personality/-p takes priority; if absent, check argv[0].
         let explicit_personality = find_personality_arg(&cli_args);
+        let explicit = explicit_personality.is_some();
         let personality_name = explicit_personality.or_else(|| {
             let argv0 = env::args().next()?;
             let bin_name = std::path::Path::new(&argv0)
@@ -112,7 +113,11 @@ fn main() {
                     args.extend(personality.to_args());
                     active_personality = Some(personality_name.clone());
                 }
-                Ok(None) => {}  // unknown personality, ignore
+                Ok(None) if explicit => {
+                    eprintln!("lx: unknown personality '{personality_name}'");
+                    std::process::exit(exits::OPTIONS_ERROR);
+                }
+                Ok(None) => {}  // argv[0] didn't match — use defaults
                 Err(e) => {
                     eprintln!("lx: {e}");
                     std::process::exit(exits::OPTIONS_ERROR);
