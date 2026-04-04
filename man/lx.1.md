@@ -278,16 +278,24 @@ personality defaults.  For flags with a short form, a `--no-X` alias
 is also accepted (e.g. `--no-h` for `--no-header`, `--no-Z` for
 `--no-total-size`, `--no-C` for `--no-count`, `--no-g` for
 `--no-group`, `--no-i` for `--no-inode`, `--no-H` for `--no-links`,
-`--no-S` for `--no-blocks`, `--no-o` for `--no-octal`).
+`--no-S` for `--no-blocks`, `--no-o` for `--no-octal`, `--no-u` for
+`--no-user`, `--no-z` for `--no-filesize`, `--no-M` for
+`--no-permissions`, `--no-m` for `--no-modified`, `--no-c` for
+`--no-changed`).
 
-`--permissions`, `--no-permissions`
-: Show or suppress the permissions field.
+`-M`, `--permissions`, `--no-permissions`
+: Show or suppress the permissions field. `--mode`/`--no-mode` are
+accepted as long aliases (matching traditional Unix terminology).
+`--no-M` is a hidden short-letter alias for `--no-permissions`.
 
-`--filesize`, `--no-filesize`
-: Show or suppress the file size field.
+`-z`, `--filesize`, `--no-filesize`
+: Show or suppress the file size field. `--size`/`--no-size` are
+accepted as long aliases. `--no-z` is a hidden short-letter alias
+for `--no-filesize`.
 
-`--user`, `--no-user`
-: Show or suppress the user field.
+`-u`, `--user`, `--no-user`
+: Show or suppress the user field. `--no-u` is a hidden short-letter
+alias for `--no-user`.
 
 `--no-time`
 : Clear all timestamp columns from the base format. Runs *before*

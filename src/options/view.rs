@@ -695,18 +695,83 @@ mod test {
             assert!(cmd.try_get_matches_from(["lx", "--time=modified"]).is_err());
         }
 
-        // `-u` is no longer a short for --accessed (batch B repurposes it).
-        // For batch A it's simply gone: clap should reject it.
+        // `-u` is now the short flag for --user (reassigned from --accessed
+        // in batch A, attached in batch B).
         #[test]
-        fn short_u_rejected() {
+        fn short_u_is_user() {
             let cmd = crate::options::parser::build_command();
-            assert!(cmd.try_get_matches_from(["lx", "-u"]).is_err());
+            let m = cmd.try_get_matches_from(["lx", "-l", "-u"])
+                .expect("-u should parse as --user");
+            assert!(m.get_count(crate::options::flags::SHOW_USER) > 0);
         }
 
+        // `-U` is still unused after batch A: clap should reject it until
+        // a future batch reassigns it.
         #[test]
         fn short_upper_u_rejected() {
             let cmd = crate::options::parser::build_command();
             assert!(cmd.try_get_matches_from(["lx", "-U"]).is_err());
+        }
+
+        // `-z` / `--filesize` / `--size` all parse as the filesize enabler.
+        #[test]
+        fn short_z_is_filesize() {
+            let cmd = crate::options::parser::build_command();
+            assert!(cmd.try_get_matches_from(["lx", "-l", "-z"]).is_ok());
+            let cmd = crate::options::parser::build_command();
+            assert!(cmd.try_get_matches_from(["lx", "-l", "--size"]).is_ok());
+        }
+
+        // `-M` / `--permissions` / `--mode` all parse as the permissions enabler.
+        #[test]
+        fn short_upper_m_is_permissions() {
+            let cmd = crate::options::parser::build_command();
+            assert!(cmd.try_get_matches_from(["lx", "-l", "-M"]).is_ok());
+            let cmd = crate::options::parser::build_command();
+            assert!(cmd.try_get_matches_from(["lx", "-l", "--mode"]).is_ok());
+        }
+
+        // Hidden short-letter negation aliases: --no-u, --no-z, --no-M.
+        #[test]
+        fn hidden_negation_aliases() {
+            let cmd = crate::options::parser::build_command();
+            assert!(cmd.try_get_matches_from(["lx", "-l", "--no-u"]).is_ok());
+            let cmd = crate::options::parser::build_command();
+            assert!(cmd.try_get_matches_from(["lx", "-l", "--no-z"]).is_ok());
+            let cmd = crate::options::parser::build_command();
+            assert!(cmd.try_get_matches_from(["lx", "-l", "--no-M"]).is_ok());
+        }
+
+        // Long-form negation aliases: --no-mode, --no-size.
+        #[test]
+        fn long_negation_aliases() {
+            let cmd = crate::options::parser::build_command();
+            assert!(cmd.try_get_matches_from(["lx", "-l", "--no-mode"]).is_ok());
+            let cmd = crate::options::parser::build_command();
+            assert!(cmd.try_get_matches_from(["lx", "-l", "--no-size"]).is_ok());
+        }
+
+        // Verify suppression actually removes the column.
+        #[test]
+        fn no_z_suppresses_filesize() {
+            let cols: Vec<Column> = parse_for_test(&["--no-z"], |mf| deduce_columns(mf, 1))
+                .into_iter().next().unwrap();
+            assert!(!cols.contains(&Column::FileSize));
+        }
+
+        #[test]
+        fn no_upper_m_suppresses_permissions() {
+            let cols: Vec<Column> = parse_for_test(&["--no-M"], |mf| deduce_columns(mf, 1))
+                .into_iter().next().unwrap();
+            assert!(!cols.contains(&Column::Permissions));
+        }
+
+        #[cfg(unix)]
+        #[test]
+        fn no_u_suppresses_user() {
+            let cols: Vec<Column> = parse_for_test(&["--no-u"], |mf| deduce_columns(mf, 1))
+                .into_iter().next().unwrap();
+            assert!(!cols.contains(&Column::User));
         }
     }
 
