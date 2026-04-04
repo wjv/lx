@@ -43,7 +43,7 @@ use crate::theme::Theme;
 mod config;
 mod fs;
 mod logger;
-mod options;
+pub(crate) mod options;
 mod output;
 mod theme;
 

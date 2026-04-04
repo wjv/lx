@@ -9,6 +9,7 @@ pub mod lines;
 pub mod render;
 pub mod table;
 pub mod time;
+pub mod column_registry;
 
 mod cell;
 mod escape;

@@ -22,7 +22,7 @@ use crate::theme::Options as ThemeOptions;
 mod dir_action;
 mod file_name;
 mod filter;
-mod flags;
+pub(crate) mod flags;
 mod theme;
 mod view;
 

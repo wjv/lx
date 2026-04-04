@@ -271,7 +271,7 @@ impl TimeType {
 pub struct Environment {
 
     /// Localisation rules for formatting numbers.
-    numeric: locale::Numeric,
+    pub numeric: locale::Numeric,
 
     /// Mapping cache of user IDs to usernames.
     #[cfg(unix)]
