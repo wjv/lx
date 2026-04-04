@@ -65,13 +65,13 @@ migration.
 | `"0.2"`        | 0.2.0+     | Personalities replace `[defaults]`         |
 | `"0.3"`        | 0.3.0+     | Classes, flat formats, exa style chain     |
 | `"0.4"`        | 0.7.0+     | Conditional overrides (`[[when]]` blocks)  |
-| `"0.5"`        | 0.8.0+     | `time = "..."` setting removed; timestamps now ordinary add/suppress columns |
+| `"0.5"`        | 0.8.0+     | `time` and `numeric` settings removed; timestamps and UID/GID now ordinary columns |
 
 Version `"0.3"` and `"0.4"` configs are still accepted by lx 0.8+
-(0.5 is a superset of both), with two caveats: `[[when]]` blocks in
-a `"0.3"` config trigger a warning, and the `time = "..."` setting
-(valid in 0.3/0.4) triggers a deprecation warning at load time and
-is ignored.
+(0.5 is a superset of both), with caveats: `[[when]]` blocks in
+a `"0.3"` config trigger a warning, and the `time = "..."` and
+`numeric = ...` settings (valid in 0.3/0.4) trigger deprecation
+warnings at load time and are ignored.
 
 If lx encounters a config file with an older version (or no version
 field), it refuses to load it and prints a message directing the user
@@ -83,7 +83,8 @@ This command migrates the config to the current format (0.1→0.5,
 0.2→0.5, 0.3→0.5, and 0.4→0.5 are all supported) and saves the
 original as `~/.lxconfig.toml.bak`. The 0.3→0.5 and 0.4→0.5
 migrations only bump the version string (and warn if `time = "..."`
-is present); earlier migrations also restructure the file.
+or `numeric = ...` are present); earlier migrations also restructure
+the file.
 
 
 FORMATS
@@ -208,17 +209,21 @@ globs), `prune` (string: pipe-separated globs),
 Long view options:
 
 : `binary` (bool), `bytes` (bool), `header` (bool), `inode` (bool),
-`links` (bool), `blocks` (bool), `group` (bool), `numeric` (bool),
+`links` (bool), `blocks` (bool), `group` (bool), `uid` (bool),
+`gid` (bool),
 `time-style` (string: `default`/`iso`/`long-iso`/`full-iso`/`relative`/`+FORMAT`),
 `modified` (bool), `changed` (bool), `accessed` (bool),
 `created` (bool), `total-size` (bool), `extended` (bool),
 `octal-permissions` (bool), `flags` (bool).
 
-The `time` setting (a string naming a single timestamp field)
-existed in config versions 0.3 and 0.4. It was removed in 0.5; use
-the individual `modified`/`changed`/`accessed`/`created` booleans
-(which are additive in 0.8+) to show the timestamps you want, and
-set `no-time = true` to start from an empty timestamp set if needed.
+Removed in 0.5: `time` (string naming a single timestamp field) and
+`numeric` (boolean). The `time` setting is replaced by the individual
+`modified`/`changed`/`accessed`/`created` booleans (which are additive
+in 0.8+); set `no-time = true` to start from an empty timestamp set.
+The `numeric` setting is replaced by the new first-class `uid` and
+`gid` columns. For the old `ls -n`-style numeric-only view, use
+`uid = true, gid = true, no-user = true, no-group = true` — or better,
+use `--columns` to pick exactly the columns you want.
 
 VCS:
 
@@ -228,8 +233,9 @@ VCS:
 Negation (override personality defaults):
 
 : `no-permissions` (bool), `no-filesize` (bool), `no-user` (bool),
-`no-time` (bool), `no-modified` (bool), `no-changed` (bool),
-`no-accessed` (bool), `no-created` (bool), `no-icons` (bool),
+`no-uid` (bool), `no-gid` (bool), `no-time` (bool),
+`no-modified` (bool), `no-changed` (bool), `no-accessed` (bool),
+`no-created` (bool), `no-icons` (bool),
 `no-inode` (bool), `no-group` (bool), `no-links` (bool),
 `no-blocks` (bool), `no-octal` (bool), `no-header` (bool),
 `no-count` (bool), `no-total-size` (bool).
@@ -405,7 +411,16 @@ sets all unit magnitudes), `size-major`, `size-minor`.
 
 **Users:**
 
-: `user-you`, `user-other`, `group-yours`, `group-other`.
+: `user-you`, `user-other`, `group-yours`, `group-other`,
+`uid-you`, `uid-other`, `gid-yours`, `gid-other`.
+
+The `uid-*` and `gid-*` slots style the dedicated `--uid` and
+`--gid` columns. If unset, they cascade from `user-*` / `group-*`
+so themes that only specify the name-column colours automatically
+apply to the numeric ID columns. The compiled-in default theme
+sets them to non-bold versions of the user/group defaults so that
+`-ll --uid --gid` — four adjacent identity columns — reads with
+the numeric IDs as secondary information.
 
 **Links:**
 

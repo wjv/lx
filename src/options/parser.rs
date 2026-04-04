@@ -106,24 +106,8 @@ pub fn build_command() -> Command {
                         {all-args}{after-help}")
         .after_help("\
 Column overrides:\n  \
-  Every Long view column flag has a matching --no-FLAG suppressor\n  \
-  (e.g. -i/--inode pairs with --no-inode and hidden --no-i; -M/--permissions\n  \
-  pairs with --no-permissions, --no-mode, and hidden --no-M). Use these to\n  \
-  turn off columns that a personality has enabled. --no-time is special:\n  \
-  it clears all timestamp columns at once and runs before individual\n  \
-  timestamp adds, so `--no-time --accessed` shows only the accessed column.\n  \
-  See lx(1) for the full list.\n\
-\n  \
-  Example: lx -lll --no-user --no-changed\n\
-\n\
-Environment variables:\n  \
-  COLUMNS          Override terminal width (characters)\n  \
-  LX_GRID_ROWS     Minimum rows before grid-details view activates\n  \
-  LX_ICON_SPACING  Spaces between icon and file name\n  \
-  NO_COLOR         Disable colours (overridden by --colour)\n  \
-  LS_COLORS        File-type colour scheme\n  \
-  LX_COLORS        Extended colour scheme (UI elements and metadata)\n  \
-  TIME_STYLE       Default timestamp style (overridden by --time-style)")
+  Every Long view column flag has a matching --no-FLAG suppressor,\n  \
+  e.g. --inode pairs with --no-inode, -M pairs with --no-M")
 
         // ── Display mode ──────────────────────────────────────────
 
@@ -263,14 +247,19 @@ Environment variables:\n  \
             .help_heading("Long view")
             .action(ArgAction::Count)
             .overrides_with(flags::NO_USER))
+        .arg(Arg::new(flags::UID)
+            .long("uid")
+            .help("Show the numeric user ID column")
+            .help_heading("Long view")
+            .action(ArgAction::Count))
         .arg(Arg::new(flags::GROUP)
             .short('g').long("group")
             .help("Show the group column")
             .help_heading("Long view")
             .action(ArgAction::Count))
-        .arg(Arg::new(flags::NUMERIC)
-            .short('n').long("numeric")
-            .help("Numeric user and group IDs")
+        .arg(Arg::new(flags::GID)
+            .long("gid")
+            .help("Show the numeric group ID column")
             .help_heading("Long view")
             .action(ArgAction::Count))
 
@@ -479,6 +468,16 @@ Environment variables:\n  \
             .long("no-group").alias("no-g")
             .hide(true)
             .action(ArgAction::Count))
+        .arg(Arg::new(flags::NO_UID)
+            .long("no-uid")
+            .hide(true)
+            .action(ArgAction::Count)
+            .overrides_with(flags::UID))
+        .arg(Arg::new(flags::NO_GID)
+            .long("no-gid")
+            .hide(true)
+            .action(ArgAction::Count)
+            .overrides_with(flags::GID))
         .arg(Arg::new(flags::NO_LINKS)
             .long("no-links").alias("no-H")
             .hide(true)

@@ -171,7 +171,15 @@ These options affect the columns displayed in long view (`-l`):
 : List file sizes in bytes, without prefixes.
 
 `-g`, `--group`
-: List each file's group.
+: List each file's group name.
+
+`--uid`
+: Show the numeric user ID column (long-form only). Composes with
+`-u`/`--user`: `-lug --uid --gid` shows both names and IDs
+side-by-side.
+
+`--gid`
+: Show the numeric group ID column (long-form only).
 
 `-h`, `--header`
 : Add a header row to each column.
@@ -207,9 +215,6 @@ compounding short.
 `full-iso`, `relative`. A custom strftime format can be specified with a
 leading `+` (e.g. `--time-style='+%d %b %Y'`). The `relative` style shows
 human-friendly durations such as "2 hours ago" or "3 days ago".
-
-`-n`, `--numeric`
-: List numeric user and group IDs.
 
 `-S`, `--blocks`
 : List each file's number of file system blocks.
@@ -296,6 +301,12 @@ for `--no-filesize`.
 `-u`, `--user`, `--no-user`
 : Show or suppress the user field. `--no-u` is a hidden short-letter
 alias for `--no-user`.
+
+`--uid`, `--no-uid`
+: Show or suppress the numeric user ID column (long-form only).
+
+`--gid`, `--no-gid`
+: Show or suppress the numeric group ID column (long-form only).
 
 `--no-time`
 : Clear all timestamp columns from the base format. Runs *before*

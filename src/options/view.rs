@@ -4,7 +4,7 @@ use crate::options::parser::MatchedFlags;
 use crate::output::{View, Mode, TerminalWidth, grid, details};
 use crate::output::grid_details::{self, RowThreshold};
 use crate::output::file_name::Options as FileStyle;
-use crate::output::table::{Column, TimeType, SizeFormat, UserFormat, Options as TableOptions};
+use crate::output::table::{Column, TimeType, SizeFormat, Options as TableOptions};
 use crate::output::time::TimeFormat;
 
 
@@ -152,10 +152,9 @@ impl TableOptions {
     fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V, long_count: u8) -> Result<Self, OptionsError> {
         let time_format = TimeFormat::deduce(matches, vars)?;
         let size_format = SizeFormat::deduce(matches);
-        let user_format = UserFormat::deduce(matches);
         let columns = deduce_columns(matches, long_count);
         let total_size = matches.has(flags::TOTAL_SIZE) && !matches.has(flags::NO_TOTAL_SIZE);
-        Ok(Self { size_format, time_format, user_format, columns, total_size })
+        Ok(Self { size_format, time_format, columns, total_size })
     }
 }
 
@@ -451,13 +450,6 @@ impl TimeFormat {
             s if s.starts_with('+') => Self::Custom(s[1..].to_string()),
             _          => Self::DefaultFormat,
         }
-    }
-}
-
-
-impl UserFormat {
-    fn deduce(matches: &MatchedFlags) -> Self {
-        if matches.has(flags::NUMERIC) { Self::Numeric } else { Self::Name }
     }
 }
 
@@ -773,6 +765,75 @@ mod test {
                 .into_iter().next().unwrap();
             assert!(!cols.contains(&Column::User));
         }
+
+        // Batch C: --uid and --gid as first-class columns.
+
+        #[cfg(unix)]
+        #[test]
+        fn uid_adds_column_after_user() {
+            let cols: Vec<Column> = parse_for_test(&["--uid"], |mf| deduce_columns(mf, 1))
+                .into_iter().next().unwrap();
+            assert!(cols.contains(&Column::Uid));
+            // Canonical position: uid sits immediately after user.
+            let user_idx = cols.iter().position(|c| *c == Column::User);
+            let uid_idx = cols.iter().position(|c| *c == Column::Uid);
+            assert!(user_idx.is_some() && uid_idx.is_some());
+            assert_eq!(uid_idx.unwrap(), user_idx.unwrap() + 1);
+        }
+
+        #[cfg(unix)]
+        #[test]
+        fn gid_adds_column_after_group() {
+            let cols: Vec<Column> = parse_for_test(&["-ll", "--gid"], |mf| deduce_columns(mf, 2))
+                .into_iter().next().unwrap();
+            assert!(cols.contains(&Column::Gid));
+            let group_idx = cols.iter().position(|c| *c == Column::Group);
+            let gid_idx = cols.iter().position(|c| *c == Column::Gid);
+            assert!(group_idx.is_some() && gid_idx.is_some());
+            assert_eq!(gid_idx.unwrap(), group_idx.unwrap() + 1);
+        }
+
+        #[cfg(unix)]
+        #[test]
+        fn uid_and_gid_compose() {
+            // Adding both alongside user/group gives all four columns,
+            // in canonical order: user, uid, group, gid.
+            let cols: Vec<Column> = parse_for_test(
+                &["-ll", "--uid", "--gid"],
+                |mf| deduce_columns(mf, 2),
+            ).into_iter().next().unwrap();
+            let positions: Vec<usize> = [Column::User, Column::Uid, Column::Group, Column::Gid]
+                .iter()
+                .map(|c| cols.iter().position(|x| x == c).expect("column present"))
+                .collect();
+            assert_eq!(positions, (0..4).map(|i| positions[0] + i).collect::<Vec<_>>());
+        }
+
+        #[cfg(unix)]
+        #[test]
+        fn no_uid_suppresses() {
+            let cols: Vec<Column> = parse_for_test(
+                &["--uid", "--no-uid"],
+                |mf| deduce_columns(mf, 1),
+            ).into_iter().next().unwrap();
+            assert!(!cols.contains(&Column::Uid));
+        }
+
+        // `--numeric` and `-n` are gone — clap should reject them.
+        #[test]
+        fn numeric_removed() {
+            let cmd = crate::options::parser::build_command();
+            assert!(cmd.try_get_matches_from(["lx", "--numeric"]).is_err());
+            let cmd = crate::options::parser::build_command();
+            assert!(cmd.try_get_matches_from(["lx", "-n"]).is_err());
+        }
+
+        #[cfg(unix)]
+        #[test]
+        fn uid_column_from_name() {
+            assert_eq!(Column::from_name("uid"), Some(Column::Uid));
+            assert_eq!(Column::from_name("gid"), Some(Column::Gid));
+        }
     }
 
 
@@ -814,7 +875,8 @@ mod test {
         test!(just_blocks:   Mode <- ["--blocks"],   None;  like Ok(Mode::Grid(_)));
         test!(just_binary:   Mode <- ["--binary"],   None;  like Ok(Mode::Grid(_)));
         test!(just_bytes:    Mode <- ["--bytes"],    None;  like Ok(Mode::Grid(_)));
-        test!(just_numeric:  Mode <- ["--numeric"],  None;  like Ok(Mode::Grid(_)));
+        test!(just_uid:      Mode <- ["--uid"],      None;  like Ok(Mode::Grid(_)));
+        test!(just_gid:      Mode <- ["--gid"],      None;  like Ok(Mode::Grid(_)));
 
         #[cfg(feature = "git")]
         test!(just_vcs_status: Mode <- ["--vcs-status"],   None;  like Ok(Mode::Grid(_)));

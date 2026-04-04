@@ -129,7 +129,8 @@ static SETTING_FLAGS: &[SettingDef] = &[
     SettingDef { key: "links",         flag: "--links",          kind: SettingKind::Bool },
     SettingDef { key: "blocks",        flag: "--blocks",         kind: SettingKind::Bool },
     SettingDef { key: "group",         flag: "--group",          kind: SettingKind::Bool },
-    SettingDef { key: "numeric",       flag: "--numeric",        kind: SettingKind::Bool },
+    SettingDef { key: "uid",           flag: "--uid",            kind: SettingKind::Bool },
+    SettingDef { key: "gid",           flag: "--gid",            kind: SettingKind::Bool },
     SettingDef { key: "time-style",    flag: "--time-style",     kind: SettingKind::Str },
     SettingDef { key: "modified",      flag: "--modified",       kind: SettingKind::Bool },
     SettingDef { key: "changed",       flag: "--changed",        kind: SettingKind::Bool },
@@ -180,6 +181,8 @@ static SETTING_FLAGS: &[SettingDef] = &[
     SettingDef { key: "no-icons",      flag: "--no-icons",       kind: SettingKind::Bool },
     SettingDef { key: "no-inode",      flag: "--no-inode",       kind: SettingKind::Bool },
     SettingDef { key: "no-group",      flag: "--no-group",       kind: SettingKind::Bool },
+    SettingDef { key: "no-uid",        flag: "--no-uid",         kind: SettingKind::Bool },
+    SettingDef { key: "no-gid",        flag: "--no-gid",         kind: SettingKind::Bool },
     SettingDef { key: "no-links",      flag: "--no-links",       kind: SettingKind::Bool },
     SettingDef { key: "no-blocks",     flag: "--no-blocks",      kind: SettingKind::Bool },
     SettingDef { key: "no-octal",      flag: "--no-octal",       kind: SettingKind::Bool },
@@ -202,6 +205,12 @@ fn removed_setting_hint(key: &str) -> Option<&'static str> {
             "the `time` setting was removed in config version 0.5; \
              use `modified`, `changed`, `accessed`, or `created` \
              (each a boolean) to add timestamp columns"
+        ),
+        "numeric" => Some(
+            "the `numeric` setting was removed in config version 0.5; \
+             UID and GID are now first-class columns. Use \
+             `uid = true, gid = true, no-user = true, no-group = true` \
+             for the old `-n` behaviour, or pick whichever columns you want"
         ),
         _ => None,
     }
@@ -1612,11 +1621,17 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
         return Err(ConfigError::AlreadyCurrent { path: path.clone() });
     }
 
-    // Warn if the file contains `time = "..."` — removed in 0.5.
+    // Warn about settings removed in 0.5.
     if version == "0.3" || version == "0.4" {
+        let mut warned_time = false;
+        let mut warned_numeric = false;
         for line in contents.lines() {
             let trimmed = line.trim();
-            if trimmed.starts_with("time") && trimmed.contains('=')
+            if !trimmed.contains('=') {
+                continue;
+            }
+            if !warned_time
+                && trimmed.starts_with("time")
                 && !trimmed.starts_with("time-style")
             {
                 eprintln!(
@@ -1624,6 +1639,18 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
                      version 0.5; use `modified`, `changed`, `accessed`, \
                      or `created` booleans instead. Upgrading anyway."
                 );
+                warned_time = true;
+            }
+            if !warned_numeric && trimmed.starts_with("numeric") {
+                eprintln!(
+                    "lx: warning: `numeric = ...` is removed in config \
+                     version 0.5; UID and GID are first-class columns now. \
+                     Use `uid = true, gid = true, no-user = true, \
+                     no-group = true` for the old behaviour. Upgrading anyway."
+                );
+                warned_numeric = true;
+            }
+            if warned_time && warned_numeric {
                 break;
             }
         }

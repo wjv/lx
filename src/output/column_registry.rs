@@ -9,7 +9,7 @@ use crate::fs::File;
 use crate::fs::feature::VcsCache;
 use crate::options::flags;
 use crate::output::cell::TextCell;
-use crate::output::table::{Alignment, Column, Environment, SizeFormat, TimeType, UserFormat};
+use crate::output::table::{Alignment, Column, Environment, SizeFormat, TimeType};
 use crate::output::time::TimeFormat;
 use crate::theme::Theme;
 
@@ -23,7 +23,6 @@ pub struct RenderContext<'a> {
     pub theme: &'a Theme,
     pub size_format: SizeFormat,
     pub time_format: &'a TimeFormat,
-    pub user_format: UserFormat,
     pub env: &'a Environment,
     pub vcs: Option<&'a dyn VcsCache>,
     pub total_size: bool,
@@ -117,12 +116,22 @@ fn render_blocks(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> Tex
 
 #[cfg(unix)]
 fn render_user(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
-    file.user().render(ctx.theme, &*ctx.env.lock_users(), ctx.user_format)
+    file.user().render(ctx.theme, &*ctx.env.lock_users())
+}
+
+#[cfg(unix)]
+fn render_uid(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
+    file.user().render_uid(ctx.theme, &*ctx.env.lock_users())
 }
 
 #[cfg(unix)]
 fn render_group(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
-    file.group().render(ctx.theme, &*ctx.env.lock_users(), ctx.user_format)
+    file.group().render(ctx.theme, &*ctx.env.lock_users())
+}
+
+#[cfg(unix)]
+fn render_gid(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
+    file.group().render_gid(ctx.theme, &*ctx.env.lock_users())
 }
 
 fn render_vcs_status(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
@@ -284,16 +293,42 @@ pub static COLUMN_REGISTRY: &[ColumnDef] = &[
     },
     #[cfg(unix)]
     ColumnDef {
+        column: Column::Uid,
+        name: "uid",
+        aliases: &[],
+        header: "UID",
+        alignment: Alignment::Right,
+        canonical_position: 8,
+        add_flag: Some(flags::UID),
+        suppress_flag: Some(flags::NO_UID),
+        show_flag: None,
+        render: render_uid,
+    },
+    #[cfg(unix)]
+    ColumnDef {
         column: Column::Group,
         name: "group",
         aliases: &[],
         header: "Group",
         alignment: Alignment::Left,
-        canonical_position: 8,
+        canonical_position: 9,
         add_flag: Some(flags::GROUP),
         suppress_flag: Some(flags::NO_GROUP),
         show_flag: None,
         render: render_group,
+    },
+    #[cfg(unix)]
+    ColumnDef {
+        column: Column::Gid,
+        name: "gid",
+        aliases: &[],
+        header: "GID",
+        alignment: Alignment::Right,
+        canonical_position: 10,
+        add_flag: Some(flags::GID),
+        suppress_flag: Some(flags::NO_GID),
+        show_flag: None,
+        render: render_gid,
     },
     ColumnDef {
         column: Column::Timestamp(TimeType::Modified),
@@ -301,7 +336,7 @@ pub static COLUMN_REGISTRY: &[ColumnDef] = &[
         aliases: &[],
         header: "Date Modified",
         alignment: Alignment::Left,
-        canonical_position: 9,
+        canonical_position: 11,
         add_flag: Some(flags::MODIFIED),
         suppress_flag: Some(flags::NO_MODIFIED),
         show_flag: None,
@@ -313,7 +348,7 @@ pub static COLUMN_REGISTRY: &[ColumnDef] = &[
         aliases: &[],
         header: "Date Changed",
         alignment: Alignment::Left,
-        canonical_position: 10,
+        canonical_position: 12,
         add_flag: Some(flags::CHANGED),
         suppress_flag: Some(flags::NO_CHANGED),
         show_flag: None,
@@ -325,7 +360,7 @@ pub static COLUMN_REGISTRY: &[ColumnDef] = &[
         aliases: &[],
         header: "Date Created",
         alignment: Alignment::Left,
-        canonical_position: 11,
+        canonical_position: 13,
         add_flag: Some(flags::CREATED),
         suppress_flag: Some(flags::NO_CREATED),
         show_flag: None,
@@ -337,7 +372,7 @@ pub static COLUMN_REGISTRY: &[ColumnDef] = &[
         aliases: &[],
         header: "Date Accessed",
         alignment: Alignment::Left,
-        canonical_position: 12,
+        canonical_position: 14,
         add_flag: Some(flags::ACCESSED),
         suppress_flag: Some(flags::NO_ACCESSED),
         show_flag: None,
@@ -349,7 +384,7 @@ pub static COLUMN_REGISTRY: &[ColumnDef] = &[
         aliases: &[],
         header: "VCS",
         alignment: Alignment::Right,
-        canonical_position: 13,
+        canonical_position: 15,
         add_flag: Some(flags::VCS_STATUS),
         suppress_flag: None,
         show_flag: None,
@@ -361,7 +396,7 @@ pub static COLUMN_REGISTRY: &[ColumnDef] = &[
         aliases: &[],
         header: "Repo",
         alignment: Alignment::Left,
-        canonical_position: 14,
+        canonical_position: 16,
         add_flag: Some(flags::VCS_REPOS),
         suppress_flag: None,
         show_flag: None,

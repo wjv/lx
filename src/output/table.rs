@@ -19,7 +19,6 @@ use crate::theme::Theme;
 pub struct Options {
     pub size_format: SizeFormat,
     pub time_format: TimeFormat,
-    pub user_format: UserFormat,
     pub columns: Vec<Column>,
     /// When true, the size column shows recursive directory sizes.
     pub total_size: bool,
@@ -37,7 +36,11 @@ pub enum Column {
     #[cfg(unix)]
     User,
     #[cfg(unix)]
+    Uid,
+    #[cfg(unix)]
     Group,
+    #[cfg(unix)]
+    Gid,
     #[cfg(unix)]
     HardLinks,
     #[cfg(unix)]
@@ -108,17 +111,6 @@ pub enum SizeFormat {
     /// Do no formatting and just display the size as a number of bytes.
     JustBytes,
 }
-
-/// Formatting options for user and group.
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
-pub enum UserFormat {
-    /// The UID / GID
-    Numeric,
-    /// Show the name
-    Name,
-}
-
-
 
 /// The types of a file’s time fields. These three fields are standard
 /// across most (all?) operating systems.
@@ -195,7 +187,6 @@ pub struct Table<'a> {
     widths: TableWidths,
     time_format: TimeFormat,
     size_format: SizeFormat,
-    user_format: UserFormat,
     total_size: bool,
     vcs: Option<&'a dyn VcsCache>,
 }
@@ -227,7 +218,6 @@ impl<'a, 'f> Table<'a> {
             env,
             time_format: options.time_format.clone(),
             size_format: options.size_format,
-            user_format: options.user_format,
             total_size: options.total_size,
         }
     }
@@ -270,7 +260,6 @@ impl<'a, 'f> Table<'a> {
             theme: self.theme,
             size_format: self.size_format,
             time_format: &self.time_format,
-            user_format: self.user_format,
             env: self.env,
             vcs: self.vcs,
             total_size: self.total_size,

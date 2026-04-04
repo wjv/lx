@@ -332,9 +332,11 @@ fn byte_sizes() {
 }
 
 #[test]
-fn numeric_ids() {
+fn uid_and_gid_columns() {
+    // --uid and --gid are first-class columns as of 0.8 (batch C);
+    // the old `-n`/`--numeric` shortcut is gone.
     lx_no_colour()
-        .args(["-ln", "Cargo.toml"])
+        .args(["-l", "--uid", "--gid", "Cargo.toml"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Cargo.toml"));
