@@ -7,11 +7,13 @@ on:
       - "src/**"
       - "tests/**"
       - "Cargo.*"
+      - ".github/**"
   pull_request:
     paths:
       - "src/**"
       - "tests/**"
       - "Cargo.*"
+      - ".github/**"
 
 env:
   CARGO_TERM_COLOR: always
@@ -53,3 +55,49 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo check --no-default-features
+
+  # Release dress rehearsal — mirrors the release workflow's build matrix.
+  # Only runs on release branches.
+  release-build:
+    if: startsWith(github.ref, 'refs/heads/rel/')
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Install cross-compilation tools
+        if: matrix.cross
+        run: |
+          sudo dpkg --add-architecture arm64
+          # Pin existing sources to amd64 only (handles both .list and .sources formats).
+          for f in /etc/apt/sources.list.d/*.sources; do
+            [ -f "$f" ] && grep -q '^Architectures:' "$f" || sudo sed -i '/^Types:/a Architectures: amd64' "$f" || true
+          done
+          for f in /etc/apt/sources.list.d/*.list; do
+            [ -f "$f" ] && sudo sed -i '/^deb \(http\|https\)/s|^deb |deb [arch=amd64] |' "$f" || true
+          done
+          # Add arm64 ports repository.
+          echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe' | sudo tee /etc/apt/sources.list.d/arm64.list
+          echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe' | sudo tee -a /etc/apt/sources.list.d/arm64.list
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu zlib1g-dev:arm64
+      - name: Set cross-linker
+        if: matrix.cross
+        run: |
+          mkdir -p .cargo
+          echo '[target.aarch64-unknown-linux-gnu]' >> .cargo/config.toml
+          echo 'linker = "aarch64-linux-gnu-gcc"' >> .cargo/config.toml
+      - run: cargo build --release --features jj --target ${{ matrix.target }}

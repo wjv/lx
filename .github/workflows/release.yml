@@ -25,7 +25,20 @@ jobs:
           targets: ${{ matrix.target }}
       - name: Install cross-compilation tools
         if: matrix.cross
-        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+        run: |
+          sudo dpkg --add-architecture arm64
+          # Pin existing sources to amd64 only (handles both .list and .sources formats).
+          for f in /etc/apt/sources.list.d/*.sources; do
+            [ -f "$f" ] && grep -q '^Architectures:' "$f" || sudo sed -i '/^Types:/a Architectures: amd64' "$f" || true
+          done
+          for f in /etc/apt/sources.list.d/*.list; do
+            [ -f "$f" ] && sudo sed -i '/^deb \(http\|https\)/s|^deb |deb [arch=amd64] |' "$f" || true
+          done
+          # Add arm64 ports repository.
+          echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe' | sudo tee /etc/apt/sources.list.d/arm64.list
+          echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe' | sudo tee -a /etc/apt/sources.list.d/arm64.list
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu zlib1g-dev:arm64
       - name: Set cross-linker
         if: matrix.cross
         run: |
@@ -89,14 +102,14 @@ jobs:
   update-homebrew:
     needs: release
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v4
         with:
           repository: wjv/homebrew-tap
           token: ${{ secrets.HOMEBREW_LX_LS }}
       - name: Update formula
-        env:
-          TAG: ${{ github.ref_name }}
         run: |
           VERSION="${TAG#v}"
           BASE="https://github.com/wjv/lx/releases/download/${TAG}"
@@ -148,8 +161,8 @@ jobs:
 
             def install
               bin.install Dir["lx-*"].first => "lx"
-              man1.install resource("man-lx") => "lx.1"
-              man5.install resource("man-lxconfig") => "lxconfig.toml.5"
+              resource("man-lx").stage { man1.install "lx.1" }
+              resource("man-lxconfig").stage { man5.install "lxconfig.toml.5" }
             end
 
             test do
