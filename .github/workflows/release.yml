@@ -25,7 +25,10 @@ jobs:
           targets: ${{ matrix.target }}
       - name: Install cross-compilation tools
         if: matrix.cross
-        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+        run: |
+          sudo dpkg --add-architecture arm64
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu zlib1g-dev:arm64
       - name: Set cross-linker
         if: matrix.cross
         run: |
