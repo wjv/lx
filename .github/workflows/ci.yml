@@ -82,10 +82,14 @@ jobs:
         if: matrix.cross
         run: |
           sudo dpkg --add-architecture arm64
-          # Restrict existing x86 sources to amd64 only, then add arm64 ports.
+          # Pin existing sources to amd64 only (handles both .list and .sources formats).
+          for f in /etc/apt/sources.list.d/*.sources; do
+            [ -f "$f" ] && grep -q '^Architectures:' "$f" || sudo sed -i '/^Types:/a Architectures: amd64' "$f" || true
+          done
           for f in /etc/apt/sources.list.d/*.list; do
             [ -f "$f" ] && sudo sed -i '/^deb \(http\|https\)/s|^deb |deb [arch=amd64] |' "$f" || true
           done
+          # Add arm64 ports repository.
           echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe' | sudo tee /etc/apt/sources.list.d/arm64.list
           echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe' | sudo tee -a /etc/apt/sources.list.d/arm64.list
           sudo apt-get update
