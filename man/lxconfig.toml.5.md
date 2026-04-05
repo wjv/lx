@@ -95,19 +95,19 @@ keys in a flat `[format]` section. Each key is a format name; its value
 is either a TOML array or a comma-separated string of column names:
 
     [format]
-    long  = ["perms", "size", "user", "modified"]
-    long2 = ["perms", "size", "user", "group", "modified", "vcs"]
-    long3 = ["perms", "links", "size", "blocks", "user", "group",
+    long  = ["permissions", "size", "user", "modified"]
+    long2 = ["permissions", "size", "user", "group", "modified", "vcs"]
+    long3 = ["permissions", "links", "size", "blocks", "user", "group",
              "modified", "changed", "created", "accessed", "vcs"]
-    compact = "perms,size,modified"
+    compact = "permissions,size,modified"
 
 Three compiled-in formats correspond to the `-l` tier system:
 
 | Tier | Flag   | Format name | Columns                                      |
 |:----:|--------|-------------|----------------------------------------------|
-| 1    | `-l`   | `long`      | perms, size, user, modified                  |
-| 2    | `-ll`  | `long2`     | perms, size, user, group, modified, vcs      |
-| 3    | `-lll` | `long3`     | perms, links, size, blocks, user, group, modified, changed, created, accessed, vcs |
+| 1    | `-l`   | `long`      | permissions, size, user, modified            |
+| 2    | `-ll`  | `long2`     | permissions, size, user, group, modified, vcs |
+| 3    | `-lll` | `long3`     | permissions, links, size, blocks, user, group, modified, changed, created, accessed, vcs |
 
 Defining a format with a compiled-in name in the config file overrides
 the built-in. Custom formats are used via `--format=NAME` or referenced
@@ -116,7 +116,7 @@ from personality definitions.
 Valid column names
 ------------------
 
-`perms` (alias `permissions`)
+`permissions` (alias `perms`)
 : File permissions.
 
 `size` (alias `filesize`)

@@ -1517,14 +1517,14 @@ pub fn show_class_all() {
 fn compiled_formats() -> HashMap<String, Vec<String>> {
     HashMap::from([
         ("long".into(), vec![
-            "perms".into(), "size".into(), "user".into(), "modified".into(),
+            "permissions".into(), "size".into(), "user".into(), "modified".into(),
         ]),
         ("long2".into(), vec![
-            "perms".into(), "size".into(), "user".into(), "group".into(),
+            "permissions".into(), "size".into(), "user".into(), "group".into(),
             "modified".into(), "vcs".into(),
         ]),
         ("long3".into(), vec![
-            "perms".into(), "links".into(), "size".into(), "blocks".into(),
+            "permissions".into(), "links".into(), "size".into(), "blocks".into(),
             "user".into(), "group".into(), "modified".into(), "changed".into(),
             "created".into(), "accessed".into(), "vcs".into(),
         ]),

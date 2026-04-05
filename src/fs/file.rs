@@ -591,6 +591,15 @@ impl<'dir> File<'dir> {
         }
     }
 
+    /// The raw permission bits from the file's mode, masked to the
+    /// permission-significant bits (rwx × owner/group/other plus
+    /// setuid/setgid/sticky).  Used for sorting by permissions — both
+    /// the symbolic and octal views sort numerically on this value.
+    #[cfg(unix)]
+    pub fn permissions_octal(&self) -> u32 {
+        self.metadata.mode() & 0o7777
+    }
+
     /// This file’s permissions, with flags for each bit.
     #[cfg(unix)]
     pub fn permissions(&self) -> f::Permissions {

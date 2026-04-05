@@ -120,6 +120,58 @@ impl SortField {
             "none" => {
                 Self::Unsorted
             }
+
+            // `version` is a promise about what the `name` sort does.
+            // lx already uses natord::compare for the name sort, which
+            // handles embedded numbers naturally (`v1.10` > `v1.2`).
+            // Adding `-s version` as an alias gives users migrating
+            // from lsd a discoverable name for this behaviour.
+            "version" => {
+                Self::Name(SortCase::AaBbCc)
+            }
+
+            #[cfg(unix)]
+            "permissions" | "mode" | "octal" => {
+                Self::Permissions
+            }
+            #[cfg(unix)]
+            "blocks" => {
+                Self::Blocks
+            }
+            #[cfg(unix)]
+            "links" => {
+                Self::HardLinks
+            }
+            "flags" => {
+                Self::Flags
+            }
+            #[cfg(unix)]
+            "user" => {
+                Self::User(SortCase::AaBbCc)
+            }
+            #[cfg(unix)]
+            "User" => {
+                Self::User(SortCase::ABCabc)
+            }
+            #[cfg(unix)]
+            "group" => {
+                Self::Group(SortCase::AaBbCc)
+            }
+            #[cfg(unix)]
+            "Group" => {
+                Self::Group(SortCase::ABCabc)
+            }
+            #[cfg(unix)]
+            "uid" => {
+                Self::Uid
+            }
+            #[cfg(unix)]
+            "gid" => {
+                Self::Gid
+            }
+            "vcs" => {
+                Self::VcsStatusSort
+            }
             _ => unreachable!("Clap rejects invalid --sort values"),
         };
 
@@ -288,6 +340,41 @@ mod test {
         // Overriding
         test!(overridden:    SortField <- ["--sort=cr",       "--sort", "mod"];     Ok(SortField::ModifiedDate));
         test!(overridden_2:  SortField <- ["--sort", "none",  "--sort=Extension"];  Ok(SortField::Extension(SortCase::ABCabc)));
+
+        // Batch D: new metadata sort fields
+        #[cfg(unix)]
+        mod metadata_sorts {
+            use super::*;
+
+            test!(permissions:    SortField <- ["--sort=permissions"];  Ok(SortField::Permissions));
+            test!(perms_mode:     SortField <- ["--sort=mode"];         Ok(SortField::Permissions));
+            test!(perms_octal:    SortField <- ["--sort=octal"];        Ok(SortField::Permissions));
+            test!(size_filesize:  SortField <- ["--sort=filesize"];     Ok(SortField::Size));
+
+            // `-s perms` is no longer a valid sort value (removed in
+            // Batch D).  `perms` survives only as a backward-compat
+            // alias for `--columns=perms,...`; the canonical column
+            // name is now `permissions`.
+            #[test]
+            fn perms_rejected_as_sort_field() {
+                let cmd = crate::options::parser::build_command();
+                assert!(cmd.try_get_matches_from(["lx", "--sort=perms"]).is_err());
+            }
+            test!(blocks:       SortField <- ["--sort=blocks"];       Ok(SortField::Blocks));
+            test!(links:        SortField <- ["--sort=links"];        Ok(SortField::HardLinks));
+            test!(flags:        SortField <- ["--sort=flags"];        Ok(SortField::Flags));
+            test!(user_lower:   SortField <- ["--sort=user"];         Ok(SortField::User(SortCase::AaBbCc)));
+            test!(user_upper:   SortField <- ["--sort=User"];         Ok(SortField::User(SortCase::ABCabc)));
+            test!(group_lower:  SortField <- ["--sort=group"];        Ok(SortField::Group(SortCase::AaBbCc)));
+            test!(group_upper:  SortField <- ["--sort=Group"];        Ok(SortField::Group(SortCase::ABCabc)));
+            test!(uid:          SortField <- ["--sort=uid"];          Ok(SortField::Uid));
+            test!(gid:          SortField <- ["--sort=gid"];          Ok(SortField::Gid));
+            test!(vcs:          SortField <- ["--sort=vcs"];          Ok(SortField::VcsStatusSort));
+
+            // `-s version` is an alias for the case-insensitive name
+            // sort — natord already handles embedded-number ordering.
+            test!(version:      SortField <- ["--sort=version"];      Ok(SortField::Name(SortCase::AaBbCc)));
+        }
     }
 
 

@@ -17,21 +17,44 @@ const STYLES: styling::Styles = styling::Styles::styled()
 /// Return valid values for the `--sort` flag.
 fn sort_values() -> Vec<PossibleValue> {
     vec![
+        // Name / extension
         PossibleValue::new("name"),
         PossibleValue::new("Name"),
-        PossibleValue::new("size"),
         PossibleValue::new("extension"),
         PossibleValue::new("Extension"),
+        PossibleValue::new("version"),
+        // Metadata columns
+        PossibleValue::new("size"),
+        PossibleValue::new("permissions"),
+        PossibleValue::new("blocks"),
+        PossibleValue::new("links"),
+        PossibleValue::new("flags"),
+        PossibleValue::new("user"),
+        PossibleValue::new("User"),
+        PossibleValue::new("group"),
+        PossibleValue::new("Group"),
+        PossibleValue::new("uid"),
+        PossibleValue::new("gid"),
+        // Time
         PossibleValue::new("modified"),
         PossibleValue::new("changed"),
         PossibleValue::new("accessed"),
         PossibleValue::new("created"),
+        // VCS
+        PossibleValue::new("vcs"),
+        // Miscellaneous
         PossibleValue::new("type"),
         PossibleValue::new("none"),
         PossibleValue::new("inode"),
-        // Aliases (hidden from help):
+        // Aliases (hidden from help).  The general pattern: any
+        // column-add flag's long form is also accepted as a sort
+        // field name, so users don't have to remember two sets
+        // of names.
         PossibleValue::new("ext").hide(true),
         PossibleValue::new("Ext").hide(true),
+        PossibleValue::new("filesize").hide(true),      // mirrors --filesize
+        PossibleValue::new("mode").hide(true),          // mirrors --mode
+        PossibleValue::new("octal").hide(true),         // mirrors --octal
         PossibleValue::new("date").hide(true),
         PossibleValue::new("time").hide(true),
         PossibleValue::new("mod").hide(true),
@@ -325,8 +348,12 @@ Column overrides:\n  \
             .action(ArgAction::Count))
         .arg(Arg::new(flags::SORT)
             .short('s').long("sort")
-            .help("Sort field\n[name, Name, size, extension, Extension, \
-                  modified, changed, accessed, created, type, none, inode]")
+            .help("Sort field — one of:\n\
+                   name, Name, extension, Extension, version,\n\
+                   size, blocks, links, permissions, flags,\n\
+                   user, User, group, Group, uid, gid,\n\
+                   modified, changed, accessed, created,\n\
+                   vcs, type, inode, none")
             .help_heading("Filtering")
             .action(ArgAction::Set)
             .value_name("FIELD")

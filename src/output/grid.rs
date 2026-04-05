@@ -32,7 +32,7 @@ pub struct Render<'a, 'dir> {
 
 impl Render<'_, '_> {
     pub fn render<W: Write>(mut self, w: &mut W) -> io::Result<()> {
-        self.filter.sort_files(&mut self.files);
+        self.filter.sort_files(&mut self.files, None);
 
         let cells: Vec<String> = self.files.iter()
             .map(|file| {

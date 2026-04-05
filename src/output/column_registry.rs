@@ -215,8 +215,10 @@ pub static COLUMN_REGISTRY: &[ColumnDef] = &[
     },
     ColumnDef {
         column: Column::Permissions,
-        name: "perms",
-        aliases: &["permissions"],
+        name: "permissions",
+        // `perms` kept as an alias for backward compatibility with
+        // pre-0.8 configs that use `columns = ["perms", ...]`.
+        aliases: &["perms"],
         #[cfg(unix)]
         header: "Permissions",
         #[cfg(windows)]

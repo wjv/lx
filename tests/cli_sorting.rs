@@ -290,3 +290,134 @@ fn group_directories_first_legacy() {
             dir_pos < file_pos
         }));
 }
+
+
+// ── Batch D: expanded sort fields ──────────────────────────
+
+#[test]
+fn sort_by_blocks() {
+    // Larger file → more blocks (on any reasonable filesystem).
+    let dir = tempdir().expect("failed to create tempdir");
+    fs::write(dir.path().join("small.txt"), "x").unwrap();
+    fs::write(dir.path().join("large.txt"), vec![0u8; 16384]).unwrap();
+
+    lx_no_colour()
+        .args(["-1", "--sort=blocks"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::function(|output: &str| {
+            output.find("small.txt").unwrap() < output.find("large.txt").unwrap()
+        }));
+}
+
+#[test]
+fn sort_by_perms() {
+    let dir = tempdir().expect("failed to create tempdir");
+    let restricted = dir.path().join("restricted.txt");
+    let open = dir.path().join("open.txt");
+    fs::write(&restricted, "").unwrap();
+    fs::write(&open, "").unwrap();
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&restricted, fs::Permissions::from_mode(0o600)).unwrap();
+        fs::set_permissions(&open, fs::Permissions::from_mode(0o644)).unwrap();
+    }
+
+    lx_no_colour()
+        .args(["-1", "--sort=permissions"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::function(|output: &str| {
+            // 0o600 (384) sorts before 0o644 (420).
+            output.find("restricted.txt").unwrap() < output.find("open.txt").unwrap()
+        }));
+}
+
+#[test]
+fn sort_version_is_alias_for_name() {
+    // `-s version` should behave like `-s name` — natord already
+    // handles embedded-number ordering.
+    let dir = tempdir().expect("failed to create tempdir");
+    fs::write(dir.path().join("file2.txt"), "").unwrap();
+    fs::write(dir.path().join("file10.txt"), "").unwrap();
+    fs::write(dir.path().join("file1.txt"), "").unwrap();
+
+    lx_no_colour()
+        .args(["-1", "--sort=version"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::function(|output: &str| {
+            let p1 = output.find("file1.txt").unwrap();
+            let p2 = output.find("file2.txt").unwrap();
+            let p10 = output.find("file10.txt").unwrap();
+            p1 < p2 && p2 < p10
+        }));
+}
+
+#[test]
+fn sort_octal_is_alias_for_perms() {
+    // `-s octal` should resolve to the same sort as `-s perms`.
+    // We don't verify ordering here (that's the perms test); we
+    // just verify that the flag is accepted without error.
+    let dir = tempdir().expect("failed to create tempdir");
+    fs::write(dir.path().join("file.txt"), "").unwrap();
+
+    lx_no_colour()
+        .args(["-1", "--sort=octal"])
+        .arg(dir.path())
+        .assert()
+        .success();
+}
+
+#[test]
+fn sort_by_links() {
+    let dir = tempdir().expect("failed to create tempdir");
+    fs::write(dir.path().join("single.txt"), "").unwrap();
+    let source = dir.path().join("source.txt");
+    fs::write(&source, "").unwrap();
+    // A hard link increases the source file's link count from 1 to 2.
+    #[cfg(unix)]
+    fs::hard_link(&source, dir.path().join("linked.txt")).unwrap();
+
+    lx_no_colour()
+        .args(["-1", "--sort=links"])
+        .arg(dir.path())
+        .assert()
+        .success();
+    // We don't assert ordering because source.txt and linked.txt
+    // share the same inode and link count, so their relative order
+    // depends on the secondary (name) sort. The main thing is that
+    // --sort=links parses and runs.
+}
+
+#[test]
+fn sort_by_user_runs() {
+    // Same user owns everything in a tempdir — sort by user is a
+    // no-op on the ordering, but should succeed.
+    let dir = tempdir().expect("failed to create tempdir");
+    fs::write(dir.path().join("a.txt"), "").unwrap();
+    fs::write(dir.path().join("b.txt"), "").unwrap();
+
+    lx_no_colour()
+        .args(["-1", "--sort=user"])
+        .arg(dir.path())
+        .assert()
+        .success();
+}
+
+#[test]
+fn sort_by_uid_runs() {
+    let dir = tempdir().expect("failed to create tempdir");
+    fs::write(dir.path().join("a.txt"), "").unwrap();
+
+    lx_no_colour()
+        .args(["-1", "--sort=uid"])
+        .arg(dir.path())
+        .assert()
+        .success();
+}

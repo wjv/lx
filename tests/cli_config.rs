@@ -582,7 +582,7 @@ fn dump_format_single() {
         .success()
         .stdout(predicate::str::contains("[format]"))
         .stdout(predicate::str::contains("long2 = ["))
-        .stdout(predicate::str::contains("\"perms\""));
+        .stdout(predicate::str::contains("\"permissions\""));
 }
 
 #[test]

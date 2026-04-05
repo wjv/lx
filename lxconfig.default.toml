@@ -14,15 +14,17 @@ version = "0.5"
 ##   -lll uses format "long3" (tier 3: all timestamps and metadata)
 
 [format]
-long  = ["perms", "size", "user", "modified"]
-long2 = ["perms", "size", "user", "group", "modified", "vcs"]
-long3 = ["perms", "links", "size", "blocks", "user", "group",
+long  = ["permissions", "size", "user", "modified"]
+long2 = ["permissions", "size", "user", "group", "modified", "vcs"]
+long3 = ["permissions", "links", "size", "blocks", "user", "group",
          "modified", "changed", "created", "accessed", "vcs"]
 
-## Custom formats — define your own named column layouts:
+## Custom formats — define your own named column layouts.
+## (`perms` is also accepted as a backward-compatible alias for
+## `permissions` in column lists.)
 
-# minimal = ["perms", "size", "modified"]
-# hpc = "perms,size,user,group,modified,vcs"
+# minimal = ["permissions", "size", "modified"]
+# hpc = "permissions,size,user,group,modified,vcs"
 
 
 ## ── Personalities ─────────────────────────────────────────────────

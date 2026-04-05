@@ -142,7 +142,13 @@ impl FileFilter {
     }
 
     /// Sort the files in the given vector based on the sort field option.
-    pub fn sort_files<'a, F>(&self, files: &mut [F])
+    ///
+    /// The optional `vcs` parameter supports `-s vcs`: the sort
+    /// comparator needs access to the VCS cache to look up each
+    /// file's status.  Callsites that don't have a cache (grid and
+    /// lines views) pass `None`; the `VcsStatusSort` field then
+    /// falls back to sorting by name.
+    pub fn sort_files<'a, F>(&self, files: &mut [F], vcs: Option<&dyn crate::fs::feature::VcsCache>)
     where F: AsRef<File<'a>>
     {
         if self.sort_by_total_size && self.sort_field == SortField::Size {
@@ -152,6 +158,18 @@ impl FileFilter {
                 let sa = match a.as_ref().total_size() { Size::Some(s) => s, _ => 0 };
                 let sb = match b.as_ref().total_size() { Size::Some(s) => s, _ => 0 };
                 sa.cmp(&sb)
+            });
+        } else if self.sort_field == SortField::VcsStatusSort && vcs.is_some() {
+            let cache = vcs.unwrap();
+            files.sort_by(|a, b| {
+                let sa = cache.get(&a.as_ref().path, a.as_ref().is_directory());
+                let sb = cache.get(&b.as_ref().path, b.as_ref().is_directory());
+                // Use the unstaged status as the primary key (staged
+                // and unstaged are identical in jj; for git the
+                // unstaged state is usually the more interesting one
+                // for "what needs attention").
+                Self::vcs_sort_key(sa.unstaged).cmp(&Self::vcs_sort_key(sb.unstaged))
+                    .then_with(|| natord::compare(&a.as_ref().name, &b.as_ref().name))
             });
         } else {
             files.sort_by(|a, b| {
@@ -179,6 +197,30 @@ impl FileFilter {
                 });
             }
             GroupDirs::None => {}
+        }
+    }
+
+    /// Sort ordering for VCS status under `-s vcs`.  Attention-worthy
+    /// states come first (conflicted, modified, etc.) so they appear
+    /// at the top of the listing; unmodified files sort last.
+    ///
+    /// Explicit integers rather than declaration-order `Ord` because
+    /// the enum's declaration order is documentation-first, not
+    /// sort-order-first — changing the enum for readability
+    /// shouldn't silently change sort behaviour.
+    fn vcs_sort_key(status: crate::fs::fields::VcsStatus) -> u8 {
+        use crate::fs::fields::VcsStatus::*;
+        match status {
+            Conflicted  => 0,
+            Modified    => 1,
+            New         => 2,
+            Deleted     => 3,
+            Renamed     => 4,
+            Copied      => 5,
+            TypeChange  => 6,
+            Untracked   => 7,
+            Ignored     => 8,
+            NotModified => 9,
         }
     }
 }
@@ -255,6 +297,47 @@ pub enum SortField {
     /// The file's name, however if the name of the file begins with `.`
     /// ignore the leading `.` and then sort as Name
     NameMixHidden(SortCase),
+
+    /// The permission bits, in octal order.  Symbolic and octal views
+    /// both compare numerically against the underlying mode bits.
+    #[cfg(unix)]
+    Permissions,
+
+    /// The number of allocated filesystem blocks.
+    #[cfg(unix)]
+    Blocks,
+
+    /// The hard link count.
+    #[cfg(unix)]
+    HardLinks,
+
+    /// Platform file flags (BSD/macOS `chflags`, Linux attributes).
+    /// Compared numerically on the raw flag bits.
+    Flags,
+
+    /// The owner's name, looked up from the UID.  Files whose owner
+    /// has no name entry fall back to numeric UID comparison.
+    #[cfg(unix)]
+    User(SortCase),
+
+    /// The owner's group name, looked up from the GID.  Files whose
+    /// group has no name entry fall back to numeric GID.
+    #[cfg(unix)]
+    Group(SortCase),
+
+    /// The numeric user ID.
+    #[cfg(unix)]
+    Uid,
+
+    /// The numeric group ID.
+    #[cfg(unix)]
+    Gid,
+
+    /// The file's VCS status.  Files are grouped by their status with
+    /// attention-worthy states (conflicted, modified, etc.) first and
+    /// unmodified files last, so that `-s vcs` surfaces what needs
+    /// work.  Secondary sort within a status group is by name.
+    VcsStatusSort,
 }
 
 /// Whether a field should be sorted case-sensitively or case-insensitively.
@@ -327,7 +410,57 @@ impl SortField {
             Self::NameMixHidden(AaBbCc) => natord::compare_ignore_case(
                 Self::strip_dot(&a.name),
                 Self::strip_dot(&b.name)
-            )
+            ),
+
+            // ── Metadata sort fields (Batch D) ─────────────────
+
+            // Permissions sort by the numeric octal value of the mode
+            // bits.  Both symbolic and octal views share this order —
+            // "sort by perms" means the same thing regardless of how
+            // the column is rendered.
+            #[cfg(unix)]
+            Self::Permissions => a.permissions_octal().cmp(&b.permissions_octal())
+                .then_with(|| natord::compare(&a.name, &b.name)),
+
+            // Blocks sort numerically.  Files with no block count
+            // (symlinks, devices) sort as 0.
+            #[cfg(unix)]
+            Self::Blocks => Self::blocks_value(a).cmp(&Self::blocks_value(b))
+                .then_with(|| natord::compare(&a.name, &b.name)),
+
+            #[cfg(unix)]
+            Self::HardLinks => a.links().count.cmp(&b.links().count)
+                .then_with(|| natord::compare(&a.name, &b.name)),
+
+            // File flags sort on the raw bit pattern.  Files with no
+            // flags (the common case) all sort together.
+            Self::Flags => a.flags().0.cmp(&b.flags().0)
+                .then_with(|| natord::compare(&a.name, &b.name)),
+
+            // User/Group name sort: look up the name per comparison.
+            // This is O(n log n) lookups for n files, which is slower
+            // than the equivalent column rendering but still fast
+            // enough in practice.  Falls back to UID/GID for unknown
+            // names so the comparison is always total.
+            #[cfg(unix)]
+            Self::User(case) => Self::compare_user_names(a, b, case),
+
+            #[cfg(unix)]
+            Self::Group(case) => Self::compare_group_names(a, b, case),
+
+            #[cfg(unix)]
+            Self::Uid => a.user().0.cmp(&b.user().0)
+                .then_with(|| natord::compare(&a.name, &b.name)),
+
+            #[cfg(unix)]
+            Self::Gid => a.group().0.cmp(&b.group().0)
+                .then_with(|| natord::compare(&a.name, &b.name)),
+
+            // VCS sort is handled in sort_files() because it needs
+            // the VcsCache.  Falling through to here means no cache
+            // was available: group all files as equal and let the
+            // secondary sort (name) take over.
+            Self::VcsStatusSort => natord::compare(&a.name, &b.name),
         }
     }
 
@@ -336,6 +469,65 @@ impl SortField {
             Some(s) => s,
             None    => n,
         }
+    }
+
+    /// Extract a numeric block count from a file, defaulting to 0
+    /// for files (symlinks, devices) that don't have one.
+    #[cfg(unix)]
+    fn blocks_value(f: &File<'_>) -> u64 {
+        use crate::fs::fields::Blocks;
+        match f.blocks() {
+            Blocks::Some(n) => n,
+            Blocks::None    => 0,
+        }
+    }
+
+    #[cfg(unix)]
+    fn compare_user_names(a: &File<'_>, b: &File<'_>, case: SortCase) -> Ordering {
+        use uzers::Users;
+
+        let env = crate::output::table::environment();
+        let users = env.lock_users();
+        let name_a = users.get_user_by_uid(a.user().0)
+            .map(|u| u.name().to_string_lossy().into_owned());
+        let name_b = users.get_user_by_uid(b.user().0)
+            .map(|u| u.name().to_string_lossy().into_owned());
+        drop(users);
+
+        match (name_a, name_b) {
+            (Some(na), Some(nb)) => match case {
+                SortCase::ABCabc => natord::compare(&na, &nb),
+                SortCase::AaBbCc => natord::compare_ignore_case(&na, &nb),
+            },
+            (Some(_), None) => Ordering::Less,
+            (None, Some(_)) => Ordering::Greater,
+            (None, None)    => a.user().0.cmp(&b.user().0),
+        }
+        .then_with(|| natord::compare(&a.name, &b.name))
+    }
+
+    #[cfg(unix)]
+    fn compare_group_names(a: &File<'_>, b: &File<'_>, case: SortCase) -> Ordering {
+        use uzers::Groups;
+
+        let env = crate::output::table::environment();
+        let users = env.lock_users();
+        let name_a = users.get_group_by_gid(a.group().0)
+            .map(|g| g.name().to_string_lossy().into_owned());
+        let name_b = users.get_group_by_gid(b.group().0)
+            .map(|g| g.name().to_string_lossy().into_owned());
+        drop(users);
+
+        match (name_a, name_b) {
+            (Some(na), Some(nb)) => match case {
+                SortCase::ABCabc => natord::compare(&na, &nb),
+                SortCase::AaBbCc => natord::compare_ignore_case(&na, &nb),
+            },
+            (Some(_), None) => Ordering::Less,
+            (None, Some(_)) => Ordering::Greater,
+            (None, None)    => a.group().0.cmp(&b.group().0),
+        }
+        .then_with(|| natord::compare(&a.name, &b.name))
     }
 }
 

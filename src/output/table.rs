@@ -179,6 +179,13 @@ impl Environment {
 
 static ENVIRONMENT: LazyLock<Environment> = LazyLock::new(Environment::load_all);
 
+/// Access the process-wide shared Environment.  Used by the sort
+/// comparator to resolve user/group names during `-s user`/`-s group`
+/// comparisons.
+pub fn environment() -> &'static Environment {
+    &ENVIRONMENT
+}
+
 
 pub struct Table<'a> {
     columns: Vec<Column>,

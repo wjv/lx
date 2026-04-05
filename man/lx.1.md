@@ -111,19 +111,58 @@ FILTERING AND SORTING OPTIONS
 `-s`, `--sort=FIELD`
 : Which field to sort by.
 
-Valid sort fields are '`name`', '`Name`', '`extension`', '`Extension`',
-'`size`', '`modified`', '`changed`', '`accessed`', '`created`',
-'`inode`', '`type`', and '`none`'.
+Valid sort fields:
 
-The '`modified`' sort field has the aliases '`date`', '`time`', '`mod`',
-and '`newest`'.  Its reverse order has the aliases '`age`' and
-'`oldest`'.  Other aliases: '`ext`' for `extension`, '`Ext`' for
-`Extension`, '`ch`' for `changed`, '`acc`' for `accessed`, '`cr`' for
-`created`.
+- **Name / extension**: '`name`', '`Name`', '`extension`',
+  '`Extension`', '`version`'
+- **Size and allocation**: '`size`', '`blocks`', '`links`'
+- **Ownership and mode**: '`permissions`', '`flags`', '`user`',
+  '`User`', '`group`', '`Group`', '`uid`', '`gid`'
+- **Time**: '`modified`', '`changed`', '`accessed`', '`created`'
+- **VCS**: '`vcs`'
+- **Miscellaneous**: '`inode`', '`type`', '`none`'
+
+As a general rule, any column-add long flag is also accepted as a
+sort field name.  `--permissions` the column flag has `permissions`
+the sort field, `--filesize` has `filesize`, and so on.  Short
+aliases are also accepted where the column flag has them.
+
+The '`modified`' sort field has the aliases '`date`', '`time`',
+'`mod`', and '`newest`'.  Its reverse order has the aliases '`age`'
+and '`oldest`'.  Other aliases:
+
+- '`ext`' / '`Ext`' for '`extension`' / '`Extension`'
+- '`filesize`' for '`size`'
+- '`mode`', '`octal`' for '`permissions`'
+- '`ch`' for '`changed`'
+- '`acc`' for '`accessed`'
+- '`cr`' for '`created`'
 
 Sort fields starting with a capital letter sort uppercase before
 lowercase: 'A' then 'B' then 'a' then 'b'.  Fields starting with a
-lowercase letter mix them: 'A' then 'a' then 'B' then 'b'.
+lowercase letter mix them: 'A' then 'a' then 'B' then 'b'.  This
+applies to '`name`'/'`Name`', '`extension`'/'`Extension`', and
+'`user`'/'`User`', '`group`'/'`Group`'.
+
+`-s version` is an alias for `-s name` and exists for users
+migrating from tools that use a separate flag.  lx's default name
+sort already handles embedded numbers naturally (`v1.10` sorts
+after `v1.2`) via `natord`.
+
+`-s permissions` sorts by the numeric octal value of the permission
+bits, independent of whether the display is symbolic or octal.
+`-s flags` sorts on the raw bit pattern of platform file flags
+(macOS/BSD `chflags`, Linux `chattr`).
+
+`-s user` and `-s group` sort by resolved owner/group name, falling
+back to UID/GID for unresolvable entries.  `-s uid` and `-s gid`
+sort by the raw numeric ID regardless of whether a name is
+available.
+
+`-s vcs` sorts by VCS status with attention-worthy states (conflicted,
+modified, added, etc.) first and unmodified files last.  In grid
+and lines views (where no VCS cache is available) it falls back to
+name order.  Secondary sort within a status group is by name.
 
 With `-Z`/`--total-size`, sorting by `size` uses the recursive
 directory total instead of the inode size.
@@ -243,10 +282,11 @@ COLUMN AND FORMAT SELECTION
 ===========================
 
 `--columns=COLS`
-: Comma-separated list of columns to display. Overrides the `-l` tier.
-Implies long view. Valid names: `perms`, `size`, `user`, `group`,
-`links`, `inode`, `blocks`, `octal`, `flags`, `modified`, `changed`,
-`accessed`, `created`, `vcs`.
+: Comma-separated list of columns to display. Overrides the `-l`
+tier. Implies long view. Valid names: `permissions`, `size`, `user`,
+`uid`, `group`, `gid`, `links`, `inode`, `blocks`, `octal`, `flags`,
+`modified`, `changed`, `accessed`, `created`, `vcs`. `perms` is
+accepted as a backward-compatible alias for `permissions`.
 
 `--format=NAME`
 : Select a named column format. Compiled-in formats: `long`, `long2`,
