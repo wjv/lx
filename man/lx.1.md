@@ -90,8 +90,8 @@ Alias: `--color-scale`.
 : Select a named theme from the config file.
 
 
-FILTERING AND SORTING OPTIONS
-=============================
+FILTERING OPTIONS
+=================
 
 `-a`, `--all`
 : Show hidden and dot files. Use twice (`-aa`) to also show `.` and `..`.
@@ -104,6 +104,31 @@ FILTERING AND SORTING OPTIONS
 
 `-f`, `--only-files`
 : List only regular files, not directories.
+
+`-I`, `--ignore=GLOBS`
+: Glob patterns, pipe-separated, of files to hide completely.
+Alias: `--ignore-glob`.
+
+`-P`, `--prune=GLOBS`
+: Glob patterns, pipe-separated, of directories to show but not
+recurse into. The directory itself is displayed (with metadata and
+`--total-size` if active), but its children are hidden. Only
+meaningful with `-T` or `-R`; silently ignored otherwise.
+Alias: `--prune-glob`.
+
+`--symlinks=MODE`
+: How to handle symbolic links. MODE is `show` (default), `hide`, or
+`follow`.  `show` displays symlinks as-is.  `hide` removes symlinks
+from listings.  `follow` dereferences symlinks, showing the target's
+metadata, and recurses into symlinked directories in `-T`/`-R` mode.
+Broken symlinks are always shown regardless of mode.
+
+See also `--vcs-ignore` under **VCS INTEGRATION** for hiding files
+matched by repository ignore rules.
+
+
+SORTING OPTIONS
+===============
 
 `-r`, `--reverse`
 : Reverse the sort order.
@@ -167,27 +192,11 @@ name order.  Secondary sort within a status group is by name.
 With `-Z`/`--total-size`, sorting by `size` uses the recursive
 directory total instead of the inode size.
 
-`-I`, `--ignore=GLOBS`
-: Glob patterns, pipe-separated, of files to hide completely.
-Alias: `--ignore-glob`.
-
-`-P`, `--prune=GLOBS`
-: Glob patterns, pipe-separated, of directories to show but not
-recurse into. The directory itself is displayed (with metadata and
-`--total-size` if active), but its children are hidden. Only
-meaningful with `-T` or `-R`; silently ignored otherwise.
-Alias: `--prune-glob`.
-
-`--symlinks=MODE`
-: How to handle symbolic links. MODE is `show` (default), `hide`, or
-`follow`.  `show` displays symlinks as-is.  `hide` removes symlinks
-from listings.  `follow` dereferences symlinks, showing the target's
-metadata, and recurses into symlinked directories in `-T`/`-R` mode.
-Broken symlinks are always shown regardless of mode.
-
 `--group-dirs=WHEN`
 : Group directories before or after other files. WHEN is `first`, `last`,
-or `none`.
+or `none`.  Directory grouping partitions the listing into two blocks
+(directories and non-directories); the primary sort field then orders
+entries within each block independently.
 
 `-F`, `--dirs-first`
 : Directories first (short for `--group-dirs=first`).
@@ -296,25 +305,6 @@ long view.
 Precedence: `--columns` > `--format` > `-l` tier > individual flags.
 
 
-PERSONALITIES
-=============
-
-`-p`, `--personality=NAME`
-: Apply a named personality, which bundles columns, flags, and settings.
-Equivalent to invoking lx via an argv[0] symlink with that name.
-
-Compiled-in personalities: `ll`, `la`, `lll`, `tree`, `ls`.
-Additional personalities may be defined in the config file.
-
-Personalities support inheritance: a personality may include
-`inherits = "NAME"` to build upon another personality's settings.
-A personality may also set `theme = "NAME"` to select a named theme.
-
-When lx is invoked via a symlink whose name matches a personality, that
-personality is applied automatically. For example, if `ll` is a symlink
-to `lx`, running `ll` is equivalent to `lx -pll`.
-
-
 COLUMN OVERRIDES
 ================
 
@@ -385,6 +375,56 @@ command line.
 : Suppress `-Z`/`--total-size`.
 
 
+PERSONALITIES
+=============
+
+Personalities are lx's answer to `alias ll='ls -l'`: a structured,
+inheritable, introspectable way to have multiple "modes" for listing
+files, without shell configuration.  A personality is a named bundle
+of flags and settings, activated either by the name lx is invoked
+under (via an `argv[0]` symlink), by the `-p`/`--personality` flag,
+or by the compiled-in default when bare `lx` is run.
+
+`-p`, `--personality=NAME`
+: Apply a named personality for this invocation.  Equivalent to
+invoking lx via an `argv[0]` symlink with the same name.
+
+Compiled-in personalities:
+
+- `lx` — the default, used when `lx` is invoked as itself.
+- `ll` — long view equivalent to `lx -l`, with VCS status and
+  directories grouped first.
+- `la` — like `ll`, plus hidden files.
+- `lll` — tier-3 long view with header, all timestamps, and extra
+  metadata columns.
+- `tree` — recursive tree view with directories first.
+- `ls` — tries to mimic POSIX `ls`.
+
+Additional personalities may be defined in the config file.  Every
+CLI flag has a corresponding config key, so a personality definition
+is simply the flags you would type on the command line, spelled out
+as TOML.  Personalities support inheritance (`inherits = "NAME"`) to
+build on another personality's settings, and may select a theme
+(`theme = "NAME"`):
+
+    [personality.work]
+    inherits = "ll"
+    ignore = "*.tmp|*.bak"
+    time-style = "long-iso"
+    theme = "catppuccin-mocha"
+
+When lx is invoked via a symlink whose name matches a personality,
+that personality is applied automatically.  For example, if `ll` is
+a symlink to `lx` on your `$PATH`, running `ll` is equivalent to
+`lx -p ll`.  This is the recommended way to use personalities in
+daily work — create the symlinks once, and never type `-p` again.
+
+For the full syntax, including every personality setting key, the
+inheritance semantics, and the conditional `[[when]]` block
+vocabulary for environment-based overrides, see the
+**PERSONALITIES** section of **lxconfig.toml**(5).
+
+
 VCS INTEGRATION
 ===============
 
@@ -431,37 +471,15 @@ lx reads a TOML configuration file from these locations (first found wins):
 Run `lx --init-config` to generate a commented starter file.
 
 The config file includes a `version` field to track the schema version.
-The current version is `"0.4"` (version `"0.3"` configs are also
-accepted).  If you have a legacy config from an earlier version, run
-`lx --upgrade-config` to migrate it (0.1→0.3 and 0.2→0.3 migrations
-are supported).
+The current version is `"0.5"`.  If you have a legacy config from an
+earlier version, run `lx --upgrade-config` to migrate it (migrations
+from 0.1 through 0.4 are all supported; a `.bak` of the original is
+saved automatically).
 
-See **lxconfig.toml**(5) for full config file documentation.
-
-## Conditional overrides
-
-Personality settings can vary based on environment variables using
-`[[personality.NAME.when]]` blocks.  Conditions use `env.VAR = value`
-where the TOML type determines the check: a string (`"ghostty"`) for
-exact match, `true` for "must be set", `false` for "must be unset".
-All conditions in a block must match (AND).  Multiple blocks are tried
-in order; all matching blocks apply (later wins).  The base personality
-is the default.
-
-    [personality.lx]
-    icons = "never"
-
-    [[personality.lx.when]]
-    env.TERM_PROGRAM = "ghostty"
-    icons = "always"
-
-    [[personality.lx.when]]
-    env.SSH_CONNECTION = true
-    colour = "never"
-
-Requires `version = "0.4"` in the config file.  If `when` blocks are
-found in a `"0.3"` config, a warning is printed.
-See **lxconfig.toml**(5) for full details.
+For the full config file format — every section type, every key, the
+conditional `[[when]]` block syntax for environment-based personality
+overrides, and the complete theme/style/class vocabulary — see
+**lxconfig.toml**(5).
 
 `--show-config`
 : Show a coloured summary of the active configuration and exit.
@@ -512,6 +530,33 @@ and `[format.*]` sections.
 
 lx ships with a library of curated themes in the `themes/` directory
 of the source tree — copy any of them to `conf.d/` to activate.
+
+
+SHELL COMPLETIONS
+=================
+
+`--completions=SHELL`
+: Generate shell completion script for SHELL and write it to stdout.
+SHELL is one of `bash`, `zsh`, `fish`, `elvish`, or `powershell`.
+
+Quick activation for the current session:
+
+    # bash
+    source <(lx --completions bash)
+
+    # zsh
+    source <(lx --completions zsh)
+
+    # fish
+    lx --completions fish | source
+
+Or save to the standard location for permanent installation, e.g.:
+
+    lx --completions bash > ~/.local/share/bash-completion/completions/lx
+    lx --completions zsh  > ~/.zfunc/_lx
+    lx --completions fish > ~/.config/fish/completions/lx.fish
+
+(For zsh, `~/.zfunc` must be in your `$fpath`.)
 
 
 ENVIRONMENT VARIABLES

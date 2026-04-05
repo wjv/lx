@@ -79,122 +79,157 @@ for a confusing interface.
   other personality.
 
 
-## Flag vocabulary
+## The orthogonal CLI
 
-### Logical flag pairs
+The 0.8 refactor reshaped `lx`'s flag surface around a single idea:
+every user-visible knob should have a predictable shape.  This
+section is the user-facing summary; the rest of the document
+expands on the principles it introduces.
 
-Short flags are assigned in logical pairs or groups wherever possible,
-making them easier to remember:
+### Four disjoint classes of flag
 
-| Pair               | Flags                                                               | Relationship              |
-|--------------------|---------------------------------------------------------------------|---------------------------|
-| View modes         | `-l` (long) / `-G` (grid) / `-1` (oneline)                          | Mutually exclusive        |
-| Recursion          | `-T` (tree) / `-R` (recurse) / `-L` (level limit)                   | Related group             |
-| Dir grouping       | `-F` (first) / `-J` (last)                                          | Opposites on the home row |
-| Dir/file filtering | `-D` (only dirs) / `-f` (only files)                                | Opposites                 |
-| Filtering          | `-I` (ignore glob) / `-P` (prune glob)                              | Related: hide vs show-but-skip |
-| Timestamps         | `-m` (modified) / `-c` (changed) / `-u` (accessed) / `-U` (created) | Full set                  |
-| Size display       | `-b` (binary prefixes) / `-B` (bytes) / `-Z` (total size)           | Related group             |
-| Users              | `-g` (group) / `-n` (numeric IDs)                                   | Related                   |
-| Visibility         | `-a` (show hidden) / `-I` (ignore glob)                             | Opposite intent           |
-| Sort               | `-s` (sort field) / `-r` (reverse)                                  | Compose together          |
-| Summary            | `-C` (count) / `-Z` (total size)                                    | Compose: `-CZ` = count + size |
-| Metadata           | `-o` (octal) / `-O` (flags)                                         | Uppercase/lowercase pair  |
+`lx`'s long-view flags fall into four categories, each with a
+distinct job:
 
-The uppercase/lowercase pairing is deliberate where feasible:
-`-D`/`-d` (dirs only / dirs as files), `-U`/`-u` (created / accessed),
-`-B`/`-b` (bytes / binary), `-S`/`-s` (blocks / sort).
+1. **Column selectors** add or remove a column from the listing.
+   `--inode`, `--permissions`, `--filesize`, `--user`, `--uid`,
+   `--group`, `--gid`, `--links`, `--blocks`, `--octal`, `--flags`,
+   `--modified`, `--changed`, `--accessed`, `--created`,
+   `--vcs-status`, `--vcs-repos`.  Every one has a matching
+   `--no-*` negation.
+2. **Column display modifiers** change how an *already visible*
+   column is rendered without adding or removing anything.
+   `--binary` / `--bytes` / `--total-size` reshape the size
+   column; `--time-style` reshapes timestamps.  They're no-ops
+   if the column they'd affect isn't in the list.
+3. **File name modifiers** change how the filename column itself
+   is rendered: `--icons`, `--classify`, `--hyperlink`, `--quotes`,
+   `--absolute`.  The filename column is always present, in every
+   view mode.
+4. **Framing** adds structure around the table.  `--header` /
+   `-h` shows a header row; `--count` / `-C` prints an item count
+   (and, with `-Z`, a total size) to stderr after the listing.
 
+Keeping these classes separate is what lets the CLI be predictable.
+A column selector never changes rendering; a modifier never adds
+or removes a column; framing never touches column content.
+
+### Every column is addable, suppressible, and sortable
+
+The orthogonal rule is: **if a column makes sense to display, it
+makes sense to sort on.**  There's no reason to privilege "size"
+and "modified" over "blocks" and "user" — that gap was inherited
+from `exa`, not a principled decision.  With it closed, every
+metadata column has the same four-flag shape:
+
+| Role            | Shape              |
+|-----------------|--------------------|
+| Add             | `--COLUMN` / short |
+| Suppress        | `--no-COLUMN` / `--no-X` (hidden short alias) |
+| Sort ascending  | `-s COLUMN`        |
+| Sort descending | `-rs COLUMN`       |
+
+So `-ls blocks` is a long listing sorted by block count, and
+`-l --columns=user,uid,name -s uid` is an audit view sorted by
+numeric UID.  The full sort vocabulary — including the version
+sort, VCS status grouping, and case-sensitive variants — is
+listed in [`docs/GUIDE.md`](GUIDE.md#sorting).
 
 ### `=WHEN` flags
 
-Flags that control conditional behaviour use a standard `=WHEN` vocabulary:
-`always`, `auto`, `never`.  This applies to `--colour`, `--icons`,
-`--classify`, `--hyperlink`, and `--quotes`.
+Flags that control conditional behaviour share a `=WHEN`
+vocabulary: `always`, `auto`, `never`.  `--colour`, `--icons`,
+`--classify`, `--hyperlink`, and `--quotes` all follow it.
 
-`auto` checks whether stdout is a terminal: enabled on a TTY, disabled
-when piped.  (`--quotes=auto` is the exception — quoting is useful in
-both contexts, so `auto` behaves like `always`.)
+`auto` checks whether stdout is a terminal: enabled on a TTY,
+disabled when piped.  (`--quotes=auto` is the exception — quoting
+is useful in both contexts, so it behaves like `always`.)
 
-### Compounding flags
+### Compounding shortcuts: `-l` and `-t`
 
-`-l` compounds: `-l` (basic), `-ll` (more detail), `-lll` (everything).
-Each tier maps to a named format (`long`, `long2`, `long3`) that can be
-overridden in the config file. This mirrors the behaviour of `-a` and
-`-aa` in `exa`. Further compounding flags were and are still under
-consideration.
+Two flags compound by repetition, but they operate on orthogonal
+axes.
 
-### Positive / negative flag symmetry
+**`-l` / `-ll` / `-lll` — detail tiers.**  Each tier selects one
+of three named formats (`long`, `long2`, `long3`), each a different
+bundle of columns.  It's a *format shortcut*, not a column toggle.
+The formats are ordinary and can be redefined in `[format]`.
 
-Every column and display option has both a positive and negative form.
-The positive form adds or enables; the negative form suppresses or
-overrides.  This is how CLI flags and personalities work together:
-a personality sets your defaults, and `--no-*` flags override them
-per invocation.
+**`-t` / `-tt` / `-ttt` — timestamp tiers.**  Each tier adds a set
+of timestamp columns.  `-t` adds `modified`; `-tt` adds `modified`
+and `changed`; `-ttt` adds all four (`modified`, `changed`,
+`created`, `accessed`).  Unlike `-l`, `-t` composes with whatever
+format you're already using — it desugars to individual add flags.
 
-| Show                | Hide                 | Feature          |
-|---------------------|----------------------|------------------|
-| `--permissions`     | `--no-permissions`   | Permission bits  |
-| `--filesize`        | `--no-filesize`      | File size        |
-| `--user`            | `--no-user`          | Owner            |
-| `--group` / `-g`    | `--no-group`         | Group            |
-| `--inode` / `-i`    | `--no-inode`         | Inode            |
-| `--links` / `-H`    | `--no-links`         | Hard links       |
-| `--blocks` / `-S`   | `--no-blocks`        | Blocks           |
-| `--octal` / `-o`    | `--no-octal`         | Octal perms      |
-| `--header` / `-h`   | `--no-header`        | Header row       |
-| `--count` / `-C`    | `--no-count`         | Item count       |
-| `--total-size`/`-Z` | `--no-total-size`    | Recursive sizes  |
-| `--icons`           | `--no-icons`         | File icons       |
+`-l` answers *"what does the table look like?"*, `-t` answers
+*"which timestamps go in it?"*.  They compose: `-ll -tt` gives
+you the tier-2 long view with two timestamp columns on top.
+
+### The precedence pipeline
+
+Column selection is deterministic.  The same flags always produce
+the same column list.  There are three layers.
+
+**1. Base list.**  Exactly one source chooses the starting set of
+columns, in strict precedence order:
+
+1. `--columns=COLS` — explicit, user-ordered list.  Highest
+   precedence; nothing else defines a base.
+2. `--format=NAME` — look up a named format.
+3. `-l` tier — `long`, `long2`, or `long3` depending on repetition
+   count.
+
+If `-l` is combined with `--format` or `--columns`, the tier is
+ignored; the higher-precedence source supplies the column list.
+
+**2. Additions.**  Individual column flags (`-i`, `-o`, `-H`,
+`-S`, `-O`, `-m`, `-c`, `--uid`, etc.) insert their column into
+the list if not already present.  Each column has a **canonical
+position**, and insertion respects that order regardless of the
+order the flags appeared on the command line:
+
+```text
+inode → octal → permissions → flags → links → filesize → blocks →
+user → uid → group → gid → modified → changed → created → accessed →
+vcs-status → vcs-repos → name
+```
+
+So `-l -i -o` always produces `inode, octal, permissions, filesize,
+user, modified`, not whatever order you happened to type.  For full
+user control over column order, use `--columns=`.
+
+**3. Suppressions.**  After adds, `--no-X` and `--no-*` flags
+remove columns from the list.  On the same command line,
+`--show-X` beats `--no-X`.
+
+### The one exception: `--no-time`
+
+`--no-time` is a bulk shortcut — it clears all four timestamp
+columns at once — and it runs *before* individual adds, not after.
+That's so explicit additions survive it:
+
+```sh
+lx -l --no-time --accessed
+```
+
+means "clear the defaults, then add accessed", not "clear
+everything including the accessed I just asked for".  Every
+per-column suppression still runs after adds in the usual way;
+only the bulk clear is promoted to run earlier.
 
 ### `--no-X` short aliases
 
-For any flag with a short form, the negation accepts a `--no-X` alias
-where `X` is the short flag letter.  This is deliberately non-standard
-but internally consistent: if you've memorised `-Z` for total sizes,
-`--no-Z` is the obvious way to suppress it.
-
-| Alias     | Expands to         |
-|-----------|--------------------|
-| `--no-h`  | `--no-header`      |
-| `--no-g`  | `--no-group`       |
-| `--no-i`  | `--no-inode`       |
-| `--no-H`  | `--no-links`       |
-| `--no-S`  | `--no-blocks`      |
-| `--no-o`  | `--no-octal`       |
-| `--no-C`  | `--no-count`       |
-| `--no-Z`  | `--no-total-size`  |
-
-These aliases are hidden from `--help` (power users discover them
-naturally) but documented in the man page.
+Every column short flag has a hidden `--no-X` alias.  If you've
+memorised `-Z` for total sizes, `--no-Z` is the obvious way to
+suppress it.  These aliases are hidden from `--help` (power users
+discover them naturally) and documented in the man page.
 
 ### Directory grouping
 
-`--group-dirs=first|last|none` controls directory position in listings.
-Short flags: `-F` (first), `-J` (last) — the home keys under the index
-fingers.  The legacy `--group-directories-first` is a hidden alias.
-
-### Sorting
-
-`-s FIELD` with `--reverse` / `-r`.  Sort fields include `name`, `Name`
-(case-sensitive), `size`, `modified`, `changed`, `accessed`, `created`,
-`extension`, `type`, `none`.  The alias `age` means reverse-modified
-(newest first). This is taken with essentially no change from `exa`.
-
-### Canonical column ordering
-
-When a column is added via an individual flag (e.g. `-S` for blocks),
-it is inserted at its canonical position relative to the columns already
-present — not appended at the end.  The canonical order is:
-
-```text
-inode, octal, perms, flags, links, size, blocks, user, group,
-modified, changed, created, accessed, vcs, repos
-```
-
-This means `-lS` places blocks after size (where it belongs), not after
-the date column.  If you want full control over column position, use
-`--columns=...` or define a format.
+`--group-dirs=first|last|none` controls directory position.
+Short flags: `-F` (first) and `-J` (last) — the home keys under
+the index fingers.  The legacy `--group-directories-first` is a
+hidden alias.
 
 
 ## Three layers of configuration
@@ -225,6 +260,10 @@ adapt to *where*, CLI flags handle *this time*.
 
 ## Short flag reference
 
+Shipped 0.8 allocations.
+
+**Display / layout**
+
 | Flag | Long form       | Purpose                                  |
 |------|-----------------|------------------------------------------|
 | `-1` | `--oneline`     | One entry per line                       |
@@ -233,37 +272,78 @@ adapt to *where*, CLI flags handle *this time*.
 | `-x` | `--across`      | Sort grid across                         |
 | `-T` | `--tree`        | Tree view                                |
 | `-R` | `--recurse`     | Recurse into directories                 |
-| `-L` | `--level`       | Depth limit for `-T`/`-R`                |
-| `-C` | `--count`       | Item count to stderr (`-CZ` + size)      |
+| `-L` | `--level`       | Depth limit for `-T` / `-R`              |
+| `-C` | `--count`       | Item count to stderr (`-CZ` adds total size) |
+| `-w` | `--width`       | Terminal width override                  |
+| `-A` | `--absolute`    | Show absolute paths                      |
+
+**Filtering and sort**
+
+| Flag | Long form       | Purpose                                  |
+|------|-----------------|------------------------------------------|
 | `-a` | `--all`         | Show hidden files (`-aa` for `.`/`..`)   |
 | `-d` | `--list-dirs`   | Treat directories as files               |
 | `-D` | `--only-dirs`   | Show only directories                    |
 | `-f` | `--only-files`  | Show only files                          |
-| `-F` |                 | Directories first (`--group-dirs=first`) |
-| `-J` |                 | Directories last (`--group-dirs=last`)   |
-| `-r` | `--reverse`     | Reverse sort order                       |
-| `-s` | `--sort`        | Sort field                               |
+| `-F` | `--dirs-first`  | Directories first (`--group-dirs=first`) |
+| `-J` | `--dirs-last`   | Directories last (`--group-dirs=last`)   |
 | `-I` | `--ignore`      | Glob patterns to hide                    |
 | `-P` | `--prune`       | Glob patterns to show but not recurse    |
-| `-A` | `--absolute`    | Show absolute paths                      |
-| `-b` | `--binary`      | Binary size prefixes (KiB)               |
-| `-B` | `--bytes`       | Size in bytes                            |
-| `-g` | `--group`       | Show group column                        |
-| `-h` | `--header`      | Show header row                          |
-| `-H` | `--links`       | Show hard link count                     |
-| `-i` | `--inode`       | Show inode number                        |
-| `-S` | `--blocks`      | Show block count                         |
-| `-o` | `--octal`       | Show octal permissions                   |
-| `-O` | `--flags`       | Show platform file flags                 |
-| `-Z` | `--total-size`  | Recursive directory size                 |
-| `-n` | `--numeric`     | Numeric user/group IDs                   |
-| `-m` | `--modified`    | Show modified time                       |
-| `-c` | `--changed`     | Show changed time                        |
-| `-u` | `--accessed`    | Show accessed time                       |
-| `-U` | `--created`     | Show created time                        |
-| `-t` | `--time`        | Select timestamp field                   |
-| `-@` | `--extended`    | Show extended attributes                 |
-| `-p` | `--personality` | Select a personality                     |
-| `-w` | `--width`       | Set terminal width                       |
-| `-v` | `--version`     | Show version                             |
-| `-?` | `--help`        | Show help                                |
+| `-s` | `--sort`        | Sort field                               |
+| `-r` | `--reverse`     | Reverse sort order                       |
+
+**Long-view columns** (canonical order)
+
+| Flag | Long form                   | Purpose                     |
+|------|-----------------------------|-----------------------------|
+| `-i` | `--inode`                   | Inode number                |
+| `-o` | `--octal`                   | Octal permissions           |
+| `-M` | `--permissions` / `--mode`  | Symbolic permission bits    |
+| `-O` | `--flags`                   | Platform file flags         |
+| `-H` | `--links`                   | Hard link count             |
+| `-z` | `--filesize` / `--size`     | File size                   |
+| `-Z` | `--total-size`              | Recursive directory totals  |
+| `-S` | `--blocks`                  | Allocated block count       |
+| `-u` | `--user`                    | Owner name                  |
+| `-g` | `--group`                   | Group name                  |
+| `-@` | `--extended`                | Extended attributes         |
+| `-h` | `--header`                  | Header row                  |
+| `-b` | `--binary`                  | Binary size prefixes (KiB)  |
+| `-B` | `--bytes`                   | Raw byte counts             |
+
+**Timestamps**
+
+| Flag    | Long form    | Purpose                                       |
+|---------|--------------|-----------------------------------------------|
+| `-m`    | `--modified` | Modification time                             |
+| `-c`    | `--changed`  | Status-change time                            |
+| `-t`    | (none)       | Compounding tier: `-t`/`-tt`/`-ttt`           |
+
+`--accessed` and `--created` are long-only.  `--uid`, `--gid`,
+`--vcs-status`, and `--vcs-repos` are also long-only — niche
+enough that reserving a single-letter short flag would be
+wasteful.
+
+**Meta**
+
+| Flag | Long form       | Purpose              |
+|------|-----------------|----------------------|
+| `-p` | `--personality` | Select a personality |
+| `-v` | `--version`     | Show version         |
+| `-?` | `--help`        | Show help            |
+
+### Notable changes in 0.8
+
+- `-n` / `--numeric` has been retired.  Use `--uid` and/or `--gid`
+  as first-class columns instead, or define a `numeric`
+  personality.
+- `-t` used to select a single timestamp field (`-t FIELD` with
+  `--time`).  It now compounds: `-t` / `-tt` / `-ttt`.  The long
+  form `--time` has been dropped.
+- `-u` used to be `--accessed`; it is now `--user`.  `-U` (previously
+  `--created`) has been freed.
+- `-M` (`--permissions` / `--mode`) and `-z` (`--filesize` /
+  `--size`) are new in 0.8.
+- The `perms` column name has been renamed to `permissions`.
+  `perms` is still accepted as a backward-compat alias by
+  `--columns=` (but not by `-s`).

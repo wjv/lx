@@ -3,6 +3,109 @@
 All notable changes to lx are documented here. lx is forked from
 [exa](https://github.com/ogham/exa) v0.10.1.
 
+## [0.8.0] — unreleased
+
+The 0.8 release is the CLI-refactor release.  A string of batches
+(`0.8.0-pre.2` through `0.8.0-pre.7`) reshaped the flag surface
+around the orthogonal design described in
+[`docs/DESIGN.md`](docs/DESIGN.md) — every column has a positive
+flag and a `--no-*` counterpart, every column is sortable, and
+timestamps are ordinary columns rather than a render-mode toggle.
+
+Internally, both the column list and the sort-field vocabulary
+are now driven by data-driven registries, so adding a new column
+or sort field touches two files instead of six.
+
+Breaking changes are gathered under **Removed** and **Changed**
+below.  Old configuration files (through schema version 0.4) can
+be migrated with `lx --upgrade-config`.
+
+### Added
+- **Compounding timestamp tiers** — `-t` / `-tt` / `-ttt` add one,
+  two, or four timestamp columns respectively.  `-t` is
+  `--modified`; `-tt` adds `--changed`; `-ttt` adds `--created`
+  and `--accessed` on top.  Composes with any format or `-l` tier.
+- **`--uid` and `--gid`** as first-class long-only columns.
+  Headers `UID` and `GID`, right-aligned.  Hidden `--no-uid` /
+  `--no-gid` suppressors.
+- **`-M` / `--permissions`** (with `--mode` as a long alias) for
+  the symbolic permission-bits column.
+- **`-z` / `--filesize`** (with `--size` as a long alias) for the
+  file-size column.
+- **`-u` / `--user`** — short flag for the owner column (`-u` was
+  previously `--accessed`).
+- **Expanded sort vocabulary** — every metadata column is now a
+  sort key.  New `--sort` values: `permissions` (aliases `mode`,
+  `octal`), `blocks`, `links`, `flags`, `user` / `User`, `group`
+  / `Group`, `uid`, `gid`, `version` (natural / version sort on
+  names), `vcs` (group by VCS status).
+- **Data-driven column registry** (`ColumnDef` in
+  `src/output/column_registry.rs`) feeding both the CLI parser
+  and the table renderer.  Adding a column touches the registry
+  and one render module.
+- **Data-driven sort-field registry** mirroring the column one.
+  `SortField::compare_files` and `SortField::deduce` both collapse
+  to registry lookups; clap's sort-value list is auto-generated.
+- **256-colour theme invariant** — the compiled default theme now
+  uses only 8/256-palette colours and does not rely on `is_dimmed`
+  for visual hierarchy, so it works predictably on 256-colour
+  terminals.
+- **UID/GID theme cascade** — `UiStyles::Users` gains four
+  `Option<Style>` slots (`uid_you`, `uid_someone_else`,
+  `gid_yours`, `gid_not_yours`) with a two-stage placeholder
+  cascade: stale placeholders are invalidated when a parent is
+  overridden, then remaining slots fall back to a dim copy of
+  their parent.  New `LX_COLORS` codes `Uy`/`Un`/`Gy`/`Gn`.
+
+### Changed
+- **`perms` column renamed to `permissions`.**  The canonical
+  column name matches the `--permissions` flag.  `perms` is still
+  accepted as a backward-compat alias in `--columns=`, but not as
+  a sort field.
+- **Long view `--help` reordered** into canonical column order
+  (inode, octal, permissions, flags, links, size, blocks, user,
+  uid, group, gid, timestamps, …) so the help text matches the
+  insertion order used when individual column flags are added.
+- **Timestamps are ordinary columns.**  They can be added and
+  suppressed like any other metadata column (`--modified` /
+  `--no-modified`, etc.).  `-t` no longer takes a field name.
+- **Six curated themes** (`catppuccin-mocha`, `dracula`,
+  `gruvbox-dark`, `nord`, `solarized-dark`, `solarized-light`)
+  had a `group = "..."` line that was silently ignored because
+  `group` is not a valid theme key.  Fixed.
+- **Config schema bumped to 0.5.**  Migrations from 0.1, 0.2,
+  0.3, and 0.4 are all supported by `--upgrade-config`.  The
+  `time = "…"` and `numeric = …` personality settings were
+  removed as part of the timestamp redesign and UID/GID column
+  work; the migration emits a deprecation warning and drops
+  them.
+
+### Removed
+- **`-n` / `--numeric`** has been retired entirely.  Use `--uid`
+  / `--gid` as first-class columns, or define a `numeric`
+  personality with `inherits = "ll"`, `uid = true`, `gid = true`,
+  `no-user = true`, `no-group = true`.
+- **`-t FIELD` / `--time`.**  Replaced by the compounding `-t` /
+  `-tt` / `-ttt` tiers and the individual `--modified` /
+  `--changed` / `--accessed` / `--created` flags.
+- **`-u` as `--accessed`** and **`-U` as `--created`.**  `-u` is
+  now `--user`; `-U` has been freed.  Both timestamp flags are
+  still available in long form.
+- **`UserFormat` enum** and its plumbing.  `f::User::render` and
+  `f::Group::render` no longer take a format argument; they fall
+  back to numeric IDs automatically when name resolution fails.
+
+### Docs
+- **`README.md` slimmed** from 857 to ~200 lines.  The manual
+  content moved to a new `docs/GUIDE.md`; the README is again a
+  landing page.
+- **New `docs/GUIDE.md`** — the user guide.  Personalities,
+  configuration, themes, VCS, daily usage patterns, shell
+  completions, and configuration debugging.
+- **`docs/DESIGN.md` refreshed** with a new "The orthogonal CLI"
+  section distilling the 0.8 flag principles, and an updated
+  short-flag reference table.
+
 ## [0.7.0] — 2026-04-04
 
 ### Added
