@@ -401,12 +401,20 @@ impl SizeFormat {
     /// Determine which file size to use in the file size column based on
     /// the user's options.
     ///
-    /// The default mode is to use the decimal prefixes, as they are the
-    /// most commonly-understood, and don't involve trying to parse large
-    /// strings of digits in your head. Changing the format to anything else
-    /// involves the `--binary` or `--bytes` flags, and these conflict with
-    /// each other — Clap's `overrides_with` ensures only the last one wins.
+    /// The default is decimal prefixes (k, M, G).  Three ways to change it:
+    ///
+    /// 1. `--size-style=decimal|binary|bytes` — the canonical valued flag.
+    /// 2. `--binary` / `-b` — alias for `--size-style=binary`.
+    /// 3. `--bytes` / `-B` — alias for `--size-style=bytes`.
+    ///
+    /// `--size-style` takes precedence when combined with `--binary` or
+    /// `--bytes`.  Between `--binary` and `--bytes`, Clap's `overrides_with`
+    /// ensures the last one on the command line wins.
     fn deduce(matches: &MatchedFlags) -> Self {
+        if let Some(w) = matches.get(flags::SIZE_STYLE) {
+            return Self::from_str(w);
+        }
+
         if matches.has(flags::BINARY) {
             Self::BinaryBytes
         }
@@ -415,6 +423,15 @@ impl SizeFormat {
         }
         else {
             Self::DecimalBytes
+        }
+    }
+
+    fn from_str(word: &str) -> Self {
+        match word {
+            "binary"  => Self::BinaryBytes,
+            "bytes"   => Self::JustBytes,
+            "decimal" => Self::DecimalBytes,
+            _         => Self::DecimalBytes,
         }
     }
 }
@@ -496,15 +513,27 @@ mod test {
         // Default behaviour
         test!(empty:   SizeFormat <- [];                       SizeFormat::DecimalBytes);
 
-        // Individual flags
+        // --size-style valued flag
+        test!(style_decimal: SizeFormat <- ["--size-style=decimal"]; SizeFormat::DecimalBytes);
+        test!(style_binary:  SizeFormat <- ["--size-style=binary"];  SizeFormat::BinaryBytes);
+        test!(style_bytes:   SizeFormat <- ["--size-style=bytes"];   SizeFormat::JustBytes);
+
+        // --size-style overrides last-wins
+        test!(style_override: SizeFormat <- ["--size-style=binary", "--size-style=bytes"]; SizeFormat::JustBytes);
+
+        // Legacy boolean flags still work
         test!(binary:  SizeFormat <- ["--binary"];             SizeFormat::BinaryBytes);
         test!(bytes:   SizeFormat <- ["--bytes"];              SizeFormat::JustBytes);
 
-        // Overriding
+        // Legacy overriding
         test!(both_1:  SizeFormat <- ["--binary", "--binary"]; SizeFormat::BinaryBytes);
         test!(both_2:  SizeFormat <- ["--bytes",  "--binary"]; SizeFormat::BinaryBytes);
         test!(both_3:  SizeFormat <- ["--binary", "--bytes"];  SizeFormat::JustBytes);
         test!(both_4:  SizeFormat <- ["--bytes",  "--bytes"];  SizeFormat::JustBytes);
+
+        // --size-style takes precedence over legacy flags
+        test!(style_beats_binary: SizeFormat <- ["--binary", "--size-style=decimal"]; SizeFormat::DecimalBytes);
+        test!(style_beats_bytes:  SizeFormat <- ["--bytes",  "--size-style=binary"];  SizeFormat::BinaryBytes);
     }
 
 

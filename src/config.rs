@@ -122,6 +122,7 @@ static SETTING_FLAGS: &[SettingDef] = &[
     SettingDef { key: "only-files",    flag: "--only-files",     kind: SettingKind::Bool },
 
     // long view options
+    SettingDef { key: "size-style",    flag: "--size-style",     kind: SettingKind::Str },
     SettingDef { key: "binary",        flag: "--binary",         kind: SettingKind::Bool },
     SettingDef { key: "bytes",         flag: "--bytes",          kind: SettingKind::Bool },
     SettingDef { key: "header",        flag: "--header",         kind: SettingKind::Bool },

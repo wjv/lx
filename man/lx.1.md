@@ -212,11 +212,15 @@ LONG VIEW OPTIONS
 
 These options affect the columns displayed in long view (`-l`):
 
+`--size-style=STYLE`
+: How to display file sizes.  STYLE is `decimal` (default: k, M, G
+prefixes), `binary` (KiB, MiB, GiB), or `bytes` (raw count).
+
 `-b`, `--binary`
-: List file sizes with binary prefixes (KiB, MiB).
+: Alias for `--size-style=binary`.
 
 `-B`, `--bytes`
-: List file sizes in bytes, without prefixes.
+: Alias for `--size-style=bytes`.
 
 `-g`, `--group`
 : List each file's group name.
