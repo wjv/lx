@@ -2,8 +2,6 @@
 
 use std::cmp::Ordering;
 use std::iter::FromIterator;
-#[cfg(unix)]
-use std::os::unix::fs::MetadataExt;
 
 use crate::fs::DotFilter;
 use crate::fs::File;
@@ -143,14 +141,19 @@ impl FileFilter {
 
     /// Sort the files in the given vector based on the sort field option.
     ///
-    /// The optional `vcs` parameter supports `-s vcs`: the sort
-    /// comparator needs access to the VCS cache to look up each
-    /// file's status.  Callsites that don't have a cache (grid and
-    /// lines views) pass `None`; the `VcsStatusSort` field then
-    /// falls back to sorting by name.
+    /// The optional `vcs` parameter supports `-s vcs`: sort fields
+    /// marked `needs_vcs = true` in the registry require the VCS
+    /// cache to look up each file's status.  Callsites that don't
+    /// have a cache (grid and lines views) pass `None`; those sort
+    /// fields then fall back to the registry entry's normal
+    /// comparator (typically by-name for VCS sort).
     pub fn sort_files<'a, F>(&self, files: &mut [F], vcs: Option<&dyn crate::fs::feature::VcsCache>)
     where F: AsRef<File<'a>>
     {
+        use crate::fs::sort_registry::SortFieldDef;
+
+        let def = SortFieldDef::for_field(self.sort_field);
+
         if self.sort_by_total_size && self.sort_field == SortField::Size {
             // When --total-size is active, sort by recursive dir size.
             use crate::fs::fields::Size;
@@ -159,7 +162,7 @@ impl FileFilter {
                 let sb = match b.as_ref().total_size() { Size::Some(s) => s, _ => 0 };
                 sa.cmp(&sb)
             });
-        } else if self.sort_field == SortField::VcsStatusSort && vcs.is_some() {
+        } else if def.needs_vcs && vcs.is_some() {
             let cache = vcs.unwrap();
             files.sort_by(|a, b| {
                 let sa = cache.get(&a.as_ref().path, a.as_ref().is_directory());
@@ -172,9 +175,7 @@ impl FileFilter {
                     .then_with(|| natord::compare(&a.as_ref().name, &b.as_ref().name))
             });
         } else {
-            files.sort_by(|a, b| {
-                self.sort_field.compare_files(a.as_ref(), b.as_ref())
-            });
+            files.sort_by(|a, b| (def.compare)(a.as_ref(), b.as_ref()));
         }
 
         if self.reverse {
@@ -370,164 +371,18 @@ impl SortField {
     /// into groups between letters and numbers, and then sorts those blocks
     /// together, so `file10` will sort after `file9`, instead of before it
     /// because of the `1`.
+    /// Compares two files using this sort field's comparator.
+    ///
+    /// The actual comparison logic lives in
+    /// `crate::fs::sort_registry::SORT_REGISTRY`; this method is a
+    /// thin dispatch that looks up the current field's entry and
+    /// calls its comparator function.
+    ///
+    /// `VcsStatusSort` has a fallback (by-name) comparator here;
+    /// the VCS-aware comparator lives in `sort_files` because it
+    /// needs the `VcsCache`.
     pub fn compare_files(self, a: &File<'_>, b: &File<'_>) -> Ordering {
-        use self::SortCase::{ABCabc, AaBbCc};
-
-        match self {
-            Self::Unsorted  => Ordering::Equal,
-
-            Self::Name(ABCabc)  => natord::compare(&a.name, &b.name),
-            Self::Name(AaBbCc)  => natord::compare_ignore_case(&a.name, &b.name),
-
-            Self::Size          => a.metadata.len().cmp(&b.metadata.len()),
-            #[cfg(unix)]
-            Self::FileInode     => a.metadata.ino().cmp(&b.metadata.ino()),
-            Self::ModifiedDate  => a.modified_time().cmp(&b.modified_time()),
-            Self::AccessedDate  => a.accessed_time().cmp(&b.accessed_time()),
-            Self::ChangedDate   => a.changed_time().cmp(&b.changed_time()),
-            Self::CreatedDate   => a.created_time().cmp(&b.created_time()),
-            Self::ModifiedAge   => b.modified_time().cmp(&a.modified_time()),  // flip b and a
-
-            Self::FileType => match a.type_char().cmp(&b.type_char()) { // todo: this recomputes
-                Ordering::Equal  => natord::compare(&a.name, &b.name),
-                order            => order,
-            },
-
-            Self::Extension(ABCabc) => match a.ext.cmp(&b.ext) {
-                Ordering::Equal  => natord::compare(&a.name, &b.name),
-                order            => order,
-            },
-
-            Self::Extension(AaBbCc) => match a.ext.cmp(&b.ext) {
-                Ordering::Equal  => natord::compare_ignore_case(&a.name, &b.name),
-                order            => order,
-            },
-
-            Self::NameMixHidden(ABCabc) => natord::compare(
-                Self::strip_dot(&a.name),
-                Self::strip_dot(&b.name)
-            ),
-            Self::NameMixHidden(AaBbCc) => natord::compare_ignore_case(
-                Self::strip_dot(&a.name),
-                Self::strip_dot(&b.name)
-            ),
-
-            // ── Metadata sort fields (Batch D) ─────────────────
-
-            // Permissions sort by the numeric octal value of the mode
-            // bits.  Both symbolic and octal views share this order —
-            // "sort by perms" means the same thing regardless of how
-            // the column is rendered.
-            #[cfg(unix)]
-            Self::Permissions => a.permissions_octal().cmp(&b.permissions_octal())
-                .then_with(|| natord::compare(&a.name, &b.name)),
-
-            // Blocks sort numerically.  Files with no block count
-            // (symlinks, devices) sort as 0.
-            #[cfg(unix)]
-            Self::Blocks => Self::blocks_value(a).cmp(&Self::blocks_value(b))
-                .then_with(|| natord::compare(&a.name, &b.name)),
-
-            #[cfg(unix)]
-            Self::HardLinks => a.links().count.cmp(&b.links().count)
-                .then_with(|| natord::compare(&a.name, &b.name)),
-
-            // File flags sort on the raw bit pattern.  Files with no
-            // flags (the common case) all sort together.
-            Self::Flags => a.flags().0.cmp(&b.flags().0)
-                .then_with(|| natord::compare(&a.name, &b.name)),
-
-            // User/Group name sort: look up the name per comparison.
-            // This is O(n log n) lookups for n files, which is slower
-            // than the equivalent column rendering but still fast
-            // enough in practice.  Falls back to UID/GID for unknown
-            // names so the comparison is always total.
-            #[cfg(unix)]
-            Self::User(case) => Self::compare_user_names(a, b, case),
-
-            #[cfg(unix)]
-            Self::Group(case) => Self::compare_group_names(a, b, case),
-
-            #[cfg(unix)]
-            Self::Uid => a.user().0.cmp(&b.user().0)
-                .then_with(|| natord::compare(&a.name, &b.name)),
-
-            #[cfg(unix)]
-            Self::Gid => a.group().0.cmp(&b.group().0)
-                .then_with(|| natord::compare(&a.name, &b.name)),
-
-            // VCS sort is handled in sort_files() because it needs
-            // the VcsCache.  Falling through to here means no cache
-            // was available: group all files as equal and let the
-            // secondary sort (name) take over.
-            Self::VcsStatusSort => natord::compare(&a.name, &b.name),
-        }
-    }
-
-    fn strip_dot(n: &str) -> &str {
-        match n.strip_prefix('.') {
-            Some(s) => s,
-            None    => n,
-        }
-    }
-
-    /// Extract a numeric block count from a file, defaulting to 0
-    /// for files (symlinks, devices) that don't have one.
-    #[cfg(unix)]
-    fn blocks_value(f: &File<'_>) -> u64 {
-        use crate::fs::fields::Blocks;
-        match f.blocks() {
-            Blocks::Some(n) => n,
-            Blocks::None    => 0,
-        }
-    }
-
-    #[cfg(unix)]
-    fn compare_user_names(a: &File<'_>, b: &File<'_>, case: SortCase) -> Ordering {
-        use uzers::Users;
-
-        let env = crate::output::table::environment();
-        let users = env.lock_users();
-        let name_a = users.get_user_by_uid(a.user().0)
-            .map(|u| u.name().to_string_lossy().into_owned());
-        let name_b = users.get_user_by_uid(b.user().0)
-            .map(|u| u.name().to_string_lossy().into_owned());
-        drop(users);
-
-        match (name_a, name_b) {
-            (Some(na), Some(nb)) => match case {
-                SortCase::ABCabc => natord::compare(&na, &nb),
-                SortCase::AaBbCc => natord::compare_ignore_case(&na, &nb),
-            },
-            (Some(_), None) => Ordering::Less,
-            (None, Some(_)) => Ordering::Greater,
-            (None, None)    => a.user().0.cmp(&b.user().0),
-        }
-        .then_with(|| natord::compare(&a.name, &b.name))
-    }
-
-    #[cfg(unix)]
-    fn compare_group_names(a: &File<'_>, b: &File<'_>, case: SortCase) -> Ordering {
-        use uzers::Groups;
-
-        let env = crate::output::table::environment();
-        let users = env.lock_users();
-        let name_a = users.get_group_by_gid(a.group().0)
-            .map(|g| g.name().to_string_lossy().into_owned());
-        let name_b = users.get_group_by_gid(b.group().0)
-            .map(|g| g.name().to_string_lossy().into_owned());
-        drop(users);
-
-        match (name_a, name_b) {
-            (Some(na), Some(nb)) => match case {
-                SortCase::ABCabc => natord::compare(&na, &nb),
-                SortCase::AaBbCc => natord::compare_ignore_case(&na, &nb),
-            },
-            (Some(_), None) => Ordering::Less,
-            (None, Some(_)) => Ordering::Greater,
-            (None, None)    => a.group().0.cmp(&b.group().0),
-        }
-        .then_with(|| natord::compare(&a.name, &b.name))
+        (crate::fs::sort_registry::SortFieldDef::for_field(self).compare)(a, b)
     }
 }
 

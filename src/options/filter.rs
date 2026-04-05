@@ -53,128 +53,29 @@ impl GroupDirs {
 
 impl SortField {
 
-    /// Determines which sort field to use based on the `--sort` argument.
-    /// This argument's value can be one of several flags, listed above.
-    /// Returns the default sort field if none is given, or `Err` if the
-    /// value doesn't correspond to a sort field we know about.
+    /// Determines which sort field to use based on the `--sort`
+    /// argument.  Delegates the name → variant mapping to the sort
+    /// registry (`src/fs/sort_registry.rs`) so this function stays
+    /// trivial regardless of how many sort fields lx gains.
+    ///
+    /// `version` is the one exception: it's not a distinct field
+    /// but an explicit promise that the default name sort already
+    /// handles version-style names via `natord`.  We resolve it to
+    /// `Name(AaBbCc)` here so it doesn't need its own registry
+    /// entry.
     fn deduce(matches: &MatchedFlags) -> Result<Self, OptionsError> {
-        let word = match matches.get(flags::SORT) {
-            Some(w)  => w,
-            None     => return Ok(Self::default()),
+        use crate::fs::sort_registry::SortFieldDef;
+
+        let Some(word) = matches.get(flags::SORT) else {
+            return Ok(Self::default());
         };
 
-        let field = match word {
-            "name" | "filename" => {
-                Self::Name(SortCase::AaBbCc)
-            }
-            "Name" | "Filename" => {
-                Self::Name(SortCase::ABCabc)
-            }
-            ".name" | ".filename" => {
-                Self::NameMixHidden(SortCase::AaBbCc)
-            }
-            ".Name" | ".Filename" => {
-                Self::NameMixHidden(SortCase::ABCabc)
-            }
-            "size" | "filesize" => {
-                Self::Size
-            }
-            "ext" | "extension" => {
-                Self::Extension(SortCase::AaBbCc)
-            }
-            "Ext" | "Extension" => {
-                Self::Extension(SortCase::ABCabc)
-            }
+        if word == "version" {
+            return Ok(Self::Name(SortCase::AaBbCc));
+        }
 
-            // "new" sorts oldest at the top and newest at the bottom; "old"
-            // sorts newest at the top and oldest at the bottom. I think this
-            // is the right way round to do this: "size" puts the smallest at
-            // the top and the largest at the bottom, doesn't it?
-            "date" | "time" | "mod" | "modified" | "new" | "newest" => {
-                Self::ModifiedDate
-            }
-
-            // Similarly, "age" means that files with the least age (the
-            // newest files) get sorted at the top, and files with the most
-            // age (the oldest) at the bottom.
-            "age" | "old" | "oldest" => {
-                Self::ModifiedAge
-            }
-
-            "ch" | "changed" => {
-                Self::ChangedDate
-            }
-            "acc" | "accessed" => {
-                Self::AccessedDate
-            }
-            "cr" | "created" => {
-                Self::CreatedDate
-            }
-            #[cfg(unix)]
-            "inode" => {
-                Self::FileInode
-            }
-            "type" => {
-                Self::FileType
-            }
-            "none" => {
-                Self::Unsorted
-            }
-
-            // `version` is a promise about what the `name` sort does.
-            // lx already uses natord::compare for the name sort, which
-            // handles embedded numbers naturally (`v1.10` > `v1.2`).
-            // Adding `-s version` as an alias gives users migrating
-            // from lsd a discoverable name for this behaviour.
-            "version" => {
-                Self::Name(SortCase::AaBbCc)
-            }
-
-            #[cfg(unix)]
-            "permissions" | "mode" | "octal" => {
-                Self::Permissions
-            }
-            #[cfg(unix)]
-            "blocks" => {
-                Self::Blocks
-            }
-            #[cfg(unix)]
-            "links" => {
-                Self::HardLinks
-            }
-            "flags" => {
-                Self::Flags
-            }
-            #[cfg(unix)]
-            "user" => {
-                Self::User(SortCase::AaBbCc)
-            }
-            #[cfg(unix)]
-            "User" => {
-                Self::User(SortCase::ABCabc)
-            }
-            #[cfg(unix)]
-            "group" => {
-                Self::Group(SortCase::AaBbCc)
-            }
-            #[cfg(unix)]
-            "Group" => {
-                Self::Group(SortCase::ABCabc)
-            }
-            #[cfg(unix)]
-            "uid" => {
-                Self::Uid
-            }
-            #[cfg(unix)]
-            "gid" => {
-                Self::Gid
-            }
-            "vcs" => {
-                Self::VcsStatusSort
-            }
-            _ => unreachable!("Clap rejects invalid --sort values"),
-        };
-
+        let field = SortFieldDef::field_from_name(word)
+            .expect("Clap rejects invalid --sort values");
         Ok(field)
     }
 }

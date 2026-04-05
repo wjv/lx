@@ -15,60 +15,29 @@ const STYLES: styling::Styles = styling::Styles::styled()
 
 
 /// Return valid values for the `--sort` flag.
+///
+/// Generated from the sort registry (`src/fs/sort_registry.rs`) so
+/// adding a new sort field doesn't require touching this file.
+/// Canonical names are visible in `--help`; aliases are hidden.
+///
+/// `version` is a special case: it's an alias for `name` that isn't
+/// a distinct registry entry, so we append it explicitly.
 fn sort_values() -> Vec<PossibleValue> {
-    vec![
-        // Name / extension
-        PossibleValue::new("name"),
-        PossibleValue::new("Name"),
-        PossibleValue::new("extension"),
-        PossibleValue::new("Extension"),
-        PossibleValue::new("version"),
-        // Metadata columns
-        PossibleValue::new("size"),
-        PossibleValue::new("permissions"),
-        PossibleValue::new("blocks"),
-        PossibleValue::new("links"),
-        PossibleValue::new("flags"),
-        PossibleValue::new("user"),
-        PossibleValue::new("User"),
-        PossibleValue::new("group"),
-        PossibleValue::new("Group"),
-        PossibleValue::new("uid"),
-        PossibleValue::new("gid"),
-        // Time
-        PossibleValue::new("modified"),
-        PossibleValue::new("changed"),
-        PossibleValue::new("accessed"),
-        PossibleValue::new("created"),
-        // VCS
-        PossibleValue::new("vcs"),
-        // Miscellaneous
-        PossibleValue::new("type"),
-        PossibleValue::new("none"),
-        PossibleValue::new("inode"),
-        // Aliases (hidden from help).  The general pattern: any
-        // column-add flag's long form is also accepted as a sort
-        // field name, so users don't have to remember two sets
-        // of names.
-        PossibleValue::new("ext").hide(true),
-        PossibleValue::new("Ext").hide(true),
-        PossibleValue::new("filesize").hide(true),      // mirrors --filesize
-        PossibleValue::new("mode").hide(true),          // mirrors --mode
-        PossibleValue::new("octal").hide(true),         // mirrors --octal
-        PossibleValue::new("date").hide(true),
-        PossibleValue::new("time").hide(true),
-        PossibleValue::new("mod").hide(true),
-        PossibleValue::new("newest").hide(true),
-        PossibleValue::new("new").hide(true),
-        PossibleValue::new("age").hide(true),
-        PossibleValue::new("old").hide(true),
-        PossibleValue::new("oldest").hide(true),
-        PossibleValue::new(".name").hide(true),
-        PossibleValue::new(".Name").hide(true),
-        PossibleValue::new("ch").hide(true),
-        PossibleValue::new("acc").hide(true),
-        PossibleValue::new("cr").hide(true),
-    ]
+    use crate::fs::sort_registry::SortFieldDef;
+
+    let mut values: Vec<PossibleValue> = SortFieldDef::visible_canonical_names()
+        .map(PossibleValue::new)
+        .collect();
+
+    // `version` alias — not a distinct registry entry.
+    values.push(PossibleValue::new("version"));
+
+    // Hidden aliases and hidden-canonical entries from the registry.
+    values.extend(
+        SortFieldDef::all_hidden_names().map(|n| PossibleValue::new(n).hide(true))
+    );
+
+    values
 }
 
 
@@ -348,6 +317,14 @@ Column overrides:\n  \
             .action(ArgAction::Count))
         .arg(Arg::new(flags::SORT)
             .short('s').long("sort")
+            // NOTE: this list is hand-curated to keep the --help
+            // output grouped by category.  The authoritative list
+            // of accepted values is in src/fs/sort_registry.rs;
+            // if you add a new sort field there, add it here too.
+            // `clap` uses the registry (via sort_values()) for
+            // validation and error-message suggestions, so a new
+            // field will still *work* without updating this text —
+            // it just won't appear in --help until you do.
             .help("Sort field — one of:\n\
                    name, Name, extension, Extension, version,\n\
                    size, blocks, links, permissions, flags,\n\
