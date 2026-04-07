@@ -33,6 +33,7 @@ pub const ONLY_FILES: &str = "only-files";
 // long view options
 pub const BINARY: &str = "binary";
 pub const BYTES: &str = "bytes";
+pub const DECIMAL: &str = "decimal";
 pub const SIZE_STYLE: &str = "size-style";
 pub const GROUP: &str = "group";
 pub const UID: &str = "uid";

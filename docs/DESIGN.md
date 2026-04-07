@@ -308,8 +308,9 @@ Shipped 0.8 allocations.
 | `-g` | `--group`                   | Group name                  |
 | `-@` | `--extended`                | Extended attributes         |
 | `-h` | `--header`                  | Header row                  |
-| `-b` | `--binary`                  | Binary size prefixes (KiB)  |
-| `-B` | `--bytes`                   | Raw byte counts             |
+| `-b` | `--bytes`                   | Raw byte counts             |
+| `-K` | `--decimal`                 | Decimal size prefixes (k, M, G) |
+| `-B` | `--binary`                  | Binary size prefixes (KiB)  |
 
 **Timestamps**
 

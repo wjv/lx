@@ -404,12 +404,16 @@ impl SizeFormat {
     /// The default is decimal prefixes (k, M, G).  Three ways to change it:
     ///
     /// 1. `--size-style=decimal|binary|bytes` — the canonical valued flag.
-    /// 2. `--binary` / `-b` — alias for `--size-style=binary`.
-    /// 3. `--bytes` / `-B` — alias for `--size-style=bytes`.
+    /// 2. `--binary` / `-B` — alias for `--size-style=binary`.
+    /// 3. `--bytes` / `-b` — alias for `--size-style=bytes`.
     ///
-    /// `--size-style` takes precedence when combined with `--binary` or
-    /// `--bytes`.  Between `--binary` and `--bytes`, Clap's `overrides_with`
-    /// ensures the last one on the command line wins.
+    /// `--size-style` takes precedence when combined with the short-form
+    /// flags.  All four flags (`--size-style`, `--binary`/`-B`,
+    /// `--bytes`/`-b`, `--decimal`/`-K`) have mutual `overrides_with_all`
+    /// in the parser, so Clap ensures only the last one on the command
+    /// line survives — the precedence check here is just a fallback for
+    /// the case where `--size-style` and a short flag are both present
+    /// (which shouldn't happen after Clap's override resolution).
     fn deduce(matches: &MatchedFlags) -> Self {
         if let Some(w) = matches.get(flags::SIZE_STYLE) {
             return Self::from_str(w);
@@ -521,19 +525,30 @@ mod test {
         // --size-style overrides last-wins
         test!(style_override: SizeFormat <- ["--size-style=binary", "--size-style=bytes"]; SizeFormat::JustBytes);
 
-        // Legacy boolean flags still work
+        // Long-form flags
         test!(binary:  SizeFormat <- ["--binary"];             SizeFormat::BinaryBytes);
         test!(bytes:   SizeFormat <- ["--bytes"];              SizeFormat::JustBytes);
+        test!(decimal: SizeFormat <- ["--decimal"];            SizeFormat::DecimalBytes);
 
-        // Legacy overriding
+        // Short flags: -B = binary, -b = bytes, -K = decimal
+        test!(short_upper_b: SizeFormat <- ["-B"];             SizeFormat::BinaryBytes);
+        test!(short_lower_b: SizeFormat <- ["-b"];             SizeFormat::JustBytes);
+        test!(short_upper_k: SizeFormat <- ["-K"];             SizeFormat::DecimalBytes);
+
+        // Mutual overriding (last wins via overrides_with_all)
         test!(both_1:  SizeFormat <- ["--binary", "--binary"]; SizeFormat::BinaryBytes);
         test!(both_2:  SizeFormat <- ["--bytes",  "--binary"]; SizeFormat::BinaryBytes);
         test!(both_3:  SizeFormat <- ["--binary", "--bytes"];  SizeFormat::JustBytes);
         test!(both_4:  SizeFormat <- ["--bytes",  "--bytes"];  SizeFormat::JustBytes);
+        test!(decimal_overrides_binary: SizeFormat <- ["--binary", "--decimal"]; SizeFormat::DecimalBytes);
+        test!(decimal_overrides_bytes:  SizeFormat <- ["--bytes",  "--decimal"]; SizeFormat::DecimalBytes);
+        test!(binary_overrides_decimal: SizeFormat <- ["--decimal", "--binary"]; SizeFormat::BinaryBytes);
 
-        // --size-style takes precedence over legacy flags
+        // --size-style vs short flags (last wins)
         test!(style_beats_binary: SizeFormat <- ["--binary", "--size-style=decimal"]; SizeFormat::DecimalBytes);
         test!(style_beats_bytes:  SizeFormat <- ["--bytes",  "--size-style=binary"];  SizeFormat::BinaryBytes);
+        test!(binary_beats_style: SizeFormat <- ["--size-style=bytes", "--binary"];   SizeFormat::BinaryBytes);
+        test!(bytes_beats_style:  SizeFormat <- ["--size-style=binary", "--bytes"];   SizeFormat::JustBytes);
     }
 
 

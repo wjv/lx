@@ -284,7 +284,7 @@ pub struct Lx {
 }
 
 /// Format a byte count as a human-readable string for the `-CZ` summary.
-/// Respects the active size format (`-b` for binary, `-B` for bytes).
+/// Respects the active size format (`-B` for binary, `-b` for bytes).
 fn format_size(bytes: u64, fmt: crate::output::table::SizeFormat) -> String {
     use unit_prefix::NumberPrefix;
     use crate::output::table::SizeFormat;

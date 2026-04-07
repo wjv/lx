@@ -54,7 +54,7 @@ When combined with `-Z`/`--total-size`, also shows the total size
 of displayed items.  In tree views, expanded directories are not
 counted towards the total (their children account for themselves);
 pruned or depth-limited directories use their recursive total.
-The size respects `-b` (binary) and `-B` (bytes) formatting.
+The size respects `-b` (bytes) and `-B` (binary) formatting.
 Works with all view modes including tree and recursive listings.
 
 `--colour=WHEN`
@@ -216,11 +216,15 @@ These options affect the columns displayed in long view (`-l`):
 : How to display file sizes.  STYLE is `decimal` (default: k, M, G
 prefixes), `binary` (KiB, MiB, GiB), or `bytes` (raw count).
 
-`-b`, `--binary`
+`-B`, `--binary`
 : Alias for `--size-style=binary`.
 
-`-B`, `--bytes`
+`-b`, `--bytes`
 : Alias for `--size-style=bytes`.
+
+`-K`, `--decimal`
+: Alias for `--size-style=decimal`.  Useful for overriding a
+personality that sets `binary` or `bytes` back to the default.
 
 `-g`, `--group`
 : List each file's group name.

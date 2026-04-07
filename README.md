@@ -54,9 +54,9 @@ lx -l -s inode        # sort by it (without having to show the column)
 
 Short flags aim to be **guessable mnemonics** — `-u` for `--user`, `-g` for 
 `--group`, `-m` for `--modified`.  Related actions share a letter in different 
-cases: `-b` and `-B` modify the file size column to show *binary* size prefixes 
-or raw *byte* count, respectively.  `-d` (list directories as files) pairs with 
-`-D` (list *only* directories).
+cases: `-b` and `-B` modify the file size column to show raw *byte* counts
+or *Binary* size prefixes, respectively.  `-d` (list directories as files)
+pairs with `-D` (list *only* directories).
 
 View detail **compounds**: `-l` fulfils its historical role of showing more 
 detail in a "long" view, but using it multiple times (`-ll` / `-lll`) increases 

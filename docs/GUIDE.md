@@ -689,6 +689,29 @@ Use `--no-time` to clear all timestamps at once — handy when you
 want to start from a format that includes timestamps and add back
 only the ones you want: `lx -lll --no-time --accessed`.
 
+### Size display
+
+The file size column has three display modes, controlled by
+`--size-style` or its short aliases:
+
+```sh
+lx -l                 # decimal prefixes: 85k, 1.2M (default)
+lx -l -B              # binary prefixes:  83Ki, 1.1Mi
+lx -l -b              # raw bytes:        85269
+lx -l -K              # decimal (explicit — useful for overriding a personality)
+```
+
+Or equivalently:
+
+```sh
+lx -l --size-style=binary
+lx -l --size-style=bytes
+lx -l --size-style=decimal
+```
+
+A personality can set `size-style = "binary"` (or `"bytes"` or
+`"decimal"`) and the CLI flag overrides it for one invocation.
+
 ### Summary footer
 
 `-C` / `--count` prints an item count to stderr after the listing.

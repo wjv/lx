@@ -13,6 +13,18 @@ const STYLES: styling::Styles = styling::Styles::styled()
     .placeholder(styling::AnsiColor::Green.on_default())
     .error(styling::AnsiColor::Red.on_default().bold());
 
+/// Choose help styles based on environment: respect `NO_COLOR` and
+/// check whether stderr is a terminal (help is written to stderr).
+fn help_styles() -> styling::Styles {
+    if std::env::var_os("NO_COLOR").is_some() {
+        return styling::Styles::plain();
+    }
+    if !std::io::IsTerminal::is_terminal(&std::io::stderr()) {
+        return styling::Styles::plain();
+    }
+    STYLES
+}
+
 
 /// Return valid values for the `--sort` flag.
 ///
@@ -88,7 +100,7 @@ pub fn build_command() -> Command {
     Command::new("lx")
         .version(env!("CARGO_PKG_VERSION"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
-        .styles(STYLES)
+        .styles(help_styles())
         .max_term_width(80)
         .disable_help_flag(true)
         .disable_version_flag(true)
@@ -99,7 +111,13 @@ pub fn build_command() -> Command {
         .after_help("\
 Column overrides:\n  \
   Every Long view column flag has a matching --no-FLAG suppressor,\n  \
-  e.g. --inode pairs with --no-inode, -M pairs with --no-M")
+  e.g. --inode pairs with --no-inode, -M pairs with --no-M\n\
+\n\
+Environment:\n  \
+  NO_COLOR        Disable all colour output (no-color.org)\n  \
+  LX_CONFIG       Explicit path to config file\n  \
+  LS_COLORS       File-type colour scheme\n  \
+  TIME_STYLE      Default timestamp style")
 
         // ── Display mode ──────────────────────────────────────────
 
@@ -190,7 +208,7 @@ Column overrides:\n  \
             .overrides_with(flags::NO_OCTAL))
         .arg(Arg::new(flags::SHOW_PERMISSIONS)
             .short('M').long("permissions").visible_alias("mode")
-            .help("Show the permissions field")
+            .help("Show the permissions column")
             .help_heading("Long view")
             .action(ArgAction::Count)
             .overrides_with(flags::NO_PERMISSIONS))
@@ -206,30 +224,37 @@ Column overrides:\n  \
             .action(ArgAction::Count))
         .arg(Arg::new(flags::SHOW_FILESIZE)
             .short('z').long("filesize").visible_alias("size")
-            .help("Show the file size field")
+            .help("Show the file size column")
             .help_heading("Long view")
             .action(ArgAction::Count)
             .overrides_with(flags::NO_FILESIZE))
         .arg(Arg::new(flags::SIZE_STYLE)
             .long("size-style")
-            .help("How to display file sizes [decimal, binary, bytes]")
+            .help("How to display file sizes\n[decimal (default), binary, bytes]")
             .help_heading("Long view")
             .action(ArgAction::Set)
             .value_name("STYLE")
             .value_parser(["decimal", "binary", "bytes"])
-            .overrides_with_all([flags::BINARY, flags::BYTES]))
+            .hide_possible_values(true)
+            .overrides_with_all([flags::BINARY, flags::BYTES, flags::DECIMAL]))
+        .arg(Arg::new(flags::DECIMAL)
+            .short('K').long("decimal")
+            .help("Decimal size prefixes (k, M, G)\n[short for --size-style=decimal]")
+            .help_heading("Long view")
+            .action(ArgAction::Count)
+            .overrides_with_all([flags::BINARY, flags::BYTES, flags::SIZE_STYLE]))
         .arg(Arg::new(flags::BINARY)
-            .short('b').long("binary")
-            .help("Binary size prefixes (KiB, MiB) [alias for --size-style=binary]")
+            .short('B').long("binary")
+            .help("Binary size prefixes (KiB, MiB)\n[short for --size-style=binary]")
             .help_heading("Long view")
             .action(ArgAction::Count)
-            .overrides_with_all([flags::BYTES, flags::SIZE_STYLE]))
+            .overrides_with_all([flags::BYTES, flags::DECIMAL, flags::SIZE_STYLE]))
         .arg(Arg::new(flags::BYTES)
-            .short('B').long("bytes")
-            .help("Raw byte counts [alias for --size-style=bytes]")
+            .short('b').long("bytes")
+            .help("Raw byte counts [short for --size-style=bytes]")
             .help_heading("Long view")
             .action(ArgAction::Count)
-            .overrides_with_all([flags::BINARY, flags::SIZE_STYLE]))
+            .overrides_with_all([flags::BINARY, flags::DECIMAL, flags::SIZE_STYLE]))
         .arg(Arg::new(flags::TOTAL_SIZE)
             .short('Z').long("total-size")
             .help("Show directory content sizes (recursive)")
@@ -243,7 +268,7 @@ Column overrides:\n  \
             .action(ArgAction::Count))
         .arg(Arg::new(flags::SHOW_USER)
             .short('u').long("user")
-            .help("Show the user field")
+            .help("Show the user column")
             .help_heading("Long view")
             .action(ArgAction::Count)
             .overrides_with(flags::NO_USER))
@@ -275,34 +300,34 @@ Column overrides:\n  \
         .arg(Arg::new(flags::ALL)
             .short('a').long("all")
             .help("Show hidden and dot files (-aa for . and ..)")
-            .help_heading("Filtering")
+            .help_heading("Filtering & Sorting")
             .action(ArgAction::Count))
         .arg(Arg::new(flags::LIST_DIRS)
             .short('d').long("list-dirs")
             .help("List directories as regular files")
-            .help_heading("Filtering")
+            .help_heading("Filtering & Sorting")
             .action(ArgAction::Count))
         .arg(Arg::new(flags::ONLY_DIRS)
             .short('D').long("only-dirs")
             .help("List only directories, not files")
-            .help_heading("Filtering")
+            .help_heading("Filtering & Sorting")
             .action(ArgAction::Count))
         .arg(Arg::new(flags::ONLY_FILES)
             .short('f').long("only-files")
             .help("List only regular files, not directories")
-            .help_heading("Filtering")
+            .help_heading("Filtering & Sorting")
             .action(ArgAction::Count))
         .arg(Arg::new(flags::IGNORE_GLOB)
             .short('I').long("ignore")
             .visible_alias("ignore-glob")
             .help("Glob patterns (pipe-separated) of files to hide")
-            .help_heading("Filtering")
+            .help_heading("Filtering & Sorting")
             .action(ArgAction::Set)
             .value_name("GLOB"))
         .arg(Arg::new(flags::SYMLINKS)
             .long("symlinks")
             .help("How to handle symlinks [show, hide, follow]")
-            .help_heading("Filtering")
+            .help_heading("Filtering & Sorting")
             .action(ArgAction::Set)
             .value_name("MODE")
             .hide_possible_values(true)
@@ -315,13 +340,13 @@ Column overrides:\n  \
             .short('P').long("prune")
             .visible_alias("prune-glob")
             .help("Glob patterns of directories to show but not recurse")
-            .help_heading("Filtering")
+            .help_heading("Filtering & Sorting")
             .action(ArgAction::Set)
             .value_name("GLOB"))
         .arg(Arg::new(flags::REVERSE)
             .short('r').long("reverse")
             .help("Reverse the sort order")
-            .help_heading("Filtering")
+            .help_heading("Filtering & Sorting")
             .action(ArgAction::Count))
         .arg(Arg::new(flags::SORT)
             .short('s').long("sort")
@@ -333,13 +358,13 @@ Column overrides:\n  \
             // validation and error-message suggestions, so a new
             // field will still *work* without updating this text —
             // it just won't appear in --help until you do.
-            .help("Sort field — one of:\n\
-                   name, Name, extension, Extension, version,\n\
-                   size, blocks, links, permissions, flags,\n\
-                   user, User, group, Group, uid, gid,\n\
-                   modified, changed, accessed, created,\n\
-                   vcs, type, inode, none")
-            .help_heading("Filtering")
+            .help("Sort field\n\
+                   [name, Name, extension, Extension, version,\n \
+                   size, blocks, links, permissions, flags,\n \
+                   user, User, group, Group, uid, gid,\n \
+                   modified, changed, accessed, created,\n \
+                   vcs, type, inode, none]")
+            .help_heading("Filtering & Sorting")
             .action(ArgAction::Set)
             .value_name("FIELD")
             .hide_possible_values(true)
@@ -347,7 +372,7 @@ Column overrides:\n  \
         .arg(Arg::new(flags::GROUP_DIRS)
             .long("group-dirs")
             .help("Group directories before or after other files\n[first, last, none]")
-            .help_heading("Filtering")
+            .help_heading("Filtering & Sorting")
             .action(ArgAction::Set)
             .value_name("WHEN")
             .hide_possible_values(true)
@@ -362,7 +387,7 @@ Column overrides:\n  \
             .long("dirs-first")
             .alias("group-directories-first")
             .help("Directories first [short for --group-dirs=first]")
-            .help_heading("Filtering")
+            .help_heading("Filtering & Sorting")
             .action(ArgAction::SetTrue)
             .overrides_with_all([flags::GROUP_DIRS, flags::DIRS_LAST]))
         .arg(Arg::new(flags::DIRS_LAST)
@@ -370,7 +395,7 @@ Column overrides:\n  \
             .long("dirs-last")
             .alias("group-directories-last")
             .help("Directories last [short for --group-dirs=last]")
-            .help_heading("Filtering")
+            .help_heading("Filtering & Sorting")
             .action(ArgAction::SetTrue)
             .overrides_with_all([flags::GROUP_DIRS, flags::DIRS_FIRST]))
 
@@ -433,10 +458,18 @@ Column overrides:\n  \
             .action(ArgAction::Count))
         .arg(Arg::new(flags::TIME_STYLE)
             .long("time-style")
-            .help("How to format timestamps\n[default, iso, long-iso, full-iso,\nrelative, +FORMAT]")
+            .help("How to format timestamps\n\
+            [default, iso, long-iso, full-iso,\n \
+            relative, +FORMAT]")
             .help_heading("Timestamps")
             .action(ArgAction::Set)
             .value_name("STYLE"))
+        .arg(Arg::new(flags::NO_TIME)
+            .long("no-time").alias("no-timestamps")
+            .help("Clear all timestamp columns from the base format\n\
+                   (`--no-time --accessed` shows only accessed)")
+            .help_heading("Timestamps")
+            .action(ArgAction::Count))
 
         // ── Column overrides (suppressions) ───────────────────────
         //
@@ -461,13 +494,6 @@ Column overrides:\n  \
             .hide(true)
             .action(ArgAction::Count)
             .overrides_with(flags::SHOW_USER))
-        .arg(Arg::new(flags::NO_TIME)
-            .long("no-time").alias("no-timestamps")
-            .help("Clear all timestamp columns from the base format\n\
-                   (runs before individual timestamp adds, so\n\
-                   `--no-time --accessed` shows only accessed)")
-            .help_heading("Timestamps")
-            .action(ArgAction::Count))
         .arg(Arg::new(flags::NO_ICONS)
             .long("no-icons")
             .hide(true)

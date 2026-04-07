@@ -170,7 +170,44 @@ another `-t`.
 
 See?  Easier.
 
-### 4. Sort on any column you can display
+### 4. Size display: `-b`/`-B` swapped, `-K` and `--size-style` added
+
+The three size-display modes — decimal prefixes (k, M, G), binary
+prefixes (KiB, MiB), and raw bytes — now have a canonical valued
+flag and three short aliases:
+
+| Flag | Long form    | Mode                            |
+|------|--------------|---------------------------------|
+| `-K` | `--decimal`  | Decimal prefixes (default)      |
+| `-B` | `--binary`   | Binary prefixes (KiB, MiB, GiB) |
+| `-b` | `--bytes`    | Raw byte count                  |
+
+All three are also expressible as `--size-style=decimal`,
+`--size-style=binary`, and `--size-style=bytes`.  The valued flag
+parallels `--time-style` and is the canonical form; the short
+flags are aliases.  Personality config key: `size-style = "decimal"`.
+
+**⚠️  Breaking: `-b` and `-B` have swapped.**  In 0.7, `-b` was
+`--binary` and `-B` was `--bytes`.  The new assignment puts the
+simple, original display (raw bytes, lowercase) on the lowercase
+letter and the formatting system (Binary prefixes, uppercase) on
+the uppercase letter.
+
+If you had `-b` or `-B` in scripts or muscle memory, swap them.
+The long forms `--binary` and `--bytes` are unchanged.
+
+**`-K` / `--decimal` is new.**  It explicitly selects the default
+decimal-prefix mode — useful for overriding a personality that
+sets `binary` or `bytes` back to the default.  `-K` for Kilo, the
+most recognisable decimal prefix.
+
+**`--size-style` closes an asymmetry.**  In 0.7, a personality
+that set `binary = true` could not be overridden back to decimal
+from the command line — there was no flag for it.  Now there is:
+`--size-style=decimal`, or `-K`, or just `--decimal`.
+
+
+### 5. Sort on every column you can display
 
 ```sh
 lx -ls blocks              # sort by allocated blocks
@@ -194,7 +231,7 @@ sortable".
 
 No removals fall out of this one — it's pure addition.
 
-### 5. `perms` → `permissions` (column canonical rename)
+### 6. `perms` → `permissions` (column canonical rename)
 
 ```sh
 # Both work in 0.8:
@@ -215,7 +252,7 @@ a value for `-s` / `--sort`, where only the canonical
 different word was used.  Closing that gap keeps the whole
 vocabulary internally consistent.
 
-### 6. Config schema 0.4 → 0.5
+### 7. Config schema 0.4 → 0.5
 
 Old config files (version 0.1 through 0.4) are migrated
 automatically by `lx --upgrade-config`.  The only personality
@@ -249,6 +286,8 @@ measure, not a destination.
 | New: `-u` / `--user`              | Nothing required — new short flag                              |
 | New: `-M` / `--permissions`       | Nothing required — new short flag                              |
 | New: `-z` / `--filesize`          | Nothing required — new short flag                              |
+| New: `--size-style`, `-K`         | Nothing required — new valued flag + short alias               |
+| **`-b` / `-B` swapped**           | `-b` is now `--bytes`; `-B` is now `--binary`. Swap them.      |
 | Expanded `--sort` vocabulary      | Nothing required — new sort fields                             |
 | `-n` / `--numeric` removed        | `--uid --gid --no-user --no-group`, or a `numeric` personality |
 | `-t FIELD` / `--time` removed     | `--FIELD` / `--no-time --FIELD` / `-t`/`-tt`/`-ttt`            |
