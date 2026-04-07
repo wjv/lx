@@ -3,10 +3,10 @@
 All notable changes to lx are documented here. lx is forked from
 [exa](https://github.com/ogham/exa) v0.10.1.
 
-## [0.8.0] — unreleased
+## [0.8.0] — 2026-04-07
 
 The 0.8 release is the CLI-refactor release.  A string of batches
-(`0.8.0-pre.2` through `0.8.0-pre.7`) reshaped the flag surface
+(`0.8.0-pre.2` through `0.8.0-pre.10`) reshaped the flag surface
 around the orthogonal design described in
 [`docs/DESIGN.md`](docs/DESIGN.md) — every column has a positive
 flag and a `--no-*` counterpart, every column is sortable, and
@@ -56,6 +56,18 @@ be migrated with `lx --upgrade-config`.
   cascade: stale placeholders are invalidated when a parent is
   overridden, then remaining slots fall back to a dim copy of
   their parent.  New `LX_COLORS` codes `Uy`/`Un`/`Gy`/`Gn`.
+- **`--size-style=decimal|binary|bytes`** — valued flag for size
+  display mode, parallel to `--time-style`.  Config key:
+  `size-style`.  Closes the asymmetry where a personality setting
+  `binary = true` could not be overridden back to decimal.
+- **`-K` / `--decimal`** — new short flag selecting decimal size
+  prefixes (alias for `--size-style=decimal`).
+- **`--help` respects `NO_COLOR` and stderr TTY state** — help
+  output is now plain text when `NO_COLOR` is set or stderr is
+  not a terminal.
+- **`--completions` flag** documented in `lx(1)` man page (was
+  missing from the command reference).
+- **README badges** — CI status, crates.io version, MSRV, licence.
 
 ### Changed
 - **`perms` column renamed to `permissions`.**  The canonical
@@ -79,6 +91,23 @@ be migrated with `lx --upgrade-config`.
   removed as part of the timestamp redesign and UID/GID column
   work; the migration emits a deprecation warning and drops
   them.
+- **`-b` / `-B` short flags swapped.**  `-b` is now `--bytes`
+  (was `--binary`); `-B` is now `--binary` (was `--bytes`).
+  Mnemonic: lowercase for the simple raw byte count, uppercase
+  for the Binary prefix formatting system.  Long forms unchanged.
+- **`--show-config` and `--dump-*` output** now says `builtin`
+  instead of `compiled-in` (shorter, friendlier).
+- **Curated themes** — `group-yours` now uses an on-palette accent
+  colour distinct from `group-other` in all six shipped themes.
+- **`lx(1)` man page restructured** — sorting split into its own
+  section; column overrides moved adjacent to column selection;
+  personalities section expanded with compiled-in list and TOML
+  example.
+
+### Fixed
+- **`-p` / `--personality` with an unknown name** now exits with
+  an error (exit code 3) instead of silently falling through to
+  defaults.
 
 ### Removed
 - **`-n` / `--numeric`** has been retired entirely.  Use `--uid`
@@ -96,12 +125,15 @@ be migrated with `lx --upgrade-config`.
   back to numeric IDs automatically when name resolution fails.
 
 ### Docs
-- **`README.md` slimmed** from 857 to ~200 lines.  The manual
+- **`README.md` slimmed** from 857 to ~220 lines.  The manual
   content moved to a new `docs/GUIDE.md`; the README is again a
-  landing page.
+  landing page with four top-tier Highlights.
 - **New `docs/GUIDE.md`** — the user guide.  Personalities,
-  configuration, themes, VCS, daily usage patterns, shell
-  completions, and configuration debugging.
+  configuration, themes, VCS, daily usage patterns, size display,
+  shell completions, and configuration debugging.
+- **New `docs/UPGRADING.md`** — per-release breaking-change list
+  with migration notes and justifications.  The 0.8 section leads
+  with additions and treats removals as consequences.
 - **`docs/DESIGN.md` refreshed** with a new "The orthogonal CLI"
   section distilling the 0.8 flag principles, and an updated
   short-flag reference table.
