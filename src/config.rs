@@ -1092,7 +1092,7 @@ pub fn show_config(personality_name: &str) {
     {
         "config"
     } else {
-        "compiled-in"
+        "builtin"
     };
     println!("  {} {}", label.paint("source:"), dimmed.paint(source));
 
@@ -1128,7 +1128,7 @@ pub fn show_config(personality_name: &str) {
     if let Some(ref tname) = theme_name {
         println!("{} {}", label.paint("Theme:"), name.paint(tname));
         let source = if tname == "exa" {
-            "compiled-in"
+            "builtin"
         } else if has_config && CONFIG.as_ref().unwrap().theme.contains_key(tname) {
             "config"
         } else {
@@ -1168,7 +1168,7 @@ pub fn show_config(personality_name: &str) {
     if let Some(ref sname) = style_name {
         println!("{} {}", label.paint("Style:"), name.paint(sname));
         let source = if sname == "exa" {
-            "compiled-in"
+            "builtin"
         } else if has_config && CONFIG.as_ref().unwrap().style.contains_key(sname) {
             "config"
         } else {
@@ -1210,7 +1210,7 @@ pub fn show_config(personality_name: &str) {
         {
             "config"
         } else {
-            "compiled-in"
+            "builtin"
         };
         let patterns = &classes[cname];
         println!("  {} {}: {} patterns",
@@ -1226,9 +1226,9 @@ pub fn show_config(personality_name: &str) {
         let source = if has_config
             && CONFIG.as_ref().unwrap().format.contains_key(*fname)
         {
-            "config (overrides compiled-in)"
+            "config (overrides builtin)"
         } else {
-            "compiled-in"
+            "builtin"
         };
         println!("  {}: {}", name.paint(*fname), dimmed.paint(source));
     }
