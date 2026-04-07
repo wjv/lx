@@ -1,0 +1,37 @@
+# cargo-deny configuration — https://embarkstudios.github.io/cargo-deny/
+
+[advisories]
+# Advisory IDs to ignore (e.g. if a fix isn't available yet).
+ignore = []
+
+[licenses]
+# Reject anything not explicitly allowed.
+confidence-threshold = 0.8
+
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "Zlib",
+    "BSL-1.0",
+    "OpenSSL",
+]
+
+# Some crates use "MIT OR Apache-2.0"; both are in the allow list,
+# so they pass.  Dual-licensed crates only need one match.
+
+[bans]
+# No banned crates for now.  Add entries here if a transitive
+# dependency ever needs blocking.
+multiple-versions = "warn"
+wildcards = "allow"
+
+[sources]
+# Only allow crates from crates.io (no private registries or git deps).
+unknown-registry = "deny"
+unknown-git = "deny"

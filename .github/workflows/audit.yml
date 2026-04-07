@@ -1,0 +1,14 @@
+name: Security audit
+
+on:
+  schedule:
+    # Every Monday at midnight UTC.
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2

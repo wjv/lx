@@ -9,9 +9,9 @@ jobs:
       matrix:
         include:
           - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
+            os: ubuntu-22.04
           - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
+            os: ubuntu-22.04
             cross: true
           - target: x86_64-apple-darwin
             os: macos-latest
@@ -35,8 +35,8 @@ jobs:
             [ -f "$f" ] && sudo sed -i '/^deb \(http\|https\)/s|^deb |deb [arch=amd64] |' "$f" || true
           done
           # Add arm64 ports repository.
-          echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe' | sudo tee /etc/apt/sources.list.d/arm64.list
-          echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe' | sudo tee -a /etc/apt/sources.list.d/arm64.list
+          echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main restricted universe' | sudo tee /etc/apt/sources.list.d/arm64.list
+          echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted universe' | sudo tee -a /etc/apt/sources.list.d/arm64.list
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu zlib1g-dev:arm64
       - name: Set cross-linker
