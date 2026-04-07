@@ -3,6 +3,14 @@
 All notable changes to lx are documented here. lx is forked from
 [exa](https://github.com/ogham/exa) v0.10.1.
 
+## [0.7.1] — 2026-04-07
+
+### Fixed
+- `-p` / `--personality` with an unknown personality name now exits
+  with an error (exit code 3) instead of silently falling through
+  to defaults.  Only affects explicit `-p`; an unrecognised argv[0]
+  symlink name still falls through to the `lx` default.
+
 ## [0.7.0] — 2026-04-04
 
 ### Added
