@@ -157,6 +157,15 @@ impl Options {
                     return OptionsResult::DumpStyle(name);
                 }
 
+                if let Some(name) = clap_matches.get_one::<String>("save-as") {
+                    let settings = Self::extract_cli_settings(&clap_matches);
+                    return OptionsResult::SaveAs(
+                        name.clone(),
+                        None,  // inherits — set by main.rs from active personality
+                        settings,
+                    );
+                }
+
                 if clap_matches.get_flag("init-config") {
                     return OptionsResult::InitConfig;
                 }
@@ -176,6 +185,92 @@ impl Options {
                 }
             }
         }
+    }
+
+    /// Extract settings that were explicitly passed on the CLI, as a
+    /// config-key → TOML-value map suitable for writing a personality file.
+    /// Only captures flags the user actually typed, not personality defaults.
+    fn extract_cli_settings(matches: &clap::ArgMatches) -> std::collections::HashMap<String, toml::Value> {
+        use std::collections::HashMap;
+        use crate::config::{SETTING_FLAGS, SettingKind};
+
+        let mut settings: HashMap<String, toml::Value> = HashMap::new();
+
+        for def in SETTING_FLAGS {
+            // Map config key to Clap arg ID.  Most match the flag name
+            // without "--", but some differ (column enablers use "show-*"
+            // IDs, British/American aliases share a single Clap ID).
+            let clap_id = match def.key {
+                "permissions"  => flags::SHOW_PERMISSIONS,
+                "filesize"     => flags::SHOW_FILESIZE,
+                "user"         => flags::SHOW_USER,
+                "colour"       => flags::COLOR,
+                "color"        => flags::COLOR,
+                "colour-scale" => flags::COLOR_SCALE,
+                "color-scale"  => flags::COLOR_SCALE,
+                "ignore"       => flags::IGNORE_GLOB,
+                _ => def.flag.strip_prefix("--").unwrap_or(def.flag),
+            };
+
+            // Some config keys share a Clap ID (e.g. "colour" and "color"
+            // both map to "--colour").  Skip if we already captured this.
+            if settings.contains_key(def.key) {
+                continue;
+            }
+
+            // Only include flags the user explicitly typed on this CLI.
+            if matches.value_source(clap_id)
+                != Some(clap::parser::ValueSource::CommandLine)
+            {
+                continue;
+            }
+
+            let value = match def.kind {
+                SettingKind::Bool => toml::Value::Boolean(true),
+                SettingKind::Str => {
+                    if let Some(v) = matches.get_one::<String>(clap_id) {
+                        toml::Value::String(v.clone())
+                    } else {
+                        continue;
+                    }
+                }
+                SettingKind::Int => {
+                    if let Some(v) = matches.get_one::<i64>(clap_id) {
+                        toml::Value::Integer(*v)
+                    } else if let Some(v) = matches.get_one::<String>(clap_id) {
+                        if let Ok(n) = v.parse::<i64>() {
+                            toml::Value::Integer(n)
+                        } else {
+                            continue;
+                        }
+                    } else {
+                        continue;
+                    }
+                }
+            };
+            settings.insert(def.key.to_string(), value);
+        }
+
+        // Handle compounding -t (TIME_TIER): expand to individual
+        // timestamp booleans so they're saved as explicit config keys.
+        if matches.value_source(flags::TIME_TIER)
+            == Some(clap::parser::ValueSource::CommandLine)
+        {
+            let count = matches.get_count(flags::TIME_TIER);
+            if count >= 1 { settings.insert("modified".into(), toml::Value::Boolean(true)); }
+            if count >= 2 { settings.insert("changed".into(), toml::Value::Boolean(true)); }
+            if count >= 3 {
+                settings.insert("created".into(), toml::Value::Boolean(true));
+                settings.insert("accessed".into(), toml::Value::Boolean(true));
+            }
+        }
+
+        // Handle compounding -l: the Clap ID is "long" with Count action.
+        // The personality config uses `format` to express detail tiers,
+        // but the simplest save is just `long = true` (already captured
+        // above as a Bool).  Advanced users can edit the file.
+
+        settings
     }
 
     /// Whether the View specified in this set of options includes a Git
@@ -275,6 +370,10 @@ pub enum OptionsResult {
 
     /// The user wants to upgrade a legacy config file.
     UpgradeConfig,
+
+    /// The user wants to save CLI flags as a personality.
+    /// Contains: (name, inherits, settings as TOML key/value pairs).
+    SaveAs(String, Option<String>, std::collections::HashMap<String, toml::Value>),
 }
 
 

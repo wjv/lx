@@ -125,6 +125,21 @@ conceptually "the personality for bare `lx`".  Symlinks like `ll` or
 `tree` still win over the environment variable because they're
 structural: when you type `ll`, you always mean "long view".
 
+### Creating personalities from the command line
+
+Once you've found a combination of flags you like, save it as a
+personality in one step:
+
+```sh
+lx -l --total-size --sort=size --reverse --save-as=du
+```
+
+This writes `conf.d/du.toml` containing only the flags you typed,
+inheriting everything else from the active personality.  If you were
+invoked as `ll`, the saved personality inherits from `ll`; if bare
+`lx`, it inherits from `lx`.  If the file already exists, the
+previous version is backed up to `du.toml.bak`.
+
 ### Inheritance
 
 Personalities form a tree via `inherits`.  Children replace the

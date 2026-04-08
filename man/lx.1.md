@@ -506,6 +506,13 @@ overrides, and the complete theme/style/class vocabulary — see
 `--upgrade-config`
 : Upgrade a legacy config file to the current format.
 
+`--save-as=NAME`
+: Save the CLI flags from this invocation as a named personality in
+`conf.d/NAME.toml`.  The saved definition inherits from the active
+personality and contains only the flags you typed on this command line.
+If `NAME.toml` already exists, the previous file is backed up to
+`NAME.toml.bak`.  Exits after saving without listing files.
+
 The `--dump-*` flags output copy-pasteable TOML definitions. Each
 accepts an optional `=NAME` to dump a single definition, or dumps all
 when used bare:

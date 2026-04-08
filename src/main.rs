@@ -141,7 +141,7 @@ fn main() {
     }
 
     // Layer 3: actual CLI args (override everything above).
-    args.extend(cli_args);
+    args.extend(cli_args.iter().cloned());
 
 
     match Options::parse(&args, &LiveVars) {
@@ -206,6 +206,17 @@ fn main() {
         OptionsResult::ShowConfig => {
             let name = active_personality.as_deref().unwrap_or("lx");
             config::show_config(name, personality_source);
+        }
+
+        OptionsResult::SaveAs(ref name, _, _) => {
+            // Parse just the CLI args (without personality layer) to
+            // extract only what the user typed on this command line.
+            let cli_settings = match Options::parse(&cli_args, &LiveVars) {
+                OptionsResult::SaveAs(_, _, settings) => settings,
+                _ => std::collections::HashMap::new(),
+            };
+            let inherits = active_personality.as_deref();
+            config::save_personality_as(name, inherits, &cli_settings);
         }
 
         OptionsResult::DumpClass(ref name) => {
