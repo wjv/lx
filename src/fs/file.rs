@@ -17,7 +17,8 @@ use crate::fs::dir::Dir;
 use crate::fs::fields as f;
 
 /// Cache of total directory sizes keyed by (device, inode).
-/// Prevents re-walking the same physical directory multiple times.
+/// Prevents re-walking the same physical directory multiple times
+/// (hardlinks, or the same dir seen via different paths).
 #[cfg(unix)]
 static DIR_SIZE_CACHE: LazyLock<Mutex<HashMap<(u64, u64), u64>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -478,7 +479,13 @@ impl<'dir> File<'dir> {
     /// sizes of all contents.
     pub fn total_size(&self) -> f::Size {
         if self.is_directory() {
-            let size = *self.cached_total_size.get_or_init(|| Self::dir_total_size(&self.path));
+            let size = *self.cached_total_size.get_or_init(|| {
+                #[cfg(unix)]
+                let key = Some((self.metadata.dev(), self.metadata.ino()));
+                #[cfg(not(unix))]
+                let key = None;
+                Self::dir_total_size(&self.path, key)
+            });
             f::Size::Some(size)
         } else {
             self.size()
@@ -500,13 +507,15 @@ impl<'dir> File<'dir> {
     /// Results are cached by `(dev, ino)` to avoid re-walking the same
     /// physical directory when encountered through hardlinks or
     /// multiple paths.
-    fn dir_total_size(path: &std::path::Path) -> u64 {
+    /// The `cache_key` is the `(dev, ino)` of the directory, passed
+    /// from the caller to avoid an extra `symlink_metadata()` call.
+    /// When `None` (non-Unix or unavailable), the cache is bypassed.
+    fn dir_total_size(path: &std::path::Path, cache_key: Option<(u64, u64)>) -> u64 {
         use rayon::prelude::*;
 
         // Check the (dev, ino) cache before walking.
         #[cfg(unix)]
-        if let Ok(meta) = std::fs::symlink_metadata(path) {
-            let key = (meta.dev(), meta.ino());
+        if let Some(key) = cache_key {
             if let Some(&cached) = DIR_SIZE_CACHE.lock().unwrap().get(&key) {
                 return cached;
             }
@@ -524,7 +533,14 @@ impl<'dir> File<'dir> {
             };
 
             if ft.is_dir() {
-                Self::dir_total_size(&entry.path())
+                // Extract (dev, ino) from the entry's metadata for
+                // the recursive call — avoids an extra stat.
+                #[cfg(unix)]
+                let child_key = entry.metadata().ok()
+                    .map(|m| (m.dev(), m.ino()));
+                #[cfg(not(unix))]
+                let child_key = None;
+                Self::dir_total_size(&entry.path(), child_key)
             } else if ft.is_file() {
                 entry.metadata().map(|m| m.len()).unwrap_or(0)
             } else {
@@ -534,8 +550,7 @@ impl<'dir> File<'dir> {
 
         // Store in cache for future lookups.
         #[cfg(unix)]
-        if let Ok(meta) = std::fs::symlink_metadata(path) {
-            let key = (meta.dev(), meta.ino());
+        if let Some(key) = cache_key {
             DIR_SIZE_CACHE.lock().unwrap().insert(key, size);
         }
 

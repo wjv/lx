@@ -3,6 +3,31 @@
 All notable changes to lx are documented here. lx is forked from
 [exa](https://github.com/ogham/exa) v0.10.1.
 
+## [Unreleased] — 0.9.0
+
+### Added
+
+- `$LX_PERSONALITY` environment variable for session-level
+  personality selection.  Resolution pipeline:
+  `-p` → argv[0] → `$LX_PERSONALITY` → default.
+- `--save-as=NAME` writes the current CLI flag delta as a
+  personality to `conf.d/NAME.toml`.
+- `--show-config` now shows an "activated by" line indicating how
+  the personality was chosen.
+- `grid-rows` and `icon-spacing` personality config keys (previously
+  `LX_GRID_ROWS` / `LX_ICON_SPACING` env-var-only).
+- `decimal-point` and `thousands-separator` personality config keys
+  for overriding locale numeric formatting.
+
+### Changed
+
+- *(experimental)* `--total-size` in tree mode uses post-order
+  accumulation from the display traversal instead of a redundant
+  second filesystem walk.  Reduces kernel time on NFS and cold
+  caches; may slightly increase wall time on small local trees.
+  Directory sizes are cached by `(dev, ino)`.
+
+
 ## [0.8.0] — 2026-04-07
 
 The 0.8 release is the CLI-refactor release.  A string of batches

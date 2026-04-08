@@ -28,6 +28,9 @@ pub struct RenderContext<'a> {
     pub numeric: &'a locale::Numeric,
     pub vcs: Option<&'a dyn VcsCache>,
     pub total_size: bool,
+    /// When true, directory size cells are placeholders — the real
+    /// value will be patched in after post-order accumulation.
+    pub defer_dir_total_size: bool,
 }
 
 
@@ -95,7 +98,12 @@ fn render_permissions(ctx: &RenderContext<'_>, file: &File<'_>, xattrs: bool) ->
 
 fn render_size(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
     if ctx.total_size {
-        file.total_size().render(ctx.theme, ctx.size_format, &ctx.numeric)
+        if ctx.defer_dir_total_size && file.is_directory() {
+            // Placeholder — patched after post-order accumulation.
+            file.size().render(ctx.theme, ctx.size_format, &ctx.numeric)
+        } else {
+            file.total_size().render(ctx.theme, ctx.size_format, &ctx.numeric)
+        }
     } else {
         file.size().render(ctx.theme, ctx.size_format, &ctx.numeric)
     }

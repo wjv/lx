@@ -303,6 +303,7 @@ impl<'a> Render<'a> {
             };
 
             rows.push(row);
+            let parent_row_idx = rows.len() - 1;
 
             // Size accounting for -CZ summary.
             if egg.file.is_directory() {
@@ -346,6 +347,37 @@ impl<'a> Render<'a> {
                     }
 
                     self.add_files_to_table(table, rows, &files, depth.deeper(), size_total);
+
+                    // Post-order accumulation: sum children's sizes and
+                    // inject into the parent directory's cached_total_size.
+                    // Children's OnceLocks are already set (by deeper
+                    // recursion or by dir_total_size for leaf dirs).
+                    let defer = table.as_ref()
+                        .is_some_and(|t| t.total_size_active() && t.defer_active());
+                    if defer {
+                        use crate::fs::fields::Size;
+                        let dir_total: u64 = files.iter().map(|f| {
+                            if f.is_directory() {
+                                match f.total_size() { Size::Some(s) => s, _ => 0 }
+                            } else if f.is_file() {
+                                f.metadata.len()
+                            } else {
+                                0
+                            }
+                        }).sum();
+                        egg.file.set_cached_total_size(dir_total);
+
+                        // Patch the parent row's size cell with the real value.
+                        if let Some(ref mut t) = table.as_mut() {
+                            if let Some((col_idx, new_cell)) = t.rerender_size_cell(egg.file) {
+                                if let Some(ref mut row) = rows[parent_row_idx].cells {
+                                    row.replace_cell(col_idx, new_cell);
+                                    t.add_widths(row);
+                                }
+                            }
+                        }
+                    }
+
                     continue;
                 }
             }

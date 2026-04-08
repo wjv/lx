@@ -37,7 +37,12 @@ impl Mode {
 
         // Tree takes priority over grid when combined with long.
         if long && tree {
-            let details = details::Options::deduce_long(matches, vars, long_count)?;
+            let mut details = details::Options::deduce_long(matches, vars, long_count)?;
+            // In tree mode, defer directory size rendering so post-order
+            // accumulation can fill in sizes without a second traversal.
+            if let Some(ref mut t) = details.table {
+                if t.total_size { t.defer_dir_total_size = true; }
+            }
             return Ok(Self::Details(details));
         }
 
@@ -164,7 +169,7 @@ impl TableOptions {
         let total_size = matches.has(flags::TOTAL_SIZE) && !matches.has(flags::NO_TOTAL_SIZE);
         let decimal_point = matches.get("decimal-point").map(String::from);
         let thousands_separator = matches.get("thousands-separator").map(String::from);
-        Ok(Self { size_format, time_format, columns, total_size, decimal_point, thousands_separator })
+        Ok(Self { size_format, time_format, columns, total_size, defer_dir_total_size: false, decimal_point, thousands_separator })
     }
 }
 
