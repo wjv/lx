@@ -75,6 +75,14 @@ impl Options {
     pub fn to_theme(&self, isatty: bool) -> Theme {
         use crate::config::CONFIG;
 
+        // Validate the theme name early — even when colours are off,
+        // the user should know if they've misspelled a theme name.
+        if let Some(ref name) = self.theme_override {
+            let empty_cfg = crate::config::Config::default();
+            let cfg = CONFIG.as_ref().unwrap_or(&empty_cfg);
+            Self::validate_theme_name(name, cfg);
+        }
+
         if self.use_colours == UseColours::Never || (self.use_colours == UseColours::Automatic && ! isatty) {
             let ui = UiStyles::plain();
             let exts = Box::new(NoFileColours);
@@ -113,6 +121,30 @@ impl Options {
         };
 
         Theme { ui, exts }
+    }
+
+    /// Validate that a theme name (and its inheritance chain) can be
+    /// resolved.  Exits with code 3 on unknown names — same as
+    /// unknown `-p` personality.
+    fn validate_theme_name(name: &str, cfg: &crate::config::Config) {
+        let mut current = Some(name.to_string());
+        let mut visited = Vec::new();
+
+        while let Some(ref tname) = current {
+            if visited.contains(tname) {
+                return; // cycle — apply_config_theme will warn
+            }
+            visited.push(tname.clone());
+
+            if tname == "exa" {
+                return; // builtin, always valid
+            } else if let Some(theme) = cfg.theme.get(tname) {
+                current = theme.inherits.clone();
+            } else {
+                eprintln!("lx: unknown theme '{tname}'");
+                std::process::exit(3);
+            }
+        }
     }
 
     /// Apply the selected theme from the config file, resolving
@@ -159,7 +191,9 @@ impl Options {
                 chain.push(theme);
                 current = theme.inherits.clone();
             } else {
-                warn!("Theme '{tname}' not found in config; ignoring");
+                // Should not reach here — validate_theme_name catches
+                // unknown names early.
+                warn!("Theme '{tname}' not found; ignoring");
                 return;
             }
         }
