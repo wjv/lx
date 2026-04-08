@@ -597,9 +597,11 @@ for UI elements (e.g. `ur` for user-read permission, `da` for date).
 
 `LX_GRID_ROWS`
 : Minimum rows before the grid-details view activates.
+Also settable as `grid-rows` in a personality definition (config takes precedence).
 
 `LX_ICON_SPACING`
 : Number of spaces between an icon and its filename.
+Also settable as `icon-spacing` in a personality definition (config takes precedence).
 
 `LX_PERSONALITY`
 : Session-level personality selection.  Equivalent to `-p NAME` but

@@ -42,6 +42,15 @@ impl View {
             _ => None,
         }
     }
+
+    /// Access the table options, if the current mode has them.
+    pub fn table_options(&self) -> Option<&table::Options> {
+        match &self.mode {
+            Mode::Details(opts) => opts.table.as_ref(),
+            Mode::GridDetails(opts) => opts.details.table.as_ref(),
+            _ => None,
+        }
+    }
 }
 
 

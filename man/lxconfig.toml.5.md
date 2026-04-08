@@ -208,13 +208,35 @@ globs), `prune` (string: pipe-separated globs),
 
 Long view options:
 
-: `binary` (bool), `bytes` (bool), `header` (bool), `inode` (bool),
+: `size-style` (string: `decimal`/`binary`/`bytes`),
+`binary` (bool), `bytes` (bool), `header` (bool), `inode` (bool),
 `links` (bool), `blocks` (bool), `group` (bool), `uid` (bool),
 `gid` (bool),
 `time-style` (string: `default`/`iso`/`long-iso`/`full-iso`/`relative`/`+FORMAT`),
 `modified` (bool), `changed` (bool), `accessed` (bool),
 `created` (bool), `total-size` (bool), `extended` (bool),
-`octal-permissions` (bool), `flags` (bool).
+`octal-permissions` (bool), `flags` (bool),
+`permissions` (bool), `filesize` (bool), `user` (bool).
+
+Layout tuning:
+
+: `grid-rows` (integer) — minimum rows before the grid-details view
+activates. Equivalent to the `LX_GRID_ROWS` environment variable;
+the config key takes precedence.
+`icon-spacing` (integer) — number of spaces between an icon and its
+filename. Equivalent to `LX_ICON_SPACING`; the config key takes
+precedence.
+
+Numeric formatting:
+
+: `decimal-point` (string) — override the locale's decimal separator.
+Exactly one character.
+`thousands-separator` (string) — override the locale's thousands
+separator. Zero or one character; empty string disables grouping.
+Both apply to **counts** (file sizes in all `size-style` modes,
+`--total-size` totals, `-CZ` summaries, block counts, link counts)
+but not to **IDs** (inodes, UID, GID). Always 3-digit grouping.
+Setting these in `[personality.default]` makes them global.
 
 Removed in 0.5: `time` (string naming a single timestamp field) and
 `numeric` (boolean). The `time` setting is replaced by the individual

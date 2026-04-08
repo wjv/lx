@@ -158,7 +158,18 @@ fn main() {
 
             let console_width = options.view.width.actual_terminal_width();
             let theme = options.theme.to_theme(console_width.is_some());
-            let lx = Lx { options, writer, input_paths, theme, console_width, vcs, item_count: 0, size_total: 0 };
+
+            // Build a locale::Numeric with personality overrides applied.
+            let mut numeric = locale::Numeric::load_user_locale()
+                .unwrap_or_else(|_| locale::Numeric::english());
+            if let Some(ref dp) = options.view.table_options().and_then(|t| t.decimal_point.clone()) {
+                numeric.decimal_sep = dp.clone();
+            }
+            if let Some(ref ts) = options.view.table_options().and_then(|t| t.thousands_separator.clone()) {
+                numeric.thousands_sep = ts.clone();
+            }
+
+            let lx = Lx { options, writer, input_paths, theme, console_width, vcs, item_count: 0, size_total: 0, numeric };
 
             match lx.run() {
                 Ok(exit_status) => {
@@ -311,23 +322,23 @@ pub struct Lx {
 
     /// Running total of displayed file sizes in bytes (for `-CZ`).
     pub size_total: u64,
+
+    /// Numeric locale with personality overrides applied.
+    pub numeric: locale::Numeric,
 }
 
 /// Format a byte count as a human-readable string for the `-CZ` summary.
-/// Respects the active size format (`-B` for binary, `-b` for bytes).
-fn format_size(bytes: u64, fmt: crate::output::table::SizeFormat) -> String {
+/// Respects the active size format (`-B` for binary, `-b` for bytes)
+/// and the personality's numeric formatting overrides.
+fn format_size(bytes: u64, fmt: crate::output::table::SizeFormat, numeric: &locale::Numeric) -> String {
     use unit_prefix::NumberPrefix;
     use crate::output::table::SizeFormat;
-    use locale::Numeric as NumericLocale;
-
-    let locale = NumericLocale::load_user_locale()
-        .unwrap_or_else(|_| NumericLocale::english());
 
     match fmt {
         SizeFormat::JustBytes => {
             // Thousands-separated with "bytes" suffix for clarity.
             let s = bytes.to_string();
-            let sep = &locale.thousands_sep;
+            let sep = &numeric.thousands_sep;
             let formatted = if sep.is_empty() || s.len() <= 3 {
                 s
             } else {
@@ -449,12 +460,13 @@ impl Lx {
         let result = self.print_dirs(dirs, no_files, is_only_dir, exit_status);
 
         if self.options.count {
+            let count = self.numeric.format_int(self.item_count as isize);
             if self.options.view.has_total_size() {
                 let fmt = self.options.view.size_format()
                     .unwrap_or(crate::output::table::SizeFormat::DecimalBytes);
-                eprintln!("{} items shown, {}", self.item_count, format_size(self.size_total, fmt));
+                eprintln!("{count} items shown, {}", format_size(self.size_total, fmt, &self.numeric));
             } else {
-                eprintln!("{} items shown", self.item_count);
+                eprintln!("{count} items shown");
             }
         }
 

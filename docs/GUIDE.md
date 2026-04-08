@@ -756,6 +756,25 @@ lx -lCZ               # … in a long listing
 
 Works in grid view too, not just long view.
 
+### Numeric formatting
+
+By default, lx uses your system locale for decimal points and
+thousands grouping.  Two personality config keys let you override
+this:
+
+```toml
+[personality.default]
+decimal-point = ","
+thousands-separator = " "
+```
+
+Setting them in `[personality.default]` makes them global.  They
+apply to **counts** — file sizes (in all `--size-style` modes),
+`--total-size` totals, `-CZ` summaries, block counts, and link
+counts — but not to IDs (inodes, UID, GID).  Set
+`thousands-separator` to an empty string to disable grouping
+entirely.
+
 ### Environment variables
 
 | Variable          | Purpose                                                    |
@@ -763,8 +782,9 @@ Works in grid view too, not just long view.
 | `LX_CONFIG`       | Explicit config file path                                  |
 | `LX_COLORS`       | Colour theme (overrides `LS_COLORS`)                       |
 | `LX_DEBUG`        | Enable debug logging (`1` or `trace`)                      |
-| `LX_GRID_ROWS`    | Minimum rows for grid-details view                         |
-| `LX_ICON_SPACING` | Spaces between icon and filename                           |
+| `LX_GRID_ROWS`    | Minimum rows for grid-details view (also a config key)     |
+| `LX_ICON_SPACING` | Spaces between icon and filename (also a config key)       |
+| `LX_PERSONALITY`  | Session-level personality selection (see §Personalities)    |
 | `LS_COLORS`       | Standard file-type colour scheme                           |
 | `COLUMNS`         | Override terminal width                                    |
 | `TIME_STYLE`      | Default timestamp style                                    |

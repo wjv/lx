@@ -8,6 +8,7 @@
 use crate::fs::File;
 use crate::fs::feature::VcsCache;
 use crate::options::flags;
+use locale;
 use crate::output::cell::TextCell;
 use crate::output::table::{Alignment, Column, Environment, SizeFormat, TimeType};
 use crate::output::time::TimeFormat;
@@ -24,6 +25,7 @@ pub struct RenderContext<'a> {
     pub size_format: SizeFormat,
     pub time_format: &'a TimeFormat,
     pub env: &'a Environment,
+    pub numeric: &'a locale::Numeric,
     pub vcs: Option<&'a dyn VcsCache>,
     pub total_size: bool,
 }
@@ -93,15 +95,15 @@ fn render_permissions(ctx: &RenderContext<'_>, file: &File<'_>, xattrs: bool) ->
 
 fn render_size(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
     if ctx.total_size {
-        file.total_size().render(ctx.theme, ctx.size_format, &ctx.env.numeric)
+        file.total_size().render(ctx.theme, ctx.size_format, &ctx.numeric)
     } else {
-        file.size().render(ctx.theme, ctx.size_format, &ctx.env.numeric)
+        file.size().render(ctx.theme, ctx.size_format, &ctx.numeric)
     }
 }
 
 #[cfg(unix)]
 fn render_hard_links(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
-    file.links().render(ctx.theme, &ctx.env.numeric)
+    file.links().render(ctx.theme, &ctx.numeric)
 }
 
 #[cfg(unix)]

@@ -22,6 +22,10 @@ pub struct Options {
     pub columns: Vec<Column>,
     /// When true, the size column shows recursive directory sizes.
     pub total_size: bool,
+    /// Override the locale's decimal separator (e.g. ".").
+    pub decimal_point: Option<String>,
+    /// Override the locale's thousands separator (e.g. ",").  Empty = no grouping.
+    pub thousands_separator: Option<String>,
 }
 
 
@@ -191,6 +195,7 @@ pub struct Table<'a> {
     columns: Vec<Column>,
     theme: &'a Theme,
     env: &'a Environment,
+    numeric: locale::Numeric,
     widths: TableWidths,
     time_format: TimeFormat,
     size_format: SizeFormat,
@@ -217,12 +222,22 @@ impl<'a, 'f> Table<'a> {
         let widths = TableWidths::zero(columns.len());
         let env = &*ENVIRONMENT;
 
+        // Start with the system locale, then apply personality overrides.
+        let mut numeric = env.numeric.clone();
+        if let Some(ref dp) = options.decimal_point {
+            numeric.decimal_sep = dp.clone();
+        }
+        if let Some(ref ts) = options.thousands_separator {
+            numeric.thousands_sep = ts.clone();
+        }
+
         Table {
             theme,
             widths,
             columns,
             vcs,
             env,
+            numeric,
             time_format: options.time_format.clone(),
             size_format: options.size_format,
             total_size: options.total_size,
@@ -268,6 +283,7 @@ impl<'a, 'f> Table<'a> {
             size_format: self.size_format,
             time_format: &self.time_format,
             env: self.env,
+            numeric: &self.numeric,
             vcs: self.vcs,
             total_size: self.total_size,
         };
