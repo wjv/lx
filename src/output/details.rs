@@ -281,6 +281,22 @@ impl<'a> Render<'a> {
 
         // this is safe because all entries have been initialized above
         let mut file_eggs = unsafe { std::mem::transmute::<_, Vec<Egg<'_>>>(file_eggs) };
+
+        // When --total-size is active in tree mode, eagerly pre-compute
+        // directory sizes in parallel.  This warms the (dev, ino) cache
+        // and sets each directory's OnceLock so that post-order
+        // accumulation reads cached values instead of walking sequentially.
+        let total_size_active = table.as_ref()
+            .is_some_and(|t| t.total_size_active());
+        if total_size_active && self.recurse.is_some() {
+            use rayon::prelude::*;
+            file_eggs.par_iter().for_each(|egg| {
+                if egg.file.is_directory() {
+                    let _ = egg.file.total_size();
+                }
+            });
+        }
+
         self.filter.sort_files(&mut file_eggs, self.vcs);
 
         for (tree_params, egg) in depth.iterate_over(file_eggs.into_iter()) {
