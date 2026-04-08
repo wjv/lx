@@ -22,10 +22,6 @@ pub struct Options {
     pub columns: Vec<Column>,
     /// When true, the size column shows recursive directory sizes.
     pub total_size: bool,
-    /// When true, directory size cells are rendered as placeholders
-    /// during the parallel phase and patched after post-order
-    /// accumulation.  Set when `total_size && tree_mode`.
-    pub defer_dir_total_size: bool,
     /// Override the locale's decimal separator (e.g. ".").
     pub decimal_point: Option<String>,
     /// Override the locale's thousands separator (e.g. ",").  Empty = no grouping.
@@ -204,7 +200,6 @@ pub struct Table<'a> {
     time_format: TimeFormat,
     size_format: SizeFormat,
     total_size: bool,
-    defer_dir_total_size: bool,
     vcs: Option<&'a dyn VcsCache>,
 }
 
@@ -213,20 +208,9 @@ pub struct Row {
     cells: Vec<TextCell>,
 }
 
-impl Row {
-    /// Replace a cell at the given index (used for post-order size patching).
-    pub fn replace_cell(&mut self, index: usize, cell: TextCell) {
-        self.cells[index] = cell;
-    }
-}
-
 impl<'a, 'f> Table<'a> {
     pub fn total_size_active(&self) -> bool {
         self.total_size
-    }
-
-    pub fn defer_active(&self) -> bool {
-        self.defer_dir_total_size
     }
 
     pub fn new(options: &'a Options, vcs: Option<&'a dyn VcsCache>, theme: &'a Theme) -> Table<'a> {
@@ -257,7 +241,6 @@ impl<'a, 'f> Table<'a> {
             time_format: options.time_format.clone(),
             size_format: options.size_format,
             total_size: options.total_size,
-            defer_dir_total_size: options.defer_dir_total_size,
         }
     }
 
@@ -292,27 +275,6 @@ impl<'a, 'f> Table<'a> {
         self.widths.add_widths(row);
     }
 
-    /// Re-render the size cell for a file whose `cached_total_size` has
-    /// been set by post-order accumulation.  Returns the column index
-    /// and new cell, or `None` if there is no FileSize column.
-    pub fn rerender_size_cell(&self, file: &File<'_>) -> Option<(usize, TextCell)> {
-        let col_idx = self.columns.iter().position(|c| *c == Column::FileSize)?;
-        // Temporarily override defer so we render the real value now.
-        use super::column_registry::{ColumnDef, RenderContext};
-        let def = ColumnDef::for_column(Column::FileSize);
-        let ctx = RenderContext {
-            theme: self.theme,
-            size_format: self.size_format,
-            time_format: &self.time_format,
-            env: self.env,
-            numeric: &self.numeric,
-            vcs: self.vcs,
-            total_size: self.total_size,
-            defer_dir_total_size: false, // render the real value
-        };
-        Some((col_idx, (def.render)(&ctx, file, false)))
-    }
-
     fn display(&self, file: &File<'_>, column: Column, xattrs: bool) -> TextCell {
         use super::column_registry::{ColumnDef, RenderContext};
         let def = ColumnDef::for_column(column);
@@ -324,7 +286,6 @@ impl<'a, 'f> Table<'a> {
             numeric: &self.numeric,
             vcs: self.vcs,
             total_size: self.total_size,
-            defer_dir_total_size: self.defer_dir_total_size,
         };
         (def.render)(&ctx, file, xattrs)
     }

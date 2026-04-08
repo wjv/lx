@@ -201,6 +201,22 @@ impl<'a> Render<'a> {
         use log::*;
         use crate::fs::feature::xattr;
 
+        // When --total-size is active in tree mode, eagerly pre-compute
+        // directory sizes in parallel BEFORE the rayon rendering scope.
+        // This populates each File's OnceLock so that render_size() in the
+        // rayon scope reads cached values — no dir_total_size() triggered
+        // during rendering, no deferral or row-patching needed.
+        let total_size_active = table.as_ref()
+            .is_some_and(|t| t.total_size_active());
+        if total_size_active && self.recurse.is_some() {
+            use rayon::prelude::*;
+            src.par_iter().for_each(|f| {
+                if f.is_directory() {
+                    let _ = f.total_size();
+                }
+            });
+        }
+
         let mut file_eggs = (0..src.len()).map(|_| MaybeUninit::uninit()).collect::<Vec<_>>();
 
         rayon::scope(|s| {
@@ -282,21 +298,6 @@ impl<'a> Render<'a> {
         // this is safe because all entries have been initialized above
         let mut file_eggs = unsafe { std::mem::transmute::<_, Vec<Egg<'_>>>(file_eggs) };
 
-        // When --total-size is active in tree mode, eagerly pre-compute
-        // directory sizes in parallel.  This warms the (dev, ino) cache
-        // and sets each directory's OnceLock so that post-order
-        // accumulation reads cached values instead of walking sequentially.
-        let total_size_active = table.as_ref()
-            .is_some_and(|t| t.total_size_active());
-        if total_size_active && self.recurse.is_some() {
-            use rayon::prelude::*;
-            file_eggs.par_iter().for_each(|egg| {
-                if egg.file.is_directory() {
-                    let _ = egg.file.total_size();
-                }
-            });
-        }
-
         self.filter.sort_files(&mut file_eggs, self.vcs);
 
         for (tree_params, egg) in depth.iterate_over(file_eggs.into_iter()) {
@@ -319,7 +320,6 @@ impl<'a> Render<'a> {
             };
 
             rows.push(row);
-            let parent_row_idx = rows.len() - 1;
 
             // Size accounting for -CZ summary.
             if egg.file.is_directory() {
@@ -363,37 +363,6 @@ impl<'a> Render<'a> {
                     }
 
                     self.add_files_to_table(table, rows, &files, depth.deeper(), size_total);
-
-                    // Post-order accumulation: sum children's sizes and
-                    // inject into the parent directory's cached_total_size.
-                    // Children's OnceLocks are already set (by deeper
-                    // recursion or by dir_total_size for leaf dirs).
-                    let defer = table.as_ref()
-                        .is_some_and(|t| t.total_size_active() && t.defer_active());
-                    if defer {
-                        use crate::fs::fields::Size;
-                        let dir_total: u64 = files.iter().map(|f| {
-                            if f.is_directory() {
-                                match f.total_size() { Size::Some(s) => s, _ => 0 }
-                            } else if f.is_file() {
-                                f.metadata.len()
-                            } else {
-                                0
-                            }
-                        }).sum();
-                        egg.file.set_cached_total_size(dir_total);
-
-                        // Patch the parent row's size cell with the real value.
-                        if let Some(ref mut t) = table.as_mut() {
-                            if let Some((col_idx, new_cell)) = t.rerender_size_cell(egg.file) {
-                                if let Some(ref mut row) = rows[parent_row_idx].cells {
-                                    row.replace_cell(col_idx, new_cell);
-                                    t.add_widths(row);
-                                }
-                            }
-                        }
-                    }
-
                     continue;
                 }
             }

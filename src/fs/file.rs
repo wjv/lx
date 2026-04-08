@@ -492,12 +492,6 @@ impl<'dir> File<'dir> {
         }
     }
 
-    /// Inject a pre-computed total size (e.g. from post-order tree
-    /// accumulation).  No-op if the size was already set.
-    pub fn set_cached_total_size(&self, size: u64) {
-        let _ = self.cached_total_size.set(size);
-    }
-
     /// Recursively sum file sizes in a directory.
     ///
     /// Uses rayon to parallelise subdirectory walks for performance
