@@ -8,10 +8,19 @@ use std::os::windows::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use std::collections::HashMap;
+use std::sync::{LazyLock, Mutex};
+
 use log::*;
 
 use crate::fs::dir::Dir;
 use crate::fs::fields as f;
+
+/// Cache of total directory sizes keyed by (device, inode).
+/// Prevents re-walking the same physical directory multiple times.
+#[cfg(unix)]
+static DIR_SIZE_CACHE: LazyLock<Mutex<HashMap<(u64, u64), u64>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 
 /// A **File** is a wrapper around one of Rust’s `PathBuf` values, along with
@@ -476,20 +485,39 @@ impl<'dir> File<'dir> {
         }
     }
 
+    /// Inject a pre-computed total size (e.g. from post-order tree
+    /// accumulation).  No-op if the size was already set.
+    pub fn set_cached_total_size(&self, size: u64) {
+        let _ = self.cached_total_size.set(size);
+    }
+
     /// Recursively sum file sizes in a directory.
     ///
     /// Uses rayon to parallelise subdirectory walks for performance
     /// on multi-core systems.  The syscall overhead (many `stat()`
     /// calls) dominates, so parallelism lets the kernel pipeline I/O.
+    ///
+    /// Results are cached by `(dev, ino)` to avoid re-walking the same
+    /// physical directory when encountered through hardlinks or
+    /// multiple paths.
     fn dir_total_size(path: &std::path::Path) -> u64 {
         use rayon::prelude::*;
+
+        // Check the (dev, ino) cache before walking.
+        #[cfg(unix)]
+        if let Ok(meta) = std::fs::symlink_metadata(path) {
+            let key = (meta.dev(), meta.ino());
+            if let Some(&cached) = DIR_SIZE_CACHE.lock().unwrap().get(&key) {
+                return cached;
+            }
+        }
 
         let entries: Vec<_> = match std::fs::read_dir(path) {
             Ok(e) => e.filter_map(std::result::Result::ok).collect(),
             Err(_) => return 0,
         };
 
-        entries.par_iter().map(|entry| {
+        let size: u64 = entries.par_iter().map(|entry| {
             let ft = match entry.file_type() {
                 Ok(ft) => ft,
                 Err(_) => return 0,
@@ -502,7 +530,16 @@ impl<'dir> File<'dir> {
             } else {
                 0
             }
-        }).sum()
+        }).sum();
+
+        // Store in cache for future lookups.
+        #[cfg(unix)]
+        if let Ok(meta) = std::fs::symlink_metadata(path) {
+            let key = (meta.dev(), meta.ino());
+            DIR_SIZE_CACHE.lock().unwrap().insert(key, size);
+        }
+
+        size
     }
 
     /// This file’s last modified timestamp, if available on this platform.
