@@ -1,0 +1,46 @@
+# Catppuccin Latte colour theme for lx (light background)
+# https://catppuccin.com/
+#
+# Copy to ~/.config/lx/conf.d/ to activate, then use:
+#   --theme=catppuccin-latte  or  theme = "catppuccin-latte" in a personality
+
+[theme.catppuccin-latte]
+inherits = "exa"
+use-style = "catppuccin-latte"
+
+# UI elements — warm pastels on light background
+directory = "bold #1e66f5"
+symlink = "#179299"
+executable = "#40a02b"
+date = "#9ca0b0"
+user-you = "#4c4f69"
+user-other = "#9ca0b0"
+group-yours = "#179299"
+group-other = "#9ca0b0"
+uid-you = "#1e66f5"
+uid-other = "#9ca0b0"
+gid-yours = "#7287fd"
+gid-other = "#9ca0b0"
+size-number = "#4c4f69"
+size-unit = "#9ca0b0"
+permissions-user-read = "#40a02b"
+permissions-user-write = "#d20f39"
+permissions-user-execute = "#df8e1d"
+permissions-group-read = "#40a02b"
+permissions-group-write = "#d20f39"
+permissions-group-execute = "#df8e1d"
+permissions-other-read = "#40a02b"
+permissions-other-write = "#d20f39"
+permissions-other-execute = "#df8e1d"
+
+[style.catppuccin-latte]
+class.image = "#ea76cb"
+class.video = "#8839ef"
+class.music = "#04a5e5"
+class.lossless = "#04a5e5"
+class.crypto = "#df8e1d"
+class.document = "#4c4f69"
+class.compressed = "#d20f39"
+class.compiled = "#fe640b"
+class.temp = "#9ca0b0"
+class.immediate = "bold underline #df8e1d"

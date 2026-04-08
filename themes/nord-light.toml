@@ -1,0 +1,50 @@
+# Nord Light colour theme for lx (light background)
+# https://www.nordtheme.com/
+#
+# Nord doesn't officially define a light variant, but the palette
+# works well inverted: Snow Storm as foreground on a light base,
+# Polar Night for muted elements, Frost and Aurora for accents.
+#
+# Copy to ~/.config/lx/conf.d/ to activate, then use:
+#   --theme=nord-light  or  theme = "nord-light" in a personality
+
+[theme.nord-light]
+inherits = "exa"
+use-style = "nord-light"
+
+# UI elements — Arctic palette on light background
+directory = "bold #5e81ac"
+symlink = "#88c0d0"
+executable = "#a3be8c"
+date = "#b8c5d4"
+user-you = "#2e3440"
+user-other = "#b8c5d4"
+group-yours = "#5e81ac"
+group-other = "#b8c5d4"
+uid-you = "#88c0d0"
+uid-other = "#b8c5d4"
+gid-yours = "#a3be8c"
+gid-other = "#b8c5d4"
+size-number = "#2e3440"
+size-unit = "#b8c5d4"
+permissions-user-read = "#a3be8c"
+permissions-user-write = "#bf616a"
+permissions-user-execute = "#ebcb8b"
+permissions-group-read = "#a3be8c"
+permissions-group-write = "#bf616a"
+permissions-group-execute = "#ebcb8b"
+permissions-other-read = "#a3be8c"
+permissions-other-write = "#bf616a"
+permissions-other-execute = "#ebcb8b"
+
+[style.nord-light]
+class.image = "#b48ead"
+class.video = "#b48ead"
+class.music = "#88c0d0"
+class.lossless = "#88c0d0"
+class.crypto = "#ebcb8b"
+class.document = "#2e3440"
+class.compressed = "#bf616a"
+class.compiled = "#d08770"
+class.temp = "#b8c5d4"
+class.immediate = "bold underline #ebcb8b"

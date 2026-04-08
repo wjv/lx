@@ -1,0 +1,46 @@
+# Gruvbox Light colour theme for lx (light background)
+# https://github.com/morhetz/gruvbox
+#
+# Copy to ~/.config/lx/conf.d/ to activate, then use:
+#   --theme=gruvbox-light  or  theme = "gruvbox-light" in a personality
+
+[theme.gruvbox-light]
+inherits = "exa"
+use-style = "gruvbox-light"
+
+# UI elements — retro, warm palette on light background
+directory = "bold #076678"
+symlink = "#427b58"
+executable = "#79740e"
+date = "#a89984"
+user-you = "#3c3836"
+user-other = "#a89984"
+group-yours = "#427b58"
+group-other = "#a89984"
+uid-you = "#b57614"
+uid-other = "#a89984"
+gid-yours = "#076678"
+gid-other = "#a89984"
+size-number = "#3c3836"
+size-unit = "#a89984"
+permissions-user-read = "#79740e"
+permissions-user-write = "#9d0006"
+permissions-user-execute = "#b57614"
+permissions-group-read = "#79740e"
+permissions-group-write = "#9d0006"
+permissions-group-execute = "#b57614"
+permissions-other-read = "#79740e"
+permissions-other-write = "#9d0006"
+permissions-other-execute = "#b57614"
+
+[style.gruvbox-light]
+class.image = "#8f3f71"
+class.video = "#8f3f71"
+class.music = "#427b58"
+class.lossless = "#427b58"
+class.crypto = "#b57614"
+class.document = "#3c3836"
+class.compressed = "#9d0006"
+class.compiled = "#af3a03"
+class.temp = "#a89984"
+class.immediate = "bold underline #b57614"
