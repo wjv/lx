@@ -1052,7 +1052,7 @@ pub fn write_init_config(path: &PathBuf) -> std::io::Result<()> {
 ///
 /// Shows the resolved personality, format, theme, style, and classes,
 /// indicating for each whether it's compiled-in or from the config file.
-pub fn show_config(personality_name: &str) {
+pub fn show_config(personality_name: &str, activated_by: &str) {
     use nu_ansi_term::{Color, Style};
 
     // Styling consistent with --help: yellow bold headers, cyan bold
@@ -1095,6 +1095,7 @@ pub fn show_config(personality_name: &str) {
         "builtin"
     };
     println!("  {} {}", label.paint("source:"), dimmed.paint(source));
+    println!("  {} {}", label.paint("activated by:"), dimmed.paint(activated_by));
 
     if let Ok(Some(p)) = resolve_personality(personality_name) {
         if let Some(ref inherits) = p.inherits {

@@ -79,33 +79,47 @@ fn main() {
 
     // Layer 1: personality (skip when upgrading — config may be legacy).
     let mut active_personality: Option<String> = None;
+    // Tracks how the personality was chosen (for --show-config).
+    let mut personality_source = "default";
     if !upgrading {
-        // Determine which personality to apply.
-        // Explicit --personality/-p takes priority; if absent, check argv[0].
+        // Personality resolution: -p → argv[0] → $LX_PERSONALITY → "lx".
         let explicit_personality = find_personality_arg(&cli_args);
-        let explicit = explicit_personality.is_some();
-        let personality_name = explicit_personality.or_else(|| {
-            let argv0 = env::args().next()?;
-            let bin_name = std::path::Path::new(&argv0)
+        let from_env = env::var("LX_PERSONALITY").ok().filter(|s| !s.is_empty());
+        // Error on unknown name when the user asked explicitly (-p or env var).
+        let explicit = explicit_personality.is_some() || from_env.is_some();
+
+        let personality_name = if let Some(name) = explicit_personality {
+            personality_source = "-p";
+            debug!("-p dispatch: {name}");
+            Some(name)
+        } else if let Some(bin_name) = env::args().next().and_then(|argv0| {
+            let name = std::path::Path::new(&argv0)
                 .file_name()?
                 .to_string_lossy()
                 .to_string();
-            // Check if this name resolves to a personality (config or compiled-in).
-            // We only probe here; actual resolution + error handling happens below.
-            match config::resolve_personality(&bin_name) {
-                Ok(Some(_)) | Err(_) => {
-                    debug!("argv[0] dispatch: {bin_name}");
-                    Some(bin_name)
-                }
-                Ok(None) => {
-                    debug!("argv[0] is '{bin_name}' but no matching personality found; using default");
-                    None
-                }
+            // "lx" is the binary's own name, not a deliberate symlink —
+            // skip it so $LX_PERSONALITY can take effect.
+            if name == "lx" {
+                return None;
             }
-        });
+            match config::resolve_personality(&name) {
+                Ok(Some(_)) | Err(_) => Some(name),
+                Ok(None) => None,
+            }
+        }) {
+            personality_source = "argv[0]";
+            debug!("argv[0] dispatch: {bin_name}");
+            Some(bin_name)
+        } else if let Some(name) = from_env {
+            personality_source = "$LX_PERSONALITY";
+            debug!("$LX_PERSONALITY: {name}");
+            Some(name)
+        } else {
+            None
+        };
 
-        // Apply the resolved personality, falling back to "lx" if argv[0]
-        // didn't match any personality and no explicit -p was given.
+        // Apply the resolved personality, falling back to "lx" if no
+        // earlier stage matched.
         let personality_name = personality_name.unwrap_or_else(|| "lx".to_string());
         {
             match config::resolve_personality(&personality_name) {
@@ -191,7 +205,7 @@ fn main() {
 
         OptionsResult::ShowConfig => {
             let name = active_personality.as_deref().unwrap_or("lx");
-            config::show_config(name);
+            config::show_config(name, personality_source);
         }
 
         OptionsResult::DumpClass(ref name) => {

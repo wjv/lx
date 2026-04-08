@@ -391,7 +391,15 @@ inheritable, introspectable way to have multiple "modes" for listing
 files, without shell configuration.  A personality is a named bundle
 of flags and settings, activated either by the name lx is invoked
 under (via an `argv[0]` symlink), by the `-p`/`--personality` flag,
-or by the compiled-in default when bare `lx` is run.
+by the `LX_PERSONALITY` environment variable, or by the compiled-in
+default when bare `lx` is run.
+
+Resolution precedence (highest to lowest): `-p` flag, `argv[0]`
+symlink name, `$LX_PERSONALITY`, compiled-in default (`lx`).  When
+lx is invoked by its own name, the `argv[0]` step is skipped so
+that `$LX_PERSONALITY` can take effect.  An unknown name from `-p`
+or `$LX_PERSONALITY` is an error; an unknown `argv[0]` name falls
+through silently.
 
 `-p`, `--personality=NAME`
 : Apply a named personality for this invocation.  Equivalent to
@@ -585,6 +593,11 @@ for UI elements (e.g. `ur` for user-read permission, `da` for date).
 
 `LX_ICON_SPACING`
 : Number of spaces between an icon and its filename.
+
+`LX_PERSONALITY`
+: Session-level personality selection.  Equivalent to `-p NAME` but
+lower in precedence than both `-p` and `argv[0]` symlink dispatch.
+Useful for setting a default personality per terminal or shell session.
 
 `LS_COLORS`
 : Standard file-type colour scheme.

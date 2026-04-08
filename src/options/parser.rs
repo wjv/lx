@@ -116,6 +116,7 @@ Column overrides:\n  \
 Environment:\n  \
   NO_COLOR        Disable all colour output (no-color.org)\n  \
   LX_CONFIG       Explicit path to config file\n  \
+  LX_PERSONALITY  Session-level personality selection\n  \
   LS_COLORS       File-type colour scheme\n  \
   TIME_STYLE      Default timestamp style")
 

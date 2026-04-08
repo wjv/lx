@@ -110,6 +110,21 @@ lx -p ll
 lx --personality tree
 ```
 
+You can also set a session-level default via the `LX_PERSONALITY`
+environment variable:
+
+```sh
+export LX_PERSONALITY=ll    # every lx invocation in this shell uses ll
+```
+
+The full resolution order is: `-p` flag → argv[0] symlink name →
+`$LX_PERSONALITY` → compiled-in default (`lx`).  When lx is invoked
+as itself (i.e. argv[0] is `lx`), the argv[0] step is skipped so
+that the environment variable can take effect — `$LX_PERSONALITY` is
+conceptually "the personality for bare `lx`".  Symlinks like `ll` or
+`tree` still win over the environment variable because they're
+structural: when you type `ll`, you always mean "long view".
+
 ### Inheritance
 
 Personalities form a tree via `inherits`.  Children replace the
