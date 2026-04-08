@@ -452,8 +452,19 @@ default set all eight slots.
 
 **UI elements:**
 
-: `punctuation`, `date`, `inode`, `blocks`, `header`, `octal`,
+: `punctuation`, `inode`, `blocks`, `header`, `octal`,
 `symlink-path`, `control-char`, `broken-symlink`, `broken-overlay`.
+
+**Timestamps (age-based gradient):**
+
+: `date` (bulk setter — sets all tiers at once),
+`date-now` (< 1 hour), `date-today` (< 24 hours),
+`date-week` (< 7 days), `date-month` (< 30 days),
+`date-year` (< 365 days), `date-old` (> 1 year).
+
+Setting `date` alone is backwards compatible — all timestamps
+render in the same colour.  Setting individual tiers creates a
+gradient that shows file age at a glance.
 
 The compiled-in "exa" theme
 ---------------------------

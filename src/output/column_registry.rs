@@ -165,22 +165,22 @@ fn render_flags(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> Text
 
 fn render_modified(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
     use crate::output::render::TimeRender;
-    file.modified_time().render(ctx.theme.ui.date, ctx.time_format)
+    file.modified_time().render(&ctx.theme.ui.date, ctx.time_format)
 }
 
 fn render_changed(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
     use crate::output::render::TimeRender;
-    file.changed_time().render(ctx.theme.ui.date, ctx.time_format)
+    file.changed_time().render(&ctx.theme.ui.date, ctx.time_format)
 }
 
 fn render_accessed(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
     use crate::output::render::TimeRender;
-    file.accessed_time().render(ctx.theme.ui.date, ctx.time_format)
+    file.accessed_time().render(&ctx.theme.ui.date, ctx.time_format)
 }
 
 fn render_created(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
     use crate::output::render::TimeRender;
-    file.created_time().render(ctx.theme.ui.date, ctx.time_format)
+    file.created_time().render(&ctx.theme.ui.date, ctx.time_format)
 }
 
 

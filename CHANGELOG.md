@@ -18,6 +18,13 @@ All notable changes to lx are documented here. lx is forked from
   `LX_GRID_ROWS` / `LX_ICON_SPACING` env-var-only).
 - `decimal-point` and `thousands-separator` personality config keys
   for overriding locale numeric formatting.
+- Age-based timestamp colouring: six tiers from "just now"
+  (bright cyan) to "old" (grey).  Theme keys `date-now` through
+  `date-old`; `date` remains a bulk setter for backwards
+  compatibility.
+- Three new light-background curated themes: Catppuccin Latte,
+  Gruvbox Light, Nord Light.
+- Error on unknown `--theme=NAME` (exit 3, same as unknown `-p`).
 - Dependabot for Cargo + GitHub Actions dependency updates.
 - `cargo-deny` in CI (licence compliance + security advisories).
 - Weekly scheduled security audit workflow.

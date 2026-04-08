@@ -15,7 +15,7 @@ pub struct UiStyles {
     pub vcs:        Git,
 
     pub punctuation:  Style,
-    pub date:         Style,
+    pub date:         DateAge,
     pub inode:        Style,
     pub blocks:       Style,
     pub header:       Style,
@@ -78,6 +78,45 @@ pub struct Size {
     pub unit_mega: Style,
     pub unit_giga: Style,
     pub unit_huge: Style,
+}
+
+/// Age-based timestamp styles.  Six tiers from "just now" to "old".
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct DateAge {
+    pub now:   Style,   // < 1 hour
+    pub today: Style,   // < 24 hours
+    pub week:  Style,   // < 7 days
+    pub month: Style,   // < 30 days
+    pub year:  Style,   // < 365 days
+    pub old:   Style,   // > 1 year
+}
+
+impl DateAge {
+    /// Set all tiers to the same style (bulk setter for `date = ...`).
+    pub fn set_all(&mut self, style: Style) {
+        self.now = style;
+        self.today = style;
+        self.week = style;
+        self.month = style;
+        self.year = style;
+        self.old = style;
+    }
+
+    /// Pick the style for a given age in seconds.
+    pub fn for_age(&self, age_secs: u64) -> Style {
+        const HOUR: u64 = 3600;
+        const DAY: u64 = 86400;
+        const WEEK: u64 = 7 * DAY;
+        const MONTH: u64 = 30 * DAY;
+        const YEAR: u64 = 365 * DAY;
+
+        if age_secs < HOUR       { self.now }
+        else if age_secs < DAY   { self.today }
+        else if age_secs < WEEK  { self.week }
+        else if age_secs < MONTH { self.month }
+        else if age_secs < YEAR  { self.year }
+        else                     { self.old }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -197,7 +236,13 @@ impl UiStyles {
             "gt" => self.vcs.typechange           = pair.to_style(),
 
             "xx" => self.punctuation              = pair.to_style(),
-            "da" => self.date                     = pair.to_style(),
+            "da" => self.date.set_all(pair.to_style()),
+            "dn" => self.date.now                = pair.to_style(),
+            "dt" => self.date.today              = pair.to_style(),
+            "dw" => self.date.week               = pair.to_style(),
+            "dm" => self.date.month              = pair.to_style(),
+            "dy" => self.date.year               = pair.to_style(),
+            "do" => self.date.old                = pair.to_style(),
             "in" => self.inode                    = pair.to_style(),
             "bl" => self.blocks                   = pair.to_style(),
             "hd" => self.header                   = pair.to_style(),
@@ -305,7 +350,13 @@ impl UiStyles {
 
             // UI elements
             "punctuation"      => self.punctuation      = style,
-            "date"             => self.date              = style,
+            "date"             => self.date.set_all(style),
+            "date-now"         => self.date.now           = style,
+            "date-today"       => self.date.today         = style,
+            "date-week"        => self.date.week          = style,
+            "date-month"       => self.date.month         = style,
+            "date-year"        => self.date.year          = style,
+            "date-old"         => self.date.old           = style,
             "inode"            => self.inode             = style,
             "blocks"           => self.blocks            = style,
             "header"           => self.header            = style,

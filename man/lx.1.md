@@ -66,6 +66,10 @@ Alias: `--color`.
 `256` (extended palette), or `none`. Default when bare: `16`.
 Alias: `--color-scale`.
 
+Timestamps are also coloured by age: recent files appear brighter,
+older files fade towards grey.  The six tiers (`date-now` through
+`date-old`) are theme keys — see **lxconfig.toml**(5).
+
 `--icons`[`=WHEN`]
 : Display icons next to file names. WHEN is `always`, `auto`, or `never`.
 

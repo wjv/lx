@@ -71,7 +71,14 @@ impl UiStyles {
             },
 
             punctuation:  Fixed(244).normal(),
-            date:         Blue.normal(),
+            date: DateAge {
+                now:   Cyan.bold(),
+                today: Cyan.normal(),
+                week:  Blue.bold(),
+                month: Blue.normal(),
+                year:  Fixed(244).normal(),
+                old:   Fixed(240).normal(),
+            },
             inode:        Purple.normal(),
             blocks:       Cyan.normal(),
             octal:        Purple.normal(),

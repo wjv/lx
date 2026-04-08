@@ -5,7 +5,7 @@ use crate::output::file_name::Colours as FileNameColours;
 use crate::output::render;
 
 mod ui_styles;
-pub use self::ui_styles::UiStyles;
+pub use self::ui_styles::{UiStyles, DateAge};
 
 mod lsc;
 pub use self::lsc::LSColors;
@@ -683,7 +683,7 @@ mod customs_test {
     test!(lx_gt:  ls "", lx "gt=38;5;127"  =>  colours c -> { c.vcs.typechange            = Fixed(127).normal(); });
 
     test!(lx_xx:  ls "", lx "xx=38;5;128"  =>  colours c -> { c.punctuation               = Fixed(128).normal(); });
-    test!(lx_da:  ls "", lx "da=38;5;129"  =>  colours c -> { c.date                      = Fixed(129).normal(); });
+    test!(lx_da:  ls "", lx "da=38;5;129"  =>  colours c -> { c.date.set_all(Fixed(129).normal()); });
     test!(lx_in:  ls "", lx "in=38;5;130"  =>  colours c -> { c.inode                     = Fixed(130).normal(); });
     test!(lx_bl:  ls "", lx "bl=38;5;131"  =>  colours c -> { c.blocks                    = Fixed(131).normal(); });
     test!(lx_hd:  ls "", lx "hd=38;5;132"  =>  colours c -> { c.header                    = Fixed(132).normal(); });
@@ -718,7 +718,7 @@ mod customs_test {
 
     // Finally, colours get applied right-to-left:
     test!(ls_overwrite:  ls "pi=31:pi=32:pi=33", lx ""  =>  colours c -> { c.filekinds.pipe = Yellow.normal(); });
-    test!(lx_overwrite: ls "", lx "da=36:da=35:da=34"  =>  colours c -> { c.date = Blue.normal(); });
+    test!(lx_overwrite: ls "", lx "da=36:da=35:da=34"  =>  colours c -> { c.date.set_all(Blue.normal()); });
 }
 
 

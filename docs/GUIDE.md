@@ -742,6 +742,24 @@ lx -l --size-style=decimal
 A personality can set `size-style = "binary"` (or `"bytes"` or
 `"decimal"`) and the CLI flag overrides it for one invocation.
 
+### Timestamp colours
+
+Timestamps are coloured by age — recent files appear brighter,
+older files fade towards grey.  Six tiers:
+
+| Theme key | Age | Builtin colour |
+|-----------|-----|----------------|
+| `date-now` | < 1 hour | bright cyan |
+| `date-today` | < 24 hours | cyan |
+| `date-week` | < 7 days | bold blue |
+| `date-month` | < 30 days | blue |
+| `date-year` | < 365 days | grey |
+| `date-old` | > 1 year | dark grey |
+
+Setting `date = "steelblue"` in a theme sets all tiers to the
+same colour (backwards compatible).  Set individual tiers to
+create a custom gradient.
+
 ### Summary footer
 
 `-C` / `--count` prints an item count to stderr after the listing.
