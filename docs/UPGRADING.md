@@ -10,7 +10,28 @@ Each section is written assuming you're coming from the immediately
 preceding release.  If you're jumping multiple versions, read them
 in order.
 
+- [Upgrading to 0.9](#upgrading-to-09)
 - [Upgrading to 0.8](#upgrading-to-08)
+
+
+## Upgrading to 0.9
+
+0.9 is the **performance release** — the tentpole is the traversal
+redesign for `--total-size`.  There is one theming change:
+
+### UID/GID theme cascade removed
+
+In 0.8, the `uid-you` / `uid-other` / `gid-yours` / `gid-other`
+theme slots cascaded from `user-you` / `group-yours` when unset.
+In 0.9, they are independent slots with no cascade.
+
+**If you have a custom theme** that sets `user-you` but not
+`uid-you`: add explicit `uid-you` and `uid-other` entries (and
+likewise for `gid-yours` / `gid-other`).  All six curated themes
+and the builtin default now set all eight identity slots
+explicitly.
+
+**If you never customised these slots:** no action needed.
 
 
 ## Upgrading to 0.8

@@ -112,11 +112,6 @@ impl Options {
             Box::new(NoFileColours)
         };
 
-        // Layer 5: fill in any cascading-default slots (UID/GID
-        // columns) that no earlier layer set explicitly.  See
-        // `UiStyles::finalise_defaults` for the rationale.
-        ui.finalise_defaults();
-
         Theme { ui, exts }
     }
 
@@ -390,13 +385,8 @@ impl render::GroupColours for Theme {
     fn yours(&self)      -> Style { self.ui.users.group_yours }
     fn not_yours(&self)  -> Style { self.ui.users.group_not_yours }
 
-    // GID column cascades from the group slots when unset.
-    fn gid_yours(&self)  -> Style {
-        self.ui.users.gid_yours.unwrap_or(self.ui.users.group_yours)
-    }
-    fn gid_not_yours(&self) -> Style {
-        self.ui.users.gid_not_yours.unwrap_or(self.ui.users.group_not_yours)
-    }
+    fn gid_yours(&self)     -> Style { self.ui.users.gid_yours }
+    fn gid_not_yours(&self) -> Style { self.ui.users.gid_not_yours }
 }
 
 impl render::LinksColours for Theme {
@@ -457,13 +447,8 @@ impl render::UserColours for Theme {
     fn you(&self)           -> Style { self.ui.users.user_you }
     fn someone_else(&self)  -> Style { self.ui.users.user_someone_else }
 
-    // UID column cascades from the user slots when unset.
-    fn uid_you(&self) -> Style {
-        self.ui.users.uid_you.unwrap_or(self.ui.users.user_you)
-    }
-    fn uid_someone_else(&self) -> Style {
-        self.ui.users.uid_someone_else.unwrap_or(self.ui.users.user_someone_else)
-    }
+    fn uid_you(&self)           -> Style { self.ui.users.uid_you }
+    fn uid_someone_else(&self)  -> Style { self.ui.users.uid_someone_else }
 }
 
 impl FileNameColours for Theme {
@@ -705,143 +690,24 @@ mod customs_test {
 
 #[cfg(test)]
 #[cfg(unix)]
-mod uid_gid_cascade_test {
+mod uid_gid_theme_test {
     use super::*;
     use crate::output::render::UserColours;
-    use crate::theme::ui_styles::{
-        UiStyles,
-        default_uid_placeholder_you, default_uid_placeholder_other,
-    };
+    use crate::theme::ui_styles::UiStyles;
     use nu_ansi_term::Color::*;
 
-    /// Construct a plain Theme with the given UiStyles.
     fn theme_with(ui: UiStyles) -> Theme {
         Theme { ui, exts: Box::new(NoFileColours) }
     }
 
-    /// Return a style with only `is_dimmed = true` set.
-    fn dimmed(base: Style) -> Style {
-        let mut s = base;
-        s.is_dimmed = true;
-        s
-    }
-
-    // ── Stage 1: stale-placeholder invalidation ──────────────
-
     #[test]
-    fn finalise_clears_stale_uid_placeholder_when_user_overridden() {
-        // Simulate the catppuccin-style case: default_theme (including
-        // the uid_you placeholder) has been installed, then a curated
-        // theme overrides user_you but not uid_you.  finalise should
-        // treat the placeholder as stale and cascade from the new
-        // user_you.
+    fn theme_trait_returns_direct_fields() {
         let mut ui = UiStyles::default_theme(ColourScale::None);
-        ui.users.user_you = Purple.bold();  // curated theme override
-        ui.finalise_defaults();
-        assert_eq!(ui.users.uid_you, Some(dimmed(Purple.bold())));
-    }
+        ui.users.uid_you = Red.normal();
+        ui.users.uid_someone_else = Green.normal();
 
-    #[test]
-    fn finalise_keeps_default_placeholder_when_no_override() {
-        // No override: user_you is still at the compiled default, so
-        // the uid_you placeholder is NOT stale and should survive.
-        // This is the out-of-the-box default-theme case.
-        let mut ui = UiStyles::default_theme(ColourScale::None);
-        ui.finalise_defaults();
-        assert_eq!(ui.users.uid_you, Some(default_uid_placeholder_you()));
-        assert_eq!(ui.users.uid_someone_else, Some(default_uid_placeholder_other()));
-        assert_eq!(ui.users.gid_yours, Some(default_uid_placeholder_you()));
-        assert_eq!(ui.users.gid_not_yours, Some(default_uid_placeholder_other()));
-    }
-
-    #[test]
-    fn finalise_clears_stale_gid_placeholder_when_group_overridden() {
-        let mut ui = UiStyles::default_theme(ColourScale::None);
-        ui.users.group_yours = Cyan.bold();
-        ui.finalise_defaults();
-        assert_eq!(ui.users.gid_yours, Some(dimmed(Cyan.bold())));
-    }
-
-    // ── Stage 2: dim cascade for None slots ──────────────────
-
-    #[test]
-    fn finalise_fills_uid_with_dimmed_user_from_plain() {
-        // Starting from plain() (not default_theme), all slots are None.
-        // After setting user_you and running finalise, uid_you should
-        // become dim(user_you).
-        let mut ui = UiStyles::plain();
-        ui.users.user_you = Purple.bold();
-        ui.users.user_someone_else = Green.normal();
-        ui.finalise_defaults();
-        assert_eq!(ui.users.uid_you, Some(dimmed(Purple.bold())));
-        assert_eq!(ui.users.uid_someone_else, Some(dimmed(Green.normal())));
-    }
-
-    // ── Explicit override always wins ────────────────────────
-
-    #[test]
-    fn finalise_preserves_explicit_uid() {
-        let mut ui = UiStyles::default_theme(ColourScale::None);
-        ui.users.user_you = Purple.bold();  // override user_you
-        ui.users.uid_you = Some(Red.normal());  // explicit uid-you override
-        ui.finalise_defaults();
-        // Explicit uid-you survives both stages.
-        assert_eq!(ui.users.uid_you, Some(Red.normal()));
-    }
-
-    #[test]
-    fn finalise_preserves_explicit_gid() {
-        let mut ui = UiStyles::default_theme(ColourScale::None);
-        ui.users.group_yours = Cyan.bold();
-        ui.users.gid_yours = Some(Yellow.bold().italic());  // odd explicit choice
-        ui.finalise_defaults();
-        assert_eq!(ui.users.gid_yours, Some(Yellow.bold().italic()));
-    }
-
-    // ── End-to-end via the Theme Colours trait ───────────────
-
-    #[test]
-    fn default_theme_uid_is_256_safe() {
-        // This is the invariant test: after theme construction with
-        // no override, the UID slots must hold only values from the
-        // 8-colour ANSI palette or the 256-colour xterm palette.
-        // No truecolor, no `is_dimmed`, no `is_bold`.
-        let mut ui = UiStyles::default_theme(ColourScale::None);
-        ui.finalise_defaults();
         let theme = theme_with(ui);
-        let you = <Theme as UserColours>::uid_you(&theme);
-        let other = <Theme as UserColours>::uid_someone_else(&theme);
-        assert!(!you.is_dimmed, "uid_you should not use the dim attribute");
-        assert!(!other.is_dimmed, "uid_someone_else should not use the dim attribute");
-        assert_eq!(you, default_uid_placeholder_you());
-        assert_eq!(other, default_uid_placeholder_other());
+        assert_eq!(<Theme as UserColours>::uid_you(&theme), Red.normal());
+        assert_eq!(<Theme as UserColours>::uid_someone_else(&theme), Green.normal());
     }
-
-    #[test]
-    fn curated_theme_uid_cascades_to_dim() {
-        // Simulates the catppuccin path: curated theme inherits from
-        // exa (which resets to default_theme) and then overrides
-        // user_you with a truecolor hex.  The UID column should
-        // cascade from the new user_you with dim applied.
-        let mut ui = UiStyles::default_theme(ColourScale::None);
-        let lavender = Rgb(205, 214, 244);  // #cdd6f4
-        ui.users.user_you = lavender.normal();
-        ui.finalise_defaults();
-        let theme = theme_with(ui);
-        assert_eq!(<Theme as UserColours>::you(&theme), lavender.normal());
-        assert_eq!(<Theme as UserColours>::uid_you(&theme), dimmed(lavender.normal()));
-    }
-
-    /// Round-trip verification that the trait-level getters return
-    /// what finalise put in.
-    #[test]
-    fn theme_trait_roundtrip_after_finalise() {
-        let mut ui = UiStyles::default_theme(ColourScale::None);
-        ui.users.user_you = Purple.bold();
-        ui.finalise_defaults();
-        let theme = theme_with(ui);
-        assert_eq!(<Theme as UserColours>::you(&theme), Purple.bold());
-        assert_eq!(<Theme as UserColours>::uid_you(&theme), dimmed(Purple.bold()));
-    }
-
 }

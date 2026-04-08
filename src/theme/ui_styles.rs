@@ -86,18 +86,10 @@ pub struct Users {
     pub user_someone_else: Style,
     pub group_yours: Style,
     pub group_not_yours: Style,
-
-    /// `--uid` column styles.  `None` means cascade from `user_you`
-    /// / `user_someone_else` — so themes that set only `user-you`
-    /// implicitly also set the UID column colour, but themes that
-    /// set `uid-you` explicitly get fine-grained control.
-    pub uid_you: Option<Style>,
-    pub uid_someone_else: Option<Style>,
-
-    /// `--gid` column styles.  `None` means cascade from
-    /// `group_yours` / `group_not_yours`.
-    pub gid_yours: Option<Style>,
-    pub gid_not_yours: Option<Style>,
+    pub uid_you: Style,
+    pub uid_someone_else: Style,
+    pub gid_yours: Style,
+    pub gid_not_yours: Style,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -117,122 +109,9 @@ pub struct Git {
     pub conflicted: Style,
 }
 
-// ── Compiled default values for the cascading theme slots ──────
-//
-// These are the single source of truth for what the compiled
-// default theme installs for `user_you` / `group_yours` and the
-// corresponding `uid_*` / `gid_*` placeholder values.  Both
-// `default_theme::colourful()` and `UiStyles::finalise_defaults()`
-// reference these constants so the "is this still the compiled
-// default?" check can't drift out of sync.
-//
-// The rationale is a hybrid of guaranteed 256-colour-safe defaults
-// for the compiled theme plus a dim cascade for curated themes;
-// see `UiStyles::finalise_defaults` below for the two-stage
-// algorithm.
-
-/// Compiled default `user_you` / `group_yours`: bold yellow.
-pub fn default_user_you() -> Style {
-    use nu_ansi_term::Color::Yellow;
-    Yellow.bold()
-}
-
-/// Compiled default `user_someone_else` / `group_not_yours`: plain
-/// terminal foreground.
-pub fn default_user_other() -> Style {
-    Style::default()
-}
-
-/// Compiled default placeholder for the `uid_you` / `gid_yours`
-/// slot: plain (non-bold) yellow, from the 8-colour ANSI base
-/// palette.  Universal rendering on any terminal.
-pub fn default_uid_placeholder_you() -> Style {
-    use nu_ansi_term::Color::Yellow;
-    Yellow.normal()
-}
-
-/// Compiled default placeholder for the `uid_someone_else` /
-/// `gid_not_yours` slot: 256-palette medium grey.
-pub fn default_uid_placeholder_other() -> Style {
-    use nu_ansi_term::Color::Fixed;
-    Fixed(244).normal()
-}
-
-
 impl UiStyles {
     pub fn plain() -> Self {
         Self::default()
-    }
-
-    /// Fill in cascading theme slots with sensible defaults derived
-    /// from their parent slots.  Called once at the end of theme
-    /// construction, after all overrides (compiled defaults, env
-    /// vars, named-theme config) have been applied.
-    ///
-    /// The algorithm is two-stage:
-    ///
-    /// 1. **Invalidate stale placeholders.** If `user_you` has been
-    ///    overridden away from the compiled default but `uid_you`
-    ///    still holds the compiled placeholder, clear the
-    ///    placeholder — it was a safe fallback for the default
-    ///    theme and is no longer relevant once the user or a
-    ///    curated theme picked a different `user_you` colour.
-    ///    The same logic applies to `uid_someone_else` / `gid_*`.
-    ///
-    /// 2. **Dim cascade.** Any slot still `None` is filled with a
-    ///    `is_dimmed` copy of its parent slot (`user_you` →
-    ///    `uid_you`, etc.) so that curated themes which don't set
-    ///    the UID/GID slots explicitly still get a visually
-    ///    differentiated column.
-    ///
-    /// Result: the compiled default theme renders with 8-colour
-    /// ANSI `Yellow.normal()` for the UID column (guaranteed
-    /// rendering on any terminal), while curated themes automatically
-    /// cascade their own colours into a dimmed variant.  Explicit
-    /// `uid-you` settings in any theme survive both stages.
-    pub fn finalise_defaults(&mut self) {
-        fn dimmed(base: Style) -> Style {
-            let mut s = base;
-            s.is_dimmed = true;
-            s
-        }
-
-        // Stage 1: invalidate stale placeholders.
-        let you_overridden = self.users.user_you != default_user_you();
-        let other_overridden = self.users.user_someone_else != default_user_other();
-        let yours_overridden = self.users.group_yours != default_user_you();
-        let not_yours_overridden = self.users.group_not_yours != default_user_other();
-
-        if you_overridden && self.users.uid_you == Some(default_uid_placeholder_you()) {
-            self.users.uid_you = None;
-        }
-        if other_overridden
-            && self.users.uid_someone_else == Some(default_uid_placeholder_other())
-        {
-            self.users.uid_someone_else = None;
-        }
-        if yours_overridden && self.users.gid_yours == Some(default_uid_placeholder_you()) {
-            self.users.gid_yours = None;
-        }
-        if not_yours_overridden
-            && self.users.gid_not_yours == Some(default_uid_placeholder_other())
-        {
-            self.users.gid_not_yours = None;
-        }
-
-        // Stage 2: dim cascade for any remaining None slots.
-        if self.users.uid_you.is_none() {
-            self.users.uid_you = Some(dimmed(self.users.user_you));
-        }
-        if self.users.uid_someone_else.is_none() {
-            self.users.uid_someone_else = Some(dimmed(self.users.user_someone_else));
-        }
-        if self.users.gid_yours.is_none() {
-            self.users.gid_yours = Some(dimmed(self.users.group_yours));
-        }
-        if self.users.gid_not_yours.is_none() {
-            self.users.gid_not_yours = Some(dimmed(self.users.group_not_yours));
-        }
     }
 }
 
@@ -303,10 +182,10 @@ impl UiStyles {
             // Capital U/G = the numeric ID version of the user/group
             // columns.  Case-sensitive, so these don't collide with the
             // lowercase `uu`/`un`/`gu`/`gn` keys above.
-            "Uy" => self.users.uid_you            = Some(pair.to_style()),
-            "Un" => self.users.uid_someone_else   = Some(pair.to_style()),
-            "Gy" => self.users.gid_yours          = Some(pair.to_style()),
-            "Gn" => self.users.gid_not_yours      = Some(pair.to_style()),
+            "Uy" => self.users.uid_you            = pair.to_style(),
+            "Un" => self.users.uid_someone_else   = pair.to_style(),
+            "Gy" => self.users.gid_yours          = pair.to_style(),
+            "Gn" => self.users.gid_not_yours      = pair.to_style(),
 
             "lc" => self.links.normal             = pair.to_style(),
             "lm" => self.links.multi_link_file    = pair.to_style(),
@@ -406,11 +285,10 @@ impl UiStyles {
             "user-other"       => self.users.user_someone_else = style,
             "group-yours"      => self.users.group_yours       = style,
             "group-other"      => self.users.group_not_yours   = style,
-            // UID / GID columns — if unset, they cascade from user/group.
-            "uid-you"          => self.users.uid_you           = Some(style),
-            "uid-other"        => self.users.uid_someone_else  = Some(style),
-            "gid-yours"        => self.users.gid_yours         = Some(style),
-            "gid-other"        => self.users.gid_not_yours     = Some(style),
+            "uid-you"          => self.users.uid_you           = style,
+            "uid-other"        => self.users.uid_someone_else  = style,
+            "gid-yours"        => self.users.gid_yours         = style,
+            "gid-other"        => self.users.gid_not_yours     = style,
 
             // Links
             "links"            => self.links.normal            = style,

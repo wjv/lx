@@ -25,7 +25,7 @@ impl UiStyles {
             perms: Permissions {
                 user_read:           Yellow.bold(),
                 user_write:          Red.bold(),
-                user_execute_file:   Green.bold().underline(),
+                user_execute_file:   Green.bold(),
                 user_execute_other:  Green.bold(),
 
                 group_read:          Yellow.normal(),
@@ -45,24 +45,14 @@ impl UiStyles {
             size: Size::colourful(scale),
 
             users: Users {
-                user_you:           default_user_you(),
-                user_someone_else:  default_user_other(),
-                group_yours:        default_user_you(),
-                group_not_yours:    default_user_other(),
-
-                // UID / GID columns: safe 256-colour-compatible
-                // placeholders.  These survive theme construction
-                // only if no later layer overrides `user_you` etc.;
-                // `finalise_defaults()` clears them as stale and
-                // replaces them with a dim cascade if a curated
-                // theme has picked a different `user_you`.  The
-                // compiled placeholders use only 8/256-palette
-                // colours so the default theme renders predictably
-                // on any terminal.
-                uid_you:            Some(default_uid_placeholder_you()),
-                uid_someone_else:   Some(default_uid_placeholder_other()),
-                gid_yours:          Some(default_uid_placeholder_you()),
-                gid_not_yours:      Some(default_uid_placeholder_other()),
+                user_you:           Yellow.bold(),
+                user_someone_else:  Style::default(),
+                group_yours:        Yellow.bold(),
+                group_not_yours:    Style::default(),
+                uid_you:            Cyan.bold(),
+                uid_someone_else:   Style::default(),
+                gid_yours:          Cyan.bold(),
+                gid_not_yours:      Style::default(),
             },
 
             links: Links {

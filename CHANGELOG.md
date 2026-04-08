@@ -18,15 +18,24 @@ All notable changes to lx are documented here. lx is forked from
   `LX_GRID_ROWS` / `LX_ICON_SPACING` env-var-only).
 - `decimal-point` and `thousands-separator` personality config keys
   for overriding locale numeric formatting.
+- Dependabot for Cargo + GitHub Actions dependency updates.
+- `cargo-deny` in CI (licence compliance + security advisories).
+- Weekly scheduled security audit workflow.
 
 ### Changed
 
-- `--total-size` in tree mode uses single-pass post-order
-  accumulation instead of a redundant second filesystem walk.
-  On NFS: **10x faster wall time** vs 0.8 (4s vs 41s median),
-  7x less kernel time (13s vs 85s).  On local SSD: 2x less
-  kernel time; wall time unchanged.  Directory sizes are cached
-  by `(dev, ino)` for flat listings.
+- `--total-size` in tree mode uses parallel pre-computation and
+  `(dev, ino)` caching instead of a redundant second filesystem
+  walk.  On NFS: **10x faster wall time** vs 0.8 (4s vs 41s
+  median), 7x less kernel time (13s vs 85s).  On local SSD:
+  wall time unchanged; kernel time marginally improved.
+- UID/GID theme cascade removed.  The `uid-you`, `uid-other`,
+  `gid-yours`, `gid-other` theme slots are now independent —
+  no longer cascade from `user-*` / `group-*` when unset.
+  Custom themes that relied on the cascade should add explicit
+  `uid-*` / `gid-*` entries.
+- Linux release builds pinned to `ubuntu-22.04` (glibc 2.35),
+  lowering the floor from glibc 2.39.
 
 
 ## [0.8.0] — 2026-04-07

@@ -437,12 +437,9 @@ sets all unit magnitudes), `size-major`, `size-minor`.
 `uid-you`, `uid-other`, `gid-yours`, `gid-other`.
 
 The `uid-*` and `gid-*` slots style the dedicated `--uid` and
-`--gid` columns. If unset, they cascade from `user-*` / `group-*`
-so themes that only specify the name-column colours automatically
-apply to the numeric ID columns. The compiled-in default theme
-sets them to non-bold versions of the user/group defaults so that
-`-ll --uid --gid` — four adjacent identity columns — reads with
-the numeric IDs as secondary information.
+`--gid` columns.  Each must be set explicitly; there is no cascade
+from `user-*` / `group-*`.  All curated themes and the builtin
+default set all eight slots.
 
 **Links:**
 
