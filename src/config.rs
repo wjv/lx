@@ -159,6 +159,14 @@ pub(crate) static SETTING_FLAGS: &[SettingDef] = &[
     // theme
     SettingDef { key: "theme",         flag: "--theme",           kind: SettingKind::Str },
 
+    // layout tuning (also settable via LX_GRID_ROWS / LX_ICON_SPACING)
+    SettingDef { key: "grid-rows",     flag: "--grid-rows",       kind: SettingKind::Int },
+    SettingDef { key: "icon-spacing",  flag: "--icon-spacing",    kind: SettingKind::Int },
+
+    // numeric formatting (config-only, no short flags)
+    SettingDef { key: "decimal-point",       flag: "--decimal-point",       kind: SettingKind::Str },
+    SettingDef { key: "thousands-separator", flag: "--thousands-separator", kind: SettingKind::Str },
+
     // display
     SettingDef { key: "width",         flag: "--width",           kind: SettingKind::Int },
     SettingDef { key: "absolute",      flag: "--absolute",        kind: SettingKind::Bool },

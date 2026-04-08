@@ -56,6 +56,14 @@ impl ShowIcons {
             return Ok(Self::Off);
         }
 
+        // Config/CLI flag takes precedence over environment variable.
+        if let Some(spacing) = matches.get("icon-spacing") {
+            return match spacing.parse::<u32>() {
+                Ok(n) => Ok(Self::On(n)),
+                Err(e) => Err(OptionsError::FailedParse(spacing.into(), NumberSource::Arg("icon-spacing"), e)),
+            };
+        }
+
         if let Some(columns) = vars.get(vars::LX_ICON_SPACING).and_then(|s| s.into_string().ok()) {
             match columns.parse() {
                 Ok(width) => {

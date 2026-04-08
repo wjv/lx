@@ -25,6 +25,9 @@ pub enum NumberSource {
 
     /// It came from an environment variable.
     Env(&'static str),
+
+    /// It came from a CLI argument or config setting.
+    Arg(&'static str),
 }
 
 impl From<glob::PatternError> for OptionsError {
@@ -37,6 +40,7 @@ impl fmt::Display for NumberSource {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Env(env) => write!(f, "environment variable {env}"),
+            Self::Arg(arg) => write!(f, "argument --{arg}"),
         }
     }
 }

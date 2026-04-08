@@ -44,7 +44,7 @@ impl Mode {
         if long && grid {
             let details = details::Options::deduce_long(matches, vars, long_count)?;
             let grid = grid::Options::deduce(matches);
-            let row_threshold = RowThreshold::deduce(vars)?;
+            let row_threshold = RowThreshold::deduce(matches, vars)?;
             let grid_details = grid_details::Options { grid, details, row_threshold };
             return Ok(Self::GridDetails(grid_details));
         }
@@ -127,8 +127,16 @@ impl TerminalWidth {
 
 
 impl RowThreshold {
-    fn deduce<V: Vars>(vars: &V) -> Result<Self, OptionsError> {
+    fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
         use crate::options::vars;
+
+        // Config/CLI flag takes precedence over environment variable.
+        if let Some(rows) = matches.get("grid-rows") {
+            return match rows.parse::<usize>() {
+                Ok(n) => Ok(Self::MinimumRows(n)),
+                Err(e) => Err(OptionsError::FailedParse(rows.into(), NumberSource::Arg("grid-rows"), e)),
+            };
+        }
 
         if let Some(columns) = vars.get(vars::LX_GRID_ROWS).and_then(|s| s.into_string().ok()) {
             match columns.parse() {

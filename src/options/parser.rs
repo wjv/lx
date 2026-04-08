@@ -757,6 +757,29 @@ Environment:\n  \
             .hide_possible_values(true)
             .value_parser(clap::value_parser!(clap_complete::Shell)))
 
+        // ── Hidden config-only flags ──────────────────────────────
+        // These exist so personality definitions can set them via the
+        // SETTING_FLAGS pipeline.  Not shown in --help.
+
+        .arg(Arg::new("grid-rows")
+            .long("grid-rows")
+            .action(ArgAction::Set)
+            .value_parser(clap::value_parser!(usize))
+            .hide(true))
+        .arg(Arg::new("icon-spacing")
+            .long("icon-spacing")
+            .action(ArgAction::Set)
+            .value_parser(clap::value_parser!(usize))
+            .hide(true))
+        .arg(Arg::new("decimal-point")
+            .long("decimal-point")
+            .action(ArgAction::Set)
+            .hide(true))
+        .arg(Arg::new("thousands-separator")
+            .long("thousands-separator")
+            .action(ArgAction::Set)
+            .hide(true))
+
         // ── Help & version ────────────────────────────────────────
 
         .arg(Arg::new("help")
