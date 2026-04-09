@@ -53,6 +53,193 @@ fn sort_values() -> Vec<PossibleValue> {
 }
 
 
+/// `TypedValueParser` for `--time-style`.
+///
+/// `+strftime` formats are accepted directly; everything else is
+/// delegated to a `PossibleValuesParser` so clap's native error
+/// formatting *and* its built-in "did you mean" suggestions both
+/// kick in.  `+FORMAT` appears in `possible_values()` so the help
+/// text and `[possible values: ...]` hint advertise it, but the
+/// `+`-prefix shortcut means a real `+%Y-%m-%d` value never has to
+/// match against the literal `+FORMAT` token.
+#[derive(Clone)]
+struct TimeStyleParser;
+
+impl clap::builder::TypedValueParser for TimeStyleParser {
+    type Value = String;
+
+    fn parse_ref(
+        &self,
+        cmd: &clap::Command,
+        arg: Option<&clap::Arg>,
+        value: &std::ffi::OsStr,
+    ) -> Result<Self::Value, clap::Error> {
+        if let Some(s) = value.to_str()
+            && s.starts_with('+') {
+                return Ok(s.to_string());
+            }
+        // `+FORMAT` is in the list so the error hint and "did you
+        // mean" suggestions know about it; the `+`-prefix shortcut
+        // above means a real `+%Y-%m-%d` value never has to match
+        // against the literal token.
+        clap::builder::PossibleValuesParser::new([
+            "default", "iso", "long-iso", "full-iso", "relative", "+FORMAT",
+        ])
+        .parse_ref(cmd, arg, value)
+    }
+
+    fn possible_values(
+        &self,
+    ) -> Option<Box<dyn Iterator<Item = PossibleValue> + '_>> {
+        Some(Box::new(
+            [
+                PossibleValue::new("default"),
+                PossibleValue::new("iso"),
+                PossibleValue::new("long-iso"),
+                PossibleValue::new("full-iso"),
+                PossibleValue::new("relative"),
+                PossibleValue::new("+FORMAT"),
+            ]
+            .into_iter(),
+        ))
+    }
+}
+
+
+/// `TypedValueParser` for selectors like `--dump-theme=NAME`,
+/// `--dump-personality=NAME`, `--personality=NAME`, etc.
+///
+/// Wraps a function that returns the list of valid names (called at
+/// parse time so it sees the loaded config).  Empty values are
+/// always accepted (the dump flags use `default_missing_value("")`
+/// to mean "list all", and that path skips the lookup).  Non-empty
+/// unknown names produce a clap-formatted error with `[possible
+/// values: ...]` and a "did you mean" suggestion via clap's built-in
+/// error context, just like every other valued flag.
+#[derive(Clone)]
+struct NameListParser {
+    names_fn: fn() -> Vec<String>,
+    /// If true, accept the empty string (the `--dump-foo` no-value
+    /// case).  Set to false for selectors that always need a name
+    /// (e.g. `--personality=NAME`).
+    allow_empty: bool,
+}
+
+impl NameListParser {
+    const fn new(names_fn: fn() -> Vec<String>) -> Self {
+        Self { names_fn, allow_empty: true }
+    }
+
+    const fn no_empty(names_fn: fn() -> Vec<String>) -> Self {
+        Self { names_fn, allow_empty: false }
+    }
+}
+
+impl clap::builder::TypedValueParser for NameListParser {
+    type Value = String;
+
+    fn parse_ref(
+        &self,
+        cmd: &clap::Command,
+        arg: Option<&clap::Arg>,
+        value: &std::ffi::OsStr,
+    ) -> Result<Self::Value, clap::Error> {
+        let s = value.to_str().ok_or_else(|| {
+            clap::Error::new(clap::error::ErrorKind::InvalidUtf8).with_cmd(cmd)
+        })?;
+        if s.is_empty() && self.allow_empty {
+            return Ok(String::new());
+        }
+        // Delegate to PossibleValuesParser for both validation and
+        // error construction.  Doing it this way (rather than
+        // hand-rolling a clap::Error with ValidValue context) is what
+        // wires up clap's built-in "did you mean" suggestion.
+        let names = (self.names_fn)();
+        let leaked: Vec<&'static str> = names
+            .into_iter()
+            .map(|n| -> &'static str { Box::leak(n.into_boxed_str()) })
+            .collect();
+        clap::builder::PossibleValuesParser::new(leaked).parse_ref(cmd, arg, value)
+    }
+
+    fn possible_values(
+        &self,
+    ) -> Option<Box<dyn Iterator<Item = PossibleValue> + '_>> {
+        let names = (self.names_fn)();
+        let pvs: Vec<PossibleValue> = names
+            .into_iter()
+            .map(|n| {
+                let leaked: &'static str = Box::leak(n.into_boxed_str());
+                PossibleValue::new(leaked)
+            })
+            .collect();
+        Some(Box::new(pvs.into_iter()))
+    }
+}
+
+
+/// `TypedValueParser` for `--columns`.
+///
+/// Splits the comma-separated list, finds the first bad name, and
+/// delegates that single name to a `PossibleValuesParser` so clap
+/// produces its native error format complete with the "did you mean"
+/// suggestion when the typo is close to a real column name.
+#[derive(Clone)]
+struct ColumnsParser;
+
+impl ColumnsParser {
+    fn possible_values_static() -> Vec<&'static str> {
+        use crate::output::column_registry::ColumnDef;
+        // Leak each name once so we can hand clap `&'static str`s.
+        // The list is small and built once at parser construction.
+        ColumnDef::all_names_csv()
+            .split(", ")
+            .map(|n| -> &'static str { Box::leak(n.to_string().into_boxed_str()) })
+            .collect()
+    }
+}
+
+impl clap::builder::TypedValueParser for ColumnsParser {
+    type Value = String;
+
+    fn parse_ref(
+        &self,
+        cmd: &clap::Command,
+        arg: Option<&clap::Arg>,
+        value: &std::ffi::OsStr,
+    ) -> Result<Self::Value, clap::Error> {
+        use crate::output::table::Column;
+
+        let s = value.to_str().ok_or_else(|| {
+            clap::Error::new(clap::error::ErrorKind::InvalidUtf8).with_cmd(cmd)
+        })?;
+        for name in s.split(',') {
+            let name = name.trim();
+            if Column::from_name(name).is_none() {
+                // Hand the single bad name to PossibleValuesParser
+                // and propagate its rich error.
+                let bad: std::ffi::OsString = name.into();
+                clap::builder::PossibleValuesParser::new(Self::possible_values_static())
+                    .parse_ref(cmd, arg, &bad)?;
+            }
+        }
+        Ok(s.to_string())
+    }
+
+    fn possible_values(
+        &self,
+    ) -> Option<Box<dyn Iterator<Item = PossibleValue> + '_>> {
+        Some(Box::new(
+            Self::possible_values_static()
+                .into_iter()
+                .map(PossibleValue::new),
+        ))
+    }
+}
+
+
+
+
 /// A wrapper around clap's `ArgMatches` that provides convenience
 /// methods matching those expected by the deduce functions.
 pub struct MatchedFlags {
@@ -407,13 +594,17 @@ Environment:\n  \
             .help("Apply a named personality (columns + flags) 🌟\n[ll, lll, la, tree, ...]")
             .help_heading("Personalities & Formats")
             .action(ArgAction::Set)
-            .value_name("NAME"))
+            .value_name("NAME")
+            .hide_possible_values(true)
+            .value_parser(NameListParser::no_empty(crate::config::all_personality_names)))
         .arg(Arg::new(flags::COLUMNS)
             .long("columns")
             .help("Explicit column list (comma-separated)")
             .help_heading("Personalities & Formats")
             .action(ArgAction::Set)
-            .value_name("COLS"))
+            .value_name("COLS")
+            .hide_possible_values(true)
+            .value_parser(ColumnsParser))
         .arg(Arg::new(flags::FORMAT)
             .long("format")
             .help("Named column format [long, long2, long3, ...]")
@@ -464,7 +655,9 @@ Environment:\n  \
             relative, +FORMAT]")
             .help_heading("Timestamps")
             .action(ArgAction::Set)
-            .value_name("STYLE"))
+            .value_name("STYLE")
+            .hide_possible_values(true)
+            .value_parser(TimeStyleParser))
         .arg(Arg::new(flags::NO_TIME)
             .long("no-time").alias("no-timestamps")
             .help("Clear all timestamp columns from the base format\n\
@@ -662,7 +855,9 @@ Environment:\n  \
             .help("Use a named colour theme")
             .help_heading("Appearance")
             .action(ArgAction::Set)
-            .value_name("NAME"))
+            .value_name("NAME")
+            .hide_possible_values(true)
+            .value_parser(NameListParser::no_empty(crate::config::all_theme_names)))
         .arg(Arg::new("hyperlink")
             .long("hyperlink")
             .help("File names as clickable hyperlinks\n[always, auto, never]")
@@ -714,7 +909,9 @@ Environment:\n  \
             .value_name("NAME")
             .default_missing_value("")
             .num_args(0..=1)
-            .require_equals(true))
+            .require_equals(true)
+            .hide_possible_values(true)
+            .value_parser(NameListParser::new(crate::config::all_class_names)))
         .arg(Arg::new("dump-format")
             .long("dump-format")
             .help("Dump format definitions as TOML")
@@ -722,7 +919,9 @@ Environment:\n  \
             .value_name("NAME")
             .default_missing_value("")
             .num_args(0..=1)
-            .require_equals(true))
+            .require_equals(true)
+            .hide_possible_values(true)
+            .value_parser(NameListParser::new(crate::options::view::format_names)))
         .arg(Arg::new("dump-personality")
             .long("dump-personality")
             .help("Dump personality definitions as TOML")
@@ -730,7 +929,9 @@ Environment:\n  \
             .value_name("NAME")
             .default_missing_value("")
             .num_args(0..=1)
-            .require_equals(true))
+            .require_equals(true)
+            .hide_possible_values(true)
+            .value_parser(NameListParser::new(crate::config::all_personality_names)))
         .arg(Arg::new("dump-theme")
             .long("dump-theme")
             .help("Dump theme definitions as TOML")
@@ -738,7 +939,9 @@ Environment:\n  \
             .value_name("NAME")
             .default_missing_value("")
             .num_args(0..=1)
-            .require_equals(true))
+            .require_equals(true)
+            .hide_possible_values(true)
+            .value_parser(NameListParser::new(crate::config::all_theme_names)))
         .arg(Arg::new("dump-style")
             .long("dump-style")
             .help("Dump style definitions as TOML")
@@ -746,7 +949,9 @@ Environment:\n  \
             .value_name("NAME")
             .default_missing_value("")
             .num_args(0..=1)
-            .require_equals(true))
+            .require_equals(true)
+            .hide_possible_values(true)
+            .value_parser(NameListParser::new(crate::config::all_style_names)))
         .arg(Arg::new("save-as")
             .long("save-as")
             .help("Save CLI flags as a personality in conf.d/")

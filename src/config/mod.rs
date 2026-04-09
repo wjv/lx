@@ -74,11 +74,11 @@ pub use self::personality::{
     save_personality_as,
 };
 
-pub use self::themes::{dump_theme, dump_theme_all, is_builtin_theme};
+pub use self::themes::{all_theme_names, dump_theme, dump_theme_all, is_builtin_theme};
 
-pub use self::styles::{compiled_exa_style, dump_style, dump_style_all, resolve_style};
+pub use self::styles::{all_style_names, compiled_exa_style, dump_style, dump_style_all, resolve_style};
 
-pub use self::classes::{resolve_classes, show_class, show_class_all};
+pub use self::classes::{all_class_names, resolve_classes, show_class, show_class_all};
 
 pub use self::formats::{show_format, show_format_all};
 

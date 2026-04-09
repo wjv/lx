@@ -80,6 +80,13 @@ pub fn resolve_classes() -> HashMap<String, Vec<String>> {
     classes
 }
 
+/// Sorted list of all known class names (compiled-in + config).
+pub fn all_class_names() -> Vec<String> {
+    let mut names: Vec<String> = resolve_classes().into_keys().collect();
+    names.sort();
+    names
+}
+
 
 // ── --show-class output ─────────────────────────────────────────
 

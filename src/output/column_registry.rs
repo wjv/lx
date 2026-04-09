@@ -426,4 +426,14 @@ impl ColumnDef {
             .find(|d| d.name == s || d.aliases.contains(&s))
             .map(|d| d.column)
     }
+
+    /// Comma-separated list of all known column canonical names, in
+    /// registry order.  Used for "[possible values: ...]" hints in
+    /// error messages from `--columns=` parsing.
+    pub fn all_names_csv() -> String {
+        COLUMN_REGISTRY.iter()
+            .map(|d| d.name)
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
 }

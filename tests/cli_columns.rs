@@ -49,13 +49,19 @@ fn columns_suppression_still_works() {
 }
 
 #[test]
-fn columns_unknown_names_ignored() {
-    // Unknown column names should be silently ignored
+fn columns_unknown_names_error() {
+    // Unknown column names are rejected by ColumnsParser, which
+    // delegates to clap's PossibleValuesParser for the *first*
+    // bad name in the list — so the error focuses on that name
+    // (with [possible values: ...] and "did you mean" hints) rather
+    // than echoing the whole comma-separated input.
     lx_no_colour()
         .args(["-l", "--columns=perms,bogus,size", "Cargo.toml"])
         .assert()
-        .success()
-        .stdout(predicate::str::contains("Cargo.toml"));
+        .failure()
+        .code(2)
+        .stderr(predicate::str::contains("invalid value 'bogus' for '--columns"))
+        .stderr(predicate::str::contains("[possible values:"));
 }
 
 

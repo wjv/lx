@@ -556,9 +556,9 @@ fn dump_class_unknown() {
         .arg("--dump-class=bogus")
         .assert()
         .failure()
-        .code(3)
-        .stderr(predicate::str::contains("unknown class"))
-        .stderr(predicate::str::contains("Known classes:"));
+        .code(2)
+        .stderr(predicate::str::contains("invalid value 'bogus' for '--dump-class"))
+        .stderr(predicate::str::contains("[possible values:"));
 }
 
 // ── --dump-format ────────────────────────────────────────────────
@@ -591,9 +591,9 @@ fn dump_format_unknown() {
         .arg("--dump-format=bogus")
         .assert()
         .failure()
-        .code(3)
-        .stderr(predicate::str::contains("unknown format"))
-        .stderr(predicate::str::contains("Known formats:"));
+        .code(2)
+        .stderr(predicate::str::contains("invalid value 'bogus' for '--dump-format"))
+        .stderr(predicate::str::contains("[possible values:"));
 }
 
 // ── --dump-personality ───────────────────────────────────────────
@@ -625,9 +625,9 @@ fn dump_personality_unknown() {
         .arg("--dump-personality=bogus")
         .assert()
         .failure()
-        .code(3)
-        .stderr(predicate::str::contains("unknown personality"))
-        .stderr(predicate::str::contains("Known personalities:"));
+        .code(2)
+        .stderr(predicate::str::contains("invalid value 'bogus' for '--dump-personality"))
+        .stderr(predicate::str::contains("[possible values:"));
 }
 
 // ── --dump-theme ─────────────────────────────────────────────────
@@ -648,8 +648,9 @@ fn dump_theme_unknown() {
         .arg("--dump-theme=bogus")
         .assert()
         .failure()
-        .code(3)
-        .stderr(predicate::str::contains("unknown theme"));
+        .code(2)
+        .stderr(predicate::str::contains("invalid value 'bogus' for '--dump-theme"))
+        .stderr(predicate::str::contains("[possible values:"));
 }
 
 // ── --dump-style ─────────────────────────────────────────────────
@@ -671,8 +672,9 @@ fn dump_style_unknown() {
         .arg("--dump-style=bogus")
         .assert()
         .failure()
-        .code(3)
-        .stderr(predicate::str::contains("unknown style"));
+        .code(2)
+        .stderr(predicate::str::contains("invalid value 'bogus' for '--dump-style"))
+        .stderr(predicate::str::contains("[possible values:"));
 }
 
 // ── --dump with config overrides ─────────────────────────────────

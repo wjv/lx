@@ -104,13 +104,18 @@ fn invalid_colour_value() {
 }
 
 #[test]
-fn unknown_time_style_falls_back_to_default() {
-    // Unknown time-style values fall back to the default format
-    // (they don't cause an error, unlike before custom formats).
+fn unknown_time_style_errors() {
+    // Unknown --time-style values are rejected by clap's value_parser
+    // (via the `TimeStyleParser` TypedValueParser), so the error is
+    // formatted natively with exit code 2 and a [possible values: ...]
+    // hint.
     lx_no_colour()
         .args(["--time-style=24-hour", "-l", "Cargo.toml"])
         .assert()
-        .success();
+        .failure()
+        .code(2)
+        .stderr(predicate::str::contains("invalid value '24-hour' for '--time-style"))
+        .stderr(predicate::str::contains("[possible values: default, iso, long-iso, full-iso, relative, +FORMAT]"));
 }
 
 #[test]

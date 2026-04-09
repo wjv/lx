@@ -175,11 +175,11 @@ fn try_main() -> Result<i32, LxError> {
                 args.extend(personality.to_args());
                 active_personality = Some(personality_name.clone());
             }
-            None if explicit => {
-                // The user named a personality explicitly via -p or
-                // $LX_PERSONALITY but it doesn't exist.  Surface this
-                // through the same NotFound channel as the dump
-                // commands so the candidate list comes for free.
+            None if personality_source == "$LX_PERSONALITY" => {
+                // Env var named a personality that doesn't exist —
+                // produce our NotFound error.  (-p / --personality is
+                // handled by clap's value_parser on the PERSONALITY
+                // flag and produces a clap-native error there.)
                 return Err(LxError::Config(config::ConfigError::NotFound {
                     kind: "personality",
                     kind_plural: "personalities",
@@ -187,8 +187,10 @@ fn try_main() -> Result<i32, LxError> {
                     candidates: config::all_personality_names().join(", "),
                 }));
             }
-            None => {}  // argv[0] didn't match — use defaults
+            None => {}  // -p (clap will catch it) or argv[0] (silent default)
         }
+        // `explicit` is now only consulted via personality_source above.
+        let _ = explicit;
     }
 
     // Layer 3: actual CLI args (override everything above).

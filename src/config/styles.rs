@@ -46,7 +46,7 @@ pub fn resolve_style(name: &str) -> Option<StyleDef> {
 // ── --dump-style output ─────────────────────────────────────────
 
 /// Names of all known styles (compiled-in + config).
-fn all_style_names() -> Vec<String> {
+pub fn all_style_names() -> Vec<String> {
     let mut names = vec!["exa".to_string()];
     if let Some(cfg) = config() {
         for name in cfg.style.keys() {

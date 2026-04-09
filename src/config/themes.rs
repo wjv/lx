@@ -23,7 +23,7 @@ pub fn is_builtin_theme(name: &str) -> bool {
 // ── --dump-theme output ─────────────────────────────────────────
 
 /// Names of all known themes (compiled-in + config).
-fn all_theme_names() -> Vec<String> {
+pub fn all_theme_names() -> Vec<String> {
     let mut names: Vec<String> = BUILTIN_THEMES.iter().map(|s| (*s).to_string()).collect();
     if let Some(cfg) = config() {
         for name in cfg.theme.keys() {
