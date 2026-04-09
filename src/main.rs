@@ -114,12 +114,14 @@ fn try_main() -> Result<i32, LxError> {
 
     let cli_args: Vec<OsString> = env::args_os().skip(1).collect();
 
-    // Skip config loading for --upgrade-config (the config may be
-    // legacy and would emit an error before we get to handle it).
+    // Skip config loading for --upgrade-config — the file may be in
+    // an older schema version, which would error out of init_config()
+    // and prevent the upgrade from running.  upgrade_config() reads
+    // the file directly via try_load_config() and bypasses the
+    // CONFIG_STORE altogether.
     let upgrading = cli_args.iter().any(|a| a == "--upgrade-config");
     if !upgrading {
-        // Force config to load (populates the CONFIG static).
-        let _ = &*config::CONFIG;
+        config::init_config()?;
     }
 
     // Build the arg list in layers; Clap's args_override_self ensures

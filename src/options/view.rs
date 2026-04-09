@@ -172,7 +172,7 @@ impl TableOptions {
 /// Look up a format by name: config-defined first, then compiled-in.
 fn format_columns(name: &str) -> Option<Vec<Column>> {
     // Check config-defined formats first.
-    if let Some(ref cfg) = *crate::config::CONFIG
+    if let Some(cfg) = crate::config::config()
         && let Some(columns) = cfg.format.get(name) {
             let cols: Vec<Column> = columns.iter()
                 .filter_map(|s| Column::from_name(s))
@@ -229,7 +229,7 @@ pub fn format_names() -> Vec<String> {
         "long".into(), "long2".into(), "long3".into(),
     ];
 
-    if let Some(ref cfg) = *crate::config::CONFIG {
+    if let Some(cfg) = crate::config::config() {
         for name in cfg.format.keys() {
             if !names.iter().any(|n| n == name) {
                 names.push(name.clone());

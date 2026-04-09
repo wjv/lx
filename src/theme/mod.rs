@@ -76,13 +76,11 @@ impl Options {
 
     #[allow(trivial_casts)]   // the `as Box<_>` stuff below warns about this for some reason
     pub fn to_theme(&self, isatty: bool) -> Result<Theme, ThemeError> {
-        use crate::config::CONFIG;
-
         // Validate the theme name early — even when colours are off,
         // the user should know if they've misspelled a theme name.
         if let Some(ref name) = self.theme_override {
             let empty_cfg = crate::config::Config::default();
-            let cfg = CONFIG.as_ref().unwrap_or(&empty_cfg);
+            let cfg = crate::config::config().unwrap_or(&empty_cfg);
             Self::validate_theme_name(name, cfg)?;
         }
 
@@ -114,7 +112,7 @@ impl Options {
         // apply_config_theme handles the "exa" theme as a special
         // compiled-in case, so it works even without a config file.
         let empty_cfg = crate::config::Config::default();
-        let cfg = CONFIG.as_ref().unwrap_or(&empty_cfg);
+        let cfg = crate::config::config().unwrap_or(&empty_cfg);
         self.apply_config_theme(cfg, &mut ui, &mut exts)?;
 
         let exts: Box<dyn FileColours> = if exts.is_non_empty() {

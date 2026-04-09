@@ -12,7 +12,7 @@ use std::env;
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::LazyLock;
+use std::sync::OnceLock;
 
 use log::*;
 use serde::Deserialize;
@@ -85,8 +85,44 @@ impl<T> IoResultExt<T> for std::io::Result<T> {
 }
 
 
-/// Global config, loaded once at startup.
-pub static CONFIG: LazyLock<Option<Config>> = LazyLock::new(load_config);
+/// Storage for the user's configuration.
+///
+/// Populated once by `init_config()` early in `try_main()`, then read
+/// through `config()` for the rest of the process lifetime.  The
+/// outer `Option` represents "no config file exists" (which is fine —
+/// lx falls back to compiled defaults), while errors during loading
+/// surface as `Err` from `init_config()` rather than being silently
+/// swallowed.
+static CONFIG_STORE: OnceLock<Option<Config>> = OnceLock::new();
+
+/// Load the user's configuration file.
+///
+/// Called once from `main` before any other config-reading code runs.
+/// Errors here are fatal — the pre-0.9 graceful fallback for broken
+/// configs (eprintln + continue with compiled defaults) is gone.
+///
+/// # Errors
+///
+/// Returns whatever `try_load_config()` returns: `ConfigError::Io`
+/// for unreadable files, `ConfigError::Parse` for invalid TOML,
+/// `ConfigError::NeedsUpgrade` for old-format files, etc.
+pub fn init_config() -> Result<(), ConfigError> {
+    let loaded = try_load_config()?;
+    // OnceLock::set fails only if it has already been set; we don't
+    // need a second init, so silently ignore.
+    let _ = CONFIG_STORE.set(loaded);
+    Ok(())
+}
+
+/// Read the loaded configuration.
+///
+/// Returns `None` if no config file exists, or if `init_config()`
+/// has not yet been called (e.g. during `--upgrade-config`, which
+/// loads the file directly).
+#[must_use]
+pub fn config() -> Option<&'static Config> {
+    CONFIG_STORE.get().and_then(Option::as_ref)
+}
 
 
 // ── Setting-to-flag mapping ─────────────────────────────────────
@@ -907,18 +943,6 @@ fn try_load_config() -> Result<Option<Config>, ConfigError> {
     Ok(config)
 }
 
-/// Load config for the `LazyLock` static.  Errors are printed to
-/// stderr and result in `None` (lx continues without a config).
-fn load_config() -> Option<Config> {
-    match try_load_config() {
-        Ok(config) => config,
-        Err(e) => {
-            eprintln!("lx: {e}");
-            None
-        }
-    }
-}
-
 /// Detect the config schema version from raw file contents.
 ///
 /// Returns the version string, or `"0.1"` if no version field
@@ -1020,7 +1044,7 @@ pub fn resolve_personality(name: &str) -> Result<Option<PersonalityDef>, ConfigE
 
 /// Look up a single personality definition by name (no inheritance).
 fn lookup_personality(name: &str) -> Option<PersonalityDef> {
-    if let Some(ref cfg) = *CONFIG
+    if let Some(cfg) = config()
         && let Some(p) = cfg.personality.get(name) {
             return Some(p.clone());
         }
@@ -1185,7 +1209,7 @@ pub fn compiled_classes() -> HashMap<String, Vec<String>> {
 /// Resolve class definitions: config overrides compiled-in defaults.
 pub fn resolve_classes() -> HashMap<String, Vec<String>> {
     let mut classes = compiled_classes();
-    if let Some(ref cfg) = *CONFIG {
+    if let Some(cfg) = config() {
         for (name, patterns) in &cfg.class {
             classes.insert(name.clone(), patterns.clone());
         }
@@ -1217,7 +1241,7 @@ pub fn compiled_exa_style() -> StyleDef {
 
 /// Look up a style by name: config first, then compiled-in "exa".
 pub fn resolve_style(name: &str) -> Option<StyleDef> {
-    if let Some(ref cfg) = *CONFIG
+    if let Some(cfg) = config()
         && let Some(s) = cfg.style.get(name) {
             return Some(s.clone());
         }
@@ -1271,7 +1295,7 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
     let dimmed  = Style::new().dimmed();
 
     let config_path = find_config_path();
-    let has_config = CONFIG.is_some();
+    let cfg = config();
 
     println!("{}", heading.paint("lx configuration"));
     println!();
@@ -1282,21 +1306,18 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
         None    => println!("{} {}", label.paint("Config file:"), dimmed.paint("(none)")),
     }
     println!("{} {}", label.paint("Config version:"), value.paint(CONFIG_VERSION));
-    if let Some(ref cfg) = *CONFIG {
-        if !cfg.drop_in_paths.is_empty() {
-            println!("{} {} file(s) from conf.d/", label.paint("Drop-ins:"), value.paint(cfg.drop_in_paths.len().to_string()));
-            for p in &cfg.drop_in_paths {
-                println!("  {}", dimmed.paint(p.display().to_string()));
-            }
+    if let Some(cfg) = cfg
+        && !cfg.drop_in_paths.is_empty() {
+        println!("{} {} file(s) from conf.d/", label.paint("Drop-ins:"), value.paint(cfg.drop_in_paths.len().to_string()));
+        for p in &cfg.drop_in_paths {
+            println!("  {}", dimmed.paint(p.display().to_string()));
         }
     }
     println!();
 
     // Personality.
     println!("{} {}", label.paint("Personality:"), name.paint(personality_name));
-    let source = if has_config
-        && CONFIG.as_ref().unwrap().personality.contains_key(personality_name)
-    {
+    let source = if cfg.is_some_and(|c| c.personality.contains_key(personality_name)) {
         "config"
     } else {
         "builtin"
@@ -1340,7 +1361,7 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
         println!("{} {}", label.paint("Theme:"), name.paint(tname));
         let source = if is_builtin_theme(tname) {
             "builtin"
-        } else if has_config && CONFIG.as_ref().unwrap().theme.contains_key(tname) {
+        } else if cfg.is_some_and(|c| c.theme.contains_key(tname)) {
             "config"
         } else {
             "unknown"
@@ -1349,17 +1370,15 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
 
         if is_builtin_theme(tname) {
             println!("  {} {} {}", label.paint("use-style:"), name.paint("exa"), dimmed.paint("(implicit)"));
-        } else {
-            if let Some(ref cfg) = *CONFIG
-                && let Some(theme) = cfg.theme.get(tname) {
-                    if let Some(ref inherits) = theme.inherits {
-                        println!("  {} {}", label.paint("inherits:"), name.paint(inherits));
-                    }
-                    if let Some(ref style) = theme.use_style {
-                        println!("  {} {}", label.paint("use-style:"), name.paint(style));
-                    }
+        } else if let Some(cfg) = cfg
+            && let Some(theme) = cfg.theme.get(tname) {
+                if let Some(ref inherits) = theme.inherits {
+                    println!("  {} {}", label.paint("inherits:"), name.paint(inherits));
                 }
-        }
+                if let Some(ref style) = theme.use_style {
+                    println!("  {} {}", label.paint("use-style:"), name.paint(style));
+                }
+            }
     } else {
         println!("{} {}", label.paint("Theme:"), dimmed.paint("(none)"));
     }
@@ -1369,7 +1388,7 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
     let style_name = theme_name.as_deref().and_then(|tn| {
         if is_builtin_theme(tn) {
             Some("exa".to_string())
-        } else if let Some(ref cfg) = *CONFIG {
+        } else if let Some(cfg) = cfg {
             cfg.theme.get(tn).and_then(|t| t.use_style.clone())
         } else {
             None
@@ -1380,7 +1399,7 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
         println!("{} {}", label.paint("Style:"), name.paint(sname));
         let source = if sname == "exa" {
             "builtin"
-        } else if has_config && CONFIG.as_ref().unwrap().style.contains_key(sname) {
+        } else if cfg.is_some_and(|c| c.style.contains_key(sname)) {
             "config"
         } else {
             "unknown"
@@ -1416,9 +1435,7 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
     let mut names: Vec<_> = classes.keys().collect();
     names.sort();
     for cname in names {
-        let source = if has_config
-            && CONFIG.as_ref().unwrap().class.contains_key(cname)
-        {
+        let source = if cfg.is_some_and(|c| c.class.contains_key(cname)) {
             "config"
         } else {
             "builtin"
@@ -1434,16 +1451,14 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
     println!("{}", label.paint("Formats:"));
     let compiled = vec!["long", "long2", "long3"];
     for fname in &compiled {
-        let source = if has_config
-            && CONFIG.as_ref().unwrap().format.contains_key(*fname)
-        {
+        let source = if cfg.is_some_and(|c| c.format.contains_key(*fname)) {
             "config (overrides builtin)"
         } else {
             "builtin"
         };
         println!("  {}: {}", name.paint(*fname), dimmed.paint(source));
     }
-    if let Some(ref cfg) = *CONFIG {
+    if let Some(cfg) = cfg {
         for fname in cfg.format.keys() {
             if !compiled.contains(&fname.as_str()) {
                 println!("  {}: {}", name.paint(fname), dimmed.paint("config"));
@@ -1457,8 +1472,8 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
 
 /// Names of all known themes (compiled-in + config).
 fn all_theme_names() -> Vec<String> {
-    let mut names: Vec<String> = BUILTIN_THEMES.iter().map(|s| s.to_string()).collect();
-    if let Some(ref cfg) = *CONFIG {
+    let mut names: Vec<String> = BUILTIN_THEMES.iter().map(|s| (*s).to_string()).collect();
+    if let Some(cfg) = config() {
         for name in cfg.theme.keys() {
             if !names.contains(name) {
                 names.push(name.clone());
@@ -1485,7 +1500,7 @@ fn format_theme_toml(name: &str) -> Option<String> {
         ));
     }
 
-    let cfg = CONFIG.as_ref()?;
+    let cfg = config()?;
     let theme = cfg.theme.get(name)?;
     let mut lines = vec![format!("[theme.{name}]")];
 
@@ -1543,7 +1558,7 @@ pub fn dump_theme_all() {
 /// Names of all known styles (compiled-in + config).
 fn all_style_names() -> Vec<String> {
     let mut names = vec!["exa".to_string()];
-    if let Some(ref cfg) = *CONFIG {
+    if let Some(cfg) = config() {
         for name in cfg.style.keys() {
             if !names.contains(name) {
                 names.push(name.clone());
@@ -1621,7 +1636,7 @@ fn all_personality_names() -> Vec<String> {
     let mut names: Vec<String> = COMPILED_PERSONALITIES.iter()
         .map(|s| (*s).into())
         .collect();
-    if let Some(ref cfg) = *CONFIG {
+    if let Some(cfg) = config() {
         for name in cfg.personality.keys() {
             if !names.iter().any(|n| n == name) {
                 names.push(name.clone());
@@ -1869,7 +1884,7 @@ pub fn resolve_formats() -> HashMap<String, Vec<String>> {
     let mut formats = compiled_formats();
 
     // Config overrides.
-    if let Some(ref cfg) = *CONFIG {
+    if let Some(cfg) = config() {
         for (name, columns) in &cfg.format {
             formats.insert(name.clone(), columns.clone());
         }
