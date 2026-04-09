@@ -349,13 +349,15 @@ impl<'de> Deserialize<'de> for StringOrList {
 // ── Config types ────────────────────────────────────────────────
 
 /// The current config schema version.
-pub const CONFIG_VERSION: &str = "0.5";
+pub const CONFIG_VERSION: &str = "0.6";
 
-/// Accepted config versions.  0.3 and 0.4 are valid subsets of 0.5
-/// *except* for the `time = "..."` setting, which is removed in 0.5.
-/// Config files at 0.3 or 0.4 load fine; a `time` key in them just
-/// triggers a warning and is ignored.
-const ACCEPTED_VERSIONS: &[&str] = &["0.3", "0.4", "0.5"];
+/// Accepted config versions.  0.3, 0.4, and 0.5 are forward-compatible
+/// subsets of 0.6: any config file from these versions loads fine in
+/// the current parser.  0.6 adds glob and array support to `[[when]]`
+/// env conditions — both purely additive.  The only ever-removed
+/// setting is `time = "..."` (gone in 0.5), which triggers a warning
+/// and is ignored if found in 0.3/0.4 files.
+const ACCEPTED_VERSIONS: &[&str] = &["0.3", "0.4", "0.5", "0.6"];
 
 /// Top-level config file structure.
 #[derive(Debug, Default, Deserialize)]
@@ -482,20 +484,87 @@ pub struct ConditionalOverride {
 
 impl ConditionalOverride {
     /// Check whether all `env` conditions are satisfied.
+    ///
+    /// Each value can be:
+    /// - **String** — literal exact match, OR a glob pattern if it
+    ///   contains glob metacharacters (`*`, `?`, `[`).
+    /// - **Array of strings** — any element matches (each element is
+    ///   independently treated as literal-or-glob).
+    /// - **`true`** — variable must be set to anything (even empty).
+    /// - **`false`** — variable must be unset entirely.
+    ///
+    /// Globs and arrays were added in config schema 0.6; the existing
+    /// literal-string and boolean forms continue to work unchanged.
     fn matches(&self) -> bool {
         self.env.iter().all(|(key, condition)| {
             let actual = env::var(key).unwrap_or_default();
             match condition {
-                // String: exact match (including "" for empty).
-                toml::Value::String(expected) => actual == *expected,
-                // true: variable must be set (to anything, even "").
+                toml::Value::String(expected) => match_string(&actual, expected),
+                toml::Value::Array(items) => items.iter().any(|item| match item {
+                    toml::Value::String(s) => match_string(&actual, s),
+                    _ => false,
+                }),
                 toml::Value::Boolean(true) => env::var(key).is_ok(),
-                // false: variable must be truly unset.
                 toml::Value::Boolean(false) => env::var(key).is_err(),
                 // Anything else: ignore (treat as always-true).
                 _ => true,
             }
         })
+    }
+}
+
+/// Match a single value against an expected string, treating the
+/// expected string as a glob pattern if it contains glob metacharacters.
+fn match_string(actual: &str, expected: &str) -> bool {
+    if expected.contains(['*', '?', '[']) {
+        glob::Pattern::new(expected)
+            .is_ok_and(|pat| pat.matches(actual))
+    } else {
+        actual == expected
+    }
+}
+
+#[cfg(test)]
+mod when_match_test {
+    use super::match_string;
+
+    #[test]
+    fn literal_match() {
+        assert!(match_string("truecolor", "truecolor"));
+        assert!(!match_string("truecolor", "24bit"));
+    }
+
+    #[test]
+    fn empty_actual_matches_empty_expected() {
+        assert!(match_string("", ""));
+    }
+
+    #[test]
+    fn glob_star_suffix() {
+        assert!(match_string("xterm-256color", "*-256color"));
+        assert!(match_string("screen-256color", "*-256color"));
+        assert!(match_string("rxvt-unicode-256color", "*-256color"));
+        assert!(!match_string("xterm", "*-256color"));
+        assert!(!match_string("xterm-direct", "*-256color"));
+    }
+
+    #[test]
+    fn glob_question_mark() {
+        assert!(match_string("foo", "fo?"));
+        assert!(!match_string("foobar", "fo?"));
+    }
+
+    #[test]
+    fn glob_bracket_range() {
+        assert!(match_string("file1", "file[0-9]"));
+        assert!(!match_string("filea", "file[0-9]"));
+    }
+
+    #[test]
+    fn invalid_glob_falls_back_to_no_match() {
+        // An unmatched [ is invalid as a glob; we don't crash, just
+        // fail to match.
+        assert!(!match_string("foo[bar", "foo[bar"));
     }
 }
 
@@ -1702,6 +1771,9 @@ fn format_format_toml(name: &str, columns: &[String]) -> String {
 /// - 0.2: flatten `[format.NAME]` sub-tables, stamp current
 /// - 0.3 or 0.4: bump version string to current (no structural changes;
 ///   the `time = "..."` setting, removed in 0.5, warns at load time)
+/// - 0.5: bump version string to current (no structural changes; 0.6
+///   adds glob and array support to `[[when]]` env conditions, both
+///   purely additive — old configs work unchanged)
 pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
     let contents = fs::read_to_string(path).with_path(path)?;
     let version = detect_config_version(&contents);
@@ -1745,9 +1817,9 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
         }
     }
 
-    // 0.3 or 0.4 → current: bump the version string in place
+    // 0.3, 0.4, or 0.5 → current: bump the version string in place
     // (no structural changes).
-    if version == "0.3" || version == "0.4" {
+    if version == "0.3" || version == "0.4" || version == "0.5" {
         let backup = path.with_extension("toml.bak");
         fs::copy(path, &backup).with_path(&backup)?;
 
