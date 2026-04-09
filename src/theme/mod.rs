@@ -417,9 +417,11 @@ impl render::VcsReposColours for Theme {
 #[cfg(unix)]
 impl render::GroupColours for Theme {
     fn yours(&self)      -> Style { self.ui.users.group_yours }
+    fn member(&self)     -> Style { self.ui.users.group_member }
     fn not_yours(&self)  -> Style { self.ui.users.group_not_yours }
 
     fn gid_yours(&self)     -> Style { self.ui.users.gid_yours }
+    fn gid_member(&self)    -> Style { self.ui.users.gid_member }
     fn gid_not_yours(&self) -> Style { self.ui.users.gid_not_yours }
 }
 

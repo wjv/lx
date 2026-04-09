@@ -48,10 +48,12 @@ impl UiStyles {
                 user_you:           Yellow.bold(),
                 user_someone_else:  Style::default(),
                 group_yours:        Yellow.bold(),
+                group_member:       Yellow.normal(),
                 group_not_yours:    Style::default(),
                 uid_you:            Cyan.bold(),
                 uid_someone_else:   Style::default(),
                 gid_yours:          Cyan.bold(),
+                gid_member:         Cyan.normal(),
                 gid_not_yours:      Style::default(),
             },
 

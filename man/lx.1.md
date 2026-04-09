@@ -231,7 +231,8 @@ prefixes), `binary` (KiB, MiB, GiB), or `bytes` (raw count).
 personality that sets `binary` or `bytes` back to the default.
 
 `-g`, `--group`
-: List each file's group name.
+: List each file's group name.  The group is coloured in three tiers:
+your primary group, a supplementary group you belong to, or other.
 
 `--uid`
 : Show the numeric user ID column (long-form only). Composes with

@@ -433,13 +433,18 @@ sets all unit magnitudes), `size-major`, `size-minor`.
 
 **Users:**
 
-: `user-you`, `user-other`, `group-yours`, `group-other`,
-`uid-you`, `uid-other`, `gid-yours`, `gid-other`.
+: `user-you`, `user-other`, `group-yours`, `group-member`,
+`group-other`, `uid-you`, `uid-other`, `gid-yours`, `gid-member`,
+`gid-other`.
+
+Group columns distinguish three tiers: `*-yours` (your primary
+group), `*-member` (a supplementary group you belong to), and
+`*-other` (not your group).  The `member` tier indicates you have
+group-permission access to the file.
 
 The `uid-*` and `gid-*` slots style the dedicated `--uid` and
-`--gid` columns.  Each must be set explicitly; there is no cascade
-from `user-*` / `group-*`.  All curated themes and the builtin
-default set all eight slots.
+`--gid` columns.  All curated themes and the builtin default set
+all identity slots explicitly.
 
 **Links:**
 

@@ -24,6 +24,9 @@ All notable changes to lx are documented here. lx is forked from
   compatibility.
 - Three new light-background curated themes: Catppuccin Latte,
   Gruvbox Light, Nord Light.
+- Three-tier group colouring: primary group, supplementary group
+  (you have group access), and other.  Theme keys `group-member`
+  and `gid-member`.
 - Error on unknown `--theme=NAME` (exit 3, same as unknown `-p`).
 - Dependabot for Cargo + GitHub Actions dependency updates.
 - `cargo-deny` in CI (licence compliance + security advisories).

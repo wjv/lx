@@ -124,10 +124,12 @@ pub struct Users {
     pub user_you: Style,
     pub user_someone_else: Style,
     pub group_yours: Style,
+    pub group_member: Style,
     pub group_not_yours: Style,
     pub uid_you: Style,
     pub uid_someone_else: Style,
     pub gid_yours: Style,
+    pub gid_member: Style,
     pub gid_not_yours: Style,
 }
 
@@ -217,6 +219,7 @@ impl UiStyles {
             "uu" => self.users.user_you           = pair.to_style(),
             "un" => self.users.user_someone_else  = pair.to_style(),
             "gu" => self.users.group_yours        = pair.to_style(),
+            "gb" => self.users.group_member        = pair.to_style(),
             "gn" => self.users.group_not_yours    = pair.to_style(),
             // Capital U/G = the numeric ID version of the user/group
             // columns.  Case-sensitive, so these don't collide with the
@@ -224,6 +227,7 @@ impl UiStyles {
             "Uy" => self.users.uid_you            = pair.to_style(),
             "Un" => self.users.uid_someone_else   = pair.to_style(),
             "Gy" => self.users.gid_yours          = pair.to_style(),
+            "Gb" => self.users.gid_member         = pair.to_style(),
             "Gn" => self.users.gid_not_yours      = pair.to_style(),
 
             "lc" => self.links.normal             = pair.to_style(),
@@ -329,10 +333,12 @@ impl UiStyles {
             "user-you"         => self.users.user_you          = style,
             "user-other"       => self.users.user_someone_else = style,
             "group-yours"      => self.users.group_yours       = style,
+            "group-member"     => self.users.group_member      = style,
             "group-other"      => self.users.group_not_yours   = style,
             "uid-you"          => self.users.uid_you           = style,
             "uid-other"        => self.users.uid_someone_else  = style,
             "gid-yours"        => self.users.gid_yours         = style,
+            "gid-member"       => self.users.gid_member        = style,
             "gid-other"        => self.users.gid_not_yours     = style,
 
             // Links
