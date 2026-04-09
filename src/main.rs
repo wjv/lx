@@ -252,15 +252,8 @@ fn try_main() -> Result<i32, LxError> {
 
         OptionsResult::InitConfig => {
             let path = config::init_config_path();
-            match config::write_init_config(&path) {
-                Ok(()) => {
-                    eprintln!("Wrote default config to {}", path.display());
-                }
-                Err(e) => {
-                    eprintln!("lx: failed to write config to {}: {e}", path.display());
-                    exit(exits::RUNTIME_ERROR);
-                }
-            }
+            config::write_init_config(&path)?;
+            eprintln!("Wrote default config to {}", path.display());
         }
 
         OptionsResult::ShowConfig => {
