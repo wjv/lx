@@ -194,6 +194,13 @@ impl Options {
                 let exa_style = crate::config::compiled_exa_style();
                 Self::apply_style(&exa_style, cfg, exts);
                 current = None;
+            } else if tname == "lx-24bit" {
+                // Compiled-in truecolour theme.  Shares the "exa"
+                // style for file class colours.
+                *ui = UiStyles::lx_24bit_theme();
+                let exa_style = crate::config::compiled_exa_style();
+                Self::apply_style(&exa_style, cfg, exts);
+                current = None;
             } else if let Some(theme) = cfg.theme.get(tname) {
                 chain.push(theme);
                 current = theme.inherits.clone();

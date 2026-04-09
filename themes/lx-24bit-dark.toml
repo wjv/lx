@@ -1,0 +1,40 @@
+# lx-24bit-dark — dark-background variant of the builtin lx-24bit theme
+#
+# The compiled-in `lx-24bit` theme balances light and dark
+# backgrounds, leaning slightly toward light.  This drop-in is
+# a variant tuned specifically for dark terminals: brighter,
+# more saturated size and date gradients that pop on black.
+#
+# Use it explicitly:
+#   lx --theme=lx-24bit-dark
+#
+# Or set it as your default in a personality:
+#   [personality.ll]
+#   inherits = "ll"
+#   theme = "lx-24bit-dark"
+#
+# Copy this file to ~/.config/lx/conf.d/ to make it available.
+#
+# This theme inherits everything from lx-24bit and only overrides
+# the size and date gradient slots.
+
+[theme.lx-24bit-dark]
+inherits = "lx-24bit"
+
+# Brighter, more saturated size gradient.
+# Hand-picked truecolour values along a green → yellow →
+# orange → red ramp.
+size-number-byte = "#9fda4a"   # bright chartreuse
+size-number-kilo = "#cfd84a"   # bright yellow-green
+size-number-mega = "#f5c93b"   # bright gold
+size-number-giga = "#f29234"   # bright orange
+size-number-huge = "#e85c4a"   # bright red-orange
+
+# Brighter date gradient.  The "now" tier reaches near-pure cyan,
+# fading through blues to grey.
+date-now   = "bold #5cf5f5"    # vivid cyan
+date-today = "#5cf5f5"         # vivid cyan
+date-week  = "#4ad0d3"         # bright teal
+date-month = "#4aa9ec"         # bright soft blue
+date-year  = "#999999"         # mid grey
+date-old   = "#666666"         # dark grey

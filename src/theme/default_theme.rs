@@ -213,6 +213,145 @@ impl UiStyles {
 }
 
 
+impl UiStyles {
+    /// The compiled-in `lx-24bit` theme: refined, recognisably
+    /// exa-derived, using 24-bit truecolour for the smoothest
+    /// gradients and most polished palette.  Designed to look good
+    /// on both light and dark backgrounds.
+    ///
+    /// Same hue families as `lx-256`, just with hand-picked RGB
+    /// values for cleaner integration with various background
+    /// luminances.
+    pub fn lx_24bit_theme() -> Self {
+        // Hand-picked RGB constants for the lx-24bit palette.
+        // Mid-saturation tones that work on both light and dark
+        // backgrounds.
+        let blue       = Rgb(0x3b, 0x8e, 0xd8);  // soft blue
+        let teal       = Rgb(0x3a, 0xab, 0xae);  // turquoise
+        let green      = Rgb(0x5f, 0xb5, 0x5f);  // sage
+        let gold       = Rgb(0xcb, 0xa1, 0x35);  // amber
+        let coral      = Rgb(0xd7, 0x60, 0x60);  // salmon
+        let mauve      = Rgb(0xa9, 0x8c, 0xe0);  // soft lavender
+        let mid_grey   = Rgb(0x88, 0x88, 0x88);  // chrome
+        let dark_grey  = Rgb(0x5c, 0x5c, 0x5c);  // very old
+
+        // Date gradient: hot cyan → blue → grey.
+        let date_now   = Rgb(0x3d, 0xd7, 0xd7);  // bright cyan
+        let date_today = Rgb(0x3d, 0xd7, 0xd7);  // cyan
+        let date_week  = teal;
+        let date_month = blue;
+
+        // Size gradient: chartreuse → olive → gold → orange → red-orange.
+        let size_byte = Rgb(0x7e, 0xb3, 0x3b);
+        let size_kilo = Rgb(0xa8, 0xb5, 0x3b);
+        let size_mega = Rgb(0xd2, 0xa5, 0x31);
+        let size_giga = Rgb(0xcf, 0x7a, 0x2e);
+        let size_huge = Rgb(0xc5, 0x4e, 0x3a);
+
+        Self {
+            colourful: true,
+
+            filekinds: FileKinds {
+                normal:       Style::default(),
+                directory:    blue.bold(),
+                symlink:      teal.normal(),
+                pipe:         gold.normal(),
+                block_device: gold.bold(),
+                char_device:  gold.bold(),
+                socket:       coral.bold(),
+                special:      gold.normal(),
+                executable:   green.bold(),
+            },
+
+            perms: Permissions {
+                user_read:           gold.bold(),
+                user_write:          coral.bold(),
+                user_execute_file:   green.bold(),
+                user_execute_other:  green.bold(),
+
+                group_read:          gold.normal(),
+                group_write:         coral.normal(),
+                group_execute:       green.normal(),
+
+                other_read:          gold.normal(),
+                other_write:         coral.normal(),
+                other_execute:       green.normal(),
+
+                special_user_file:   mauve.normal(),
+                special_other:       mauve.normal(),
+
+                attribute:           Style::default(),
+            },
+
+            size: Size {
+                major:  green.bold(),
+                minor:  green.normal(),
+
+                number_byte: size_byte.normal(),
+                number_kilo: size_kilo.normal(),
+                number_mega: size_mega.normal(),
+                number_giga: size_giga.normal(),
+                number_huge: size_huge.normal(),
+
+                unit_byte: mid_grey.normal(),
+                unit_kilo: mid_grey.normal(),
+                unit_mega: mid_grey.normal(),
+                unit_giga: mid_grey.normal(),
+                unit_huge: mid_grey.normal(),
+            },
+
+            users: Users {
+                user_you:           gold.bold(),
+                user_someone_else:  Style::default(),
+                group_yours:        gold.bold(),
+                group_member:       gold.normal(),
+                group_not_yours:    Style::default(),
+                uid_you:            teal.bold(),
+                uid_someone_else:   Style::default(),
+                gid_yours:          teal.bold(),
+                gid_member:         teal.normal(),
+                gid_not_yours:      Style::default(),
+            },
+
+            links: Links {
+                normal:          coral.bold(),
+                multi_link_file: Style::default().on(gold),
+            },
+
+            vcs: Git {
+                new:         green.normal(),
+                modified:    blue.normal(),
+                deleted:     coral.normal(),
+                renamed:     gold.normal(),
+                typechange:  mauve.normal(),
+                ignored:     mid_grey.normal(),
+                conflicted:  coral.bold(),
+            },
+
+            punctuation:  mid_grey.normal(),
+            date: DateAge {
+                now:   date_now.bold(),
+                today: date_today.normal(),
+                week:  date_week.normal(),
+                month: date_month.normal(),
+                year:  mid_grey.normal(),
+                old:   dark_grey.normal(),
+            },
+            inode:        mauve.normal(),
+            blocks:       teal.normal(),
+            octal:        mauve.normal(),
+            flags:        gold.normal(),
+            header:       blue.bold().underline(),
+
+            symlink_path:         teal.normal(),
+            control_char:         coral.normal(),
+            broken_symlink:       coral.normal(),
+            broken_path_overlay:  Style::default().underline(),
+        }
+    }
+}
+
+
 impl Size {
     pub fn colourful(scale: ColourScale) -> Self {
         match scale {

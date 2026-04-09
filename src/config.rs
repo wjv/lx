@@ -405,7 +405,7 @@ impl Config {
 /// Names of the compiled-in themes that don't live in any config
 /// file.  These are always resolvable by `--theme=NAME` and appear
 /// in the `--dump-theme` listing.
-pub const BUILTIN_THEMES: &[&str] = &["exa", "lx-256"];
+pub const BUILTIN_THEMES: &[&str] = &["exa", "lx-256", "lx-24bit"];
 
 /// Check if a theme name refers to a compiled-in builtin.
 pub fn is_builtin_theme(name: &str) -> bool {

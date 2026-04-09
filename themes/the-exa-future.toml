@@ -1,0 +1,123 @@
+# the-exa-future — exa, but 24-bit
+#
+# A tribute to the original exa, whose home page used to live at
+# https://the.exa.website.  This theme stays close to the
+# classic exa look, but uses 24-bit truecolour values for
+# crisp, terminal-independent rendering — and adds the modern
+# conveniences exa never had:
+#
+# - A tasteful grey for tree-drawing characters and dashes
+#   (instead of the original "same colour as filenames")
+# - The full age-based date gradient (six tiers from "now" to "old")
+# - The full size gradient (five tiers from byte to huge)
+# - Three-tier group colouring (primary, member, other)
+#
+# The colours are hand-picked RGB equivalents of the standard
+# (non-bright) ANSI primaries.  Like the original exa, this theme
+# works on both light and dark backgrounds.
+#
+# Use it explicitly:
+#   lx --theme=the-exa-future
+#
+# Or set it as your default in a personality:
+#   [personality.ll]
+#   inherits = "ll"
+#   theme = "the-exa-future"
+#
+# Copy this file to ~/.config/lx/conf.d/ to make it available.
+
+[theme.the-exa-future]
+inherits = "exa"
+
+# RGB equivalents of the standard ANSI primaries (the darker,
+# non-bright versions).  These render legibly on both light
+# and dark terminals.
+
+# ── File kinds ─────────────────────────────────────────
+directory     = "bold #1166c4"   # ANSI blue
+symlink       = "#0aacac"         # ANSI cyan
+executable    = "bold #00a000"   # ANSI green
+pipe          = "#c08000"         # ANSI yellow (mustard)
+block-device  = "bold #c08000"
+char-device   = "bold #c08000"
+socket        = "bold #c01818"   # ANSI red
+special       = "#c08000"
+
+# ── Permissions ────────────────────────────────────────
+permissions-user-read          = "bold #c08000"
+permissions-user-write         = "bold #c01818"
+permissions-user-execute       = "bold #00a000"
+permissions-user-execute-other = "bold #00a000"
+permissions-group-read         = "#c08000"
+permissions-group-write        = "#c01818"
+permissions-group-execute      = "#00a000"
+permissions-other-read         = "#c08000"
+permissions-other-write        = "#c01818"
+permissions-other-execute      = "#00a000"
+
+# ── Users / groups ─────────────────────────────────────
+# A touch more banana than the permissions mustard.
+user-you      = "bold #d5a200"
+user-other    = ""
+group-yours   = "bold #d5a200"
+group-member  = "#d5a200"
+group-other   = ""
+uid-you       = "bold #0aacac"
+uid-other     = ""
+gid-yours     = "bold #0aacac"
+gid-member    = "#0aacac"
+gid-other     = ""
+
+# ── Size gradient ──────────────────────────────────────
+# Green → yellow → orange → red, all from the standard primaries.
+# Bold throughout — exa tradition.
+size-major       = "bold #00a000"
+size-minor       = "#00a000"
+size-number-byte = "bold #00a000"     # ANSI green
+size-number-kilo = "bold #5fa000"     # green-yellow
+size-number-mega = "bold #c08000"     # ANSI yellow (mustard)
+size-number-giga = "bold #c05a00"     # ANSI orange-red
+size-number-huge = "bold #c01818"     # ANSI red
+size-unit-byte = "#7c7c7c"
+size-unit-kilo = "#7c7c7c"
+size-unit-mega = "#7c7c7c"
+size-unit-giga = "#7c7c7c"
+size-unit-huge = "#7c7c7c"
+
+# ── Date gradient ──────────────────────────────────────
+# Cyan → blue → grey, six tiers.
+date-now   = "bold #0aacac"      # ANSI cyan, hot
+date-today = "#0aacac"
+date-week  = "#1188c0"           # mid sky
+date-month = "#1166c4"           # ANSI blue
+date-year  = "#7c7c7c"
+date-old   = "#555555"
+
+# ── Links / VCS / chrome ───────────────────────────────
+links       = "bold #c01818"
+links-multi = "bold #c08000"
+
+vcs-new        = "#00a000"
+vcs-modified   = "#1166c4"
+vcs-deleted    = "#c01818"
+vcs-renamed    = "#c08000"
+vcs-typechange = "#a020a0"       # ANSI magenta
+vcs-ignored    = "#7c7c7c"
+vcs-conflicted = "bold #c01818"
+
+# Tasteful grey for tree characters and dashes — the one
+# thing the original exa never got right.
+punctuation       = "#7c7c7c"
+inode             = "#a020a0"    # ANSI magenta
+blocks            = "#0aacac"
+octal             = "#a020a0"
+flags             = "#c08000"
+
+# Bold underlined grey header — same family as the punctuation
+# chrome, reads as structural.
+header            = "bold underline #7c7c7c"
+
+symlink-path       = "#0aacac"
+control-char       = "#c01818"
+broken-symlink     = "bold #c01818"
+broken-overlay     = "underline"
