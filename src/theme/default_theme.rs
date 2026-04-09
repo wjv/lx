@@ -72,14 +72,17 @@ impl UiStyles {
                 conflicted:  Red.normal(),
             },
 
-            punctuation:  Fixed(244).normal(),
-            date: DateAge {
-                now:   Cyan.bold(),
-                today: Cyan.normal(),
-                week:  Blue.bold(),
-                month: Blue.normal(),
-                year:  Fixed(244).normal(),
-                old:   Fixed(240).normal(),
+            // ANSI has no "subdued grey" — punctuation collapses to
+            // the terminal foreground.  lx-256 and lx-24bit will use
+            // Fixed/RGB greys for visual subordination.
+            punctuation:  Style::default(),
+            // ANSI date "gradient" collapses to a single colour —
+            // matches the historical exa behaviour.  The age-based
+            // gradient is reserved for lx-256 and lx-24bit.
+            date: {
+                let mut d = DateAge::default();
+                d.set_all(Blue.normal());
+                d
             },
             inode:        Purple.normal(),
             blocks:       Cyan.normal(),
