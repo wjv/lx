@@ -102,9 +102,8 @@ pub mod test {
     use crate::fs::fields as f;
     use crate::output::cell::TextCell;
 
-    use uzers::{User, Group};
+    use uzers::Group;
     use uzers::mock::MockUsers;
-    use uzers::os::unix::GroupExt;
     use nu_ansi_term::Color::*;
     use nu_ansi_term::Style;
 
