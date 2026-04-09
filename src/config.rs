@@ -57,6 +57,10 @@ pub enum ConfigError {
     #[error("{path} is already at version {CONFIG_VERSION}; no upgrade needed")]
     AlreadyCurrent { path: PathBuf },
 
+    /// `--upgrade-config` invoked with no config file in scope.
+    #[error("no config file found to upgrade")]
+    NothingToUpgrade,
+
     /// A `--dump-*` or `--show-class`/`--show-format` lookup that
     /// references a name we don't know.  `kind` is the singular
     /// user-facing noun ("theme", "personality", ...) and
@@ -1632,7 +1636,7 @@ const COMPILED_PERSONALITIES: &[&str] = &[
 ];
 
 /// Return the names of all known personalities (compiled-in + config).
-fn all_personality_names() -> Vec<String> {
+pub fn all_personality_names() -> Vec<String> {
     let mut names: Vec<String> = COMPILED_PERSONALITIES.iter()
         .map(|s| (*s).into())
         .collect();

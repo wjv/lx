@@ -114,6 +114,37 @@ legacy `perm-*` short form is still accepted as an alias.  This
 fixes a long-standing bug where curated themes that used the
 longer form were silently ignored.
 
+### Broken config files are now fatal
+
+In 0.8 and earlier, lx would emit a warning and continue with
+compiled defaults if your config file failed to parse, used an
+unsupported schema version, or contained a `[theme.X]`
+inheritance cycle.  In 0.9 these are *errors*: lx prints the
+problem and exits non-zero (exit code 1 for I/O / parse errors,
+3 for theme cycles).
+
+The motivation is that a silent fallback hides real bugs — if
+you've taken the trouble to write a config file, an invalid line
+should tell you about itself, not vanish.
+
+**No action needed** for users with a working config file or no
+config file at all.
+
+**If you see a new error on launch**, the first line will tell
+you what's wrong.  Most likely:
+
+- **TOML parse error**: edit the file or restore an earlier
+  version.  `lx --upgrade-config` keeps a `.bak` of your last
+  successful upgrade.
+- **`needs upgrade`**: run `lx --upgrade-config` to migrate the
+  schema version.
+- **`theme inheritance cycle`**: a chain of `inherits = "..."`
+  loops back on itself.  Break the loop and try again.
+
+The `--upgrade-config` flow is unaffected — it still reads the
+config file directly and runs even when the schema is too old
+for normal operation.
+
 
 ## Upgrading to 0.8
 

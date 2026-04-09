@@ -79,6 +79,24 @@ All notable changes to lx are documented here. lx is forked from
   ignored them.  Backportable to 0.8.
 - Linux release builds pinned to `ubuntu-22.04` (glibc 2.35),
   lowering the floor from glibc 2.39.
+- **Error handling refactor.**  Every fallible code path now
+  bubbles a `thiserror`-based error type up to a single handler
+  in `main()`.  New module-level error types (`ThemeError`),
+  thiserror conversions for `OptionsError`, new `ConfigError`
+  variants for unknown lookups (`NotFound`) and missing upgrade
+  targets (`NothingToUpgrade`), and a top-level `LxError` enum
+  in `src/main.rs` that wraps them all via `#[from]` for
+  ergonomic `?` propagation.  No user-visible CLI changes from
+  this; error messages and exit codes are preserved.
+- **Broken config files are now fatal.**  Previously a config
+  file with invalid TOML or an unsupported version would emit
+  a warning and lx would continue with compiled defaults.  Now
+  it exits with the relevant error.  A cycle in `[theme.X]`
+  inheritance is similarly fatal (was: warn + continue).
+  Operating without a config file at all is unaffected.
+  Cause: silently ignoring a broken config file hides real
+  bugs.  See [`docs/UPGRADING.md`](docs/UPGRADING.md) for the
+  full migration note.
 
 
 ## [0.8.0] — 2026-04-07

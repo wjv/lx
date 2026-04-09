@@ -110,8 +110,6 @@ fn main() {
 /// Fallible body of `main()`.  Returns the desired process exit code on
 /// success or a top-level `LxError` to be reported by the wrapper.
 fn try_main() -> Result<i32, LxError> {
-    use std::process::exit;
-
     let cli_args: Vec<OsString> = env::args_os().skip(1).collect();
 
     // Skip config loading for --upgrade-config — the file may be in
@@ -172,22 +170,24 @@ fn try_main() -> Result<i32, LxError> {
         // Apply the resolved personality, falling back to "lx" if no
         // earlier stage matched.
         let personality_name = personality_name.unwrap_or_else(|| "lx".to_string());
-        {
-            match config::resolve_personality(&personality_name) {
-                Ok(Some(personality)) => {
-                    args.extend(personality.to_args());
-                    active_personality = Some(personality_name.clone());
-                }
-                Ok(None) if explicit => {
-                    eprintln!("lx: unknown personality '{personality_name}'");
-                    std::process::exit(exits::OPTIONS_ERROR);
-                }
-                Ok(None) => {}  // argv[0] didn't match — use defaults
-                Err(e) => {
-                    eprintln!("lx: {e}");
-                    std::process::exit(exits::OPTIONS_ERROR);
-                }
+        match config::resolve_personality(&personality_name)? {
+            Some(personality) => {
+                args.extend(personality.to_args());
+                active_personality = Some(personality_name.clone());
             }
+            None if explicit => {
+                // The user named a personality explicitly via -p or
+                // $LX_PERSONALITY but it doesn't exist.  Surface this
+                // through the same NotFound channel as the dump
+                // commands so the candidate list comes for free.
+                return Err(LxError::Config(config::ConfigError::NotFound {
+                    kind: "personality",
+                    kind_plural: "personalities",
+                    name: personality_name,
+                    candidates: config::all_personality_names().join(", "),
+                }));
+            }
+            None => {}  // argv[0] didn't match — use defaults
         }
     }
 
@@ -223,19 +223,16 @@ fn try_main() -> Result<i32, LxError> {
             let lx = Lx { options, writer, input_paths, theme, console_width, vcs, item_count: 0, size_total: 0, numeric };
 
             match lx.run() {
-                Ok(exit_status) => {
-                    return Ok(exit_status);
-                }
+                Ok(exit_status) => return Ok(exit_status),
 
+                // Broken pipe is normal for `lx | head` etc. — quietly
+                // exit 0 instead of treating it as an error.
                 Err(e) if e.kind() == ErrorKind::BrokenPipe => {
                     warn!("Broken pipe error: {e}");
                     return Ok(exits::SUCCESS);
                 }
 
-                Err(e) => {
-                    eprintln!("{e}");
-                    exit(exits::RUNTIME_ERROR);
-                }
+                Err(e) => return Err(LxError::from(e)),
             }
         }
 
@@ -316,20 +313,12 @@ fn try_main() -> Result<i32, LxError> {
         }
 
         OptionsResult::UpgradeConfig => {
-            let Some(path) = config::find_config_path() else {
-                eprintln!("lx: no config file found to upgrade");
-                exit(exits::RUNTIME_ERROR);
-            };
-            if let Err(e) = config::upgrade_config(&path) {
-                eprintln!("lx: {e}");
-                exit(exits::RUNTIME_ERROR);
-            }
+            let path = config::find_config_path()
+                .ok_or(config::ConfigError::NothingToUpgrade)?;
+            config::upgrade_config(&path)?;
         }
 
-        OptionsResult::InvalidOptions(error) => {
-            eprintln!("lx: {error}");
-            exit(exits::OPTIONS_ERROR);
-        }
+        OptionsResult::InvalidOptions(error) => return Err(LxError::from(error)),
     }
 
     Ok(exits::SUCCESS)
