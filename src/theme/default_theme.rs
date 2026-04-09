@@ -79,6 +79,8 @@ impl UiStyles {
             // ANSI date "gradient" collapses to a single colour —
             // matches the historical exa behaviour.  The age-based
             // gradient is reserved for lx-256 and lx-24bit.
+            // `set_all()` covers `flat` too, so the no-gradient
+            // path picks up the same Blue.
             date: {
                 let mut d = DateAge::default();
                 d.set_all(Blue.normal());
@@ -190,6 +192,9 @@ impl UiStyles {
             punctuation:  Fixed(244).normal(),  // medium grey
             // Smooth date gradient: cyan → blue → grey.
             // Mid-tone blues: visible on both light and dark.
+            // `flat` matches the `week` tier — a mid-teal that
+            // sits comfortably alongside the other column colours
+            // without leaning hot or cold.
             date: DateAge {
                 now:   Fixed(38).bold(),    // turquoise
                 today: Fixed(38).normal(),  // turquoise
@@ -197,6 +202,7 @@ impl UiStyles {
                 month: Fixed(27).normal(),  // royal blue
                 year:  Fixed(244).normal(), // medium grey
                 old:   Fixed(240).normal(), // dark grey
+                flat:  Fixed(32).normal(),  // = week
             },
             inode:        Fixed(141).normal(),
             blocks:       Fixed(38).normal(),
@@ -329,6 +335,9 @@ impl UiStyles {
             },
 
             punctuation:  mid_grey.normal(),
+            // `flat` matches the `week` tier (teal) — a mid-tone
+            // that reads cleanly on its own when the gradient is
+            // disabled, without favouring "recent" or "ancient".
             date: DateAge {
                 now:   date_now.bold(),
                 today: date_today.normal(),
@@ -336,6 +345,7 @@ impl UiStyles {
                 month: date_month.normal(),
                 year:  mid_grey.normal(),
                 old:   dark_grey.normal(),
+                flat:  date_week.normal(),  // = teal
             },
             inode:        mauve.normal(),
             blocks:       teal.normal(),

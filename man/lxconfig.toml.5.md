@@ -490,11 +490,15 @@ all identity slots explicitly.
 : `date` (bulk setter — sets all tiers at once),
 `date-now` (< 1 hour), `date-today` (< 24 hours),
 `date-week` (< 7 days), `date-month` (< 30 days),
-`date-year` (< 365 days), `date-old` (> 1 year).
+`date-year` (< 365 days), `date-old` (> 1 year),
+`date-flat` (the single colour the date column uses
+when its gradient is disabled).
 
 Setting `date` alone is backwards compatible — all timestamps
-render in the same colour.  Setting individual tiers creates a
-gradient that shows file age at a glance.
+render in the same colour, including the flat fallback.  Setting
+individual tiers creates a gradient that shows file age at a
+glance, and `date-flat` lets a theme define what colour the
+column collapses to when the gradient is turned off.
 
 The compiled-in "exa" theme
 ---------------------------

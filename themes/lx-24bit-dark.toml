@@ -38,3 +38,4 @@ date-week  = "#4ad0d3"         # bright teal
 date-month = "#4aa9ec"         # bright soft blue
 date-year  = "#999999"         # mid grey
 date-old   = "#666666"         # dark grey
+date-flat  = "#4ad0d3"         # = week (bright teal)

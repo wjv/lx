@@ -80,7 +80,9 @@ pub struct Size {
     pub unit_huge: Style,
 }
 
-/// Age-based timestamp styles.  Six tiers from "just now" to "old".
+/// Age-based timestamp styles.  Six tiers from "just now" to "old",
+/// plus a single `flat` colour used when the date column's gradient
+/// is disabled.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct DateAge {
     pub now:   Style,   // < 1 hour
@@ -89,10 +91,17 @@ pub struct DateAge {
     pub month: Style,   // < 30 days
     pub year:  Style,   // < 365 days
     pub old:   Style,   // > 1 year
+
+    /// Flat single-tone colour used when the date column is rendered
+    /// without an age gradient.  Mirrors `Size::major`/`Size::minor`,
+    /// which fill the same role for the size column.
+    pub flat: Style,
 }
 
 impl DateAge {
     /// Set all tiers to the same style (bulk setter for `date = ...`).
+    /// Also sets `flat` so the bulk setter behaves the way a user
+    /// would expect: "make the date column this colour, full stop".
     pub fn set_all(&mut self, style: Style) {
         self.now = style;
         self.today = style;
@@ -100,6 +109,7 @@ impl DateAge {
         self.month = style;
         self.year = style;
         self.old = style;
+        self.flat = style;
     }
 
     /// Pick the style for a given age in seconds.
@@ -247,6 +257,7 @@ impl UiStyles {
             "dm" => self.date.month              = pair.to_style(),
             "dy" => self.date.year               = pair.to_style(),
             "do" => self.date.old                = pair.to_style(),
+            "dl" => self.date.flat               = pair.to_style(),
             "in" => self.inode                    = pair.to_style(),
             "bl" => self.blocks                   = pair.to_style(),
             "hd" => self.header                   = pair.to_style(),
@@ -365,6 +376,7 @@ impl UiStyles {
             "date-month"       => self.date.month         = style,
             "date-year"        => self.date.year          = style,
             "date-old"         => self.date.old           = style,
+            "date-flat"        => self.date.flat          = style,
             "inode"            => self.inode             = style,
             "blocks"           => self.blocks            = style,
             "header"           => self.header            = style,

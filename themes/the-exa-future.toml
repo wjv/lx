@@ -85,13 +85,15 @@ size-unit-giga = "#7c7c7c"
 size-unit-huge = "#7c7c7c"
 
 # ── Date gradient ──────────────────────────────────────
-# Cyan → blue → grey, six tiers.
+# Cyan → blue → grey, six tiers, plus a flat-colour fallback
+# for when the date column's gradient is disabled.
 date-now   = "bold #0aacac"      # ANSI cyan, hot
 date-today = "#0aacac"
 date-week  = "#1188c0"           # mid sky
 date-month = "#1166c4"           # ANSI blue
 date-year  = "#7c7c7c"
 date-old   = "#555555"
+date-flat  = "#1188c0"           # = mid sky (week)
 
 # ── Links / VCS / chrome ───────────────────────────────
 links       = "bold #c01818"
