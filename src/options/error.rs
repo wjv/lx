@@ -55,3 +55,5 @@ impl fmt::Display for OptionsError {
         }
     }
 }
+
+impl std::error::Error for OptionsError {}

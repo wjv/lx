@@ -31,12 +31,13 @@ use nu_ansi_term::{AnsiStrings, Style};
 
 use log::*;
 
+use crate::config::ConfigError;
 use crate::fs::{Dir, File};
 use crate::fs::feature::git::GitCache;
 use crate::fs::feature::jj::JjCache;
 use crate::fs::feature::VcsCache;
 use crate::fs::filter::VcsIgnore;
-use crate::options::{Options, VcsBackend, Vars, vars, OptionsResult};
+use crate::options::{Options, OptionsError, VcsBackend, Vars, vars, OptionsResult};
 use crate::output::{escape, lines, grid, grid_details, details, View, Mode};
 use crate::theme::Theme;
 
@@ -48,9 +49,37 @@ mod output;
 mod theme;
 
 
-fn main() {
-    use std::process::exit;
+/// Top-level error type for the `lx` binary.
+///
+/// Wraps the per-module error types so that fallible call sites in
+/// `try_main()` can use the `?` operator across module boundaries.
+/// New module errors are added here as the refactor progresses.
+#[derive(Debug, thiserror::Error)]
+pub enum LxError {
+    #[error("{0}")]
+    Config(#[from] ConfigError),
 
+    #[error("{0}")]
+    Options(#[from] OptionsError),
+
+    #[error("{0}")]
+    Io(#[from] std::io::Error),
+}
+
+impl LxError {
+    /// Map an `LxError` to the process exit code that should accompany it.
+    fn exit_code(&self) -> i32 {
+        match self {
+            Self::Options(_)
+            | Self::Config(ConfigError::InheritanceCycle { .. })
+            | Self::Config(ConfigError::MissingParent { .. }) => exits::OPTIONS_ERROR,
+            _ => exits::RUNTIME_ERROR,
+        }
+    }
+}
+
+
+fn main() {
     #[cfg(unix)]
     unsafe {
         libc::signal(libc::SIGPIPE, libc::SIG_DFL);
@@ -62,6 +91,21 @@ fn main() {
     if let Err(e) = nu_ansi_term::enable_ansi_support() {
         warn!("Failed to enable ANSI support: {}", e);
     }
+
+    match try_main() {
+        Ok(code) => std::process::exit(code),
+        Err(e) => {
+            eprintln!("lx: {e}");
+            std::process::exit(e.exit_code());
+        }
+    }
+}
+
+
+/// Fallible body of `main()`.  Returns the desired process exit code on
+/// success or a top-level `LxError` to be reported by the wrapper.
+fn try_main() -> Result<i32, LxError> {
+    use std::process::exit;
 
     let cli_args: Vec<OsString> = env::args_os().skip(1).collect();
 
@@ -173,12 +217,12 @@ fn main() {
 
             match lx.run() {
                 Ok(exit_status) => {
-                    exit(exit_status);
+                    return Ok(exit_status);
                 }
 
                 Err(e) if e.kind() == ErrorKind::BrokenPipe => {
                     warn!("Broken pipe error: {e}");
-                    exit(exits::SUCCESS);
+                    return Ok(exits::SUCCESS);
                 }
 
                 Err(e) => {
@@ -287,6 +331,8 @@ fn main() {
             exit(exits::OPTIONS_ERROR);
         }
     }
+
+    Ok(exits::SUCCESS)
 }
 
 
