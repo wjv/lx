@@ -417,11 +417,16 @@ element. Each key takes a colour value (see *COLOUR VALUES* below).
 
 **Permissions:**
 
-: `perm-user-read`, `perm-user-write`, `perm-user-exec`,
-`perm-user-exec-other`, `perm-group-read`, `perm-group-write`,
-`perm-group-exec`, `perm-other-read`, `perm-other-write`,
-`perm-other-exec`, `perm-special-user`, `perm-special-other`,
-`perm-attribute`.
+: `permissions-user-read`, `permissions-user-write`,
+`permissions-user-execute`, `permissions-user-execute-other`,
+`permissions-group-read`, `permissions-group-write`,
+`permissions-group-execute`, `permissions-other-read`,
+`permissions-other-write`, `permissions-other-execute`,
+`permissions-special-user`, `permissions-special-other`,
+`permissions-attribute`.
+
+The legacy short form `perm-user-read`, `perm-user-write`,
+`perm-user-exec` etc. is also accepted as an alias.
 
 **Size:**
 
@@ -490,19 +495,19 @@ The special theme name `"exa"` provides the following defaults.  Use
     executable = "bold green"
 
     # Permissions
-    perm-user-read = "bold yellow"
-    perm-user-write = "bold red"
-    perm-user-exec = "bold underline green"
-    perm-user-exec-other = "bold green"
-    perm-group-read = "yellow"
-    perm-group-write = "red"
-    perm-group-exec = "green"
-    perm-other-read = "yellow"
-    perm-other-write = "red"
-    perm-other-exec = "green"
-    perm-special-user = "purple"
-    perm-special-other = "purple"
-    perm-attribute = ""
+    permissions-user-read = "bold yellow"
+    permissions-user-write = "bold red"
+    permissions-user-execute = "bold underline green"
+    permissions-user-execute-other = "bold green"
+    permissions-group-read = "yellow"
+    permissions-group-write = "red"
+    permissions-group-execute = "green"
+    permissions-other-read = "yellow"
+    permissions-other-write = "red"
+    permissions-other-execute = "green"
+    permissions-special-user = "purple"
+    permissions-special-other = "purple"
+    permissions-attribute = ""
 
     # Size (default: all green; see --colour-scale for gradients)
     size-number = "bold green"
