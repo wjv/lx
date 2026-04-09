@@ -524,6 +524,74 @@ impl ConditionalOverride {
     }
 }
 
+/// Inject the auto-selection `[[when]]` blocks into a config file's
+/// `[personality.default]` section.  Used by `--upgrade-config` from
+/// 0.5 to 0.6.  Idempotent: callers should check that the blocks
+/// are not already present before calling.
+fn inject_auto_select_blocks(contents: &str) -> String {
+    const BLOCKS: &str = "\n\
+## Auto-select a richer theme on capable terminals (added by\n\
+## lx --upgrade-config to 0.6).  Delete or edit to opt out.\n\
+\n\
+[[personality.default.when]]\n\
+env.TERM = \"*-256color\"\n\
+theme = \"lx-256\"\n\
+\n\
+[[personality.default.when]]\n\
+env.COLORTERM = [\"truecolor\", \"24bit\"]\n\
+theme = \"lx-24bit\"\n\
+\n";
+
+    // Find the end of the [personality.default] section: the next
+    // line that starts with [ (a new section) or end of file.
+    let lines: Vec<&str> = contents.lines().collect();
+    let mut in_default = false;
+    let mut insert_after: Option<usize> = None;
+
+    for (i, line) in lines.iter().enumerate() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("[personality.default]") {
+            in_default = true;
+            continue;
+        }
+        if in_default && (trimmed.starts_with('[') && !trimmed.starts_with("[[")) {
+            // Next top-level section — end of [personality.default].
+            insert_after = Some(i);
+            break;
+        }
+        if in_default && trimmed.starts_with("[[") {
+            // Already a [[ block in [personality.default] — bail
+            // (we don't want to insert in the middle).
+            insert_after = Some(i);
+            break;
+        }
+    }
+
+    let insert_at = match insert_after {
+        Some(i) => i,
+        None if in_default => lines.len(),
+        None => return contents.to_string(),  // no [personality.default]
+    };
+
+    let mut result = String::new();
+    for (i, line) in lines.iter().enumerate() {
+        if i == insert_at {
+            result.push_str(BLOCKS);
+        }
+        result.push_str(line);
+        result.push('\n');
+    }
+    if insert_at == lines.len() {
+        result.push_str(BLOCKS);
+    }
+
+    // Preserve trailing newline if present in original.
+    if !contents.ends_with('\n') && result.ends_with('\n') {
+        result.pop();
+    }
+    result
+}
+
 /// Match a single value against an expected string, treating the
 /// expected string as a glob pattern if it contains glob metacharacters.
 fn match_string(actual: &str, expected: &str) -> bool {
@@ -954,10 +1022,37 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
     match name {
         // The "default" personality sets theme = "exa" so that
         // file-type colouring is explicit, not a magic fallback.
+        // Conditional [[when]] blocks auto-select richer themes
+        // when the terminal supports them: lx-256 on 256-colour
+        // terminals, lx-24bit on truecolour terminals.  The
+        // truecolour block comes second so it wins on terminals
+        // that satisfy both conditions (e.g. xterm-256color +
+        // COLORTERM=truecolor).
         "default" => Some(PersonalityDef {
             settings: HashMap::from([
                 ("theme".into(), toml::Value::String("exa".into())),
             ]),
+            when: vec![
+                ConditionalOverride {
+                    env: HashMap::from([
+                        ("TERM".into(), toml::Value::String("*-256color".into())),
+                    ]),
+                    settings: HashMap::from([
+                        ("theme".into(), toml::Value::String("lx-256".into())),
+                    ]),
+                },
+                ConditionalOverride {
+                    env: HashMap::from([
+                        ("COLORTERM".into(), toml::Value::Array(vec![
+                            toml::Value::String("truecolor".into()),
+                            toml::Value::String("24bit".into()),
+                        ])),
+                    ]),
+                    settings: HashMap::from([
+                        ("theme".into(), toml::Value::String("lx-24bit".into())),
+                    ]),
+                },
+            ],
             ..Default::default()
         }),
         "lx" => Some(PersonalityDef {
@@ -1833,15 +1928,45 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
         }
     }
 
-    // 0.3, 0.4, or 0.5 → current: bump the version string in place
-    // (no structural changes).
+    // 0.3, 0.4, or 0.5 → current: bump the version string in place.
+    // For 0.5 → 0.6, also inject auto-selection [[when]] blocks into
+    // [personality.default] (if it exists and doesn't already have
+    // terminal-detection conditions).  Older versions don't support
+    // [[when]] blocks at all and will pick up the auto-selection
+    // when the user re-runs --upgrade-config from 0.5.
     if version == "0.3" || version == "0.4" || version == "0.5" {
         let backup = path.with_extension("toml.bak");
         fs::copy(path, &backup).with_path(&backup)?;
 
         let old_version_line = format!("version = \"{version}\"");
         let new_version_line = format!("version = \"{CONFIG_VERSION}\"");
-        let updated = contents.replacen(&old_version_line, &new_version_line, 1);
+        let mut updated = contents.replacen(&old_version_line, &new_version_line, 1);
+
+        // Inject auto-selection blocks if upgrading from 0.5 and the
+        // user has [personality.default] without existing terminal
+        // detection.  Match on `env.TERM ` and `env.COLORTERM` as
+        // tokens (with following space or `=`) so we don't false-match
+        // on `env.TERM_PROGRAM` etc.
+        let has_term_detection = updated.lines().any(|line| {
+            let l = line.trim_start();
+            l.starts_with("env.TERM ")
+                || l.starts_with("env.TERM=")
+                || l.starts_with("env.COLORTERM ")
+                || l.starts_with("env.COLORTERM=")
+        });
+        if version == "0.5"
+            && updated.contains("[personality.default]")
+            && !has_term_detection
+        {
+            updated = inject_auto_select_blocks(&updated);
+            eprintln!(
+                "Note: added auto-selection [[when]] blocks to \
+                 [personality.default] so capable terminals get the \
+                 lx-256 / lx-24bit themes automatically.  Edit or \
+                 delete to opt out."
+            );
+        }
+
         fs::write(path, &updated).with_path(path)?;
 
         eprintln!("Original config saved to {}", backup.display());

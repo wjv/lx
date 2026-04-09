@@ -419,24 +419,109 @@ fn no_theme_works() {
         .stdout(predicate::str::contains("Cargo.toml"));
 }
 
-#[test]
-fn default_theme_produces_colour() {
-    // Without any config, the compiled-in exa theme (via the
-    // default personality) should produce coloured output.
-    // Bold blue (1;34) for directories is the exa default.
+/// Helper: build a `lx` command with a clean environment so the
+/// builtin theme auto-selection doesn't interfere with assertions.
+fn lx_clean() -> assert_cmd::Command {
     let mut cmd = assert_cmd::Command::cargo_bin("lx").expect("binary lx not found");
     cmd.env("LX_CONFIG", "/nonexistent")
        .env("HOME", "/nonexistent")
        .env_remove("LS_COLORS")
        .env_remove("LX_COLORS")
+       .env_remove("TERM")
+       .env_remove("COLORTERM");
+    cmd
+}
+
+#[test]
+fn default_theme_produces_colour() {
+    // Force --theme=exa so this test doesn't depend on ambient
+    // TERM/COLORTERM (auto-selection would pick lx-256 or lx-24bit).
+    // Bold blue (1;34) for directories is the exa default.
+    lx_clean()
+       .arg("--colour=always")
+       .arg("--theme=exa")
+       .args(["-l", "src"])
+       .assert()
+       .success()
+       .stdout(predicate::str::contains("\x1b[1;34m"))  // bold blue dir
+       .stdout(predicate::str::contains("\x1b[34m"));   // blue date
+}
+
+#[test]
+fn lx_256_theme_produces_256_colour() {
+    // The lx-256 theme uses Fixed(33) bold for directories.
+    lx_clean()
+       .arg("--colour=always")
+       .arg("--theme=lx-256")
+       .args(["-l", "src"])
+       .assert()
+       .success()
+       // Bold soft blue directory (Fixed 33): "1;38;5;33"
+       .stdout(predicate::str::contains("\x1b[1;38;5;33m"));
+}
+
+#[test]
+fn lx_24bit_theme_produces_truecolour() {
+    // The lx-24bit theme uses #3b8ed8 bold for directories.
+    lx_clean()
+       .arg("--colour=always")
+       .arg("--theme=lx-24bit")
+       .args(["-l", "src"])
+       .assert()
+       .success()
+       // Bold #3b8ed8 directory: "1;38;2;59;142;216"
+       .stdout(predicate::str::contains("\x1b[1;38;2;59;142;216m"));
+}
+
+#[test]
+fn auto_selection_picks_exa_with_no_term() {
+    // Bare environment: no TERM, no COLORTERM, so the [[when]]
+    // blocks in the default personality don't fire.  Should
+    // get the bare-bones exa theme.
+    lx_clean()
        .arg("--colour=always")
        .args(["-l", "src"])
        .assert()
        .success()
-       // Bold blue directory (from exa theme): 1;34
-       .stdout(predicate::str::contains("\x1b[1;34m"))
-       // Blue date (from exa theme): 34
-       .stdout(predicate::str::contains("\x1b[34m"));
+       .stdout(predicate::str::contains("\x1b[1;34m"));  // exa bold blue
+}
+
+#[test]
+fn auto_selection_picks_lx_256_for_256color_term() {
+    // TERM=xterm-256color → matches "*-256color" → lx-256.
+    lx_clean()
+       .env("TERM", "xterm-256color")
+       .arg("--colour=always")
+       .args(["-l", "src"])
+       .assert()
+       .success()
+       .stdout(predicate::str::contains("\x1b[1;38;5;33m"));  // lx-256 dir
+}
+
+#[test]
+fn auto_selection_picks_lx_24bit_for_truecolor_colorterm() {
+    // COLORTERM=truecolor → matches the array → lx-24bit.
+    // Truecolour wins over 256-colour even if both apply.
+    lx_clean()
+       .env("TERM", "xterm-256color")
+       .env("COLORTERM", "truecolor")
+       .arg("--colour=always")
+       .args(["-l", "src"])
+       .assert()
+       .success()
+       .stdout(predicate::str::contains("\x1b[1;38;2;59;142;216m"));  // lx-24bit dir
+}
+
+#[test]
+fn auto_selection_accepts_24bit_colorterm_value() {
+    // COLORTERM=24bit also valid.
+    lx_clean()
+       .env("COLORTERM", "24bit")
+       .arg("--colour=always")
+       .args(["-l", "src"])
+       .assert()
+       .success()
+       .stdout(predicate::str::contains("\x1b[1;38;2;59;142;216m"));
 }
 
 #[test]
@@ -463,7 +548,9 @@ fn default_theme_colours_filetypes() {
 #[test]
 fn init_config_preserves_default_colours() {
     // After --init-config, output should look identical to no-config.
-    // This is design invariant #2.
+    // This is design invariant #2.  We test it by running lx twice
+    // (once with no config, once with the generated config) and
+    // comparing stdout byte-for-byte.
     let dir = tempdir().expect("failed to create tempdir");
 
     // Generate config.
@@ -473,19 +560,32 @@ fn init_config_preserves_default_colours() {
         .env("LX_CONFIG", "/nonexistent")
         .assert()
         .success();
-
     let config_path = dir.path().join(".lxconfig.toml");
     assert!(config_path.exists());
 
-    // Run with generated config — should have bold blue directories.
-    let mut cmd = assert_cmd::Command::cargo_bin("lx").expect("binary lx not found");
-    cmd.env("LX_CONFIG", &config_path)
-       .env("HOME", dir.path())
-       .env_remove("LS_COLORS")
-       .env_remove("LX_COLORS")
-       .arg("--colour=always")
-       .args(["-l", "src"])
-       .assert()
-       .success()
-       .stdout(predicate::str::contains("\x1b[1;34m"));
+    // Common args / env for both runs.
+    fn common(cmd: &mut assert_cmd::Command, dir: &std::path::Path) {
+        cmd.env("HOME", dir)
+           .env_remove("LS_COLORS")
+           .env_remove("LX_COLORS")
+           .arg("--colour=always")
+           .args(["-l", "src"]);
+    }
+
+    // Run without config.
+    let mut no_cfg = assert_cmd::Command::cargo_bin("lx").expect("binary lx not found");
+    no_cfg.env("LX_CONFIG", "/nonexistent");
+    common(&mut no_cfg, dir.path());
+    let no_cfg_out = no_cfg.assert().success().get_output().stdout.clone();
+
+    // Run with the generated config.
+    let mut with_cfg = assert_cmd::Command::cargo_bin("lx").expect("binary lx not found");
+    with_cfg.env("LX_CONFIG", &config_path);
+    common(&mut with_cfg, dir.path());
+    let with_cfg_out = with_cfg.assert().success().get_output().stdout.clone();
+
+    assert_eq!(
+        no_cfg_out, with_cfg_out,
+        "--init-config changed behaviour (invariant #2 violation)"
+    );
 }
