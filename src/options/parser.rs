@@ -525,6 +525,11 @@ Environment:\n  \
             .long("no-blocks").alias("no-S")
             .hide(true)
             .action(ArgAction::Count))
+        .arg(Arg::new(flags::NO_FLAGS)
+            .long("no-flags").alias("no-O")
+            .hide(true)
+            .action(ArgAction::Count)
+            .overrides_with(flags::FILE_FLAGS))
         .arg(Arg::new(flags::NO_OCTAL)
             .long("no-octal").alias("no-o")
             .hide(true)
@@ -596,6 +601,16 @@ Environment:\n  \
             .help("Show per-directory VCS repo indicator")
             .help_heading("VCS")
             .action(ArgAction::Count))
+        .arg(Arg::new(flags::NO_VCS_STATUS)
+            .long("no-vcs-status")
+            .hide(true)
+            .action(ArgAction::Count)
+            .overrides_with(flags::VCS_STATUS))
+        .arg(Arg::new(flags::NO_VCS_REPOS)
+            .long("no-vcs-repos")
+            .hide(true)
+            .action(ArgAction::Count)
+            .overrides_with(flags::VCS_REPOS))
 
         // ── Appearance ────────────────────────────────────────────
 

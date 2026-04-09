@@ -129,10 +129,13 @@ pub(crate) static SETTING_FLAGS: &[SettingDef] = &[
     SettingDef { key: "no-gid",        flag: "--no-gid",         kind: SettingKind::Bool },
     SettingDef { key: "no-links",      flag: "--no-links",       kind: SettingKind::Bool },
     SettingDef { key: "no-blocks",     flag: "--no-blocks",      kind: SettingKind::Bool },
+    SettingDef { key: "no-flags",      flag: "--no-flags",       kind: SettingKind::Bool },
     SettingDef { key: "no-octal",      flag: "--no-octal",       kind: SettingKind::Bool },
     SettingDef { key: "no-header",     flag: "--no-header",      kind: SettingKind::Bool },
     SettingDef { key: "no-count",      flag: "--no-count",       kind: SettingKind::Bool },
     SettingDef { key: "no-total-size", flag: "--no-total-size",  kind: SettingKind::Bool },
+    SettingDef { key: "no-vcs-status", flag: "--no-vcs-status",  kind: SettingKind::Bool },
+    SettingDef { key: "no-vcs-repos",  flag: "--no-vcs-repos",   kind: SettingKind::Bool },
 ];
 
 /// Look up a setting definition by config key name.
