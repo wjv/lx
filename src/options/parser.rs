@@ -238,6 +238,89 @@ impl clap::builder::TypedValueParser for ColumnsParser {
 }
 
 
+/// `TypedValueParser` for `--gradient`.
+///
+/// Accepts a comma-separated list of column names (`size`, `date`),
+/// or one of the special tokens `none` / `all`.  Tokens may not be
+/// mixed with column names — `none` and `all` only make sense alone.
+/// On a typo (`--gradient=siz`) clap's "did you mean" suggests the
+/// closest known token via the `possible_values()` advertised here.
+#[derive(Clone)]
+struct GradientParser;
+
+impl GradientParser {
+    /// All tokens accepted by the parser, including `none` and `all`.
+    /// Listed in `possible_values()` so clap's hint and the "did you
+    /// mean" computation see them.
+    const TOKENS: &'static [&'static str] = &["none", "all", "size", "date"];
+}
+
+impl clap::builder::TypedValueParser for GradientParser {
+    type Value = String;
+
+    fn parse_ref(
+        &self,
+        cmd: &clap::Command,
+        arg: Option<&clap::Arg>,
+        value: &std::ffi::OsStr,
+    ) -> Result<Self::Value, clap::Error> {
+        let s = value.to_str().ok_or_else(|| {
+            clap::Error::new(clap::error::ErrorKind::InvalidUtf8).with_cmd(cmd)
+        })?;
+        let mut saw_none_or_all = false;
+        let mut saw_column = false;
+        for tok in s.split(',') {
+            let tok = tok.trim();
+            match tok {
+                "none" | "all" => saw_none_or_all = true,
+                "size" | "date" => saw_column = true,
+                _ => {
+                    // Unknown token — let PossibleValuesParser
+                    // construct the error so we get the same
+                    // [possible values: ...] hint and "did you mean"
+                    // suggestion as every other valued flag.
+                    let bad: std::ffi::OsString = tok.into();
+                    clap::builder::PossibleValuesParser::new(Self::TOKENS)
+                        .parse_ref(cmd, arg, &bad)?;
+                }
+            }
+        }
+        if saw_none_or_all && saw_column {
+            // none/all are exclusive — `--gradient=none,size` is
+            // nonsense.  Build a clap-style error.
+            let mut err = clap::Error::new(
+                clap::error::ErrorKind::InvalidValue,
+            )
+            .with_cmd(cmd);
+            if let Some(arg) = arg {
+                err.insert(
+                    clap::error::ContextKind::InvalidArg,
+                    clap::error::ContextValue::String(arg.to_string()),
+                );
+            }
+            err.insert(
+                clap::error::ContextKind::InvalidValue,
+                clap::error::ContextValue::String(s.to_string()),
+            );
+            err.insert(
+                clap::error::ContextKind::ValidValue,
+                clap::error::ContextValue::Strings(
+                    Self::TOKENS.iter().map(|s| (*s).to_string()).collect(),
+                ),
+            );
+            return Err(err);
+        }
+        Ok(s.to_string())
+    }
+
+    fn possible_values(
+        &self,
+    ) -> Option<Box<dyn Iterator<Item = PossibleValue> + '_>> {
+        Some(Box::new(
+            Self::TOKENS.iter().copied().map(PossibleValue::new),
+        ))
+    }
+}
 
 
 /// A wrapper around clap's `ArgMatches` that provides convenience
@@ -835,6 +918,21 @@ Environment:\n  \
             .num_args(0..=1)
             .require_equals(true)
             .default_missing_value("16"))
+        .arg(Arg::new(flags::GRADIENT)
+            .long("gradient")
+            .help("Per-column gradient on/off\n[size, date, all, none]")
+            .help_heading("Appearance")
+            .action(ArgAction::Set)
+            .value_name("COLUMNS")
+            .hide_possible_values(true)
+            .value_parser(GradientParser)
+            .num_args(0..=1)
+            .require_equals(true)
+            .default_missing_value("all"))
+        .arg(Arg::new(flags::NO_GRADIENT)
+            .long("no-gradient")
+            .hide(true)
+            .action(ArgAction::Count))
         .arg(Arg::new(flags::ICONS)
             .long("icons")
             .help("Display icons next to file names\n[always, auto, never]")

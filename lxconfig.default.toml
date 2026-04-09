@@ -50,7 +50,7 @@ long3 = ["permissions", "links", "size", "blocks", "user", "group",
 ## Shared base: settings that all personalities inherit.
 [personality.default]
 colour = "auto"               # always / auto / never
-colour-scale = "none"         # none / 16 / 256
+gradient = "all"              # all / none / size / date / size,date
 time-style = "default"        # default / iso / long-iso / full-iso
 group-dirs = "none"           # first / last / none
 icons = "never"               # always / auto / never

@@ -1,12 +1,11 @@
 use nu_ansi_term::Style;
 use nu_ansi_term::Color::*;
 
-use crate::theme::ColourScale;
 use crate::theme::ui_styles::*;
 
 
 impl UiStyles {
-    pub fn default_theme(scale: ColourScale) -> Self {
+    pub fn default_theme() -> Self {
         Self {
             colourful: true,
 
@@ -42,7 +41,26 @@ impl UiStyles {
                 attribute:           Style::default(),
             },
 
-            size: Size::colourful(scale),
+            // Size column gradient: green → yellow → red → purple,
+            // strictly within ANSI primaries.  When the user disables
+            // the size gradient via --no-gradient or --gradient=none,
+            // `apply_gradient_flags` collapses these to `major`/`minor`.
+            size: Size {
+                major:  Green.bold(),
+                minor:  Green.normal(),
+
+                number_byte: Green.normal(),
+                number_kilo: Green.bold(),
+                number_mega: Yellow.normal(),
+                number_giga: Red.normal(),
+                number_huge: Purple.normal(),
+
+                unit_byte: Green.normal(),
+                unit_kilo: Green.bold(),
+                unit_mega: Yellow.normal(),
+                unit_giga: Red.normal(),
+                unit_huge: Purple.normal(),
+            },
 
             users: Users {
                 user_you:           Yellow.bold(),
@@ -362,70 +380,3 @@ impl UiStyles {
 }
 
 
-impl Size {
-    pub fn colourful(scale: ColourScale) -> Self {
-        match scale {
-            ColourScale::None     => Self::colourful_fixed(),
-            ColourScale::Scale16  => Self::colourful_gradient(),
-            ColourScale::Scale256 => Self::colourful_gradient_256(),
-        }
-    }
-
-    fn colourful_fixed() -> Self {
-        Self {
-            major:  Green.bold(),
-            minor:  Green.normal(),
-
-            number_byte: Green.bold(),
-            number_kilo: Green.bold(),
-            number_mega: Green.bold(),
-            number_giga: Green.bold(),
-            number_huge: Green.bold(),
-
-            unit_byte: Green.normal(),
-            unit_kilo: Green.normal(),
-            unit_mega: Green.normal(),
-            unit_giga: Green.normal(),
-            unit_huge: Green.normal(),
-        }
-    }
-
-    fn colourful_gradient() -> Self {
-        Self {
-            major:  Green.bold(),
-            minor:  Green.normal(),
-
-            number_byte: Green.normal(),
-            number_kilo: Green.bold(),
-            number_mega: Yellow.normal(),
-            number_giga: Red.normal(),
-            number_huge: Purple.normal(),
-
-            unit_byte: Green.normal(),
-            unit_kilo: Green.bold(),
-            unit_mega: Yellow.normal(),
-            unit_giga: Red.normal(),
-            unit_huge: Purple.normal(),
-        }
-    }
-
-    /// 256-colour gradient.
-    fn colourful_gradient_256() -> Self {
-        Self {
-            major:  Green.bold(),
-            minor:  Green.normal(),
-
-            number_byte: Fixed(118).normal(),
-            number_kilo: Fixed(190).normal(),
-            number_mega: Fixed(226).normal(),
-            number_giga: Fixed(220).normal(),
-            number_huge: Fixed(214).normal(),
-
-            unit_byte: Green.normal(),
-            unit_kilo: Green.normal(),
-            unit_mega: Green.normal(),
-            unit_giga: Green.normal(),
-            unit_huge: Green.normal(),
-        }
-    }
-}

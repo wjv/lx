@@ -95,6 +95,10 @@ pub const VCS_REPOS: &str = "vcs-repos";
 // theme selection
 pub const THEME: &str = "theme";
 
+// gradient on/off (per-column)
+pub const GRADIENT: &str = "gradient";
+pub const NO_GRADIENT: &str = "no-gradient";
+
 // display options
 pub const WIDTH: &str = "width";
 pub const ABSOLUTE: &str = "absolute";

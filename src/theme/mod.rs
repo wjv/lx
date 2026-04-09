@@ -23,10 +23,45 @@ pub struct Options {
 
     pub colour_scale: ColourScale,
 
+    pub gradient: GradientFlags,
+
     pub definitions: Definitions,
 
     /// CLI override for theme selection (`--theme=NAME`).
     pub theme_override: Option<String>,
+}
+
+/// Per-column gradient on/off state.
+///
+/// Each gradient-capable column (currently `size` and `date`) is
+/// either rendered with its full per-tier gradient (`true`) or
+/// collapsed to a single flat colour from the theme (`false`).
+///
+/// The collapse happens once at theme construction in `to_theme()`
+/// via [`UiStyles::apply_gradient_flags`]; the renderers themselves
+/// don't know about the on/off state — they just read whatever the
+/// theme tells them.
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+pub struct GradientFlags {
+    pub size: bool,
+    pub date: bool,
+}
+
+impl GradientFlags {
+    /// Both gradients on.  This is the default — themes that ship
+    /// gradient values are designed to show them.
+    pub const ALL: Self = Self { size: true, date: true };
+
+    /// Both gradients off.  Each column collapses to its theme's
+    /// flat colour (`size.major`/`size.minor` for size, `date.flat`
+    /// for date).
+    pub const NONE: Self = Self { size: false, date: false };
+}
+
+impl Default for GradientFlags {
+    fn default() -> Self {
+        Self::ALL
+    }
 }
 
 /// Under what circumstances we should display coloured, rather than plain,
@@ -97,7 +132,7 @@ impl Options {
         let mut ui = if self.theme_override.is_some() {
             UiStyles::plain()
         } else {
-            UiStyles::default_theme(self.colour_scale)
+            UiStyles::default_theme()
         };
 
         // Layer 2–3: LS_COLORS and LX_COLORS environment variables.
@@ -114,6 +149,14 @@ impl Options {
         let empty_cfg = crate::config::Config::default();
         let cfg = crate::config::config().unwrap_or(&empty_cfg);
         self.apply_config_theme(cfg, &mut ui, &mut exts)?;
+
+        // Layer 5: collapse gradient columns to flat colours where
+        // the user has turned the gradient off.  Runs after the full
+        // theme chain is resolved so it sees the final per-tier
+        // values, regardless of whether they came from a compiled
+        // theme, a config theme, an LS_COLORS override, or any
+        // combination.
+        ui.apply_gradient_flags(self.gradient);
 
         let exts: Box<dyn FileColours> = if exts.is_non_empty() {
             Box::new(exts)
@@ -187,7 +230,7 @@ impl Options {
             if tname == "exa" {
                 // Special: apply the compiled-in default theme
                 // and the compiled-in "exa" style.
-                *ui = UiStyles::default_theme(self.colour_scale);
+                *ui = UiStyles::default_theme();
                 let exa_style = crate::config::compiled_exa_style();
                 Self::apply_style(&exa_style, cfg, exts);
                 current = None;
@@ -758,7 +801,7 @@ mod uid_gid_theme_test {
 
     #[test]
     fn theme_trait_returns_direct_fields() {
-        let mut ui = UiStyles::default_theme(ColourScale::None);
+        let mut ui = UiStyles::default_theme();
         ui.users.uid_you = Red.normal();
         ui.users.uid_someone_else = Green.normal();
 

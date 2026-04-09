@@ -93,6 +93,7 @@ pub(crate) static SETTING_FLAGS: &[SettingDef] = &[
 
     // theme
     SettingDef { key: "theme",         flag: "--theme",           kind: SettingKind::Str },
+    SettingDef { key: "gradient",      flag: "--gradient",        kind: SettingKind::Str },
 
     // layout tuning (also settable via LX_GRID_ROWS / LX_ICON_SPACING)
     SettingDef { key: "grid-rows",     flag: "--grid-rows",       kind: SettingKind::Int },

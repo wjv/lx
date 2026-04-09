@@ -164,6 +164,45 @@ impl UiStyles {
     pub fn plain() -> Self {
         Self::default()
     }
+
+    /// Collapse the per-tier values of any column whose gradient is
+    /// disabled into a single flat colour from the theme.
+    ///
+    /// - When `gradient.size` is `false`, every `size.number_*` tier
+    ///   is overwritten with `size.major` and every `size.unit_*`
+    ///   tier with `size.minor`.  These two slots are already
+    ///   themeable (`size-major` / `size-minor`, `LX_COLORS` codes
+    ///   `df` / `ds`) and serve as the column's "headline" colour
+    ///   in non-tiered contexts like the `-CZ` count footer.
+    /// - When `gradient.date` is `false`, every age tier (`now`
+    ///   through `old`) is overwritten with `date.flat`.  Theme
+    ///   authors set `date-flat` explicitly (or rely on the bulk
+    ///   `date = "..."` setter, which now also touches `flat`).
+    ///
+    /// Runs once at theme construction so the renderers themselves
+    /// stay oblivious to the on/off state.
+    pub fn apply_gradient_flags(&mut self, gradient: super::GradientFlags) {
+        if !gradient.size {
+            self.size.number_byte = self.size.major;
+            self.size.number_kilo = self.size.major;
+            self.size.number_mega = self.size.major;
+            self.size.number_giga = self.size.major;
+            self.size.number_huge = self.size.major;
+            self.size.unit_byte   = self.size.minor;
+            self.size.unit_kilo   = self.size.minor;
+            self.size.unit_mega   = self.size.minor;
+            self.size.unit_giga   = self.size.minor;
+            self.size.unit_huge   = self.size.minor;
+        }
+        if !gradient.date {
+            self.date.now   = self.date.flat;
+            self.date.today = self.date.flat;
+            self.date.week  = self.date.flat;
+            self.date.month = self.date.flat;
+            self.date.year  = self.date.flat;
+            self.date.old   = self.date.flat;
+        }
+    }
 }
 
 

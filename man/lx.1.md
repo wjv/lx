@@ -64,7 +64,25 @@ Alias: `--color`.
 `--colour-scale`[`=MODE`]
 : Colour file sizes on a scale. MODE is `16` (basic ANSI colours),
 `256` (extended palette), or `none`. Default when bare: `16`.
-Alias: `--color-scale`.
+Alias: `--color-scale`.  **Deprecated** in favour of `--gradient`;
+`=none` translates to `--gradient=none` and `=16`/`=256` translate
+to `--gradient=all`.  Will be removed in a future release.
+
+`--gradient`[`=COLUMNS`]
+: Per-column gradient on/off.  COLUMNS is a comma-separated list
+of column names that should render with their gradient
+(currently `size` and `date`), or one of the special tokens
+`none` (no gradients) or `all` (every gradient-capable column,
+the default).  Bare `--gradient` is equivalent to `--gradient=all`.
+
+The flat colour each column collapses to when its gradient is
+disabled comes from the active theme: `size-major` / `size-minor`
+for the size column, `date-flat` for the date column.  See
+**lxconfig.toml**(5) for theme keys.
+
+`--no-gradient`
+: Hidden alias for `--gradient=none`.  Turns off both the size
+and date gradients.
 
 Timestamps are also coloured by age: recent files appear brighter,
 older files fade towards grey.  The six tiers (`date-now` through
