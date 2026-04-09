@@ -402,6 +402,17 @@ impl Config {
     }
 }
 
+/// Names of the compiled-in themes that don't live in any config
+/// file.  These are always resolvable by `--theme=NAME` and appear
+/// in the `--dump-theme` listing.
+pub const BUILTIN_THEMES: &[&str] = &["exa", "lx-256"];
+
+/// Check if a theme name refers to a compiled-in builtin.
+pub fn is_builtin_theme(name: &str) -> bool {
+    BUILTIN_THEMES.contains(&name)
+}
+
+
 /// A named theme definition under `[theme.NAME]`.
 ///
 /// UI element keys are captured via `serde(flatten)` into a flat map.
@@ -1129,7 +1140,7 @@ pub fn write_init_config(path: &PathBuf) -> std::io::Result<()> {
 ///
 /// Shows the resolved personality, format, theme, style, and classes,
 /// indicating for each whether it's compiled-in or from the config file.
-pub fn show_config(personality_name: &str, activated_by: &str) {
+pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_override: Option<&str>) {
     use nu_ansi_term::{Color, Style};
 
     // Styling consistent with --help: yellow bold headers, cyan bold
@@ -1195,17 +1206,20 @@ pub fn show_config(personality_name: &str, activated_by: &str) {
     }
     println!();
 
-    // Theme.
-    let theme_name = resolve_personality(personality_name)
-        .ok()
-        .flatten()
-        .and_then(|p| p.settings.get("theme").and_then(|v| {
-            if let toml::Value::String(s) = v { Some(s.clone()) } else { None }
-        }));
+    // Theme.  CLI `--theme=NAME` wins over the personality's stored
+    // setting; otherwise fall back to the personality's `theme` key.
+    let theme_name = cli_theme_override.map(String::from).or_else(|| {
+        resolve_personality(personality_name)
+            .ok()
+            .flatten()
+            .and_then(|p| p.settings.get("theme").and_then(|v| {
+                if let toml::Value::String(s) = v { Some(s.clone()) } else { None }
+            }))
+    });
 
     if let Some(ref tname) = theme_name {
         println!("{} {}", label.paint("Theme:"), name.paint(tname));
-        let source = if tname == "exa" {
+        let source = if is_builtin_theme(tname) {
             "builtin"
         } else if has_config && CONFIG.as_ref().unwrap().theme.contains_key(tname) {
             "config"
@@ -1214,7 +1228,7 @@ pub fn show_config(personality_name: &str, activated_by: &str) {
         };
         println!("  {} {}", label.paint("source:"), dimmed.paint(source));
 
-        if tname == "exa" {
+        if is_builtin_theme(tname) {
             println!("  {} {} {}", label.paint("use-style:"), name.paint("exa"), dimmed.paint("(implicit)"));
         } else {
             if let Some(ref cfg) = *CONFIG
@@ -1234,7 +1248,7 @@ pub fn show_config(personality_name: &str, activated_by: &str) {
 
     // Style.
     let style_name = theme_name.as_deref().and_then(|tn| {
-        if tn == "exa" {
+        if is_builtin_theme(tn) {
             Some("exa".to_string())
         } else if let Some(ref cfg) = *CONFIG {
             cfg.theme.get(tn).and_then(|t| t.use_style.clone())
@@ -1324,7 +1338,7 @@ pub fn show_config(personality_name: &str, activated_by: &str) {
 
 /// Names of all known themes (compiled-in + config).
 fn all_theme_names() -> Vec<String> {
-    let mut names = vec!["exa".to_string()];
+    let mut names: Vec<String> = BUILTIN_THEMES.iter().map(|s| s.to_string()).collect();
     if let Some(ref cfg) = *CONFIG {
         for name in cfg.theme.keys() {
             if !names.contains(name) {
@@ -1338,16 +1352,18 @@ fn all_theme_names() -> Vec<String> {
 
 /// Format a theme definition as TOML.
 fn format_theme_toml(name: &str) -> Option<String> {
-    if name == "exa" {
-        // The "exa" theme is compiled-in from default_theme.rs and can't
-        // be round-tripped to TOML.  Show a helpful comment instead.
-        return Some("# [theme.exa] is compiled-in and cannot be dumped as TOML.\n\
+    if is_builtin_theme(name) {
+        // Compiled-in themes from default_theme.rs can't be round-tripped
+        // to TOML.  Show a helpful comment instead.
+        return Some(format!(
+            "# [theme.{name}] is compiled-in and cannot be dumped as TOML.\n\
              # To customise, create a new theme that inherits from it:\n\
              #\n\
              # [theme.custom]\n\
-             # inherits = \"exa\"\n\
+             # inherits = \"{name}\"\n\
              # directory = \"bold dodgerblue\"\n\
-             # date = \"steelblue\"".to_string());
+             # date = \"steelblue\""
+        ));
     }
 
     let cfg = CONFIG.as_ref()?;

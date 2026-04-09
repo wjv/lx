@@ -1,0 +1,39 @@
+# lx-256-dark — dark-background variant of the builtin lx-256 theme
+#
+# The compiled-in `lx-256` theme is a balance between light and
+# dark backgrounds, leaning slightly toward light.  This drop-in
+# is a variant tuned specifically for dark terminals: brighter
+# size and date gradients that pop on a black background.
+#
+# Use it explicitly:
+#   lx --theme=lx-256-dark
+#
+# Or set it as your default in a personality:
+#   [personality.ll]
+#   inherits = "ll"
+#   theme = "lx-256-dark"
+#
+# Copy this file to ~/.config/lx/conf.d/ to make it available.
+#
+# This theme inherits everything from lx-256 and only overrides
+# the size and date gradient slots.
+
+[theme.lx-256-dark]
+inherits = "lx-256"
+
+# Brighter size gradient: better visibility on dark backgrounds.
+# Light → mid → bright path through the xterm palette.
+size-number-byte = "#87d75f"   # light green (Fixed 113)
+size-number-kilo = "#afd75f"   # yellow-green (Fixed 149)
+size-number-mega = "#ffd700"   # gold (Fixed 220)
+size-number-giga = "#ffaf00"   # orange (Fixed 214)
+size-number-huge = "#d75f5f"   # salmon-red (Fixed 167)
+
+# Brighter date gradient: cyan → blue → grey, with the "now"
+# tier reaching almost-pure cyan.
+date-now   = "bold #00d7ff"    # bright cyan (Fixed 45)
+date-today = "#00d7ff"         # cyan
+date-week  = "#00afff"         # deep sky blue (Fixed 39)
+date-month = "#0087ff"         # soft blue (Fixed 33)
+date-year  = "#808080"         # medium grey (Fixed 244)
+date-old   = "#585858"         # dark grey (Fixed 240)

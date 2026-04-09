@@ -136,7 +136,7 @@ impl Options {
             }
             visited.push(tname.clone());
 
-            if tname == "exa" {
+            if crate::config::is_builtin_theme(tname) {
                 return; // builtin, always valid
             } else if let Some(theme) = cfg.theme.get(tname) {
                 current = theme.inherits.clone();
@@ -184,6 +184,13 @@ impl Options {
                 // Special: apply the compiled-in default theme
                 // and the compiled-in "exa" style.
                 *ui = UiStyles::default_theme(self.colour_scale);
+                let exa_style = crate::config::compiled_exa_style();
+                Self::apply_style(&exa_style, cfg, exts);
+                current = None;
+            } else if tname == "lx-256" {
+                // Compiled-in 256-colour theme.  Shares the "exa"
+                // style for file class colours.
+                *ui = UiStyles::lx_256_theme();
                 let exa_style = crate::config::compiled_exa_style();
                 Self::apply_style(&exa_style, cfg, exts);
                 current = None;

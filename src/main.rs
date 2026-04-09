@@ -216,7 +216,8 @@ fn main() {
 
         OptionsResult::ShowConfig => {
             let name = active_personality.as_deref().unwrap_or("lx");
-            config::show_config(name, personality_source);
+            let cli_theme = find_theme_arg(&cli_args);
+            config::show_config(name, personality_source, cli_theme.as_deref());
         }
 
         OptionsResult::SaveAs(ref name, _, _) => {
@@ -461,12 +462,22 @@ impl Lx {
 
         if self.options.count {
             let count = self.numeric.format_int(self.item_count as isize);
+            // Theme the footer: numbers in size.major (highlighted),
+            // chrome text in punctuation (subdued).  When colour is
+            // off both styles are Style::default() — no escapes.
+            let number_style = self.theme.ui.size.major;
+            let chrome_style = self.theme.ui.punctuation;
+            let count_p = number_style.paint(&count);
+            let label_p = chrome_style.paint(" items shown");
             if self.options.view.has_total_size() {
                 let fmt = self.options.view.size_format()
                     .unwrap_or(crate::output::table::SizeFormat::DecimalBytes);
-                eprintln!("{count} items shown, {}", format_size(self.size_total, fmt, &self.numeric));
+                let size_str = format_size(self.size_total, fmt, &self.numeric);
+                let comma_p = chrome_style.paint(", ");
+                let size_p = number_style.paint(&size_str);
+                eprintln!("{count_p}{label_p}{comma_p}{size_p}");
             } else {
-                eprintln!("{count} items shown");
+                eprintln!("{count_p}{label_p}");
             }
         }
 
@@ -627,6 +638,23 @@ fn find_personality_arg(args: &[OsString]) -> Option<String> {
         if let Some(name) = s.strip_prefix("-p")
             && !name.is_empty() && !name.starts_with('-') {
                 return Some(name.to_string());
+            }
+    }
+    None
+}
+
+/// Scan raw args for --theme=NAME or --theme NAME.  Used by
+/// --show-config to display the effective theme override.
+fn find_theme_arg(args: &[OsString]) -> Option<String> {
+    let mut iter = args.iter();
+    while let Some(arg) = iter.next() {
+        let s = arg.to_string_lossy();
+        if let Some(name) = s.strip_prefix("--theme=") {
+            return Some(name.to_string());
+        }
+        if s == "--theme"
+            && let Some(next) = iter.next() {
+                return Some(next.to_string_lossy().to_string());
             }
     }
     None
