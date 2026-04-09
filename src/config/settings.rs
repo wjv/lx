@@ -42,8 +42,6 @@ pub(crate) static SETTING_FLAGS: &[SettingDef] = &[
     SettingDef { key: "classify",      flag: "--classify",       kind: SettingKind::Str },
     SettingDef { key: "colour",        flag: "--colour",         kind: SettingKind::Str },
     SettingDef { key: "color",         flag: "--colour",         kind: SettingKind::Str },
-    SettingDef { key: "colour-scale",  flag: "--colour-scale",   kind: SettingKind::Str },
-    SettingDef { key: "color-scale",   flag: "--colour-scale",   kind: SettingKind::Str },
     SettingDef { key: "icons",         flag: "--icons",          kind: SettingKind::Str },
 
     // filtering and sorting
@@ -159,6 +157,11 @@ fn removed_setting_hint(key: &str) -> Option<&'static str> {
              UID and GID are now first-class columns. Use \
              `uid = true, gid = true, no-user = true, no-group = true` \
              for the old `-n` behaviour, or pick whichever columns you want"
+        ),
+        "colour-scale" | "color-scale" => Some(
+            "the `colour-scale` setting was removed in config version 0.6; \
+             use `gradient = \"all\"` (default) or \"none\"/\"size\"/\"date\". \
+             Run `lx --upgrade-config` to migrate automatically"
         ),
         _ => None,
     }

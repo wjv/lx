@@ -1,13 +1,12 @@
 use crate::options::{flags, vars, Vars, OptionsError};
 use crate::options::parser::MatchedFlags;
-use crate::theme::{Options, UseColours, ColourScale, GradientFlags, Definitions};
+use crate::theme::{Options, UseColours, GradientFlags, Definitions};
 
 
 impl Options {
     pub fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
         let use_colours = UseColours::deduce(matches, vars)?;
-        let colour_scale = ColourScale::deduce(matches);
-        let gradient = GradientFlags::deduce(matches, colour_scale);
+        let gradient = GradientFlags::deduce(matches);
 
         let definitions = if use_colours == UseColours::Never {
                 Definitions::default()
@@ -18,7 +17,7 @@ impl Options {
 
         let theme_override = matches.get(flags::THEME).map(String::from);
 
-        Ok(Self { use_colours, colour_scale, gradient, definitions, theme_override })
+        Ok(Self { use_colours, gradient, definitions, theme_override })
     }
 }
 
@@ -46,51 +45,18 @@ impl UseColours {
 }
 
 
-impl ColourScale {
-    fn deduce(matches: &MatchedFlags) -> Self {
-        match matches.get(flags::COLOR_SCALE) {
-            Some("16")   => Self::Scale16,
-            Some("256")  => Self::Scale256,
-            Some("none") => Self::None,
-            _            => Self::None,
-        }
-    }
-}
-
-
 impl GradientFlags {
     /// Deduce per-column gradient on/off from the CLI flags.
     ///
-    /// Precedence (later wins):
+    /// Precedence:
     /// 1. Default → all on.
-    /// 2. Legacy `--colour-scale` translation: `=none` collapses
-    ///    both gradients off; `=16`/`=256` (or bare) leaves both on.
-    ///    This bridges old users until commit 3 retires the flag.
-    /// 3. `--gradient=...` overrides everything.
-    /// 4. `--no-gradient` (counted Arg) overrides everything,
-    ///    including a preceding `--gradient=...`, since it sits
-    ///    after `--gradient` in the argv ordering when both are
-    ///    given.  Modelled here as "if --no-gradient was passed,
-    ///    return NONE".
-    fn deduce(matches: &MatchedFlags, colour_scale: ColourScale) -> Self {
-        // Start from the legacy translation.
-        let mut flags = match colour_scale {
-            ColourScale::None => Self::NONE,
-            ColourScale::Scale16 | ColourScale::Scale256 => Self::ALL,
-        };
-        // If --colour-scale wasn't given at all, ColourScale::deduce
-        // returns None — but that's also "user didn't ask for flat",
-        // so we treat it as the default `ALL` (the same as the
-        // bare-default fall-through above wants).  Distinguish via
-        // matches.get directly.
-        if matches.get(flags::COLOR_SCALE).is_none() {
-            flags = Self::ALL;
-        }
-        // --gradient=... wins over the legacy flag.
+    /// 2. `--gradient=...` overrides the default.
+    /// 3. `--no-gradient` overrides `--gradient`.
+    fn deduce(matches: &MatchedFlags) -> Self {
+        let mut flags = Self::ALL;
         if let Some(s) = matches.get(flags::GRADIENT) {
             flags = parse_gradient_value(s);
         }
-        // --no-gradient (any count) wins over --gradient.
         if matches.has(flags::NO_GRADIENT) {
             flags = Self::NONE;
         }
@@ -232,10 +198,8 @@ mod terminal_test {
     test!(overridden_3:  UseColours <- ["--colour=auto", "--color=never"], MockVars::empty();   Ok(UseColours::Never));
     test!(overridden_4:  UseColours <- ["--color=auto",  "--color=never"], MockVars::empty();   Ok(UseColours::Never));
 
-    test!(scale_bare:   ColourScale <- ["--colour-scale"];                ColourScale::Scale16);
-    test!(scale_16:     ColourScale <- ["--colour-scale=16"];              ColourScale::Scale16);
-    test!(scale_256:    ColourScale <- ["--colour-scale=256"];             ColourScale::Scale256);
-    test!(scale_none:   ColourScale <- ["--colour-scale=none"];            ColourScale::None);
-    test!(scale_alias:  ColourScale <- ["--color-scale"];                  ColourScale::Scale16);
-    test!(scale_absent: ColourScale <- [];                                 ColourScale::None);
+    // --colour-scale is retired in 0.9; clap rejects any value at
+    // parse time with a deprecation pointer to --gradient.  See
+    // tests/cli_basics.rs::colour_scale_deprecated for the
+    // user-facing assertion.
 }

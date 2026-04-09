@@ -53,6 +53,26 @@ fn sort_values() -> Vec<PossibleValue> {
 }
 
 
+/// Custom value parser for the retired `--colour-scale` flag.
+///
+/// The flag is gone in 0.9 — replaced by `--gradient` (see commit
+/// "CLI: per-column gradient on/off via --gradient").  We keep the
+/// flag in the parser purely so that scripts and muscle memory using
+/// it get a useful deprecation error pointing at the replacement,
+/// rather than the generic "unknown argument" clap would otherwise
+/// produce.
+fn parse_colour_scale_deprecated(_s: &str) -> Result<String, String> {
+    Err(String::from(
+        "--colour-scale is retired in 0.9. Use --gradient instead:\n\
+         \x20 --gradient=none      no gradients (the old --colour-scale=none)\n\
+         \x20 --gradient=all       both gradients on (the old --colour-scale=16/256)\n\
+         \x20 --gradient=size      size only\n\
+         \x20 --gradient=date      date only\n\
+         \x20 --no-gradient        alias for --gradient=none",
+    ))
+}
+
+
 /// `TypedValueParser` for `--time-style`.
 ///
 /// `+strftime` formats are accepted directly; everything else is
@@ -903,21 +923,19 @@ Environment:\n  \
                 PossibleValue::new("never"),
                 PossibleValue::new("automatic").hide(true),
             ]))
+        // --colour-scale is retired in 0.9 in favour of --gradient.
+        // The flag is still recognised so we can return a useful
+        // deprecation error pointing the user at the replacement,
+        // rather than letting clap reject it as an unknown argument.
         .arg(Arg::new(flags::COLOR_SCALE)
             .long("colour-scale").visible_alias("color-scale")
-            .help("Colour file sizes on a scale\n[16, 256, none]")
-            .help_heading("Appearance")
+            .hide(true)
             .action(ArgAction::Set)
             .value_name("MODE")
-            .hide_possible_values(true)
-            .value_parser([
-                PossibleValue::new("16"),
-                PossibleValue::new("256"),
-                PossibleValue::new("none"),
-            ])
+            .value_parser(parse_colour_scale_deprecated)
             .num_args(0..=1)
             .require_equals(true)
-            .default_missing_value("16"))
+            .default_missing_value(""))
         .arg(Arg::new(flags::GRADIENT)
             .long("gradient")
             .help("Per-column gradient on/off\n[size, date, all, none]")

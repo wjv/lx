@@ -103,6 +103,20 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
             );
         }
 
+        // Rewrite `colour-scale = "..."` (and the `color-scale`
+        // alias) to the new `gradient = "..."` form.  See
+        // rewrite_colour_scale_to_gradient for the value mapping.
+        let (rewritten, rewrites) = rewrite_colour_scale_to_gradient(&updated);
+        updated = rewritten;
+        if rewrites > 0 {
+            eprintln!(
+                "Note: rewrote {rewrites} `colour-scale = \"...\"` line{} \
+                 to `gradient = \"...\"`.  See `man lx` and \
+                 `docs/UPGRADING.md` for the new vocabulary.",
+                if rewrites == 1 { "" } else { "s" },
+            );
+        }
+
         fs::write(path, &updated).with_path(path)?;
 
         eprintln!("Original config saved to {}", backup.display());
@@ -180,6 +194,77 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
     Ok(())
 }
 
+/// Rewrite `colour-scale = "..."` (and the `color-scale` alias)
+/// lines to the new `gradient = "..."` form.
+///
+/// Operates as a per-line text rewrite — the setting only ever
+/// appears inside `[personality.NAME]` or `[[personality.NAME.when]]`
+/// blocks, so we don't need to track section context.  Whitespace,
+/// comments, and surrounding lines are preserved.
+///
+/// Value mapping:
+/// - `"none"` → `"none"`   (still no gradients)
+/// - `"16"`   → `"all"`    (the depth distinction is gone)
+/// - `"256"`  → `"all"`    (ditto)
+///
+/// Returns `(rewritten_content, rewrite_count)`.
+fn rewrite_colour_scale_to_gradient(contents: &str) -> (String, usize) {
+    let mut out = String::with_capacity(contents.len());
+    let mut count = 0;
+    for line in contents.split_inclusive('\n') {
+        // Strip the trailing newline for matching, then add it back.
+        let (body, newline) = match line.strip_suffix('\n') {
+            Some(b) => (b, "\n"),
+            None    => (line, ""),
+        };
+        let trimmed = body.trim_start();
+        let indent_len = body.len() - trimmed.len();
+        let indent = &body[..indent_len];
+
+        let key_match = trimmed.strip_prefix("colour-scale")
+            .or_else(|| trimmed.strip_prefix("color-scale"));
+
+        if let Some(rest) = key_match {
+            // Must be followed by whitespace + `=` to be a TOML
+            // key/value line; otherwise it's part of something else
+            // (e.g. a comment, a longer key name).
+            let after = rest.trim_start();
+            if let Some(value_part) = after.strip_prefix('=') {
+                let value_part = value_part.trim_start();
+                // Strip an optional trailing comment.
+                let (val_with_quotes, comment) = match value_part.find('#') {
+                    Some(i) => (value_part[..i].trim_end(), &value_part[i..]),
+                    None    => (value_part.trim_end(), ""),
+                };
+                let stripped = val_with_quotes
+                    .trim_start_matches(['"', '\''])
+                    .trim_end_matches(['"', '\'']);
+                let new_value = match stripped {
+                    "none" => Some("none"),
+                    "16" | "256" => Some("all"),
+                    _ => None,
+                };
+                if let Some(v) = new_value {
+                    out.push_str(indent);
+                    out.push_str("gradient = \"");
+                    out.push_str(v);
+                    out.push('"');
+                    if !comment.is_empty() {
+                        out.push(' ');
+                        out.push_str(comment);
+                    }
+                    out.push_str(newline);
+                    count += 1;
+                    continue;
+                }
+            }
+        }
+        out.push_str(line);
+    }
+    (out, count)
+}
+
+
 /// Legacy config structure for migration.  Uses raw TOML tables
 /// so we can round-trip key-value pairs without losing data.
 #[derive(Debug, Default, Deserialize)]
@@ -193,4 +278,73 @@ struct LegacyConfig {
 
     #[serde(default)]
     personality: HashMap<String, HashMap<String, toml::Value>>,
+}
+
+
+#[cfg(test)]
+mod rewrite_test {
+    use super::rewrite_colour_scale_to_gradient;
+
+    #[test]
+    fn rewrites_none() {
+        let (out, n) = rewrite_colour_scale_to_gradient(
+            "[personality.default]\ncolour-scale = \"none\"\n"
+        );
+        assert_eq!(n, 1);
+        assert!(out.contains("gradient = \"none\""));
+        assert!(!out.contains("colour-scale"));
+    }
+
+    #[test]
+    fn rewrites_16_to_all() {
+        let (out, n) = rewrite_colour_scale_to_gradient(
+            "[personality.default]\ncolour-scale = \"16\"\n"
+        );
+        assert_eq!(n, 1);
+        assert!(out.contains("gradient = \"all\""));
+    }
+
+    #[test]
+    fn rewrites_256_to_all() {
+        let (out, n) = rewrite_colour_scale_to_gradient(
+            "[personality.default]\ncolour-scale = \"256\"\n"
+        );
+        assert_eq!(n, 1);
+        assert!(out.contains("gradient = \"all\""));
+    }
+
+    #[test]
+    fn rewrites_color_scale_alias() {
+        let (out, n) = rewrite_colour_scale_to_gradient(
+            "[personality.default]\ncolor-scale = \"none\"\n"
+        );
+        assert_eq!(n, 1);
+        assert!(out.contains("gradient = \"none\""));
+    }
+
+    #[test]
+    fn preserves_indent_and_trailing_comment() {
+        let (out, n) = rewrite_colour_scale_to_gradient(
+            "  colour-scale = \"16\"   # nice gradient\n"
+        );
+        assert_eq!(n, 1);
+        assert!(out.contains("  gradient = \"all\" # nice gradient"));
+    }
+
+    #[test]
+    fn does_not_rewrite_unknown_value() {
+        let (out, n) = rewrite_colour_scale_to_gradient(
+            "colour-scale = \"surprise\"\n"
+        );
+        assert_eq!(n, 0);
+        assert!(out.contains("colour-scale"));
+    }
+
+    #[test]
+    fn rewrites_inside_when_block() {
+        let input = "[[personality.lx.when]]\nenv.SSH_CONNECTION = true\ncolour-scale = \"none\"\n";
+        let (out, n) = rewrite_colour_scale_to_gradient(input);
+        assert_eq!(n, 1);
+        assert!(out.contains("gradient = \"none\""));
+    }
 }

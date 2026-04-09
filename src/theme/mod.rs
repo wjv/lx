@@ -21,8 +21,6 @@ pub struct Options {
 
     pub use_colours: UseColours,
 
-    pub colour_scale: ColourScale,
-
     pub gradient: GradientFlags,
 
     pub definitions: Definitions,
@@ -82,17 +80,6 @@ pub enum UseColours {
 
     /// Never display them, even when output is going to a terminal.
     Never,
-}
-
-#[derive(PartialEq, Eq, Debug, Copy, Clone, Default)]
-pub enum ColourScale {
-    /// No size-dependent colouring; all sizes use the same colour.
-    #[default]
-    None,
-    /// Size-dependent colouring using basic 16-colour ANSI.
-    Scale16,
-    /// Size-dependent colouring using the 256-colour palette.
-    Scale256,
 }
 
 #[derive(PartialEq, Eq, Debug, Default)]
