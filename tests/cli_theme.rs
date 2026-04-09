@@ -399,10 +399,14 @@ fn theme_inheritance_cycle_detected() {
         inherits = "a"
     "#);
 
-    // Should still work (warning emitted), just no theme applied.
+    // 0.9: cycles are fatal (was: warn + continue).  A cycle in user
+    // config is unambiguously broken, so silently dropping it hides
+    // real bugs.
     cmd.args(["--theme=a", "-1", "Cargo.toml"])
         .assert()
-        .success();
+        .failure()
+        .code(3)
+        .stderr(predicate::str::contains("theme inheritance cycle"));
 }
 
 

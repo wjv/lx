@@ -39,7 +39,7 @@ use crate::fs::feature::VcsCache;
 use crate::fs::filter::VcsIgnore;
 use crate::options::{Options, OptionsError, VcsBackend, Vars, vars, OptionsResult};
 use crate::output::{escape, lines, grid, grid_details, details, View, Mode};
-use crate::theme::Theme;
+use crate::theme::{Theme, ThemeError};
 
 mod config;
 mod fs;
@@ -63,6 +63,9 @@ pub enum LxError {
     Options(#[from] OptionsError),
 
     #[error("{0}")]
+    Theme(#[from] ThemeError),
+
+    #[error("{0}")]
     Io(#[from] std::io::Error),
 }
 
@@ -71,6 +74,7 @@ impl LxError {
     fn exit_code(&self) -> i32 {
         match self {
             Self::Options(_)
+            | Self::Theme(_)
             | Self::Config(ConfigError::InheritanceCycle { .. })
             | Self::Config(ConfigError::MissingParent { .. }) => exits::OPTIONS_ERROR,
             _ => exits::RUNTIME_ERROR,
@@ -201,7 +205,7 @@ fn try_main() -> Result<i32, LxError> {
             let writer = io::stdout();
 
             let console_width = options.view.width.actual_terminal_width();
-            let theme = options.theme.to_theme(console_width.is_some());
+            let theme = options.theme.to_theme(console_width.is_some())?;
 
             // Build a locale::Numeric with personality overrides applied.
             let mut numeric = locale::Numeric::load_user_locale()

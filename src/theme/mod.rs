@@ -12,6 +12,9 @@ pub use self::lsc::LSColors;
 
 mod default_theme;
 
+mod error;
+pub use self::error::ThemeError;
+
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct Options {
@@ -72,7 +75,7 @@ pub struct Theme {
 impl Options {
 
     #[allow(trivial_casts)]   // the `as Box<_>` stuff below warns about this for some reason
-    pub fn to_theme(&self, isatty: bool) -> Theme {
+    pub fn to_theme(&self, isatty: bool) -> Result<Theme, ThemeError> {
         use crate::config::CONFIG;
 
         // Validate the theme name early — even when colours are off,
@@ -80,13 +83,13 @@ impl Options {
         if let Some(ref name) = self.theme_override {
             let empty_cfg = crate::config::Config::default();
             let cfg = CONFIG.as_ref().unwrap_or(&empty_cfg);
-            Self::validate_theme_name(name, cfg);
+            Self::validate_theme_name(name, cfg)?;
         }
 
         if self.use_colours == UseColours::Never || (self.use_colours == UseColours::Automatic && ! isatty) {
             let ui = UiStyles::plain();
             let exts = Box::new(NoFileColours);
-            return Theme { ui, exts };
+            return Ok(Theme { ui, exts });
         }
 
         // Layer 1: base UI styles.
@@ -112,7 +115,7 @@ impl Options {
         // compiled-in case, so it works even without a config file.
         let empty_cfg = crate::config::Config::default();
         let cfg = CONFIG.as_ref().unwrap_or(&empty_cfg);
-        self.apply_config_theme(cfg, &mut ui, &mut exts);
+        self.apply_config_theme(cfg, &mut ui, &mut exts)?;
 
         let exts: Box<dyn FileColours> = if exts.is_non_empty() {
             Box::new(exts)
@@ -120,31 +123,37 @@ impl Options {
             Box::new(NoFileColours)
         };
 
-        Theme { ui, exts }
+        Ok(Theme { ui, exts })
     }
 
     /// Validate that a theme name (and its inheritance chain) can be
-    /// resolved.  Exits with code 3 on unknown names — same as
-    /// unknown `-p` personality.
-    fn validate_theme_name(name: &str, cfg: &crate::config::Config) {
+    /// resolved to a built-in theme or a `[theme.NAME]` config section.
+    ///
+    /// Returns `ThemeError::Unknown` for misspelled or missing names —
+    /// the binary maps that to exit code 3 the same way an unknown
+    /// `-p` personality does.  Cycles are accepted here (the chain is
+    /// just truncated) because `apply_config_theme()` reports them
+    /// with a much more useful chain context.
+    fn validate_theme_name(name: &str, cfg: &crate::config::Config) -> Result<(), ThemeError> {
         let mut current = Some(name.to_string());
         let mut visited = Vec::new();
 
         while let Some(ref tname) = current {
             if visited.contains(tname) {
-                return; // cycle — apply_config_theme will warn
+                return Ok(()); // cycle — apply_config_theme will report it
             }
             visited.push(tname.clone());
 
             if crate::config::is_builtin_theme(tname) {
-                return; // builtin, always valid
+                return Ok(()); // builtin, always valid
             } else if let Some(theme) = cfg.theme.get(tname) {
                 current = theme.inherits.clone();
             } else {
-                eprintln!("lx: unknown theme '{tname}'");
-                std::process::exit(3);
+                return Err(ThemeError::Unknown { name: tname.clone() });
             }
         }
+
+        Ok(())
     }
 
     /// Apply the selected theme from the config file, resolving
@@ -159,11 +168,9 @@ impl Options {
         cfg: &crate::config::Config,
         ui: &mut UiStyles,
         exts: &mut ExtensionMappings,
-    ) {
-        use log::*;
-
+    ) -> Result<(), ThemeError> {
         let Some(ref name) = self.theme_override else {
-            return;  // no theme selected
+            return Ok(());  // no theme selected
         };
 
         // Build the inheritance chain: [leaf, ..., root].
@@ -174,9 +181,8 @@ impl Options {
         while let Some(ref tname) = current {
             if visited.contains(tname) {
                 visited.push(tname.clone());
-                let path = visited.join(" \u{2192} ");
-                warn!("Theme inheritance cycle: {path}; ignoring");
-                return;
+                let chain_str = visited.join(" \u{2192} ");
+                return Err(ThemeError::Cycle { chain: chain_str });
             }
             visited.push(tname.clone());
 
@@ -206,9 +212,9 @@ impl Options {
                 current = theme.inherits.clone();
             } else {
                 // Should not reach here — validate_theme_name catches
-                // unknown names early.
-                warn!("Theme '{tname}' not found; ignoring");
-                return;
+                // unknown names early — but be defensive in case the
+                // chain reaches an inherits target that isn't defined.
+                return Err(ThemeError::Unknown { name: tname.clone() });
             }
         }
 
@@ -216,6 +222,8 @@ impl Options {
         for theme in chain.into_iter().rev() {
             Self::apply_theme_def(theme, cfg, ui, exts);
         }
+
+        Ok(())
     }
 
     /// Apply a single `ThemeDef`'s settings to the UI styles and
