@@ -16,8 +16,69 @@ in order.
 
 ## Upgrading to 0.9
 
-0.9 is the **performance release** — the tentpole is the traversal
-redesign for `--total-size`.  There is one theming change:
+0.9 is the **performance and theming release**.  The big changes:
+
+- The `--total-size` traversal is rebuilt for NFS performance
+  (10x faster wall time on big NFS trees).
+- Three compiled-in theme tiers (`exa` / `lx-256` / `lx-24bit`)
+  with automatic selection based on terminal capability.
+- Several smaller theme refinements (UID/GID cascade removed,
+  age-based date gradient, three-tier group colouring,
+  themed `-CZ` footer).
+
+**If you have a 0.5 config file**, run `lx --upgrade-config` to
+migrate to the 0.6 schema.  The migration is mostly cosmetic
+(version string only) but will inject auto-selection blocks
+into your `[personality.default]` section so you get the new
+theme tiers automatically.
+
+### Auto-selection of theme tiers
+
+The new compiled-in `default` personality has two `[[when]]`
+blocks that override `theme = "exa"` based on the terminal:
+
+| Condition                                  | Theme       |
+|--------------------------------------------|-------------|
+| (default)                                  | `exa`       |
+| `$TERM` matches `*-256color`               | `lx-256`    |
+| `$COLORTERM` is `truecolor` or `24bit`     | `lx-24bit`  |
+
+The truecolour block runs second, so on a terminal with both
+`xterm-256color` and `COLORTERM=truecolor` (the typical modern
+setup), `lx-24bit` wins.
+
+**No action needed** for users with no config file or for users
+who run `--upgrade-config`.
+
+**To opt out** (always use the strict 8-colour `exa` theme):
+delete the two `[[when]]` blocks from the `[personality.default]`
+section of your config file.
+
+**To force a specific theme**, override at the personality or
+CLI level:
+
+```toml
+[personality.default]
+theme = "lx-24bit"  # always, regardless of terminal
+```
+
+```sh
+lx --theme=exa  # one-off override
+```
+
+### `exa` theme is now strict 8-colour ANSI
+
+In 0.9, the compiled-in `exa` theme contains *only* base ANSI
+colours — no 256-colour or truecolour values.  The 256-colour
+embellishments that crept in during 0.9's gradient work
+(`Fixed(244)` for punctuation, the date age gradient) have moved
+to `lx-256` and `lx-24bit`.
+
+**If you've been seeing the date gradient on a strict ANSI
+terminal**, the gradient will collapse to a single colour
+(`Blue.normal()`, the historical exa default).  Use `lx-256` or
+`lx-24bit` if your terminal can handle them.  In practice the
+auto-selection will pick the right thing for you.
 
 ### UID/GID theme cascade removed
 
@@ -27,11 +88,31 @@ In 0.9, they are independent slots with no cascade.
 
 **If you have a custom theme** that sets `user-you` but not
 `uid-you`: add explicit `uid-you` and `uid-other` entries (and
-likewise for `gid-yours` / `gid-other`).  All six curated themes
-and the builtin default now set all eight identity slots
-explicitly.
+likewise for `gid-yours` / `gid-other`).  All curated themes and
+the builtin default now set all identity slots explicitly.
 
 **If you never customised these slots:** no action needed.
+
+### Three-tier group colouring
+
+Group columns now distinguish three tiers:
+
+- **`group-yours`** / **`gid-yours`** — your primary group
+- **`group-member`** / **`gid-member`** — a supplementary group
+  you belong to
+- **`group-other`** / **`gid-other`** — not your group at all
+
+Custom themes can set the new `group-member` / `gid-member` keys.
+If unset, they default to the same value as `group-yours` /
+`gid-yours`.
+
+### `permissions-*` theme keys
+
+The theme parser now accepts `permissions-user-read`,
+`permissions-user-write`, etc. — matching the column name.  The
+legacy `perm-*` short form is still accepted as an alias.  This
+fixes a long-standing bug where curated themes that used the
+longer form were silently ignored.
 
 
 ## Upgrading to 0.8

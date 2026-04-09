@@ -255,21 +255,25 @@ If you had an older config, migrate it with:
 lx --upgrade-config
 ```
 
-This converts from any previous format (0.1, 0.2, 0.3, 0.4) to
-the current 0.5 schema and saves a `.bak` of the original.
+This converts from any previous format (0.1, 0.2, 0.3, 0.4, 0.5)
+to the current 0.6 schema and saves a `.bak` of the original.
+The 0.5 → 0.6 migration is mostly cosmetic (version string only)
+but also injects auto-selection `[[when]]` blocks into your
+`[personality.default]` section so capable terminals get the
+new theme tiers automatically.
 
 ### Sections
 
 The configuration has five kinds of named section, each governing
 a different aspect of `lx`'s behaviour:
 
-| Section              | Purpose                                             | Example                                              |
-|----------------------|-----------------------------------------------------|------------------------------------------------------|
-| `[format]`           | Column layouts for long view (flat keys)            | `long = ["permissions", "size", "user", "modified"]` |
+| Section              | Purpose                                             | Example                                               |
+|----------------------|-----------------------------------------------------|-------------------------------------------------------|
+| `[format]`           | Column layouts for long view (flat keys)            | `long = ["permissions", "size", "user", "modified"]`  |
 | `[personality.NAME]` | Bundles of settings, activated by name              | `inherits = "lx"`, `format = "long2"`, `sort = "age"` |
-| `[theme.NAME]`       | UI element colours (directories, dates, etc.)       | `directory = "bold blue"`, `date = "steelblue"`      |
-| `[style.NAME]`       | File-type colours (by class, glob, or filename)     | `class.source = "yellow"`, `"*.rs" = "#ff8700"`      |
-| `[class]`            | Named file-type categories (lists of glob patterns) | `media = ["*.jpg", "*.png", "*.mp4"]`                |
+| `[theme.NAME]`       | UI element colours (directories, dates, etc.)       | `directory = "bold blue"`, `date = "steelblue"`       |
+| `[style.NAME]`       | File-type colours (by class, glob, or filename)     | `class.source = "yellow"`, `"*.rs" = "#ff8700"`       |
+| `[class]`            | Named file-type categories (lists of glob patterns) | `media = ["*.jpg", "*.png", "*.mp4"]`                 |
 
 These compose naturally:
 
@@ -306,25 +310,25 @@ hpc     = ["permissions", "size", "user", "group", "modified", "vcs"]
 
 The column vocabulary for `[format]` and `--columns=` is:
 
-| Column        | Shows                   |
-|---------------|-------------------------|
+| Column        | Shows                                                            |
+|---------------|------------------------------------------------------------------|
 | `permissions` | Permission bits (`perms` is accepted as a backward-compat alias) |
-| `size`        | File size (`filesize` is an alias) |
-| `user`        | Owner name              |
-| `uid`         | Numeric user ID         |
-| `group`       | Group name              |
-| `gid`         | Numeric group ID        |
-| `links`       | Hard link count         |
-| `inode`       | Inode number            |
-| `blocks`      | Allocated block count   |
-| `octal`       | Permission bits in octal |
-| `flags`       | Platform file flags     |
-| `modified`    | Last modification time  |
-| `changed`     | Last status-change time |
-| `accessed`    | Last access time        |
-| `created`     | Creation time           |
-| `vcs`         | Per-file VCS status     |
-| `repos`       | Per-directory VCS repo indicator |
+| `size`        | File size (`filesize` is an alias)                               |
+| `user`        | Owner name                                                       |
+| `uid`         | Numeric user ID                                                  |
+| `group`       | Group name                                                       |
+| `gid`         | Numeric group ID                                                 |
+| `links`       | Hard link count                                                  |
+| `inode`       | Inode number                                                     |
+| `blocks`      | Allocated block count                                            |
+| `octal`       | Permission bits in octal                                         |
+| `flags`       | Platform file flags                                              |
+| `modified`    | Last modification time                                           |
+| `changed`     | Last status-change time                                          |
+| `accessed`    | Last access time                                                 |
+| `created`     | Creation time                                                    |
+| `vcs`         | Per-file VCS status                                              |
+| `repos`       | Per-directory VCS repo indicator                                 |
 
 Use a format explicitly with `--format=NAME`, or (more commonly)
 reference it from a personality:
@@ -430,9 +434,20 @@ work together:
   lists of glob patterns: `media`, `source`, `archive`, etc.
   Once a class is defined, you can style it as a unit.
 
-`lx` ships with a compiled-in theme and style both named `"exa"`,
-so sensible colours work out of the box with no config file.  You
-can redefine these or start from scratch.
+`lx` ships with **three compiled-in themes**, plus a single
+compiled-in style.  All four are baked into the binary, so
+sensible colours work out of the box with no config file.
+
+| Theme      | Description                                                                                 |
+|------------|---------------------------------------------------------------------------------------------|
+| `exa`      | Strict 8-colour ANSI; renders identically on any terminal from a vt220 onwards.             |
+| `lx-256`   | 256-colour palette, refined exa-derived look, balanced for both light and dark backgrounds. |
+| `lx-24bit` | 24-bit truecolour, the smoothest gradients, balanced for both backgrounds.                  |
+
+The default `lx` personality auto-selects the best variant for
+your terminal: `lx-24bit` if `$COLORTERM` is `truecolor` or
+`24bit`, otherwise `lx-256` if `$TERM` matches `*-256color`,
+otherwise `exa`.  You can always override with `--theme=NAME`.
 
 ### Writing your own theme
 
@@ -501,7 +516,20 @@ lx -l --theme=dracula
 ### Curated themes
 
 `lx` ships with ready-made themes in the [`themes/`](../themes)
-directory:
+directory.  These are **drop-in files** — copy the ones you want
+into `~/.config/lx/conf.d/` to make them available, then
+activate with `--theme=NAME` or set as a personality default.
+
+**Light backgrounds:**
+
+| Theme            | Filename                |
+|------------------|-------------------------|
+| Catppuccin Latte | `catppuccin-latte.toml` |
+| Gruvbox Light    | `gruvbox-light.toml`    |
+| Nord Light       | `nord-light.toml`       |
+| Solarized Light  | `solarized-light.toml`  |
+
+**Dark backgrounds:**
 
 | Theme            | Filename                |
 |------------------|-------------------------|
@@ -510,9 +538,23 @@ directory:
 | Gruvbox Dark     | `gruvbox-dark.toml`     |
 | Nord             | `nord.toml`             |
 | Solarized Dark   | `solarized-dark.toml`   |
-| Solarized Light  | `solarized-light.toml`  |
 
-Install one by copying it into your drop-in directory:
+**Both backgrounds:**
+
+| Theme          | Filename                                                          |
+|----------------|-------------------------------------------------------------------|
+| The Exa Future | `the-exa-future.toml` (a 24-bit tribute to the original exa look) |
+
+**Builtin overrides** (drop-ins that override the compiled
+`lx-256` and `lx-24bit` builtins with brighter, dark-tuned
+gradients):
+
+| Theme           | Filename               |
+|-----------------|------------------------|
+| `lx-256-dark`   | `lx-256-dark.toml`     |
+| `lx-24bit-dark` | `lx-24bit-dark.toml`   |
+
+Install:
 
 ```sh
 mkdir -p ~/.config/lx/conf.d
@@ -520,8 +562,8 @@ cp themes/dracula.toml ~/.config/lx/conf.d/
 lx -l --theme=dracula
 ```
 
-See [`themes/README.md`](../themes/README.md) for guidance on
-writing your own.
+See [`themes/README.md`](../themes/README.md) for the full
+inventory and guidance on writing your own.
 
 
 ## VCS integration
@@ -747,14 +789,14 @@ A personality can set `size-style = "binary"` (or `"bytes"` or
 Timestamps are coloured by age — recent files appear brighter,
 older files fade towards grey.  Six tiers:
 
-| Theme key | Age | Builtin colour |
-|-----------|-----|----------------|
-| `date-now` | < 1 hour | bright cyan |
-| `date-today` | < 24 hours | cyan |
-| `date-week` | < 7 days | bold blue |
-| `date-month` | < 30 days | blue |
-| `date-year` | < 365 days | grey |
-| `date-old` | > 1 year | dark grey |
+| Theme key    | Age        | Builtin colour |
+|--------------|------------|----------------|
+| `date-now`   | < 1 hour   | bright cyan    |
+| `date-today` | < 24 hours | cyan           |
+| `date-week`  | < 7 days   | bold blue      |
+| `date-month` | < 30 days  | blue           |
+| `date-year`  | < 365 days | grey           |
+| `date-old`   | > 1 year   | dark grey      |
 
 Setting `date = "steelblue"` in a theme sets all tiers to the
 same colour (backwards compatible).  Set individual tiers to
@@ -802,7 +844,7 @@ entirely.
 | `LX_DEBUG`        | Enable debug logging (`1` or `trace`)                      |
 | `LX_GRID_ROWS`    | Minimum rows for grid-details view (also a config key)     |
 | `LX_ICON_SPACING` | Spaces between icon and filename (also a config key)       |
-| `LX_PERSONALITY`  | Session-level personality selection (see §Personalities)    |
+| `LX_PERSONALITY`  | Session-level personality selection (see §Personalities)   |
 | `LS_COLORS`       | Standard file-type colour scheme                           |
 | `COLUMNS`         | Override terminal width                                    |
 | `TIME_STYLE`      | Default timestamp style                                    |

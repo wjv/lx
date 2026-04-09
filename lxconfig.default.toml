@@ -57,20 +57,17 @@ icons = "never"               # always / auto / never
 classify = "never"            # always / auto / never
 theme = "exa"                 # named theme (see below)
 
-## Auto-select a richer theme on capable terminals.  These [[when]]
-## blocks override `theme = "exa"` above when the environment shows
-## the terminal supports more colour.  Order matters: the truecolour
-## block comes second so it wins on terminals that satisfy both.
-##
-## Delete these blocks (or change the theme = ... values) to opt out
-## of automatic upgrade and stay on `exa` regardless of terminal.
+## Auto-select a richer theme on capable terminals.  Order matters:
+## later blocks win, so the truecolour block runs second.  Delete
+## these to stay on `exa` regardless of terminal.  See the
+## "Conditional overrides" section below for the [[when]] syntax.
 
 [[personality.default.when]]
-env.TERM = "*-256color"       # any 256-colour terminfo
+env.TERM = "*-256color"       # glob match — any 256-colour terminfo
 theme = "lx-256"
 
 [[personality.default.when]]
-env.COLORTERM = ["truecolor", "24bit"]
+env.COLORTERM = ["truecolor", "24bit"]   # array — any element matches
 theme = "lx-24bit"
 
 ## The "lx" personality applies when the binary is invoked as "lx".
@@ -132,14 +129,18 @@ across = true
 ## environment variables.  Conditions use env.VAR = value, where the
 ## TOML value type determines the kind of check:
 ##
-##   env.VAR = "string"  Exact match — variable must equal "string"
-##   env.VAR = ""        Exact match — variable must be set but empty
-##   env.VAR = true      Presence — variable must be set (any value)
-##   env.VAR = false     Absence — variable must be unset
+##   env.VAR = "string"      Literal string — exact match (or glob
+##                           if it contains *, ?, or [).
+##   env.VAR = ["a", "b"]    Array — matches if any element matches.
+##   env.VAR = true          Presence — variable must be set.
+##   env.VAR = false         Absence — variable must be unset.
 ##
 ## All conditions in a block must match (AND logic).  Multiple blocks
 ## are tried in order; all matching blocks apply (later wins).  The
 ## base personality is the default when no block matches.
+##
+## See [personality.default] above for an example using both globs
+## and arrays for terminal capability detection.
 
 ## Example: enable icons only in terminals with Nerd Font support.
 
@@ -183,10 +184,15 @@ across = true
 ## Themes can inherit from other themes with `inherits = "NAME"`.
 ## Without `inherits`, a theme starts from a blank slate.
 ##
-## The special name "exa" refers to the compiled-in default theme.
-## It is too long to include here; find it in lxconfig.toml(5).
+## Three compiled-in themes ship with lx:
+##   "exa"      strict 8-colour ANSI (the heritage exa look)
+##   "lx-256"   256-colour, balanced for both light and dark
+##   "lx-24bit" 24-bit truecolour, smoothest gradients
 ##
-## For the full list of theme keys, also see lxconfig.toml(5).
+## The default personality auto-selects the best variant for your
+## terminal (see the [[when]] blocks above).
+##
+## For the full list of theme keys, see lxconfig.toml(5).
 
 # [theme.ocean]
 # inherits = "exa"

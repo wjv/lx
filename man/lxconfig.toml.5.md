@@ -66,12 +66,13 @@ migration.
 | `"0.3"`        | 0.3.0+     | Classes, flat formats, exa style chain     |
 | `"0.4"`        | 0.7.0+     | Conditional overrides (`[[when]]` blocks)  |
 | `"0.5"`        | 0.8.0+     | `time` and `numeric` settings removed; timestamps and UID/GID now ordinary columns |
+| `"0.6"`        | 0.9.0+     | `[[when]]` env conditions accept TOML arrays and glob patterns |
 
-Version `"0.3"` and `"0.4"` configs are still accepted by lx 0.8+
-(0.5 is a superset of both), with caveats: `[[when]]` blocks in
-a `"0.3"` config trigger a warning, and the `time = "..."` and
-`numeric = ...` settings (valid in 0.3/0.4) trigger deprecation
-warnings at load time and are ignored.
+Versions `"0.3"`, `"0.4"`, and `"0.5"` are still accepted by
+lx 0.9+ (0.6 is a strict superset), with caveats: `[[when]]`
+blocks in a `"0.3"` config trigger a warning, and the
+`time = "..."` and `numeric = ...` settings (valid in 0.3/0.4)
+trigger deprecation warnings at load time and are ignored.
 
 If lx encounters a config file with an older version (or no version
 field), it refuses to load it and prints a message directing the user
@@ -334,7 +335,13 @@ Conditions use `env.VAR = value` where the TOML value type determines
 the check:
 
 `env.VAR = "string"`
-: Exact string match against the variable's value.
+: Exact string match against the variable's value.  If the string
+contains any of `*`, `?`, or `[`, it is matched as a glob pattern
+instead (added in 0.6).
+
+`env.VAR = ["string", "string"]`
+: TOML array — matches if any element matches.  Each element is
+independently matched as a literal or a glob.  Added in 0.6.
 
 `env.VAR = true`
 : Variable must be set (to any value, including empty).
@@ -358,6 +365,19 @@ All conditions within a single block must match (AND logic).
     [[personality.lx.when]]
     env.SSH_CONNECTION = true
     colour = "never"
+
+    # Auto-select theme tier based on terminal capability.
+    # Glob match against TERM, array of accepted COLORTERM values.
+    [personality.default]
+    theme = "exa"
+
+    [[personality.default.when]]
+    env.TERM = "*-256color"
+    theme = "lx-256"
+
+    [[personality.default.when]]
+    env.COLORTERM = ["truecolor", "24bit"]
+    theme = "lx-24bit"
 
 **Evaluation rules:**
 

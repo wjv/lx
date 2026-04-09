@@ -22,11 +22,26 @@ All notable changes to lx are documented here. lx is forked from
   (bright cyan) to "old" (grey).  Theme keys `date-now` through
   `date-old`; `date` remains a bulk setter for backwards
   compatibility.
-- Three new light-background curated themes: Catppuccin Latte,
-  Gruvbox Light, Nord Light.
 - Three-tier group colouring: primary group, supplementary group
   (you have group access), and other.  Theme keys `group-member`
-  and `gid-member`.
+  and `gid-member`.  Uses `getgrouplist()` so it works with
+  macOS Directory Services and LDAP.
+- **Two new compiled-in themes**: `lx-256` (256-colour, refined
+  exa-derived palette) and `lx-24bit` (24-bit truecolour).
+  The compiled `default` personality auto-selects the best
+  variant based on `$TERM` and `$COLORTERM`: bare terminals get
+  `exa`, `*-256color` terminals get `lx-256`, and terminals with
+  `COLORTERM=truecolor`/`24bit` get `lx-24bit`.  No flags needed.
+- **Theme tier system** in `[[when]]` env conditions: TOML arrays
+  match if any element matches; strings containing `*`/`?`/`[`
+  are treated as glob patterns.  Both extensions are backwards
+  compatible.
+- New light-background curated themes: Catppuccin Latte,
+  Gruvbox Light, Nord Light.
+- New dark-background curated themes: `lx-256-dark` and
+  `lx-24bit-dark` (drop-in overrides of the builtins with
+  brighter gradients), and `the-exa-future` (a 24-bit tribute
+  to the original exa look).
 - Error on unknown `--theme=NAME` (exit 3, same as unknown `-p`).
 - Dependabot for Cargo + GitHub Actions dependency updates.
 - `cargo-deny` in CI (licence compliance + security advisories).
@@ -39,11 +54,29 @@ All notable changes to lx are documented here. lx is forked from
   walk.  On NFS: **10x faster wall time** vs 0.8 (4s vs 41s
   median), 7x less kernel time (13s vs 85s).  On local SSD:
   wall time unchanged; kernel time marginally improved.
+- The compiled-in `exa` theme is now strictly 8-colour ANSI.
+  The 256-colour values that crept in during the gradient work
+  (`Fixed(244)` for punctuation, the date age gradient) have
+  been moved to the new `lx-256` and `lx-24bit` themes.  Users
+  on capable terminals get the gradients automatically via the
+  `default` personality's auto-selection; users who pin
+  `theme = "exa"` get the strict 8-colour rendering.
 - UID/GID theme cascade removed.  The `uid-you`, `uid-other`,
   `gid-yours`, `gid-other` theme slots are now independent —
   no longer cascade from `user-*` / `group-*` when unset.
   Custom themes that relied on the cascade should add explicit
   `uid-*` / `gid-*` entries.
+- The summary footer (`-C`/`-CZ`) is now coloured: counts and
+  totals in `size.major`, surrounding text in `punctuation`.
+- Config schema bumps to 0.6 (still backwards compatible —
+  0.5 configs load unchanged).  `--upgrade-config` from 0.5
+  injects the auto-selection `[[when]]` blocks into existing
+  `[personality.default]` sections.
+- The theme parser now accepts `permissions-*` keys in addition
+  to the legacy `perm-*` short form.  This fixes a long-standing
+  bug where the curated themes shipped with `permissions-*`
+  keys (matching the column name) but the parser silently
+  ignored them.  Backportable to 0.8.
 - Linux release builds pinned to `ubuntu-22.04` (glibc 2.35),
   lowering the floor from glibc 2.39.
 
