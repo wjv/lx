@@ -12,7 +12,6 @@ use-style = "nord"
 directory = "bold #81a1c1"
 symlink = "#88c0d0"
 executable = "#a3be8c"
-date = "#4c566a"
 user-you = "#d8dee9"
 user-other = "#4c566a"
 group-yours = "#8fbcbb"
@@ -23,8 +22,24 @@ uid-other = "#4c566a"
 gid-yours = "#a3be8c"
 gid-member = "#a3be8c"
 gid-other = "#4c566a"
-size-number = "#d8dee9"
-size-unit = "#4c566a"
+
+# Size gradient: Aurora colours, green → yellow → orange → red → purple
+size-number-byte = "#a3be8c"   # green
+size-number-kilo = "#ebcb8b"   # yellow
+size-number-mega = "#d08770"   # orange
+size-number-giga = "#bf616a"   # red
+size-number-huge = "#b48ead"   # purple
+size-major       = "#d8dee9"   # snow-storm — flat fallback
+size-unit        = "#4c566a"   # polar-night-4 — dim, also sets size-minor
+
+# Date gradient: Frost colours, fading through Polar Night
+date-now   = "bold #8fbcbb"   # frost-1, hot teal
+date-today = "#88c0d0"        # frost-2
+date-week  = "#81a1c1"        # frost-3
+date-month = "#5e81ac"        # frost-4
+date-year  = "#4c566a"        # polar-night-4
+date-old   = "#434c5e"        # polar-night-3
+date-flat  = "#4c566a"        # = year (matches the previous bulk `date`)
 permissions-user-read = "#a3be8c"
 permissions-user-write = "#bf616a"
 permissions-user-execute = "#ebcb8b"

@@ -12,7 +12,6 @@ use-style = "gruvbox-dark"
 directory = "bold #83a598"
 symlink = "#8ec07c"
 executable = "#b8bb26"
-date = "#665c54"
 user-you = "#ebdbb2"
 user-other = "#665c54"
 group-yours = "#83a598"
@@ -23,8 +22,24 @@ uid-other = "#665c54"
 gid-yours = "#458588"
 gid-member = "#458588"
 gid-other = "#665c54"
-size-number = "#ebdbb2"
-size-unit = "#665c54"
+
+# Size gradient: green → yellow → orange → red → purple
+size-number-byte = "#b8bb26"   # green
+size-number-kilo = "#fabd2f"   # yellow
+size-number-mega = "#fe8019"   # orange
+size-number-giga = "#fb4934"   # red
+size-number-huge = "#d3869b"   # pink-purple
+size-major       = "#ebdbb2"   # fg — flat fallback
+size-unit        = "#665c54"   # bg3 — dim, also sets size-minor
+
+# Date gradient: aqua → blue, fading to bg greys
+date-now   = "bold #8ec07c"   # aqua, hot
+date-today = "#8ec07c"        # aqua
+date-week  = "#83a598"        # blue
+date-month = "#458588"        # deep blue
+date-year  = "#7c6f64"        # bg4 — mid grey
+date-old   = "#665c54"        # bg3
+date-flat  = "#665c54"        # = old (matches the previous bulk `date`)
 permissions-user-read = "#b8bb26"
 permissions-user-write = "#fb4934"
 permissions-user-execute = "#fabd2f"

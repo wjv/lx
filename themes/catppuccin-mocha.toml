@@ -12,7 +12,6 @@ use-style = "catppuccin-mocha"
 directory = "bold #89b4fa"
 symlink = "#94e2d5"
 executable = "#a6e3a1"
-date = "#585b70"
 user-you = "#cdd6f4"
 user-other = "#585b70"
 group-yours = "#94e2d5"
@@ -23,8 +22,24 @@ uid-other = "#585b70"
 gid-yours = "#89dceb"
 gid-member = "#89dceb"
 gid-other = "#585b70"
-size-number = "#cdd6f4"
-size-unit = "#585b70"
+
+# Size gradient: green → yellow → peach → maroon → red
+size-number-byte = "#a6e3a1"   # green
+size-number-kilo = "#f9e2af"   # yellow
+size-number-mega = "#fab387"   # peach
+size-number-giga = "#eba0ac"   # maroon
+size-number-huge = "#f38ba8"   # red
+size-major       = "#cdd6f4"   # text — flat fallback
+size-unit        = "#585b70"   # surface2 — dim, also sets size-minor
+
+# Date gradient: sky → sapphire → blue, fading to surface greys
+date-now   = "bold #89dceb"   # sky, hot
+date-today = "#89dceb"        # sky
+date-week  = "#74c7ec"        # sapphire
+date-month = "#89b4fa"        # blue
+date-year  = "#7f849c"        # overlay1
+date-old   = "#585b70"        # surface2
+date-flat  = "#585b70"        # = old (matches the previous bulk `date`)
 permissions-user-read = "#a6e3a1"
 permissions-user-write = "#f38ba8"
 permissions-user-execute = "#f9e2af"

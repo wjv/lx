@@ -12,7 +12,6 @@ use-style = "solarized-dark"
 directory = "bold #268bd2"
 symlink = "#2aa198"
 executable = "#859900"
-date = "#586e75"
 user-you = "#93a1a1"
 user-other = "#586e75"
 group-yours = "#2aa198"
@@ -23,8 +22,24 @@ uid-other = "#586e75"
 gid-yours = "#268bd2"
 gid-member = "#268bd2"
 gid-other = "#586e75"
-size-number = "#93a1a1"
-size-unit = "#586e75"
+
+# Size gradient: green → yellow → orange → red → magenta
+size-number-byte = "#859900"   # green
+size-number-kilo = "#b58900"   # yellow
+size-number-mega = "#cb4b16"   # orange
+size-number-giga = "#dc322f"   # red
+size-number-huge = "#d33682"   # magenta
+size-major       = "#93a1a1"   # base1 — flat fallback
+size-unit        = "#586e75"   # base01 — dim, also sets size-minor
+
+# Date gradient: cyan → blue → violet, fading to base02
+date-now   = "bold #2aa198"   # cyan, hot
+date-today = "#2aa198"        # cyan
+date-week  = "#268bd2"        # blue
+date-month = "#6c71c4"        # violet
+date-year  = "#586e75"        # base01
+date-old   = "#073642"        # base02
+date-flat  = "#586e75"        # = year (matches the previous bulk `date`)
 permissions-user-read = "#859900"
 permissions-user-write = "#cb4b16"
 permissions-user-execute = "#b58900"

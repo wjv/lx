@@ -311,19 +311,29 @@ impl UiStyles {
     }
 
     pub fn set_number_style(&mut self, style: Style) {
+        // Set all 5 number tiers AND `major`, so a theme that uses
+        // the bulk setter to "fake flat" the size column also gets
+        // the right colour when `--no-gradient` collapses the column
+        // via `apply_gradient_flags`.  Mirrors the way DateAge::set_all
+        // also sets `flat`.
         self.size.number_byte = style;
         self.size.number_kilo = style;
         self.size.number_mega = style;
         self.size.number_giga = style;
         self.size.number_huge = style;
+        self.size.major       = style;
     }
 
     pub fn set_unit_style(&mut self, style: Style) {
+        // Same logic as set_number_style: also set `minor` so
+        // `--no-gradient` collapses to the bulk-set colour rather
+        // than the inherited parent theme's value.
         self.size.unit_byte = style;
         self.size.unit_kilo = style;
         self.size.unit_mega = style;
         self.size.unit_giga = style;
         self.size.unit_huge = style;
+        self.size.minor     = style;
     }
 
     /// Set a UI style from a human-readable config key and value.

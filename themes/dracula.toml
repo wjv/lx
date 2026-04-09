@@ -12,7 +12,6 @@ use-style = "dracula"
 directory = "bold #bd93f9"
 symlink = "#8be9fd"
 executable = "#50fa7b"
-date = "#6272a4"
 user-you = "#f8f8f2"
 user-other = "#6272a4"
 group-yours = "#bd93f9"
@@ -23,8 +22,24 @@ uid-other = "#6272a4"
 gid-yours = "#ff79c6"
 gid-member = "#ff79c6"
 gid-other = "#6272a4"
-size-number = "#f8f8f2"
-size-unit = "#6272a4"
+
+# Size gradient: cyan → green → yellow → orange → red
+size-number-byte = "#8be9fd"   # cyan
+size-number-kilo = "#50fa7b"   # green
+size-number-mega = "#f1fa8c"   # yellow
+size-number-giga = "#ffb86c"   # orange
+size-number-huge = "#ff5555"   # red
+size-major       = "#f8f8f2"   # foreground — flat fallback
+size-unit        = "#6272a4"   # comment — dim, also sets size-minor
+
+# Date gradient: cyan → purple, fading to current-line greys
+date-now   = "bold #8be9fd"   # cyan, hot
+date-today = "#8be9fd"        # cyan
+date-week  = "#bd93f9"        # purple
+date-month = "#6272a4"        # comment
+date-year  = "#525569"        # comment-dim
+date-old   = "#44475a"        # current line
+date-flat  = "#6272a4"        # = comment (matches the previous bulk `date`)
 permissions-user-read = "#50fa7b"
 permissions-user-write = "#ff79c6"
 permissions-user-execute = "#f1fa8c"

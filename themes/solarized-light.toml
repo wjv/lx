@@ -12,7 +12,6 @@ use-style = "solarized-light"
 directory = "bold #268bd2"
 symlink = "#2aa198"
 executable = "#859900"
-date = "#93a1a1"
 user-you = "#586e75"
 user-other = "#93a1a1"
 group-yours = "#2aa198"
@@ -23,8 +22,28 @@ uid-other = "#93a1a1"
 gid-yours = "#268bd2"
 gid-member = "#268bd2"
 gid-other = "#93a1a1"
-size-number = "#586e75"
-size-unit = "#93a1a1"
+
+# Size gradient: green → yellow → orange → red → magenta
+# (same accent palette as Solarized Dark — these read well on
+# both backgrounds since they're the canonical Solarized accents)
+size-number-byte = "#859900"   # green
+size-number-kilo = "#b58900"   # yellow
+size-number-mega = "#cb4b16"   # orange
+size-number-giga = "#dc322f"   # red
+size-number-huge = "#d33682"   # magenta
+size-major       = "#586e75"   # base01 — flat fallback (dark on light)
+size-unit        = "#93a1a1"   # base1 — dim, also sets size-minor
+
+# Date gradient: cyan → blue → violet, fading to lighter greys
+# (on a light bg, "old" fades toward the page colour, not away
+# into a void)
+date-now   = "bold #2aa198"   # cyan, hot
+date-today = "#2aa198"        # cyan
+date-week  = "#268bd2"        # blue
+date-month = "#6c71c4"        # violet
+date-year  = "#839496"        # base0
+date-old   = "#93a1a1"        # base1
+date-flat  = "#93a1a1"        # = old (matches the previous bulk `date`)
 permissions-user-read = "#859900"
 permissions-user-write = "#cb4b16"
 permissions-user-execute = "#b58900"

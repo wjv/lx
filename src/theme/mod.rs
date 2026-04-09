@@ -690,19 +690,27 @@ mod customs_test {
     test!(lx_sf:  ls "", lx "sf=38;5;111"  =>  colours c -> { c.perms.special_other       = Fixed(111).normal(); });
     test!(lx_xa:  ls "", lx "xa=38;5;112"  =>  colours c -> { c.perms.attribute           = Fixed(112).normal(); });
 
+    // `sn` (size-number bulk setter) sets all 5 number tiers AND
+    // `size.major` so that themes using the bulk setter for a "fake
+    // flat" look also get the right colour when --no-gradient
+    // collapses the column to size.major.
     test!(lx_sn:  ls "", lx "sn=38;5;113" => colours c -> {
         c.size.number_byte = Fixed(113).normal();
         c.size.number_kilo = Fixed(113).normal();
         c.size.number_mega = Fixed(113).normal();
         c.size.number_giga = Fixed(113).normal();
         c.size.number_huge = Fixed(113).normal();
+        c.size.major       = Fixed(113).normal();
     });
+    // `sb` (size-unit bulk setter) — symmetric: sets all 5 unit
+    // tiers AND `size.minor`.
     test!(lx_sb:  ls "", lx "sb=38;5;114" => colours c -> {
         c.size.unit_byte = Fixed(114).normal();
         c.size.unit_kilo = Fixed(114).normal();
         c.size.unit_mega = Fixed(114).normal();
         c.size.unit_giga = Fixed(114).normal();
         c.size.unit_huge = Fixed(114).normal();
+        c.size.minor     = Fixed(114).normal();
     });
 
     test!(lx_nb:  ls "", lx "nb=38;5;115"  =>  colours c -> { c.size.number_byte          = Fixed(115).normal(); });

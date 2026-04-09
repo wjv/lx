@@ -16,7 +16,6 @@ use-style = "nord-light"
 directory = "bold #5e81ac"
 symlink = "#88c0d0"
 executable = "#a3be8c"
-date = "#b8c5d4"
 user-you = "#2e3440"
 user-other = "#b8c5d4"
 group-yours = "#5e81ac"
@@ -27,8 +26,27 @@ uid-other = "#b8c5d4"
 gid-yours = "#a3be8c"
 gid-member = "#a3be8c"
 gid-other = "#b8c5d4"
-size-number = "#2e3440"
-size-unit = "#b8c5d4"
+
+# Size gradient: Aurora colours, green → yellow → orange → red → purple
+# (the warm tones read well against a light background too)
+size-number-byte = "#a3be8c"   # green
+size-number-kilo = "#ebcb8b"   # yellow
+size-number-mega = "#d08770"   # orange
+size-number-giga = "#bf616a"   # red
+size-number-huge = "#b48ead"   # purple
+size-major       = "#2e3440"   # polar-night-0 — flat fallback (dark)
+size-unit        = "#b8c5d4"   # pale frost — dim, also sets size-minor
+
+# Date gradient: Frost (deep → light) fading toward background pale.
+# On a light bg, "recent" needs deep saturation to pop and "old"
+# fades to pale grey.
+date-now   = "bold #5e81ac"   # frost-4 (deepest)
+date-today = "#5e81ac"        # frost-4
+date-week  = "#81a1c1"        # frost-3
+date-month = "#88c0d0"        # frost-2
+date-year  = "#b8c5d4"        # pale frost
+date-old   = "#d8dee9"        # snow-storm-0 (almost background)
+date-flat  = "#b8c5d4"        # = year (matches the previous bulk `date`)
 permissions-user-read = "#a3be8c"
 permissions-user-write = "#bf616a"
 permissions-user-execute = "#ebcb8b"

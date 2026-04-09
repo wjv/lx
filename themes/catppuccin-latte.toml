@@ -12,7 +12,6 @@ use-style = "catppuccin-latte"
 directory = "bold #1e66f5"
 symlink = "#179299"
 executable = "#40a02b"
-date = "#9ca0b0"
 user-you = "#4c4f69"
 user-other = "#9ca0b0"
 group-yours = "#179299"
@@ -23,8 +22,24 @@ uid-other = "#9ca0b0"
 gid-yours = "#7287fd"
 gid-member = "#7287fd"
 gid-other = "#9ca0b0"
-size-number = "#4c4f69"
-size-unit = "#9ca0b0"
+
+# Size gradient: green → yellow → peach → red → mauve
+size-number-byte = "#40a02b"   # green
+size-number-kilo = "#df8e1d"   # yellow
+size-number-mega = "#fe640b"   # peach
+size-number-giga = "#d20f39"   # red
+size-number-huge = "#8839ef"   # mauve
+size-major       = "#4c4f69"   # text — flat fallback
+size-unit        = "#9ca0b0"   # overlay0 — dim, also sets size-minor
+
+# Date gradient: sky → sapphire → blue → grey
+date-now   = "bold #04a5e5"   # sky, hot
+date-today = "#04a5e5"        # sky
+date-week  = "#209fb5"        # sapphire
+date-month = "#1e66f5"        # blue
+date-year  = "#7c7f93"        # overlay1
+date-old   = "#9ca0b0"        # overlay0
+date-flat  = "#9ca0b0"        # = old (matches the previous bulk `date`)
 permissions-user-read = "#40a02b"
 permissions-user-write = "#d20f39"
 permissions-user-execute = "#df8e1d"
