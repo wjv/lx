@@ -1,0 +1,64 @@
+<svg height="250.4" width="299.2" xmlns="http://www.w3.org/2000/svg">
+<g transform="translate(32,16)">
+<rect fill="#282c34" height="186.4" rx="10" ry="10" width="235.2"/>
+<clipPath id="header">
+<rect height="28" width="235.2"/>
+</clipPath>
+<rect clip-path="url(#header)" fill="#383837" height="56" rx="10" ry="10" width="235.2"/>
+<line stroke="#000000c0" stroke-width="0.5" x1="0" x2="235.2" y1="28" y2="28"/><text dominant-baseline="central" fill="#b3b3b3" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" x="117.6" y="14">ls</text>
+<g>
+<circle cx="14" cy="14" fill="#ff5f56" r="6" stroke="#ff5f56" stroke-width="0.5"/>
+<circle cx="34" cy="14" fill="#ffbd2e" r="6" stroke="#ffbd2e" stroke-width="0.5"/>
+<circle cx="54" cy="14" fill="#28c941" r="6" stroke="#28c941" stroke-width="0.5"/>
+</g>
+<svg class="terminal" font-family="JetBrains Mono, Fira Code, Source Code Pro, Cascadia Code, Consolas, Menlo, Monaco, DejaVu Sans Mono, monospace, Symbols Nerd Font Mono, Cascadia Mono" font-size="12" height="158.4" width="235.2" y="28">
+<svg fill="#dcdfe4" x="9.6" y="7.2">
+<g>
+<svg height="144" viewBox="0 0 18 12" width="216">
+<g stroke-width="0.025"/>
+</svg>
+<svg height="14.4" overflow="hidden" width="216" y="0">
+<text xml:space="preserve" y="0.96em"><tspan fill="#dcdfe4">backup.tar.gz </tspan><tspan> </tspan><tspan fill="#dcdfe4">Cargo.lock </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="216" y="14.4">
+<text xml:space="preserve" y="0.96em"><tspan fill="#dcdfe4">Cargo.toml </tspan><tspan>    </tspan><tspan fill="#61afef">data</tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="216" y="28.8">
+<text xml:space="preserve" y="0.96em"><tspan fill="#dcdfe4">data.json </tspan><tspan>     </tspan><tspan fill="#dcdfe4">demo.mp4 </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="216" y="43.2">
+<text xml:space="preserve" y="0.96em"><tspan fill="#e06c75">deploy.sh</tspan><tspan>      </tspan><tspan fill="#dcdfe4">Dockerfile </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="216" y="57.6">
+<text xml:space="preserve" y="0.96em"><tspan fill="#61afef">docs</tspan><tspan>           </tspan><tspan fill="#dcdfe4">hello.rs </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="216" y="72">
+<text xml:space="preserve" y="0.96em"><tspan fill="#dcdfe4">holiday.jpg </tspan><tspan>   </tspan><tspan fill="#dcdfe4">Justfile </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="216" y="86.4">
+<text xml:space="preserve" y="0.96em"><tspan fill="#e06c75">latest.rs</tspan><tspan>      </tspan><tspan fill="#c678dd">LICENCE</tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="216" y="100.8">
+<text xml:space="preserve" y="0.96em"><tspan fill="#dcdfe4">LICENSE </tspan><tspan>       </tspan><tspan fill="#dcdfe4">scratch.tmp </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="216" y="115.2">
+<text xml:space="preserve" y="0.96em"><tspan fill="#dcdfe4">secrets.gpg </tspan><tspan>   </tspan><tspan fill="#61afef">src</tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="216" y="129.6">
+<text xml:space="preserve" y="0.96em"><tspan fill="#dcdfe4">thesis.pdf </tspan></text>
+</svg>
+</g>
+</svg>
+</svg>
+<rect fill="none" height="186.4" rx="10" ry="10" stroke="#000000" stroke-width="0.5" width="235.2"/>
+<rect fill="none" height="184.4" rx="9" ry="9" stroke="#f0f0f080" stroke-width="0.5" width="233.2" x="1" y="1"/>
+</g>
+<style>
+@font-face {
+	font-family: JetBrains Mono;
+	font-weight: 100 800;
+	font-style: normal;
+	src: url(https://raw.githubusercontent.com/pamburus/fonts/refs/heads/main/JetBrainsMono/fonts/variable/JetBrainsMono%5Bwght%5D.woff2) format('woff2');
+}
+</style>
+</svg>

@@ -12,14 +12,10 @@ But… `lx` is a file lister with *personality!* 🌟
 
 <img src="docs/images/hero.svg" alt="lx output showing long view with VCS status, file type colours, and size gradient">
 
-> **⚠️  Upgrading from 0.7?  0.8 has breaking CLI changes.**
-> `-n` / `--numeric`, `-t FIELD` / `--time`, and the `-u` /
-> `-U` short flags have all been reshaped as part of the CLI
-> refactor.  Your config file migrates automatically with
-> `lx --upgrade-config`; your muscle memory is on its own.
-> See [`docs/UPGRADING.md`](docs/UPGRADING.md) for the full list
-> and the reasoning — it's short, and each change earns its
-> keep.
+> **Upgrading from an earlier 0.x release?**  See
+> [`docs/UPGRADING.md`](docs/UPGRADING.md) for breaking changes
+> per release, with migration notes and the reasoning behind
+> each change.
 
 
 ## Highlights
@@ -30,13 +26,28 @@ Shell aliases have been wrapping `ls` in user-preferred flags for
 forty years.  `lx` takes the idea and promotes it into a feature:
 a *personality* is a named bundle of settings, activated by the
 name you call `lx` under.  Symlink `lx` to `ll` and `ll` behaves
-like `lx -l`.  Create symlinks named `la`, `tree` or `du` — it Just
-Works, no shell aliases required.
+like a long-view `lx`.  Create symlinks named `la`, `tree` or `du`
+— it Just Works, no shell aliases required.
 
 ```sh
 ln -s $(which lx) ~/.local/bin/ll     # ll is now "lx long view"
 ln -s $(which lx) ~/.local/bin/tree   # tree is now "lx tree view"
 ```
+
+Same data, three personalities, three completely different views. No aliases.
+
+<table>
+<tr>
+<th align="center"><code>ls</code></th>
+<th align="center"><code>ll</code></th>
+<th align="center"><code>tree</code></th>
+</tr>
+<tr>
+<td valign="top"><img src="docs/images/personality-ls.svg" alt="lx -p ls — grid view"></td>
+<td valign="top"><img src="docs/images/personality-ll.svg" alt="lx -p ll — long view"></td>
+<td valign="top"><img src="docs/images/personality-tree.svg" alt="lx -p tree — tree view"></td>
+</tr>
+</table>
 
 Personalities can inherit from each other, pick formats and themes,
 bundle filter rules, and activate conditionally based on environment
@@ -68,8 +79,8 @@ detail in a "long" view, but using it multiple times (`-ll` / `-lll`) increases
 the amount of detail shown. Similarly `-t`, `-tt` and `-ttt` show progressively 
 more timestamp fields.
 
-CLI flags are divided into four **disjoint classes** stay out of each other's 
-way.  See [`docs/DESIGN.md`](docs/DESIGN.md) for the full design story.
+CLI flags are divided into four **disjoint classes** that stay out of each
+other's way.  See [`docs/DESIGN.md`](docs/DESIGN.md) for the full design story.
 
 ### Zero config, or every detail
 
@@ -192,9 +203,11 @@ completions — run `just -l` to see the recipes.
 - **jj support is opt-in** at compile time.  Release binaries
   (Homebrew, GitHub releases) include it; `cargo install` defaults to
   git-only.  Build with `--features jj` to enable.
-- **Old config files** from before 0.5 need migrating.  Run
-  `lx --upgrade-config` to convert from any earlier format (a `.bak`
-  of the original is saved automatically).
+- **Old config files** can be migrated to the current schema with
+  `lx --upgrade-config` (a `.bak` of the original is saved
+  automatically).  Files written for older 0.x releases load
+  unchanged where possible; the migration only kicks in for the
+  oldest formats or where new sections are being injected.
 - **The crate name on crates.io is `lx-ls`**; the binary is still `lx`.
 - `lx` is an experiment under active development.  The CLI surface
   is not yet stable.

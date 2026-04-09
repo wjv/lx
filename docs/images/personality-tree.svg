@@ -1,0 +1,118 @@
+<svg height="509.6" width="335.2" xmlns="http://www.w3.org/2000/svg">
+<g transform="translate(32,16)">
+<rect fill="#282c34" height="445.6" rx="10" ry="10" width="271.2"/>
+<clipPath id="header">
+<rect height="28" width="271.2"/>
+</clipPath>
+<rect clip-path="url(#header)" fill="#383837" height="56" rx="10" ry="10" width="271.2"/>
+<line stroke="#000000c0" stroke-width="0.5" x1="0" x2="271.2" y1="28" y2="28"/><text dominant-baseline="central" fill="#b3b3b3" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" x="135.6" y="14">tree</text>
+<g>
+<circle cx="14" cy="14" fill="#ff5f56" r="6" stroke="#ff5f56" stroke-width="0.5"/>
+<circle cx="34" cy="14" fill="#ffbd2e" r="6" stroke="#ffbd2e" stroke-width="0.5"/>
+<circle cx="54" cy="14" fill="#28c941" r="6" stroke="#28c941" stroke-width="0.5"/>
+</g>
+<svg class="terminal" font-family="JetBrains Mono, Fira Code, Source Code Pro, Cascadia Code, Consolas, Menlo, Monaco, DejaVu Sans Mono, monospace, Symbols Nerd Font Mono, Cascadia Mono" font-size="12" height="417.6" width="271.2" y="28">
+<svg fill="#dcdfe4" x="9.6" y="7.2">
+<g>
+<svg height="403.2" viewBox="0 0 21 33.6" width="252">
+<g stroke-width="0.025"/>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="0">
+<text xml:space="preserve" y="0.96em"><tspan fill="#3b8ed8" font-weight="bold">.</tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="14.4">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#e06c75">backup.tar.gz</tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="28.8">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#dcdfe4">Cargo.lock </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="43.2">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#e5c07b" font-weight="bold" text-decoration="underline" text-decoration-style="solid">Cargo.toml</tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="57.6">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#3b8ed8" font-weight="bold">data</tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="72">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">│ </tspan><tspan> </tspan><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#dcdfe4">config.yaml </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="86.4">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">│ </tspan><tspan> </tspan><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#dcdfe4">genome.h5 </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="100.8">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">│ </tspan><tspan> </tspan><tspan fill="#888888">└──</tspan><tspan> </tspan><tspan fill="#dcdfe4">results.csv </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="115.2">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#dcdfe4">data.json </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="129.6">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#af5fff">demo.mp4</tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="144">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#5fb55f" font-weight="bold">deploy.sh</tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="158.4">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#e5c07b" font-weight="bold" text-decoration="underline" text-decoration-style="solid">Dockerfile</tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="172.8">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#3b8ed8" font-weight="bold">docs</tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="187.2">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">│ </tspan><tspan> </tspan><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#dcdfe4">design.md </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="201.6">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">│ </tspan><tspan> </tspan><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#dcdfe4">design.md~ </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="216">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">│ </tspan><tspan> </tspan><tspan fill="#888888">└──</tspan><tspan> </tspan><tspan fill="#dcdfe4">guide.md </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="230.4">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#dcdfe4">hello.rs </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="244.8">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#af5faf">holiday.jpg</tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="259.2">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#e5c07b" font-weight="bold" text-decoration="underline" text-decoration-style="solid">Justfile</tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="273.6">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#3aabae">latest.rs</tspan><tspan> </tspan><tspan fill="#d76060">-&gt;</tspan><tspan> </tspan><tspan fill="#d76060" text-decoration="underline" text-decoration-style="solid">src/hello.rs</tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="288">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#3aabae">LICENCE</tspan><tspan> </tspan><tspan fill="#888888">-&gt;</tspan><tspan> </tspan><tspan fill="#dcdfe4">LICENSE </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="302.4">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#dcdfe4">LICENSE </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="316.8">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#808080">scratch.tmp</tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="331.2">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#87afaf">secrets.gpg</tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="345.6">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#3b8ed8" font-weight="bold">src</tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="360">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">│ </tspan><tspan> </tspan><tspan fill="#888888">├──</tspan><tspan> </tspan><tspan fill="#dcdfe4">config.rs </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="374.4">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">│ </tspan><tspan> </tspan><tspan fill="#888888">└──</tspan><tspan> </tspan><tspan fill="#dcdfe4">lib.rs </tspan></text>
+</svg>
+<svg height="14.4" overflow="hidden" width="252" y="388.8">
+<text xml:space="preserve" y="0.96em"><tspan fill="#888888">└──</tspan><tspan> </tspan><tspan fill="#8787ff">thesis.pdf</tspan></text>
+</svg>
+</g>
+</svg>
+</svg>
+<rect fill="none" height="445.6" rx="10" ry="10" stroke="#000000" stroke-width="0.5" width="271.2"/>
+<rect fill="none" height="443.6" rx="9" ry="9" stroke="#f0f0f080" stroke-width="0.5" width="269.2" x="1" y="1"/>
+</g>
+<style>
+@font-face {
+	font-family: JetBrains Mono;
+	font-weight: 100 800;
+	font-style: normal;
+	src: url(https://raw.githubusercontent.com/pamburus/fonts/refs/heads/main/JetBrainsMono/fonts/variable/JetBrainsMono%5Bwght%5D.woff2) format('woff2');
+}
+</style>
+</svg>
