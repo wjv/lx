@@ -193,8 +193,9 @@ Display options:
 
 : `oneline` (bool), `long` (bool), `grid` (bool), `across` (bool),
 `recurse` (bool), `tree` (bool), `classify` (string: `always`/`auto`/`never`),
-`colour` (string: `always`/`auto`/`never`), `colour-scale` (string:
-`none`/`16`/`256`), `icons` (string: `always`/`auto`/`never`),
+`colour` (string: `always`/`auto`/`never`),
+`gradient` (string: comma-separated `size`/`date`, or `all`/`none`),
+`icons` (string: `always`/`auto`/`never`),
 `width` (integer), `absolute` (bool), `hyperlink` (string:
 `always`/`auto`/`never`), `quotes` (string: `always`/`auto`/`never`),
 `theme` (string: named theme), `count` (bool).
@@ -533,7 +534,8 @@ The special theme name `"exa"` provides the following defaults.  Use
     permissions-special-other = "purple"
     permissions-attribute = ""
 
-    # Size (default: all green; see --colour-scale for gradients)
+    # Size (set per-tier keys size-number-byte..huge for a
+    # gradient; see --gradient(1) to switch the gradient on/off)
     size-number = "bold green"
     size-unit = "green"
     size-major = "bold green"

@@ -784,6 +784,33 @@ lx -l --size-style=decimal
 A personality can set `size-style = "binary"` (or `"bytes"` or
 `"decimal"`) and the CLI flag overrides it for one invocation.
 
+### Gradients on size and date
+
+Two columns render gradients out of the box: **size** (5 tiers
+from byte to huge) and **date** (6 tiers from "just now" to
+"old").  The compiled-in `lx-256` and `lx-24bit` themes ship
+gradients tuned to their palette, and every curated theme in
+[`themes/`](../themes) defines its tier colours explicitly.
+
+Switch gradients off with `--gradient`:
+
+```sh
+lx -l                       # default: gradients on for both
+lx -l --gradient=size       # only the size column
+lx -l --gradient=date       # only the date column
+lx -l --no-gradient         # both columns flat
+lx -l --gradient=none       # equivalent to --no-gradient
+```
+
+The same vocabulary works as a personality config key:
+`gradient = "all"` (default), `"size"`, `"date"`, or `"none"`.
+
+When a column's gradient is off, it falls back to the theme's
+*flat* slots — `size-major`/`size-minor` for size and
+`date-flat` for the date.  All shipped themes set these
+explicitly, so a flat column still picks up the theme's palette
+rather than a generic fallback.
+
 ### Timestamp colours
 
 Timestamps are coloured by age — recent files appear brighter,
@@ -798,9 +825,10 @@ older files fade towards grey.  Six tiers:
 | `date-year`  | < 365 days | grey           |
 | `date-old`   | > 1 year   | dark grey      |
 
-Setting `date = "steelblue"` in a theme sets all tiers to the
-same colour (backwards compatible).  Set individual tiers to
-create a custom gradient.
+Setting `date = "steelblue"` in a theme sets all six tiers (and
+`date-flat`) to the same colour (backwards compatible).  Set
+individual tiers to create a custom gradient, or set `date-flat`
+on its own to control the colour `--no-gradient` falls back to.
 
 ### Summary footer
 

@@ -61,13 +61,6 @@ Works with all view modes including tree and recursive listings.
 : When to use terminal colours. WHEN is `always`, `auto`, or `never`.
 Alias: `--color`.
 
-`--colour-scale`[`=MODE`]
-: Colour file sizes on a scale. MODE is `16` (basic ANSI colours),
-`256` (extended palette), or `none`. Default when bare: `16`.
-Alias: `--color-scale`.  **Deprecated** in favour of `--gradient`;
-`=none` translates to `--gradient=none` and `=16`/`=256` translate
-to `--gradient=all`.  Will be removed in a future release.
-
 `--gradient`[`=COLUMNS`]
 : Per-column gradient on/off.  COLUMNS is a comma-separated list
 of column names that should render with their gradient

@@ -93,6 +93,87 @@ the builtin default now set all identity slots explicitly.
 
 **If you never customised these slots:** no action needed.
 
+### `--colour-scale` retired; new `--gradient` flag
+
+In 0.8 and earlier, `--colour-scale=none|16|256` controlled the
+size column's gradient — but only for the compiled-in `exa`
+theme, and only the size column.  The flag's name suggested
+something broader than what it actually did, the `16`/`256`
+distinction was about gradient depth (no longer relevant now
+that themes ship their own values), and the timestamp gradient
+had no equivalent knob at all.
+
+In 0.9 it's replaced by **`--gradient`**, a per-column on/off
+switch for the size and date columns:
+
+```sh
+lx -l                                 # default: gradient on for both
+lx -l --gradient=size                 # size only, flat dates
+lx -l --gradient=date                 # dates only, flat size
+lx -l --gradient=size,date            # explicit "both"
+lx -l --gradient=all                  # alias for "both"
+lx -l --gradient=none                 # all flat
+lx -l --no-gradient                   # alias for --gradient=none
+```
+
+The same vocabulary works in a personality:
+
+```toml
+[personality.minimal]
+inherits = "ll"
+gradient = "none"          # always render flat columns
+```
+
+**Default flips from off to on.**  Today's `--colour-scale`
+defaults to `none` (the size column is a flat green under the
+`exa` theme).  In 0.9 the default is `all`: any theme that ships
+gradients (`lx-256`, `lx-24bit`, the curated `the-exa-future`,
+all the dropped-in themes) shows them out of the box.
+
+The strict `exa` theme is unaffected — its size tier values are
+all "green-bold" anyway, so the on/off switch is visually
+indistinguishable.
+
+**Off-state colours are themeable.**  With `--no-gradient`, the
+size column collapses to the theme's `size-major` (numbers) and
+`size-minor` (units) slots, and the date column collapses to a
+new `date-flat` slot.  All three slots existed (or were added)
+explicitly across the curated themes, so `--no-gradient` produces
+a sensibly themed flat column rather than a fall-through mess.
+
+**`--upgrade-config` migrates old configs automatically.**  Run
+`lx --upgrade-config` and any `colour-scale = "..."` line inside
+a `[personality.X]` (or `[[personality.X.when]]`) block is
+rewritten:
+
+| Old value                 | New value          |
+|---------------------------|--------------------|
+| `colour-scale = "none"`   | `gradient = "none"` |
+| `colour-scale = "16"`     | `gradient = "all"`  |
+| `colour-scale = "256"`    | `gradient = "all"`  |
+
+The bit-depth distinction is gone: `16` and `256` both meant
+"draw the gradient", which is now `all`.
+
+**Using `--colour-scale` on the CLI is now an error**, with the
+error message pointing at `--gradient`.  Same for the
+`colour-scale = "..."` personality key if you skip
+`--upgrade-config`.
+
+### Curated themes have deliberate gradients
+
+Most of the curated themes shipped in `themes/*.toml` previously
+used a single bulk `size-number = "..."` setter and (in some
+cases) `date = "..."`, so under the new default
+(`--gradient=all`) they would have rendered visually flat
+anyway.  In 0.9 every curated theme defines its size and date
+tier colours explicitly with a deliberate, palette-appropriate
+gradient.  If you've been using a curated theme as-is, expect
+sizes and timestamps to suddenly show distinct tier colours.
+
+If you preferred the flat look, run `lx --no-gradient` (or set
+`gradient = "none"` in your personality).
+
 ### Three-tier group colouring
 
 Group columns now distinguish three tiers:

@@ -38,6 +38,15 @@ All notable changes to lx are documented here. lx is forked from
   compatible.
 - New light-background curated themes: Catppuccin Latte,
   Gruvbox Light, Nord Light.
+- **`--gradient`** — per-column gradient on/off for the size and
+  date columns.  Vocabulary: `none` / `size` / `date` / `all`
+  (default `all`).  Comma-combinable: `--gradient=size,date`.
+  `--no-gradient` is an alias for `--gradient=none`.  Personality
+  config key: `gradient = "all"`.  Replaces `--colour-scale`.
+- New `date-flat` theme key (and matching `LX_COLORS` code `dl`)
+  for the colour the date column uses when its gradient is off.
+  Curated themes set it explicitly; child themes inherit it
+  through the normal `inherits = "..."` chain.
 - New dark-background curated themes: `lx-256-dark` and
   `lx-24bit-dark` (drop-in overrides of the builtins with
   brighter gradients), and `the-exa-future` (a 24-bit tribute
@@ -88,6 +97,22 @@ All notable changes to lx are documented here. lx is forked from
   in `src/main.rs` that wraps them all via `#[from]` for
   ergonomic `?` propagation.  No user-visible CLI changes from
   this; error messages and exit codes are preserved.
+- **`--colour-scale` retired.**  The flag's old `none`/`16`/`256`
+  vocabulary was about gradient depth and only ever affected the
+  size column under the compiled-in `exa` theme.  Replaced by
+  `--gradient` (per-column on/off, default on for the size and
+  date columns regardless of theme).  `--upgrade-config` rewrites
+  `colour-scale = "..."` lines in personality blocks (`16`/`256`
+  → `"all"`, `none` → `"none"`).  CLI usage of `--colour-scale`
+  now hard-fails at parse time with a migration pointer.  See
+  [`docs/UPGRADING.md`](docs/UPGRADING.md) for the full migration
+  note.
+- **Curated themes get deliberate per-tier gradients.**  Every
+  shipped theme in `themes/*.toml` now sets the size and date
+  tier colours explicitly with palette-appropriate gradients,
+  rather than falling through to a flat-ish bulk setter.
+  `--no-gradient` collapses each column to its theme's
+  `size-major`/`size-minor` and `date-flat` slots.
 - **Broken config files are now fatal.**  Previously a config
   file with invalid TOML or an unsupported version would emit
   a warning and lx would continue with compiled defaults.  Now
