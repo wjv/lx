@@ -68,6 +68,9 @@ impl GradientFlags {
 /// `GradientParser`) into a `GradientFlags`.  Empty / `all` → all
 /// on; `none` → all off; comma-separated column names → those
 /// columns on, others off.
+///
+/// `filesize` and `timestamp` are hidden aliases for `size` and
+/// `date`, matching the column-add flag spellings.
 fn parse_gradient_value(s: &str) -> GradientFlags {
     let mut flags = GradientFlags::NONE;
     for tok in s.split(',') {
@@ -75,8 +78,8 @@ fn parse_gradient_value(s: &str) -> GradientFlags {
             "" => {} // ignore stray empties
             "none" => return GradientFlags::NONE,
             "all" => return GradientFlags::ALL,
-            "size" => flags.size = true,
-            "date" => flags.date = true,
+            "size" | "filesize" => flags.size = true,
+            "date" | "timestamp" => flags.date = true,
             // GradientParser already rejected anything else; this is
             // unreachable in practice.
             _ => {}

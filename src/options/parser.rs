@@ -265,14 +265,34 @@ impl clap::builder::TypedValueParser for ColumnsParser {
 /// mixed with column names — `none` and `all` only make sense alone.
 /// On a typo (`--gradient=siz`) clap's "did you mean" suggests the
 /// closest known token via the `possible_values()` advertised here.
+///
+/// Hidden aliases: `filesize` for `size` and `timestamp` for `date`,
+/// matching the column-add flag spellings (`--filesize`, see also
+/// timestamp flags).  These are accepted but not advertised in
+/// `[possible values: ...]` — they exist so users who reach for the
+/// column-add name don't get a surprise rejection.
 #[derive(Clone)]
 struct GradientParser;
 
 impl GradientParser {
-    /// All tokens accepted by the parser, including `none` and `all`.
-    /// Listed in `possible_values()` so clap's hint and the "did you
-    /// mean" computation see them.
+    /// Canonical tokens, listed verbatim in error messages and the
+    /// `[possible values: ...]` hint.  Hidden aliases (`filesize`,
+    /// `timestamp`) are attached via `PossibleValue::alias()` in
+    /// `token_values()` below; they participate in clap's "did you
+    /// mean" computation without cluttering the help output.
     const TOKENS: &'static [&'static str] = &["none", "all", "size", "date"];
+
+    /// `PossibleValue` objects for the parser, with hidden aliases
+    /// attached.  Used both for error construction and the
+    /// `possible_values()` advertisement.
+    fn token_values() -> Vec<PossibleValue> {
+        vec![
+            PossibleValue::new("none"),
+            PossibleValue::new("all"),
+            PossibleValue::new("size").alias("filesize"),
+            PossibleValue::new("date").alias("timestamp"),
+        ]
+    }
 }
 
 impl clap::builder::TypedValueParser for GradientParser {
@@ -293,14 +313,16 @@ impl clap::builder::TypedValueParser for GradientParser {
             let tok = tok.trim();
             match tok {
                 "none" | "all" => saw_none_or_all = true,
-                "size" | "date" => saw_column = true,
+                "size" | "filesize" | "date" | "timestamp" => saw_column = true,
                 _ => {
                     // Unknown token — let PossibleValuesParser
                     // construct the error so we get the same
                     // [possible values: ...] hint and "did you mean"
-                    // suggestion as every other valued flag.
+                    // suggestion as every other valued flag.  The
+                    // hidden aliases participate in "did you mean"
+                    // but stay out of the rendered hint.
                     let bad: std::ffi::OsString = tok.into();
-                    clap::builder::PossibleValuesParser::new(Self::TOKENS)
+                    clap::builder::PossibleValuesParser::new(Self::token_values())
                         .parse_ref(cmd, arg, &bad)?;
                 }
             }
@@ -336,9 +358,7 @@ impl clap::builder::TypedValueParser for GradientParser {
     fn possible_values(
         &self,
     ) -> Option<Box<dyn Iterator<Item = PossibleValue> + '_>> {
-        Some(Box::new(
-            Self::TOKENS.iter().copied().map(PossibleValue::new),
-        ))
+        Some(Box::new(Self::token_values().into_iter()))
     }
 }
 
