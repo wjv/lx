@@ -56,6 +56,21 @@ pub enum ConfigError {
     /// `--upgrade-config` on a config that is already current.
     #[error("{path} is already at version {CONFIG_VERSION}; no upgrade needed")]
     AlreadyCurrent { path: PathBuf },
+
+    /// A `--dump-*` or `--show-class`/`--show-format` lookup that
+    /// references a name we don't know.  `kind` is the singular
+    /// user-facing noun ("theme", "personality", ...) and
+    /// `kind_plural` is its plural form (passed explicitly so
+    /// "personality" → "personalities" works); `candidates` is a
+    /// pre-joined comma-separated list of the names that *would*
+    /// have worked.
+    #[error("unknown {kind} '{name}'\nKnown {kind_plural}: {candidates}")]
+    NotFound {
+        kind: &'static str,
+        kind_plural: &'static str,
+        name: String,
+        candidates: String,
+    },
 }
 
 /// Extension trait for attaching path context to `io::Result`.
@@ -1482,11 +1497,22 @@ fn format_theme_toml(name: &str) -> Option<String> {
 }
 
 /// Print a single theme definition as copy-pasteable TOML.
-pub fn dump_theme(name: &str) {
-    if let Some(toml) = format_theme_toml(name) { println!("{toml}") } else {
-        eprintln!("lx: unknown theme '{name}'");
-        eprintln!("Known themes: {}", all_theme_names().join(", "));
-        std::process::exit(3);
+///
+/// # Errors
+///
+/// Returns `ConfigError::NotFound` if `name` does not match any
+/// built-in or user-defined theme.
+pub fn dump_theme(name: &str) -> Result<(), ConfigError> {
+    if let Some(toml) = format_theme_toml(name) {
+        println!("{toml}");
+        Ok(())
+    } else {
+        Err(ConfigError::NotFound {
+            kind: "theme",
+            kind_plural: "themes",
+            name: name.to_string(),
+            candidates: all_theme_names().join(", "),
+        })
     }
 }
 
@@ -1542,11 +1568,22 @@ fn format_style_toml(name: &str) -> Option<String> {
 }
 
 /// Print a single style definition as copy-pasteable TOML.
-pub fn dump_style(name: &str) {
-    if let Some(toml) = format_style_toml(name) { println!("{toml}") } else {
-        eprintln!("lx: unknown style '{name}'");
-        eprintln!("Known styles: {}", all_style_names().join(", "));
-        std::process::exit(3);
+///
+/// # Errors
+///
+/// Returns `ConfigError::NotFound` if `name` does not match any
+/// built-in or user-defined style.
+pub fn dump_style(name: &str) -> Result<(), ConfigError> {
+    if let Some(toml) = format_style_toml(name) {
+        println!("{toml}");
+        Ok(())
+    } else {
+        Err(ConfigError::NotFound {
+            kind: "style",
+            kind_plural: "styles",
+            name: name.to_string(),
+            candidates: all_style_names().join(", "),
+        })
     }
 }
 
@@ -1625,11 +1662,22 @@ fn format_personality_toml(name: &str) -> Option<String> {
 }
 
 /// Print a single personality definition as copy-pasteable TOML.
-pub fn dump_personality(name: &str) {
-    if let Some(toml) = format_personality_toml(name) { println!("{toml}") } else {
-        eprintln!("lx: unknown personality '{name}'");
-        eprintln!("Known personalities: {}", all_personality_names().join(", "));
-        std::process::exit(3);
+///
+/// # Errors
+///
+/// Returns `ConfigError::NotFound` if `name` does not match any
+/// compiled-in or user-defined personality.
+pub fn dump_personality(name: &str) -> Result<(), ConfigError> {
+    if let Some(toml) = format_personality_toml(name) {
+        println!("{toml}");
+        Ok(())
+    } else {
+        Err(ConfigError::NotFound {
+            kind: "personality",
+            kind_plural: "personalities",
+            name: name.to_string(),
+            candidates: all_personality_names().join(", "),
+        })
     }
 }
 
@@ -1652,11 +1700,17 @@ pub fn dump_personality_all() {
 /// (the CLI flag delta), with an optional `inherits` directive.
 /// Creates the `conf.d/` directory if it doesn't exist.  Backs up
 /// any existing file to `NAME.toml.bak`.
+///
+/// # Errors
+///
+/// Returns `ConfigError::Io` if the `conf.d/` directory cannot be
+/// created, the existing file cannot be backed up, or the new file
+/// cannot be written.
 pub fn save_personality_as(
     name: &str,
     inherits: Option<&str>,
     settings: &std::collections::HashMap<String, toml::Value>,
-) {
+) -> Result<(), ConfigError> {
     use chrono::Local;
 
     // Build TOML lines.
@@ -1700,29 +1754,21 @@ pub fn save_personality_as(
             xdg.join("lx").join("conf.d")
         });
 
-    if let Err(e) = std::fs::create_dir_all(&conf_dir) {
-        eprintln!("lx: failed to create {}: {e}", conf_dir.display());
-        std::process::exit(1);
-    }
+    std::fs::create_dir_all(&conf_dir).with_path(&conf_dir)?;
 
     let file_path = conf_dir.join(format!("{name}.toml"));
 
     // Back up any existing file.
     if file_path.exists() {
         let backup = file_path.with_extension("toml.bak");
-        if let Err(e) = std::fs::rename(&file_path, &backup) {
-            eprintln!("lx: failed to back up {}: {e}", file_path.display());
-            std::process::exit(1);
-        }
+        std::fs::rename(&file_path, &backup).with_path(&file_path)?;
         eprintln!("lx: backed up {} → {}", file_path.display(), backup.display());
     }
 
-    if let Err(e) = std::fs::write(&file_path, &toml_content) {
-        eprintln!("lx: failed to write {}: {e}", file_path.display());
-        std::process::exit(1);
-    }
+    std::fs::write(&file_path, &toml_content).with_path(&file_path)?;
 
-    eprintln!("lx: saved personality '{}' to {}", name, file_path.display());
+    eprintln!("lx: saved personality '{name}' to {}", file_path.display());
+    Ok(())
 }
 
 /// Format a single class definition as TOML.
@@ -1754,19 +1800,27 @@ fn format_class_toml(name: &str, patterns: &[String]) -> String {
 }
 
 /// Print a single class definition as copy-pasteable TOML.
-pub fn show_class(name: &str) {
+///
+/// # Errors
+///
+/// Returns `ConfigError::NotFound` if `name` does not match any
+/// compiled-in or user-defined file-type class.
+pub fn show_class(name: &str) -> Result<(), ConfigError> {
     let classes = resolve_classes();
     if let Some(patterns) = classes.get(name) {
         println!("[class]");
         println!("{}", format_class_toml(name, patterns));
+        Ok(())
     } else {
-        eprintln!("lx: unknown class '{name}'");
-        eprintln!("Known classes: {}", {
-            let mut names: Vec<_> = classes.keys().collect();
-            names.sort();
-            names.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
-        });
-        std::process::exit(3);
+        let mut names: Vec<_> = classes.keys().collect();
+        names.sort();
+        let candidates = names.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ");
+        Err(ConfigError::NotFound {
+            kind: "class",
+            kind_plural: "classes",
+            name: name.to_string(),
+            candidates,
+        })
     }
 }
 
@@ -1816,19 +1870,27 @@ pub fn resolve_formats() -> HashMap<String, Vec<String>> {
 }
 
 /// Print a single format definition as copy-pasteable TOML.
-pub fn show_format(name: &str) {
+///
+/// # Errors
+///
+/// Returns `ConfigError::NotFound` if `name` does not match any
+/// compiled-in or user-defined column format.
+pub fn show_format(name: &str) -> Result<(), ConfigError> {
     let formats = resolve_formats();
     if let Some(columns) = formats.get(name) {
         println!("[format]");
         println!("{}", format_format_toml(name, columns));
+        Ok(())
     } else {
-        eprintln!("lx: unknown format '{name}'");
-        eprintln!("Known formats: {}", {
-            let mut names: Vec<_> = formats.keys().collect();
-            names.sort();
-            names.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
-        });
-        std::process::exit(3);
+        let mut names: Vec<_> = formats.keys().collect();
+        names.sort();
+        let candidates = names.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ");
+        Err(ConfigError::NotFound {
+            kind: "format",
+            kind_plural: "formats",
+            name: name.to_string(),
+            candidates,
+        })
     }
 }
 

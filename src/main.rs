@@ -76,7 +76,8 @@ impl LxError {
             Self::Options(_)
             | Self::Theme(_)
             | Self::Config(ConfigError::InheritanceCycle { .. })
-            | Self::Config(ConfigError::MissingParent { .. }) => exits::OPTIONS_ERROR,
+            | Self::Config(ConfigError::MissingParent { .. })
+            | Self::Config(ConfigError::NotFound { .. }) => exits::OPTIONS_ERROR,
             _ => exits::RUNTIME_ERROR,
         }
     }
@@ -276,14 +277,14 @@ fn try_main() -> Result<i32, LxError> {
                 _ => std::collections::HashMap::new(),
             };
             let inherits = active_personality.as_deref();
-            config::save_personality_as(name, inherits, &cli_settings);
+            config::save_personality_as(name, inherits, &cli_settings)?;
         }
 
         OptionsResult::DumpClass(ref name) => {
             if name.is_empty() {
                 config::show_class_all();
             } else {
-                config::show_class(name);
+                config::show_class(name)?;
             }
         }
 
@@ -291,7 +292,7 @@ fn try_main() -> Result<i32, LxError> {
             if name.is_empty() {
                 config::show_format_all();
             } else {
-                config::show_format(name);
+                config::show_format(name)?;
             }
         }
 
@@ -299,7 +300,7 @@ fn try_main() -> Result<i32, LxError> {
             if name.is_empty() {
                 config::dump_personality_all();
             } else {
-                config::dump_personality(name);
+                config::dump_personality(name)?;
             }
         }
 
@@ -307,7 +308,7 @@ fn try_main() -> Result<i32, LxError> {
             if name.is_empty() {
                 config::dump_theme_all();
             } else {
-                config::dump_theme(name);
+                config::dump_theme(name)?;
             }
         }
 
@@ -315,7 +316,7 @@ fn try_main() -> Result<i32, LxError> {
             if name.is_empty() {
                 config::dump_style_all();
             } else {
-                config::dump_style(name);
+                config::dump_style(name)?;
             }
         }
 
