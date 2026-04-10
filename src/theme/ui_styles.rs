@@ -456,8 +456,6 @@ impl UiStyles {
             // UI elements
             "punctuation"      => self.punctuation      = style,
             // Bulk date setters fan out to all four timestamp columns.
-            // Per-column variants (`date-modified-now` etc.) write
-            // directly to the named field — see commit 4.
             "date"             => self.date_for_each(|d| d.set_all(style)),
             "date-now"         => self.date_for_each(|d| d.now   = style),
             "date-today"       => self.date_for_each(|d| d.today = style),
@@ -466,6 +464,48 @@ impl UiStyles {
             "date-year"        => self.date_for_each(|d| d.year  = style),
             "date-old"         => self.date_for_each(|d| d.old   = style),
             "date-flat"        => self.date_for_each(|d| d.flat  = style),
+
+            // Per-timestamp-column overrides.  These write directly
+            // to the named field, so theme authors can give each
+            // displayed timestamp column its own colour.  Order in
+            // the theme block matters: write `date = ...` (bulk)
+            // before per-column overrides, otherwise the bulk setter
+            // will clobber them.
+            "date-modified"        => self.date_modified.set_all(style),
+            "date-modified-now"    => self.date_modified.now   = style,
+            "date-modified-today"  => self.date_modified.today = style,
+            "date-modified-week"   => self.date_modified.week  = style,
+            "date-modified-month"  => self.date_modified.month = style,
+            "date-modified-year"   => self.date_modified.year  = style,
+            "date-modified-old"    => self.date_modified.old   = style,
+            "date-modified-flat"   => self.date_modified.flat  = style,
+
+            "date-accessed"        => self.date_accessed.set_all(style),
+            "date-accessed-now"    => self.date_accessed.now   = style,
+            "date-accessed-today"  => self.date_accessed.today = style,
+            "date-accessed-week"   => self.date_accessed.week  = style,
+            "date-accessed-month"  => self.date_accessed.month = style,
+            "date-accessed-year"   => self.date_accessed.year  = style,
+            "date-accessed-old"    => self.date_accessed.old   = style,
+            "date-accessed-flat"   => self.date_accessed.flat  = style,
+
+            "date-changed"         => self.date_changed.set_all(style),
+            "date-changed-now"     => self.date_changed.now   = style,
+            "date-changed-today"   => self.date_changed.today = style,
+            "date-changed-week"    => self.date_changed.week  = style,
+            "date-changed-month"   => self.date_changed.month = style,
+            "date-changed-year"    => self.date_changed.year  = style,
+            "date-changed-old"     => self.date_changed.old   = style,
+            "date-changed-flat"    => self.date_changed.flat  = style,
+
+            "date-created"         => self.date_created.set_all(style),
+            "date-created-now"     => self.date_created.now   = style,
+            "date-created-today"   => self.date_created.today = style,
+            "date-created-week"    => self.date_created.week  = style,
+            "date-created-month"   => self.date_created.month = style,
+            "date-created-year"    => self.date_created.year  = style,
+            "date-created-old"     => self.date_created.old   = style,
+            "date-created-flat"    => self.date_created.flat  = style,
             "inode"            => self.inode             = style,
             "blocks"           => self.blocks            = style,
             "header"           => self.header            = style,
