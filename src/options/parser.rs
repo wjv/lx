@@ -5,6 +5,97 @@ use clap::builder::styling;
 use super::flags;
 
 
+// ── Help-text typographic conventions ──────────────────────────────
+//
+// `--help` is designed UI, not a string dump.  It's the first thing
+// a new user sees and the surface they'll consult most often, so it
+// earns the same care as any other rendered output.  The rules below
+// are deliberate; please honour them when adding or editing flag
+// definitions.
+//
+// ## Wrapping and line economy
+//
+// Clap handles column-width wrapping for natural prose
+// automatically.  Don't pre-wrap descriptions at the source level —
+// just write the description as a single string and let Clap reflow.
+//
+// **Minimise the number of lines used per flag, but not at the
+// expense of clarity or consistency.**  A description that fits the
+// column width should occupy one line.  Two-line layouts are fine
+// when the second line carries something the eye should treat as a
+// separate unit (a structured suffix, a constraint, an alias note).
+//
+// When a flag has *both* a description and a `[brackets]` suffix:
+// if the two together fit on one line at the column width, leave
+// them on one line — that's the most economical layout and the
+// brackets read as a tidy postfix to the description.  Examples
+// from the existing surface:
+//
+//     -M, --permissions...   Show the permissions column [aliases: --mode]
+//     -F, --dirs-first       Directories first [short for --group-dirs=first]
+//
+// If the combined line would wrap awkwardly (description on one
+// line, `[…]` dangling alone on a wrapped continuation), force the
+// suffix onto its own line with an explicit `\n` so the wrap is
+// deliberate rather than incidental:
+//
+//     .help("Decimal size prefixes (k, M, G, ...)\n\
+//           [short for --size-style=decimal]")
+//
+// You may also force the line break for *clarity or consistency*
+// even when it would otherwise fit — for example, when a cluster
+// of related flags (`-K`/`-B`/`-b`) all carry similar suffixes and
+// reading them as a group is easier when they share the same
+// two-line shape.  Consistency within a cluster outweighs minor
+// line economy.
+//
+// ## Long `[brackets]` lists
+//
+// When a `[brackets]` annotation is itself too long for one line
+// (e.g. an enumeration of `--sort` field names), hand-wrap it rather
+// than letting Clap reflow it.  Use `\n ` — newline followed by a
+// single space — at each break point so the continuation lines
+// carry a single-character indent, aligning them under the first
+// item past the `[`:
+//
+//     .help("Sort field\n\
+//           [name, Name, extension, Extension, version,\n \
+//           size, blocks, links, permissions, flags,\n \
+//           user, User, group, Group, uid, gid, ...]")
+//
+// (The trailing `\` + newline in the source is just wrapping the
+// Rust source at 80 columns; Clap never sees those.  The single
+// space *after* the embedded `\n` is what produces the indent in
+// the rendered help.)
+//
+// ## Brackets vs parens
+//
+// Two annotation styles coexist deliberately:
+//
+// - **`[brackets]` for structured annotations** the eye skims as
+//   machine-readable suffixes:
+//     `[possible values: foo, bar]`
+//     `[short for --x=y]`
+//     `[aliases: --foo]`
+//     `[default: ...]`
+//
+// - **`(parens)` for natural-language parentheticals** — prose
+//   clarifications, constraints, and hand-formatted lists:
+//     `(macOS/BSD chflags, Linux chattr)`
+//     `(24-bit themes only)`
+//     `(k, M, G, ...)`
+//     `(pipe-separated)`
+//
+// Rule of thumb: if the suffix is *enumerating values* or
+// *expanding to another flag*, brackets.  If it's a prose
+// clarification or a constraint note, parens.  When unsure, parens
+// — they read as human prose; brackets read as structure and
+// should earn that.
+//
+// Further rules may be implicit. Please ensure new additions fit
+// the `--help` structure and add rules here, should you divine any!
+
+
 /// Clap styling: yellow headers, cyan literals, green placeholders, red errors.
 const STYLES: styling::Styles = styling::Styles::styled()
     .header(styling::AnsiColor::Yellow.on_default().bold())
@@ -539,7 +630,7 @@ Environment:\n  \
             .overrides_with(flags::NO_PERMISSIONS))
         .arg(Arg::new(flags::FILE_FLAGS)
             .short('O').long("flags")
-            .help("Show file flags (macOS/BSD chflags)")
+            .help("Show file flags (macOS/BSD chflags, Linux chattr)")
             .help_heading("Long view")
             .action(ArgAction::Count))
         .arg(Arg::new(flags::LINKS)
@@ -564,19 +655,19 @@ Environment:\n  \
             .overrides_with_all([flags::BINARY, flags::BYTES, flags::DECIMAL]))
         .arg(Arg::new(flags::DECIMAL)
             .short('K').long("decimal")
-            .help("Decimal size prefixes (k, M, G)\n[short for --size-style=decimal]")
+            .help("Decimal size prefixes (k, M, G, ...)\n[short for --size-style=decimal]")
             .help_heading("Long view")
             .action(ArgAction::Count)
             .overrides_with_all([flags::BINARY, flags::BYTES, flags::SIZE_STYLE]))
         .arg(Arg::new(flags::BINARY)
             .short('B').long("binary")
-            .help("Binary size prefixes (KiB, MiB)\n[short for --size-style=binary]")
+            .help("Binary size prefixes (KiB, MiB, ...)\n[short for --size-style=binary]")
             .help_heading("Long view")
             .action(ArgAction::Count)
             .overrides_with_all([flags::BYTES, flags::DECIMAL, flags::SIZE_STYLE]))
         .arg(Arg::new(flags::BYTES)
             .short('b').long("bytes")
-            .help("Raw byte counts [short for --size-style=bytes]")
+            .help("Raw byte counts\n[short for --size-style=bytes]")
             .help_heading("Long view")
             .action(ArgAction::Count)
             .overrides_with_all([flags::BINARY, flags::DECIMAL, flags::SIZE_STYLE]))
@@ -643,13 +734,6 @@ Environment:\n  \
             .help("List only regular files, not directories")
             .help_heading("Filtering & Sorting")
             .action(ArgAction::Count))
-        .arg(Arg::new(flags::IGNORE_GLOB)
-            .short('I').long("ignore")
-            .alias("ignore-glob")
-            .help("Glob patterns (pipe-separated) of files to hide")
-            .help_heading("Filtering & Sorting")
-            .action(ArgAction::Set)
-            .value_name("GLOB"))
         .arg(Arg::new(flags::SYMLINKS)
             .long("symlinks")
             .help("How to handle symlinks [show, hide, follow]")
@@ -662,6 +746,13 @@ Environment:\n  \
                 PossibleValue::new("hide"),
                 PossibleValue::new("follow"),
             ]))
+        .arg(Arg::new(flags::IGNORE_GLOB)
+            .short('I').long("ignore")
+            .alias("ignore-glob")
+            .help("Glob patterns (pipe-separated) of files to hide")
+            .help_heading("Filtering & Sorting")
+            .action(ArgAction::Set)
+            .value_name("GLOB"))
         .arg(Arg::new(flags::PRUNE)
             .short('P').long("prune")
             .alias("prune-glob")
@@ -669,11 +760,6 @@ Environment:\n  \
             .help_heading("Filtering & Sorting")
             .action(ArgAction::Set)
             .value_name("GLOB"))
-        .arg(Arg::new(flags::REVERSE)
-            .short('r').long("reverse")
-            .help("Reverse the sort order")
-            .help_heading("Filtering & Sorting")
-            .action(ArgAction::Count))
         .arg(Arg::new(flags::SORT)
             .short('s').long("sort")
             // NOTE: this list is hand-curated to keep the --help
@@ -695,6 +781,11 @@ Environment:\n  \
             .value_name("FIELD")
             .hide_possible_values(true)
             .value_parser(sort_values()))
+        .arg(Arg::new(flags::REVERSE)
+            .short('r').long("reverse")
+            .help("Reverse the sort order")
+            .help_heading("Filtering & Sorting")
+            .action(ArgAction::Count))
         .arg(Arg::new(flags::GROUP_DIRS)
             .long("group-dirs")
             .help("Group directories before or after other files\n[first, last, none]")
@@ -997,7 +1088,7 @@ Environment:\n  \
             .action(ArgAction::Count))
         .arg(Arg::new(flags::SMOOTH)
             .long("smooth")
-            .help("Smoothly interpolate gradients\n[24-bit themes only]")
+            .help("Smoothly interpolate gradients\n(24-bit themes only)")
             .help_heading("Appearance")
             .action(ArgAction::Count))
         .arg(Arg::new(flags::NO_SMOOTH)
