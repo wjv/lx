@@ -173,7 +173,6 @@ pub fn build_smooth_lut(anchors: &[(f32, Style)]) -> SmoothLut {
 /// The anchors are powers of 1024, so the mapping is a single
 /// `log2` divided by 40 (four decades of `log2(1024)` = 10 each).
 /// No piecewise logic needed.
-#[allow(dead_code)] // first caller lands in commit 5
 pub fn size_to_position(bytes: u64) -> f32 {
     const HUGE_ANCHOR: u64 = 1_u64 << 40; // 1 TiB
     const LOG2_HUGE: f32 = 40.0;
@@ -211,7 +210,6 @@ pub fn size_to_position(bytes: u64) -> f32 {
 /// Anchor positions match the "upper boundary of each tier" rule:
 /// a file exactly 1 hour old lands on the `today` anchor (the
 /// upper bound of the `now` tier range), and so on.
-#[allow(dead_code)] // first caller lands in commit 5
 pub fn age_to_position(age_secs: u64) -> f32 {
     const ANCHORS: [u64; 6] = [
         1,         // `now`   — scale origin (anything ≤ 1 sec clamps here)

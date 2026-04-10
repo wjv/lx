@@ -195,6 +195,7 @@ Display options:
 `recurse` (bool), `tree` (bool), `classify` (string: `always`/`auto`/`never`),
 `colour` (string: `always`/`auto`/`never`),
 `gradient` (string: comma-separated `size`/`date`/`modified`/`accessed`/`changed`/`created`, or `all`/`none`),
+`smooth` (bool: interpolate gradients between anchors on 24-bit themes, see **lx**(1)),
 `icons` (string: `always`/`auto`/`never`),
 `width` (integer), `absolute` (bool), `hyperlink` (string:
 `always`/`auto`/`never`), `quotes` (string: `always`/`auto`/`never`),

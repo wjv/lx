@@ -566,6 +566,40 @@ See [`themes/README.md`](../themes/README.md) for the full
 inventory and guidance on writing your own.
 
 
+### Smooth gradients (24-bit themes)
+
+By default the size and timestamp columns paint in discrete
+tiers: a file under 1 hour old is one colour, 1 hour to 1 day
+another, 1 day to 1 week another, and so on.  On truecolour
+themes the tier boundaries can be visibly staircased.  Pass
+`--smooth` to interpolate between the tier anchors in Oklab
+colour space, giving each file a colour proportional to its
+position on a log scale between the neighbouring anchors:
+
+```sh
+lx -l --theme=lx-24bit --smooth
+```
+
+`--smooth` only takes effect on themes whose anchor colours
+are all 24-bit RGB (`lx-24bit` and the curated `solarized-*` /
+`catppuccin-*` / `gruvbox-*` / `nord-*` pairs qualify; the
+ANSI `exa` theme and the 256-colour `lx-256` theme don't).
+On non-qualifying themes it's silently a no-op.  Columns whose
+gradient is off also stay flat regardless.
+
+To make smoothing your default, set `smooth = true` in a
+personality:
+
+```toml
+[personality.lx]
+theme = "lx-24bit"
+smooth = true
+```
+
+The interpolation formulas come from Björn Ottosson's 2020
+paper on Oklab, <https://bottosson.github.io/posts/oklab/>.
+
+
 ## VCS integration
 
 `lx` shows per-file version-control status in the long view, with

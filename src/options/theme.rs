@@ -49,9 +49,12 @@ impl GradientFlags {
     /// Deduce per-column gradient on/off from the CLI flags.
     ///
     /// Precedence:
-    /// 1. Default → all on.
+    /// 1. Default → all on, smooth off.
     /// 2. `--gradient=...` overrides the default.
     /// 3. `--no-gradient` overrides `--gradient`.
+    /// 4. `--smooth` turns smoothing on; `--no-smooth` forces it off.
+    ///    Smoothing is independent of the per-column flags — it has
+    ///    no effect on columns whose gradient is off.
     fn deduce(matches: &MatchedFlags) -> Self {
         let mut flags = Self::ALL;
         if let Some(s) = matches.get(flags::GRADIENT) {
@@ -59,6 +62,12 @@ impl GradientFlags {
         }
         if matches.has(flags::NO_GRADIENT) {
             flags = Self::NONE;
+        }
+        if matches.has(flags::SMOOTH) {
+            flags.smooth = true;
+        }
+        if matches.has(flags::NO_SMOOTH) {
+            flags.smooth = false;
         }
         flags
     }
@@ -217,4 +226,19 @@ mod terminal_test {
     // parse time with a deprecation pointer to --gradient.  See
     // tests/cli_basics.rs::colour_scale_deprecated for the
     // user-facing assertion.
+
+
+    // --gradient and --smooth
+    test!(gf_default:     GradientFlags <- [];                          GradientFlags::ALL);
+    test!(gf_no_gradient: GradientFlags <- ["--no-gradient"];           GradientFlags::NONE);
+    test!(gf_size_only:   GradientFlags <- ["--gradient=size"];
+        GradientFlags { size: true, modified: false, accessed: false, changed: false, created: false, smooth: false });
+    test!(gf_smooth:      GradientFlags <- ["--smooth"];
+        GradientFlags { smooth: true, ..GradientFlags::ALL });
+    test!(gf_no_smooth_alone:  GradientFlags <- ["--no-smooth"];        GradientFlags::ALL);
+    test!(gf_smooth_then_no:   GradientFlags <- ["--smooth", "--no-smooth"]; GradientFlags::ALL);
+    test!(gf_smooth_with_gradient_size: GradientFlags <- ["--gradient=size", "--smooth"];
+        GradientFlags { size: true, modified: false, accessed: false, changed: false, created: false, smooth: true });
+    test!(gf_no_gradient_then_smooth: GradientFlags <- ["--no-gradient", "--smooth"];
+        GradientFlags { smooth: true, ..GradientFlags::NONE });
 }

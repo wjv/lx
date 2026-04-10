@@ -18,10 +18,6 @@
 //! is a fresh implementation of the published formulas with no
 //! code copied from any other source.
 
-// Callers land in a subsequent commit in the smooth-gradient
-// chain; the conversion functions are self-tested here in
-// isolation until then.
-#![allow(dead_code)]
 // Single-character bindings (r/g/b, L/a/b, l/m/s, l_/m_/s_)
 // come straight from Ottosson's paper; renaming them would
 // make the code harder to cross-reference with the source.

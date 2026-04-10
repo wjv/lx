@@ -91,6 +91,35 @@ full set of theme keys.
 : Hidden alias for `--gradient=none`.  Turns off the size gradient
 and every timestamp column's gradient.
 
+`--smooth`
+: Smoothly interpolate gradients between the theme's per-tier
+anchor colours.  Instead of the six discrete date tiers (or
+five size tiers) snapping at each boundary, each file gets its
+own colour proportional to its position on a log scale between
+adjacent anchors.  The interpolation happens in perceptually
+uniform Oklab space so transitions don't pass through muddy
+midpoints.
+
+Only takes effect on 24-bit themes whose anchor colours are all
+`Color::Rgb` — the builtin `lx-24bit` theme, the curated
+`solarized-*`, `catppuccin-*`, `gruvbox-*`, `nord-*` themes, and
+any user theme that uses hex or `rgb:` values throughout.  On
+256-colour or basic ANSI themes `--smooth` is silently a no-op.
+Columns whose gradient is off (`--gradient=size`, `--no-gradient`,
+etc.) are also unaffected.
+
+Default: off.  Opt in per-invocation with `--smooth`, per-process
+with `LX_PERSONALITY`, or permanently with `smooth = true` in
+your personality config.
+
+The formulas come from Björn Ottosson, "A perceptual color space
+for image processing" (2020),
+<https://bottosson.github.io/posts/oklab/>.
+
+`--no-smooth`
+: Hidden suppressor for `--smooth`.  Useful for turning off a
+personality setting from the command line.
+
 Timestamps are also coloured by age: recent files appear brighter,
 older files fade towards grey.  The six tiers (`date-now` through
 `date-old`) are theme keys, and each timestamp column can override

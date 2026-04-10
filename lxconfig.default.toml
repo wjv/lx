@@ -51,6 +51,7 @@ long3 = ["permissions", "links", "size", "blocks", "user", "group",
 [personality.default]
 colour = "auto"               # always / auto / never
 gradient = "all"              # all / none / size / date / size,date
+# smooth = false              # 24-bit themes only: interpolate between anchors
 time-style = "default"        # default / iso / long-iso / full-iso
 group-dirs = "none"           # first / last / none
 icons = "never"               # always / auto / never

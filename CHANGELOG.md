@@ -57,6 +57,19 @@ All notable changes to lx are documented here. lx is forked from
   the theme block and the most specific one always wins.
   Per-column overrides are config-file only; the two-letter
   `LX_COLORS` codes keep working as bulk fan-out setters.
+- **`--smooth`** — interpolate gradients between the theme's
+  per-tier anchor colours in perceptually uniform Oklab colour
+  space, instead of snapping to discrete tier boundaries.  Each
+  file gets a colour proportional to its position on a log scale
+  between adjacent anchors (256 stops, precomputed once per
+  theme).  Gated on 24-bit themes whose anchors are all
+  `Color::Rgb` — silently a no-op on `lx-256`, `exa`, and any
+  palette-based theme.  Default off; opt in via `--smooth`,
+  `--no-smooth` suppresses a personality that turns it on.
+  Personality config key: `smooth = true`.  The conversion
+  formulas come from Björn Ottosson, *"A perceptual color space
+  for image processing"* (2020),
+  <https://bottosson.github.io/posts/oklab/>.
 - New `date-flat` theme key (and matching `LX_COLORS` code `dl`)
   for the colour the date column uses when its gradient is off.
   Curated themes set it explicitly; child themes inherit it

@@ -99,6 +99,10 @@ pub const THEME: &str = "theme";
 pub const GRADIENT: &str = "gradient";
 pub const NO_GRADIENT: &str = "no-gradient";
 
+// smooth-gradient interpolation (24-bit themes only)
+pub const SMOOTH: &str = "smooth";
+pub const NO_SMOOTH: &str = "no-smooth";
+
 // display options
 pub const WIDTH: &str = "width";
 pub const ABSOLUTE: &str = "absolute";

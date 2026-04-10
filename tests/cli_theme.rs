@@ -739,3 +739,152 @@ fn hidden_gradient_aliases_match_canonical() {
     assert_eq!(run("date"), run("timestamp"),
         "--gradient=timestamp should match --gradient=date");
 }
+
+
+// ── --smooth ─────────────────────────────────────────────────────
+
+/// Helper: run `lx -l --colour=always` against a fresh tempdir
+/// whose contents have a range of mtimes, with configurable theme
+/// and extra args.  Returns the raw bytes of stdout.
+///
+/// The tempdir is created with three files whose mtimes land on
+/// different tiers (recent, a few months ago, a year+ ago) so
+/// that smooth mode has something to interpolate.
+fn run_with_varied_mtimes(theme: &str, extra_args: &[&str]) -> Vec<u8> {
+    use std::time::{Duration, SystemTime};
+
+    let work = tempdir().expect("failed to create workdir");
+    let now = SystemTime::now();
+    // Ages chosen to fall strictly between the six per-tier
+    // anchors so smooth mode lands in between buckets rather
+    // than on the same bucket as the discrete tier lookup.
+    let fixtures = [
+        ("a_half_hour",  Duration::from_secs(1800)),           // between now and today
+        ("a_half_day",   Duration::from_secs(43_200)),         // between today and week
+        ("three_days",   Duration::from_secs(3 * 86_400)),     // between week and month
+        ("two_weeks",    Duration::from_secs(14 * 86_400)),    // between month and year
+        ("three_months", Duration::from_secs(90 * 86_400)),    // between year and old
+    ];
+    for (name, age) in fixtures {
+        let path = work.path().join(name);
+        fs::File::create(&path).unwrap();
+        let t = std::fs::FileTimes::new().set_modified(now - age);
+        fs::File::options()
+            .write(true)
+            .open(&path)
+            .unwrap()
+            .set_times(t)
+            .unwrap();
+    }
+
+    let mut cmd = assert_cmd::Command::cargo_bin("lx").expect("binary lx not found");
+    cmd.env("LX_CONFIG", "/nonexistent")
+       .env("HOME", "/nonexistent")
+       .env_remove("LS_COLORS")
+       .env_remove("LX_COLORS")
+       .args(["-l", "--colour=always", &format!("--theme={theme}")])
+       .args(extra_args)
+       .arg(work.path())
+       .assert()
+       .success()
+       .get_output()
+       .stdout
+       .clone()
+}
+
+#[test]
+fn smooth_changes_24bit_output() {
+    let discrete = run_with_varied_mtimes("lx-24bit", &[]);
+    let smooth   = run_with_varied_mtimes("lx-24bit", &["--smooth"]);
+    assert_ne!(
+        discrete, smooth,
+        "--smooth should change lx-24bit output (interpolating between anchors)",
+    );
+}
+
+#[test]
+fn smooth_is_noop_on_256_palette_theme() {
+    // lx-256 uses Color::Fixed palette colours; is_smoothable()
+    // returns false, so the LUT is never built and the output
+    // must match the discrete render byte-for-byte.
+    let discrete = run_with_varied_mtimes("lx-256", &[]);
+    let smooth   = run_with_varied_mtimes("lx-256", &["--smooth"]);
+    assert_eq!(
+        discrete, smooth,
+        "--smooth should be a no-op on lx-256 (palette anchors gate it out)",
+    );
+}
+
+#[test]
+fn smooth_is_noop_on_ansi_exa_theme() {
+    // The builtin exa theme uses basic ANSI colours; same gate.
+    let discrete = run_with_varied_mtimes("exa", &[]);
+    let smooth   = run_with_varied_mtimes("exa", &["--smooth"]);
+    assert_eq!(
+        discrete, smooth,
+        "--smooth should be a no-op on the exa theme (basic ANSI anchors)",
+    );
+}
+
+#[test]
+fn smooth_with_no_gradient_is_harmless() {
+    // With --no-gradient every column collapses to its flat
+    // colour, so there's nothing to smooth.  --smooth on top of
+    // that must not error and must not differ from --no-gradient
+    // alone.
+    let flat        = run_with_varied_mtimes("lx-24bit", &["--no-gradient"]);
+    let flat_smooth = run_with_varied_mtimes("lx-24bit", &["--no-gradient", "--smooth"]);
+    assert_eq!(
+        flat, flat_smooth,
+        "--smooth --no-gradient should behave identically to --no-gradient alone",
+    );
+}
+
+#[test]
+fn no_smooth_suppresses_personality_smooth() {
+    // A personality that sets `smooth = true` is overridden by
+    // `--no-smooth` on the command line.  Round-trip through
+    // actual config: the personality's smooth should fire when
+    // no CLI override is given, then drop out under --no-smooth.
+    let dir = tempdir().expect("failed to create tempdir");
+    let config_path = dir.path().join("config.toml");
+    fs::write(&config_path, r#"
+        version = "0.5"
+        [personality.lx]
+        theme = "lx-24bit"
+        smooth = true
+    "#).unwrap();
+
+    let run = |extra: &[&str]| -> Vec<u8> {
+        use std::time::{Duration, SystemTime};
+
+        let work = tempdir().expect("failed to create workdir");
+        let path = work.path().join("f");
+        fs::File::create(&path).unwrap();
+        // Land strictly between anchors so smooth ≠ discrete.
+        let t = std::fs::FileTimes::new()
+            .set_modified(SystemTime::now() - Duration::from_secs(3 * 86_400));
+        fs::File::options().write(true).open(&path).unwrap().set_times(t).unwrap();
+
+        let mut cmd = assert_cmd::Command::cargo_bin("lx").expect("binary lx not found");
+        cmd.env("LX_CONFIG", &config_path)
+           .env("HOME", "/nonexistent")
+           .env_remove("LS_COLORS")
+           .env_remove("LX_COLORS")
+           .args(["-l", "--colour=always"])
+           .args(extra)
+           .arg(work.path())
+           .assert()
+           .success()
+           .get_output()
+           .stdout
+           .clone()
+    };
+
+    let with_personality  = run(&[]);               // smooth on (via personality)
+    let forced_off        = run(&["--no-smooth"]);  // smooth off (CLI wins)
+    assert_ne!(
+        with_personality, forced_off,
+        "--no-smooth should override a personality that enables smooth",
+    );
+}

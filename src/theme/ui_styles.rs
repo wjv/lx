@@ -9,7 +9,9 @@ use crate::theme::smooth::{self, SmoothLuts};
 /// interpolation toward another RGB anchor would produce a
 /// faithful result.  Palette colours (`Color::Fixed(n)`,
 /// `Color::Cyan`, …) and unset foregrounds return `false`.
-#[allow(dead_code)] // first caller lands in a later commit
+///
+/// Used by [`Size::is_smoothable`] and [`DateAge::is_smoothable`]
+/// to gate smooth-gradient LUT construction.
 fn is_rgb_foreground(style: Style) -> bool {
     matches!(style.foreground, Some(Color::Rgb(_, _, _)))
 }
@@ -122,7 +124,6 @@ impl Size {
     /// The `unit_*` slots are intentionally excluded — the unit
     /// suffix is a small grace note next to the number and stays
     /// discrete regardless of whether smooth mode is on.
-    #[allow(dead_code)] // first caller lands in a later commit
     pub(crate) fn is_smoothable(&self) -> bool {
         is_rgb_foreground(self.number_byte)
             && is_rgb_foreground(self.number_kilo)
@@ -172,7 +173,6 @@ impl DateAge {
     /// The `flat` slot is intentionally excluded — it's the
     /// fallback for when the column's gradient is off, and its
     /// colour has no effect on smoothing.
-    #[allow(dead_code)] // first caller lands in a later commit
     pub(crate) fn is_smoothable(&self) -> bool {
         is_rgb_foreground(self.now)
             && is_rgb_foreground(self.today)
