@@ -29,22 +29,43 @@ theme = "dracula"
 
 ### Light backgrounds
 
-| File                    | Theme name         | Description                       |
-|-------------------------|--------------------|-----------------------------------|
-| `catppuccin-latte.toml` | `catppuccin-latte` | Warm pastels on light background  |
-| `gruvbox-light.toml`    | `gruvbox-light`    | Retro warm palette, light variant |
-| `nord-light.toml`       | `nord-light`       | Arctic palette, light variant     |
-| `solarized-light.toml`  | `solarized-light`  | Ethan Schoonover's light palette  |
+| File                    | Theme name         | Description                                          |
+|-------------------------|--------------------|------------------------------------------------------|
+| `catppuccin-latte.toml` | `catppuccin-latte` | Warm pastels on light background                     |
+| `gruvbox-light.toml`    | `gruvbox-light`    | Retro warm palette, light variant                    |
+| `nord-light.toml`       | `nord-light`       | Arctic palette, light variant                        |
+| `solarized-light.toml`  | `solarized-light`  | Ethan Schoonover's light palette; per-column dates † |
 
 ### Dark backgrounds
 
-| File                    | Theme name         | Description                       |
-|-------------------------|--------------------|-----------------------------------|
-| `catppuccin-mocha.toml` | `catppuccin-mocha` | Warm pastels on dark background   |
-| `dracula.toml`          | `dracula`          | Dark theme with vibrant colours   |
-| `gruvbox-dark.toml`     | `gruvbox-dark`     | Retro warm palette, dark variant  |
-| `nord.toml`             | `nord`             | Arctic, north-bluish palette      |
-| `solarized-dark.toml`   | `solarized-dark`   | Ethan Schoonover's dark palette   |
+| File                    | Theme name         | Description                                         |
+|-------------------------|--------------------|-----------------------------------------------------|
+| `catppuccin-mocha.toml` | `catppuccin-mocha` | Warm pastels on dark background                     |
+| `dracula.toml`          | `dracula`          | Dark theme with vibrant colours                     |
+| `gruvbox-dark.toml`     | `gruvbox-dark`     | Retro warm palette, dark variant                    |
+| `nord.toml`             | `nord`             | Arctic, north-bluish palette                        |
+| `solarized-dark.toml`   | `solarized-dark`   | Ethan Schoonover's dark palette; per-column dates † |
+
+† **Per-column date styling.**  The two Solarized themes use the
+per-timestamp-column theming feature to give each of the four
+date columns (modified, accessed, changed, created) its own hue
+family for recent files, so that `lx -lll` (which displays all
+four columns side by side) reads at a glance:
+
+- **modified** → cyan/blue (the canonical Solarized date colour)
+- **accessed** → green/cyan ("reading = growth")
+- **changed**  → magenta/violet (metadata shifts)
+- **created**  → orange/yellow (origin, warm)
+
+Older files on every column fade to the same shared grey family,
+so the differentiation stays where it matters — recent activity.
+See `solarized-light.toml` and `solarized-dark.toml` for the
+worked example, and the "Timestamp colours" section of
+[`docs/GUIDE.md`](../docs/GUIDE.md) for the theme key family.
+
+The other curated themes all use single bulk `date-*` keys that
+apply uniformly to every timestamp column — consistent with
+their original designs.
 
 ### Both backgrounds
 

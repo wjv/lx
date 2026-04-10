@@ -34,9 +34,11 @@ size-number-huge = "#d33682"   # magenta
 size-major       = "#586e75"   # base01 — flat fallback (dark on light)
 size-unit        = "#93a1a1"   # base1 — dim, also sets size-minor
 
-# Date gradient: cyan → blue → violet, fading to lighter greys
+# Shared baseline: cyan → blue → violet, fading to lighter greys
 # (on a light bg, "old" fades toward the page colour, not away
-# into a void)
+# into a void).  These values apply to every timestamp column;
+# the per-column overrides below reshape the three hottest tiers
+# on a per-column basis.
 date-now   = "bold #2aa198"   # cyan, hot
 date-today = "#2aa198"        # cyan
 date-week  = "#268bd2"        # blue
@@ -44,6 +46,30 @@ date-month = "#6c71c4"        # violet
 date-year  = "#839496"        # base0
 date-old   = "#93a1a1"        # base1
 date-flat  = "#93a1a1"        # = old (matches the previous bulk `date`)
+
+# Per-timestamp-column hot tiers.  With `lx -lll` showing all four
+# timestamp columns side by side, each one announces its own hue
+# family on recent files.  Older tiers (month / year / old / flat)
+# fall through from the bulk block above, so files fade to the
+# same grey family regardless of which column they live in.
+#
+#   modified → cyan/blue    (matches the shared baseline; the
+#                            canonical Solarized date colour —
+#                            no overrides needed)
+#   accessed → green/cyan   ("reading = growth")
+#   changed  → magenta/violet (metadata shifts)
+#   created  → orange/yellow (origin, warm)
+date-accessed-now   = "bold #859900"  # green, hot
+date-accessed-today = "#859900"       # green
+date-accessed-week  = "#2aa198"       # cyan
+
+date-changed-now    = "bold #d33682"  # magenta, hot
+date-changed-today  = "#d33682"       # magenta
+date-changed-week   = "#6c71c4"       # violet
+
+date-created-now    = "bold #cb4b16"  # orange, hot
+date-created-today  = "#cb4b16"       # orange
+date-created-week   = "#b58900"       # yellow
 permissions-user-read = "#859900"
 permissions-user-write = "#cb4b16"
 permissions-user-execute = "#b58900"
