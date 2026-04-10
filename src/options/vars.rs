@@ -21,11 +21,6 @@ pub static NO_COLOR: &str = "NO_COLOR";
 
 // lx-specific variables
 
-/// Environment variable used to colour lx's interface when colours are
-/// enabled. This includes all the colours that `LS_COLORS` would recognise,
-/// overriding them if necessary. It can also contain lx-specific codes.
-pub static LX_COLORS: &str = "LX_COLORS";
-
 /// Environment variable used to make lx print out debugging information as
 /// it runs. Any non-empty value will turn debug mode on.
 pub static LX_DEBUG: &str = "LX_DEBUG";

@@ -538,11 +538,6 @@ End state: the modified column's `now` tier is bright green,
 the other three columns' `now` tiers are bright cyan, and every
 other tier on every column is blue.
 
-Per-column overrides are available only via the config file.
-The two-letter `LX_COLORS` codes (`da`, `dn`, `dt`, ...) keep
-working as bulk setters that fan out to all four columns;
-there are no per-column equivalents in `LX_COLORS`.
-
 The compiled-in "exa" theme
 ---------------------------
 
@@ -787,8 +782,7 @@ highest priority:
 
 1. **Built-in defaults** -- the compiled-in exa theme.
 2. **LS_COLORS** -- standard file-type colour scheme.
-3. **LX_COLORS** -- extended colour scheme (overrides `LS_COLORS`).
-4. **Theme** -- config-file theme (selected via personality or
+3. **Theme** -- config-file theme (selected via personality or
    `--theme`). The theme's UI element keys and style set colours
    override all environment variable settings.
 

@@ -422,6 +422,19 @@ full reference.
 
 ## Themes, styles, and classes
 
+`lx` honours `LS_COLORS` for interoperability — if your shell
+profile already sets it, lx picks up your file-type and extension
+colours automatically.  But `LS_COLORS` is a legacy format: its
+vocabulary is limited to a handful of file-kind keys plus glob
+patterns, with raw ANSI SGR values, no inheritance, no per-column
+overrides, no gradients.
+
+For anything beyond a basic colour scheme — theming individual
+columns, per-tier size and date gradients, palette inheritance,
+smooth colour interpolation — use a `[theme.NAME]` section in your
+`~/.lxconfig.toml`.  The config file is lx's full-power theming
+surface.
+
 `lx`'s colour customisation uses three kinds of config section that
 work together:
 
@@ -496,6 +509,27 @@ omitted from `--init-config`'s output for brevity; see
 [`man/lxconfig.toml.5.md`](../man/lxconfig.toml.5.md) for the
 full list.  Redefining a class name in your config overrides the
 compiled-in version.
+
+**Starting from a clean slate.**  If you want no compiled-in
+class colouring at all (for example, because you've got an
+exhaustive `LS_COLORS` list and want to drive all file-type
+colouring from there), point your personality at a style that
+references only classes you define yourself — or define a style
+with no class or extension entries and use it via `use-style`:
+
+```toml
+[style.empty]
+# deliberately empty — no class.* or extension keys
+
+[theme.mine]
+use-style = "empty"
+
+[personality.default]
+theme = "mine"
+```
+
+The style layer is the compiled-in file-type colouring; an empty
+style switches it off entirely.
 
 ### Activating a theme
 
@@ -895,10 +929,6 @@ green across the board, an accessed column that's white except
 for "now"-tier files (bright magenta), and changed/created
 columns that are white throughout.
 
-Per-column overrides are config-file only; the two-letter
-`LX_COLORS` codes (`da`, `dn`, ...) keep working as bulk
-setters that fan out to all four columns.
-
 ### Summary footer
 
 `-C` / `--count` prints an item count to stderr after the listing.
@@ -937,7 +967,6 @@ entirely.
 | Variable          | Purpose                                                    |
 |-------------------|------------------------------------------------------------|
 | `LX_CONFIG`       | Explicit config file path                                  |
-| `LX_COLORS`       | Colour theme (overrides `LS_COLORS`)                       |
 | `LX_DEBUG`        | Enable debug logging (`1` or `trace`)                      |
 | `LX_GRID_ROWS`    | Minimum rows for grid-details view (also a config key)     |
 | `LX_ICON_SPACING` | Spaces between icon and filename (also a config key)       |

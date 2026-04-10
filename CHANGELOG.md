@@ -55,8 +55,6 @@ All notable changes to lx are documented here. lx is forked from
   `lx` applies the bulk and per-column keys in specificity
   order automatically, so you can write them in any order in
   the theme block and the most specific one always wins.
-  Per-column overrides are config-file only; the two-letter
-  `LX_COLORS` codes keep working as bulk fan-out setters.
 - **`--smooth`** — interpolate gradients between the theme's
   per-tier anchor colours in perceptually uniform Oklab colour
   space, instead of snapping to discrete tier boundaries.  Each
@@ -70,10 +68,10 @@ All notable changes to lx are documented here. lx is forked from
   formulas come from Björn Ottosson, *"A perceptual color space
   for image processing"* (2020),
   <https://bottosson.github.io/posts/oklab/>.
-- New `date-flat` theme key (and matching `LX_COLORS` code `dl`)
-  for the colour the date column uses when its gradient is off.
-  Curated themes set it explicitly; child themes inherit it
-  through the normal `inherits = "..."` chain.
+- New `date-flat` theme key for the colour the date column uses
+  when its gradient is off.  Curated themes set it explicitly;
+  child themes inherit it through the normal
+  `inherits = "..."` chain.
 - New dark-background curated themes: `lx-256-dark` and
   `lx-24bit-dark` (drop-in overrides of the builtins with
   brighter gradients), and `the-exa-future` (a 24-bit tribute
@@ -95,9 +93,6 @@ All notable changes to lx are documented here. lx is forked from
 - Dependabot for Cargo + GitHub Actions dependency updates.
 - `cargo-deny` in CI (licence compliance + security advisories).
 - Weekly scheduled security audit workflow.
-
-### Changed
-
 - `--total-size` in tree mode uses parallel pre-computation and
   `(dev, ino)` caching instead of a redundant second filesystem
   walk.  On NFS: **10x faster wall time** vs 0.8 (4s vs 41s
@@ -162,6 +157,22 @@ All notable changes to lx are documented here. lx is forked from
   Cause: silently ignoring a broken config file hides real
   bugs.  See [`docs/UPGRADING.md`](docs/UPGRADING.md) for the
   full migration note.
+
+### Removed
+
+- **`LX_COLORS` environment variable.**  The lx-specific parallel
+  to `LS_COLORS` is gone.  Its ~60 two-letter codes (`ur`, `nk`,
+  `da`, `Uy`, etc.) had exhausted the usable namespace —
+  recent additions were already reaching for mixed case and
+  awkward mnemonics, and new theming features
+  (per-timestamp-column keys, per-tier gradients) couldn't be
+  expressed in two letters at all.  Every code has a long-
+  standing config-file equivalent in `[theme.NAME]` sections,
+  which are strictly more powerful (inheritance, per-column
+  overrides, X11/hex colours, smooth interpolation).
+  `LS_COLORS` is unchanged.  See
+  [`docs/UPGRADING.md`](docs/UPGRADING.md) for the migration
+  guide with a worked example.
 
 
 ## [0.8.0] — 2026-04-07

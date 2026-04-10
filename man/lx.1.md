@@ -654,10 +654,6 @@ ENVIRONMENT VARIABLES
 `LX_CONFIG`
 : Explicit path to the config file.
 
-`LX_COLORS`
-: Extended colour scheme. Overrides `LS_COLORS`. Uses two-letter codes
-for UI elements (e.g. `ur` for user-read permission, `da` for date).
-
 `LX_DEBUG`
 : Enable debug logging. Set to `1` for debug, `trace` for trace level.
 

@@ -237,9 +237,8 @@ impl UiStyles {
 
     /// Apply a closure to every per-timestamp-column [`DateAge`]
     /// instance.  Used by the bulk `date = ...` / `date-now = ...` /
-    /// etc. setters and by the `da` / `dn` / ... `LX_COLORS` codes,
-    /// so that theme authors who write a single `date` block see it
-    /// applied to every timestamp column.
+    /// etc. setters so that theme authors who write a single `date`
+    /// block see it applied to every timestamp column.
     ///
     /// Per-column overrides (e.g. `date-modified-now = ...`) write
     /// directly to the named field and do not go through this helper.
@@ -255,10 +254,10 @@ impl UiStyles {
     ///
     /// - When `gradient.size` is `false`, every `size.number_*` tier
     ///   is overwritten with `size.major` and every `size.unit_*`
-    ///   tier with `size.minor`.  These two slots are already
-    ///   themeable (`size-major` / `size-minor`, `LX_COLORS` codes
-    ///   `df` / `ds`) and serve as the column's "headline" colour
-    ///   in non-tiered contexts like the `-CZ` count footer.
+    ///   tier with `size.minor`.  These two slots (`size-major` and
+    ///   `size-minor`) are already themeable and serve as the
+    ///   column's "headline" colour in non-tiered contexts like
+    ///   the `-CZ` count footer.
     /// - For each timestamp column whose flag is `false`, every age
     ///   tier (`now` through `old`) is overwritten with that column's
     ///   `flat`.  Theme authors set `date-flat` explicitly (or rely
@@ -356,89 +355,6 @@ impl UiStyles {
              // MULTIHARDLINK, DOOR, SETUID, SETGID, CAPABILITY,
              // STICKY_OTHER_WRITABLE, OTHER_WRITABLE, STICKY, MISSING
         }
-        true
-    }
-
-    /// Sets a value on this set of colours using one of the keys understood
-    /// by the `LX_COLORS` environment variable. Invalid keys set nothing,
-    /// but return false. This doesn’t take the `LS_COLORS` keys into account,
-    /// so `set_ls` should have been run first.
-    pub fn set_lx(&mut self, pair: &Pair<'_>) -> bool {
-        match pair.key {
-            "ur" => self.perms.user_read          = pair.to_style(),
-            "uw" => self.perms.user_write         = pair.to_style(),
-            "ux" => self.perms.user_execute_file  = pair.to_style(),
-            "ue" => self.perms.user_execute_other = pair.to_style(),
-            "gr" => self.perms.group_read         = pair.to_style(),
-            "gw" => self.perms.group_write        = pair.to_style(),
-            "gx" => self.perms.group_execute      = pair.to_style(),
-            "tr" => self.perms.other_read         = pair.to_style(),
-            "tw" => self.perms.other_write        = pair.to_style(),
-            "tx" => self.perms.other_execute      = pair.to_style(),
-            "su" => self.perms.special_user_file  = pair.to_style(),
-            "sf" => self.perms.special_other      = pair.to_style(),
-            "xa" => self.perms.attribute          = pair.to_style(),
-
-            "sn" => self.set_number_style(pair.to_style()),
-            "sb" => self.set_unit_style(pair.to_style()),
-            "nb" => self.size.number_byte         = pair.to_style(),
-            "nk" => self.size.number_kilo         = pair.to_style(),
-            "nm" => self.size.number_mega         = pair.to_style(),
-            "ng" => self.size.number_giga         = pair.to_style(),
-            "nh" => self.size.number_huge         = pair.to_style(),
-            "ub" => self.size.unit_byte           = pair.to_style(),
-            "uk" => self.size.unit_kilo           = pair.to_style(),
-            "um" => self.size.unit_mega           = pair.to_style(),
-            "ug" => self.size.unit_giga           = pair.to_style(),
-            "uh" => self.size.unit_huge           = pair.to_style(),
-            "df" => self.size.major               = pair.to_style(),
-            "ds" => self.size.minor               = pair.to_style(),
-
-            "uu" => self.users.user_you           = pair.to_style(),
-            "un" => self.users.user_someone_else  = pair.to_style(),
-            "gu" => self.users.group_yours        = pair.to_style(),
-            "gb" => self.users.group_member        = pair.to_style(),
-            "gn" => self.users.group_not_yours    = pair.to_style(),
-            // Capital U/G = the numeric ID version of the user/group
-            // columns.  Case-sensitive, so these don't collide with the
-            // lowercase `uu`/`un`/`gu`/`gn` keys above.
-            "Uy" => self.users.uid_you            = pair.to_style(),
-            "Un" => self.users.uid_someone_else   = pair.to_style(),
-            "Gy" => self.users.gid_yours          = pair.to_style(),
-            "Gb" => self.users.gid_member         = pair.to_style(),
-            "Gn" => self.users.gid_not_yours      = pair.to_style(),
-
-            "lc" => self.links.normal             = pair.to_style(),
-            "lm" => self.links.multi_link_file    = pair.to_style(),
-
-            "ga" => self.vcs.new                  = pair.to_style(),
-            "gm" => self.vcs.modified             = pair.to_style(),
-            "gd" => self.vcs.deleted              = pair.to_style(),
-            "gv" => self.vcs.renamed              = pair.to_style(),
-            "gt" => self.vcs.typechange           = pair.to_style(),
-
-            "xx" => self.punctuation              = pair.to_style(),
-            // The two-letter `LX_COLORS` codes for date are bulk
-            // setters: each fans out to all four timestamp columns.
-            // Per-column overrides are config-file only by design.
-            "da" => { let s = pair.to_style(); self.date_for_each(|d| d.set_all(s)); }
-            "dn" => { let s = pair.to_style(); self.date_for_each(|d| d.now   = s); }
-            "dt" => { let s = pair.to_style(); self.date_for_each(|d| d.today = s); }
-            "dw" => { let s = pair.to_style(); self.date_for_each(|d| d.week  = s); }
-            "dm" => { let s = pair.to_style(); self.date_for_each(|d| d.month = s); }
-            "dy" => { let s = pair.to_style(); self.date_for_each(|d| d.year  = s); }
-            "do" => { let s = pair.to_style(); self.date_for_each(|d| d.old   = s); }
-            "dl" => { let s = pair.to_style(); self.date_for_each(|d| d.flat  = s); }
-            "in" => self.inode                    = pair.to_style(),
-            "bl" => self.blocks                   = pair.to_style(),
-            "hd" => self.header                   = pair.to_style(),
-            "lp" => self.symlink_path             = pair.to_style(),
-            "cc" => self.control_char             = pair.to_style(),
-            "bO" => self.broken_path_overlay      = pair.to_style(),
-
-             _   => return false,
-        }
-
         true
     }
 

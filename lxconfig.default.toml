@@ -169,7 +169,7 @@ across = true
 ## ── Themes ────────────────────────────────────────────────────────
 ##
 ## Customise colours for UI elements, file extensions, and filenames.
-## Layers on top of LS_COLORS and LX_COLORS (config wins).
+## Layers on top of LS_COLORS (config wins).
 ##
 ## Colour values accept:
 ##   Named:     "bold blue", "red underline", "dimmed cyan"

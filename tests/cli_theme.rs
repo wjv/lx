@@ -18,7 +18,6 @@ fn lx_with_theme(config_content: &str) -> (tempfile::TempDir, assert_cmd::Comman
     cmd.env("LX_CONFIG", config_path)
        .env("HOME", "/nonexistent")
        .env_remove("LS_COLORS")
-       .env_remove("LX_COLORS")
        .arg("--colour=always");
     (dir, cmd)
 }
@@ -192,22 +191,6 @@ fn theme_cli_overrides_personality() {
 
 
 // ── Precedence over env vars ─────────────────────────────────────
-
-#[test]
-fn theme_overrides_env() {
-    let (_dir, mut cmd) = lx_with_theme(r#"
-        version = "0.3"
-        [theme.test]
-        date = "bold red"
-    "#);
-
-    cmd.env("LX_COLORS", "da=32")
-        .args(["--theme=test", "-l", "Cargo.toml"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("\x1b[1;31m"));
-}
-
 
 // ── Class references in styles ────────────────────────────────────
 
@@ -430,7 +413,6 @@ fn lx_clean() -> assert_cmd::Command {
     cmd.env("LX_CONFIG", "/nonexistent")
        .env("HOME", "/nonexistent")
        .env_remove("LS_COLORS")
-       .env_remove("LX_COLORS")
        .env_remove("TERM")
        .env_remove("COLORTERM");
     cmd
@@ -535,7 +517,6 @@ fn default_theme_colours_filetypes() {
     cmd.env("LX_CONFIG", "/nonexistent")
        .env("HOME", "/nonexistent")
        .env_remove("LS_COLORS")
-       .env_remove("LX_COLORS")
        .arg("--colour=always");
 
     let work = tempdir().expect("failed to create workdir");
@@ -571,7 +552,6 @@ fn init_config_preserves_default_colours() {
     fn common(cmd: &mut assert_cmd::Command, dir: &std::path::Path) {
         cmd.env("HOME", dir)
            .env_remove("LS_COLORS")
-           .env_remove("LX_COLORS")
            .arg("--colour=always")
            .args(["-l", "src"]);
     }
@@ -704,7 +684,6 @@ fn new_gradient_tokens_are_accepted() {
         cmd.env("LX_CONFIG", "/nonexistent")
            .env("HOME", "/nonexistent")
            .env_remove("LS_COLORS")
-           .env_remove("LX_COLORS")
            .args(["-lll", "--colour=always", &format!("--gradient={tok}")])
            .arg(work.path())
            .assert()
@@ -724,7 +703,6 @@ fn hidden_gradient_aliases_match_canonical() {
         cmd.env("LX_CONFIG", "/nonexistent")
            .env("HOME", "/nonexistent")
            .env_remove("LS_COLORS")
-           .env_remove("LX_COLORS")
            .args(["-l", "--colour=always", &format!("--gradient={value}")])
            .arg(work.path())
            .assert()
@@ -781,7 +759,6 @@ fn run_with_varied_mtimes(theme: &str, extra_args: &[&str]) -> Vec<u8> {
     cmd.env("LX_CONFIG", "/nonexistent")
        .env("HOME", "/nonexistent")
        .env_remove("LS_COLORS")
-       .env_remove("LX_COLORS")
        .args(["-l", "--colour=always", &format!("--theme={theme}")])
        .args(extra_args)
        .arg(work.path())
@@ -870,7 +847,6 @@ fn no_smooth_suppresses_personality_smooth() {
         cmd.env("LX_CONFIG", &config_path)
            .env("HOME", "/nonexistent")
            .env_remove("LS_COLORS")
-           .env_remove("LX_COLORS")
            .args(["-l", "--colour=always"])
            .args(extra)
            .arg(work.path())

@@ -119,7 +119,6 @@ pub enum UseColours {
 #[derive(PartialEq, Eq, Debug, Default)]
 pub struct Definitions {
     pub ls: Option<String>,
-    pub lx: Option<String>,
 }
 
 
@@ -156,8 +155,8 @@ impl Options {
             UiStyles::default_theme()
         };
 
-        // Layer 2–3: LS_COLORS and LX_COLORS environment variables.
-        let (mut exts, _use_default_filetypes) = self.definitions.parse_colour_vars(&mut ui);
+        // Layer 2: LS_COLORS environment variable.
+        let mut exts = self.definitions.parse_colour_vars(&mut ui);
 
         // Layer 4: theme from config or compiled-in personality.
         // The compiled-in "default" personality sets theme = "exa",
@@ -661,13 +660,11 @@ mod apply_theme_def_test {
 
 impl Definitions {
 
-    /// Parse the environment variables into `LS_COLORS` pairs, putting file glob
-    /// colours into the `ExtensionMappings` that gets returned, and using the
-    /// two-character UI codes to modify the mutable `Colours`.
-    ///
-    /// Also returns if the `LX_COLORS` variable should reset the existing file
-    /// type mappings or not. The `reset` code needs to be the first one.
-    fn parse_colour_vars(&self, colours: &mut UiStyles) -> (ExtensionMappings, bool) {
+    /// Parse `LS_COLORS` into a pair of outputs: recognised two-letter
+    /// file-kind codes modify the mutable `UiStyles`, and any
+    /// glob-style entries (e.g. `*.txt=31`) populate the returned
+    /// `ExtensionMappings`.
+    fn parse_colour_vars(&self, colours: &mut UiStyles) -> ExtensionMappings {
         use log::*;
 
         let mut exts = ExtensionMappings::default();
@@ -687,29 +684,7 @@ impl Definitions {
             });
         }
 
-        let mut use_default_filetypes = true;
-
-        if let Some(lx) = &self.lx {
-            // Is this hacky? Yes.
-            if lx == "reset" || lx.starts_with("reset:") {
-                use_default_filetypes = false;
-            }
-
-            LSColors(lx).each_pair(|pair| {
-                if ! colours.set_ls(&pair) && ! colours.set_lx(&pair) {
-                    match glob::Pattern::new(pair.key) {
-                        Ok(pat) => {
-                            exts.add(pat, pair.to_style());
-                        }
-                        Err(e) => {
-                            warn!("Couldn't parse glob pattern {:?}: {}", pair.key, e);
-                        }
-                    }
-                }
-            });
-        }
-
-        (exts, use_default_filetypes)
+        exts
     }
 }
 
@@ -939,23 +914,22 @@ mod customs_test {
     use nu_ansi_term::Color::*;
 
     macro_rules! test {
-        ($name:ident:  ls $ls:expr, lx $lx:expr  =>  colours $expected:ident -> $process_expected:expr) => {
+        ($name:ident: ls $ls:expr => colours $expected:ident -> $process_expected:expr) => {
             #[test]
             fn $name() {
                 let mut $expected = UiStyles::default();
                 $process_expected();
 
                 let definitions = Definitions {
-                    ls:  Some($ls.into()),
-                    lx: Some($lx.into()),
+                    ls: Some($ls.into()),
                 };
 
                 let mut result = UiStyles::default();
-                let (_exts, _reset) = definitions.parse_colour_vars(&mut result);
+                let _exts = definitions.parse_colour_vars(&mut result);
                 assert_eq!($expected, result);
             }
         };
-        ($name:ident:  ls $ls:expr, lx $lx:expr  =>  exts $mappings:expr) => {
+        ($name:ident: ls $ls:expr => exts $mappings:expr) => {
             #[test]
             fn $name() {
                 let mappings: Vec<(glob::Pattern, Style)>
@@ -964,11 +938,10 @@ mod customs_test {
                                .collect();
 
                 let definitions = Definitions {
-                    ls:  Some($ls.into()),
-                    lx: Some($lx.into()),
+                    ls: Some($ls.into()),
                 };
 
-                let (result, _reset) = definitions.parse_colour_vars(&mut UiStyles::default());
+                let result = definitions.parse_colour_vars(&mut UiStyles::default());
                 assert_eq!(ExtensionMappings { mappings }, result);
             }
         };
@@ -976,136 +949,42 @@ mod customs_test {
 
 
     // LS_COLORS can affect all of these colours:
-    test!(ls_di:   ls "di=31", lx ""  =>  colours c -> { c.filekinds.directory    = Red.normal();    });
-    test!(ls_ex:   ls "ex=32", lx ""  =>  colours c -> { c.filekinds.executable   = Green.normal();  });
-    test!(ls_fi:   ls "fi=33", lx ""  =>  colours c -> { c.filekinds.normal       = Yellow.normal(); });
-    test!(ls_pi:   ls "pi=34", lx ""  =>  colours c -> { c.filekinds.pipe         = Blue.normal();   });
-    test!(ls_so:   ls "so=35", lx ""  =>  colours c -> { c.filekinds.socket       = Purple.normal(); });
-    test!(ls_bd:   ls "bd=36", lx ""  =>  colours c -> { c.filekinds.block_device = Cyan.normal();   });
-    test!(ls_cd:   ls "cd=35", lx ""  =>  colours c -> { c.filekinds.char_device  = Purple.normal(); });
-    test!(ls_ln:   ls "ln=34", lx ""  =>  colours c -> { c.filekinds.symlink      = Blue.normal();   });
-    test!(ls_or:   ls "or=33", lx ""  =>  colours c -> { c.broken_symlink         = Yellow.normal(); });
+    test!(ls_di: ls "di=31" => colours c -> { c.filekinds.directory    = Red.normal();    });
+    test!(ls_ex: ls "ex=32" => colours c -> { c.filekinds.executable   = Green.normal();  });
+    test!(ls_fi: ls "fi=33" => colours c -> { c.filekinds.normal       = Yellow.normal(); });
+    test!(ls_pi: ls "pi=34" => colours c -> { c.filekinds.pipe         = Blue.normal();   });
+    test!(ls_so: ls "so=35" => colours c -> { c.filekinds.socket       = Purple.normal(); });
+    test!(ls_bd: ls "bd=36" => colours c -> { c.filekinds.block_device = Cyan.normal();   });
+    test!(ls_cd: ls "cd=35" => colours c -> { c.filekinds.char_device  = Purple.normal(); });
+    test!(ls_ln: ls "ln=34" => colours c -> { c.filekinds.symlink      = Blue.normal();   });
+    test!(ls_or: ls "or=33" => colours c -> { c.broken_symlink         = Yellow.normal(); });
 
-    // LX_COLORS can affect all those colours too:
-    test!(lx_di:  ls "", lx "di=32"  =>  colours c -> { c.filekinds.directory    = Green.normal();  });
-    test!(lx_ex:  ls "", lx "ex=33"  =>  colours c -> { c.filekinds.executable   = Yellow.normal(); });
-    test!(lx_fi:  ls "", lx "fi=34"  =>  colours c -> { c.filekinds.normal       = Blue.normal();   });
-    test!(lx_pi:  ls "", lx "pi=35"  =>  colours c -> { c.filekinds.pipe         = Purple.normal(); });
-    test!(lx_so:  ls "", lx "so=36"  =>  colours c -> { c.filekinds.socket       = Cyan.normal();   });
-    test!(lx_bd:  ls "", lx "bd=35"  =>  colours c -> { c.filekinds.block_device = Purple.normal(); });
-    test!(lx_cd:  ls "", lx "cd=34"  =>  colours c -> { c.filekinds.char_device  = Blue.normal();   });
-    test!(lx_ln:  ls "", lx "ln=33"  =>  colours c -> { c.filekinds.symlink      = Yellow.normal(); });
-    test!(lx_or:  ls "", lx "or=32"  =>  colours c -> { c.broken_symlink         = Green.normal();  });
+    // LS_COLORS treats anything it doesn't recognise as a filename
+    // glob — the two-letter codes that used to be lx-specific (uu,
+    // un, gu, gn, etc.) now fall through to the extensions map.
+    test!(ls_uu: ls "uu=38;5;117" => exts [ ("uu", Fixed(117).normal()) ]);
+    test!(ls_un: ls "un=38;5;118" => exts [ ("un", Fixed(118).normal()) ]);
+    test!(ls_gu: ls "gu=38;5;119" => exts [ ("gu", Fixed(119).normal()) ]);
+    test!(ls_gn: ls "gn=38;5;120" => exts [ ("gn", Fixed(120).normal()) ]);
 
-    // LX_COLORS will even override options from LS_COLORS:
-    test!(ls_lx_di: ls "di=31", lx "di=32"  =>  colours c -> { c.filekinds.directory  = Green.normal();  });
-    test!(ls_lx_ex: ls "ex=32", lx "ex=33"  =>  colours c -> { c.filekinds.executable = Yellow.normal(); });
-    test!(ls_lx_fi: ls "fi=33", lx "fi=34"  =>  colours c -> { c.filekinds.normal     = Blue.normal();   });
-
-    // But more importantly, LX_COLORS has its own, special list of colours:
-    test!(lx_ur:  ls "", lx "ur=38;5;100"  =>  colours c -> { c.perms.user_read           = Fixed(100).normal(); });
-    test!(lx_uw:  ls "", lx "uw=38;5;101"  =>  colours c -> { c.perms.user_write          = Fixed(101).normal(); });
-    test!(lx_ux:  ls "", lx "ux=38;5;102"  =>  colours c -> { c.perms.user_execute_file   = Fixed(102).normal(); });
-    test!(lx_ue:  ls "", lx "ue=38;5;103"  =>  colours c -> { c.perms.user_execute_other  = Fixed(103).normal(); });
-    test!(lx_gr:  ls "", lx "gr=38;5;104"  =>  colours c -> { c.perms.group_read          = Fixed(104).normal(); });
-    test!(lx_gw:  ls "", lx "gw=38;5;105"  =>  colours c -> { c.perms.group_write         = Fixed(105).normal(); });
-    test!(lx_gx:  ls "", lx "gx=38;5;106"  =>  colours c -> { c.perms.group_execute       = Fixed(106).normal(); });
-    test!(lx_tr:  ls "", lx "tr=38;5;107"  =>  colours c -> { c.perms.other_read          = Fixed(107).normal(); });
-    test!(lx_tw:  ls "", lx "tw=38;5;108"  =>  colours c -> { c.perms.other_write         = Fixed(108).normal(); });
-    test!(lx_tx:  ls "", lx "tx=38;5;109"  =>  colours c -> { c.perms.other_execute       = Fixed(109).normal(); });
-    test!(lx_su:  ls "", lx "su=38;5;110"  =>  colours c -> { c.perms.special_user_file   = Fixed(110).normal(); });
-    test!(lx_sf:  ls "", lx "sf=38;5;111"  =>  colours c -> { c.perms.special_other       = Fixed(111).normal(); });
-    test!(lx_xa:  ls "", lx "xa=38;5;112"  =>  colours c -> { c.perms.attribute           = Fixed(112).normal(); });
-
-    // `sn` (size-number bulk setter) sets all 5 number tiers AND
-    // `size.major` so that themes using the bulk setter for a "fake
-    // flat" look also get the right colour when --no-gradient
-    // collapses the column to size.major.
-    test!(lx_sn:  ls "", lx "sn=38;5;113" => colours c -> {
-        c.size.number_byte = Fixed(113).normal();
-        c.size.number_kilo = Fixed(113).normal();
-        c.size.number_mega = Fixed(113).normal();
-        c.size.number_giga = Fixed(113).normal();
-        c.size.number_huge = Fixed(113).normal();
-        c.size.major       = Fixed(113).normal();
-    });
-    // `sb` (size-unit bulk setter) — symmetric: sets all 5 unit
-    // tiers AND `size.minor`.
-    test!(lx_sb:  ls "", lx "sb=38;5;114" => colours c -> {
-        c.size.unit_byte = Fixed(114).normal();
-        c.size.unit_kilo = Fixed(114).normal();
-        c.size.unit_mega = Fixed(114).normal();
-        c.size.unit_giga = Fixed(114).normal();
-        c.size.unit_huge = Fixed(114).normal();
-        c.size.minor     = Fixed(114).normal();
-    });
-
-    test!(lx_nb:  ls "", lx "nb=38;5;115"  =>  colours c -> { c.size.number_byte          = Fixed(115).normal(); });
-    test!(lx_nk:  ls "", lx "nk=38;5;116"  =>  colours c -> { c.size.number_kilo          = Fixed(116).normal(); });
-    test!(lx_nm:  ls "", lx "nm=38;5;117"  =>  colours c -> { c.size.number_mega          = Fixed(117).normal(); });
-    test!(lx_ng:  ls "", lx "ng=38;5;118"  =>  colours c -> { c.size.number_giga          = Fixed(118).normal(); });
-    test!(lx_nh:  ls "", lx "nh=38;5;119"  =>  colours c -> { c.size.number_huge          = Fixed(119).normal(); });
-
-    test!(lx_ub:  ls "", lx "ub=38;5;115"  =>  colours c -> { c.size.unit_byte            = Fixed(115).normal(); });
-    test!(lx_uk:  ls "", lx "uk=38;5;116"  =>  colours c -> { c.size.unit_kilo            = Fixed(116).normal(); });
-    test!(lx_um:  ls "", lx "um=38;5;117"  =>  colours c -> { c.size.unit_mega            = Fixed(117).normal(); });
-    test!(lx_ug:  ls "", lx "ug=38;5;118"  =>  colours c -> { c.size.unit_giga            = Fixed(118).normal(); });
-    test!(lx_uh:  ls "", lx "uh=38;5;119"  =>  colours c -> { c.size.unit_huge            = Fixed(119).normal(); });
-
-    test!(lx_df:  ls "", lx "df=38;5;115"  =>  colours c -> { c.size.major                = Fixed(115).normal(); });
-    test!(lx_ds:  ls "", lx "ds=38;5;116"  =>  colours c -> { c.size.minor                = Fixed(116).normal(); });
-
-    test!(lx_uu:  ls "", lx "uu=38;5;117"  =>  colours c -> { c.users.user_you            = Fixed(117).normal(); });
-    test!(lx_un:  ls "", lx "un=38;5;118"  =>  colours c -> { c.users.user_someone_else   = Fixed(118).normal(); });
-    test!(lx_gu:  ls "", lx "gu=38;5;119"  =>  colours c -> { c.users.group_yours         = Fixed(119).normal(); });
-    test!(lx_gn:  ls "", lx "gn=38;5;120"  =>  colours c -> { c.users.group_not_yours     = Fixed(120).normal(); });
-
-    test!(lx_lc:  ls "", lx "lc=38;5;121"  =>  colours c -> { c.links.normal              = Fixed(121).normal(); });
-    test!(lx_lm:  ls "", lx "lm=38;5;122"  =>  colours c -> { c.links.multi_link_file     = Fixed(122).normal(); });
-
-    test!(lx_ga:  ls "", lx "ga=38;5;123"  =>  colours c -> { c.vcs.new                   = Fixed(123).normal(); });
-    test!(lx_gm:  ls "", lx "gm=38;5;124"  =>  colours c -> { c.vcs.modified              = Fixed(124).normal(); });
-    test!(lx_gd:  ls "", lx "gd=38;5;125"  =>  colours c -> { c.vcs.deleted               = Fixed(125).normal(); });
-    test!(lx_gv:  ls "", lx "gv=38;5;126"  =>  colours c -> { c.vcs.renamed               = Fixed(126).normal(); });
-    test!(lx_gt:  ls "", lx "gt=38;5;127"  =>  colours c -> { c.vcs.typechange            = Fixed(127).normal(); });
-
-    test!(lx_xx:  ls "", lx "xx=38;5;128"  =>  colours c -> { c.punctuation               = Fixed(128).normal(); });
-    test!(lx_da:  ls "", lx "da=38;5;129"  =>  colours c -> { c.date_for_each(|d| d.set_all(Fixed(129).normal())); });
-    test!(lx_in:  ls "", lx "in=38;5;130"  =>  colours c -> { c.inode                     = Fixed(130).normal(); });
-    test!(lx_bl:  ls "", lx "bl=38;5;131"  =>  colours c -> { c.blocks                    = Fixed(131).normal(); });
-    test!(lx_hd:  ls "", lx "hd=38;5;132"  =>  colours c -> { c.header                    = Fixed(132).normal(); });
-    test!(lx_lp:  ls "", lx "lp=38;5;133"  =>  colours c -> { c.symlink_path              = Fixed(133).normal(); });
-    test!(lx_cc:  ls "", lx "cc=38;5;134"  =>  colours c -> { c.control_char              = Fixed(134).normal(); });
-    test!(lx_bo:  ls "", lx "bO=4"         =>  colours c -> { c.broken_path_overlay       = Style::default().underline(); });
-
-    // All the while, LS_COLORS treats them as filenames:
-    test!(ls_uu:   ls "uu=38;5;117", lx ""  =>  exts [ ("uu", Fixed(117).normal()) ]);
-    test!(ls_un:   ls "un=38;5;118", lx ""  =>  exts [ ("un", Fixed(118).normal()) ]);
-    test!(ls_gu:   ls "gu=38;5;119", lx ""  =>  exts [ ("gu", Fixed(119).normal()) ]);
-    test!(ls_gn:   ls "gn=38;5;120", lx ""  =>  exts [ ("gn", Fixed(120).normal()) ]);
-
-    // Just like all other keys:
-    test!(ls_txt:  ls "*.txt=31",          lx ""  =>  exts [ ("*.txt",      Red.normal())             ]);
-    test!(ls_mp3:  ls "*.mp3=38;5;135",    lx ""  =>  exts [ ("*.mp3",      Fixed(135).normal())      ]);
-    test!(ls_mak:  ls "Makefile=1;32;4",   lx ""  =>  exts [ ("Makefile",   Green.bold().underline()) ]);
-    test!(lx_txt: ls "", lx "*.zip=31"           =>  exts [ ("*.zip",      Red.normal())             ]);
-    test!(lx_mp3: ls "", lx "lev.*=38;5;153"     =>  exts [ ("lev.*",      Fixed(153).normal())      ]);
-    test!(lx_mak: ls "", lx "Cargo.toml=4;32;1"  =>  exts [ ("Cargo.toml", Green.bold().underline()) ]);
-
-    // Testing whether a glob from LX_COLORS overrides a glob from LS_COLORS
-    // can’t be tested here, because they’ll both be added to the same vec
+    // Filename globs:
+    test!(ls_txt: ls "*.txt=31"        => exts [ ("*.txt",    Red.normal())             ]);
+    test!(ls_mp3: ls "*.mp3=38;5;135"  => exts [ ("*.mp3",    Fixed(135).normal())      ]);
+    test!(ls_mak: ls "Makefile=1;32;4" => exts [ ("Makefile", Green.bold().underline()) ]);
 
     // Values get separated by colons:
-    test!(ls_multi:   ls "*.txt=31:*.rtf=32", lx ""  =>  exts [ ("*.txt", Red.normal()),   ("*.rtf", Green.normal()) ]);
-    test!(lx_multi:  ls "", lx "*.tmp=37:*.log=37"  =>  exts [ ("*.tmp", White.normal()), ("*.log", White.normal()) ]);
-
-    test!(ls_five: ls "1*1=31:2*2=32:3*3=1;33:4*4=34;1:5*5=35;4", lx ""  =>  exts [
-        ("1*1", Red.normal()), ("2*2", Green.normal()), ("3*3", Yellow.bold()), ("4*4", Blue.bold()), ("5*5", Purple.underline())
+    test!(ls_multi: ls "*.txt=31:*.rtf=32" => exts [
+        ("*.txt", Red.normal()), ("*.rtf", Green.normal())
+    ]);
+    test!(ls_five: ls "1*1=31:2*2=32:3*3=1;33:4*4=34;1:5*5=35;4" => exts [
+        ("1*1", Red.normal()), ("2*2", Green.normal()), ("3*3", Yellow.bold()),
+        ("4*4", Blue.bold()), ("5*5", Purple.underline())
     ]);
 
-    // Finally, colours get applied right-to-left:
-    test!(ls_overwrite:  ls "pi=31:pi=32:pi=33", lx ""  =>  colours c -> { c.filekinds.pipe = Yellow.normal(); });
-    test!(lx_overwrite: ls "", lx "da=36:da=35:da=34"  =>  colours c -> { c.date_for_each(|d| d.set_all(Blue.normal())); });
+    // Later colours override earlier ones (right-to-left):
+    test!(ls_overwrite: ls "pi=31:pi=32:pi=33" => colours c -> {
+        c.filekinds.pipe = Yellow.normal();
+    });
 }
 
 

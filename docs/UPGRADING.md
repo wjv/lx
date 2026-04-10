@@ -152,9 +152,7 @@ share one set of `date-*` colours; in 0.9 each column can be
 themed independently via `date-<col>` and `date-<col>-<tier>`
 keys (32 new keys total).  Existing themes are unaffected — the
 unprefixed `date-*` keys still fan out to all four columns.  See
-the GUIDE for the worked example.  Per-column overrides are
-config-file only; the two-letter `LX_COLORS` codes (`da`, `dn`,
-...) keep working as bulk fan-out setters.
+the GUIDE for the worked example.
 
 **`--upgrade-config` migrates old configs automatically.**  Run
 `lx --upgrade-config` and any `colour-scale = "..."` line inside
@@ -209,6 +207,67 @@ The theme parser now accepts `permissions-user-read`,
 legacy `perm-*` short form is still accepted as an alias.  This
 fixes a long-standing bug where curated themes that used the
 longer form were silently ignored.
+
+### `LX_COLORS` has been removed
+
+The `LX_COLORS` environment variable is gone in 0.9.  It was an
+lx-specific extension to `LS_COLORS` with ~60 two-letter codes
+(`ur`, `uw`, `nk`, `da`, etc.) for lx's own columns.  Every one
+of those codes has a long-standing config-file equivalent in
+`[theme.NAME]` sections — and the config file is strictly more
+powerful (inheritance, per-column overrides, per-tier gradients,
+X11/hex colours, smooth interpolation).
+
+**Why:** the two-letter namespace had run out of room.  Recent
+additions were already reaching for mixed case (`Uy`, `Gb`,
+`bO`) and awkward mnemonics (`in`, `do`, `xx`), and new theming
+features (per-timestamp-column keys, per-tier gradients) couldn't
+be expressed in two letters at all.  Rather than keep papering
+over the cracks, lx now has a single canonical theming path:
+`LS_COLORS` for the standards-compatible floor, the config file
+for everything else.
+
+**Nothing to do** if you never used `LX_COLORS`.
+
+**If you *did* use `LX_COLORS`**, move the settings into a
+`[theme.NAME]` section and activate the theme through a
+personality (or `--theme=NAME`):
+
+Before (in `.bashrc` or `.zshrc`):
+
+```sh
+export LX_COLORS='ur=38;5;100:uw=38;5;101:nk=32:da=90'
+```
+
+After (in `~/.lxconfig.toml`):
+
+```toml
+[theme.mine]
+inherits                 = "lx-24bit"
+permissions-user-read    = "colour-100"
+permissions-user-write   = "colour-101"
+size-number-kilo         = "green"
+date                     = "bright-black"
+
+[personality.default]
+theme = "mine"
+```
+
+Every `LX_COLORS` code has a config-key equivalent; the full
+list is in `lxconfig.toml(5)` or visible via `lx
+--dump-theme=exa`.
+
+**Glob precedence change.**  `LX_COLORS` used to let you
+override `LS_COLORS` globs (e.g. setting `*.log=32` in
+`LX_COLORS` would beat `*.log=31` in `LS_COLORS`).  With
+`LX_COLORS` gone, lx sees only whatever `LS_COLORS` says.  If
+you relied on this, either edit `LS_COLORS` directly or define
+a class in `[style.NAME]` (class-based colours win over
+`LS_COLORS` globs).
+
+**`LS_COLORS` is unchanged** and continues to work exactly as
+before, both for the standard file-type keys (`di`, `ex`, `ln`,
+...) and for filename glob entries.
 
 ### Broken config files are now fatal
 
