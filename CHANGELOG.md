@@ -52,8 +52,9 @@ All notable changes to lx are documented here. lx is forked from
   themed independently.  For each column there's a `date-<col>`
   bulk setter and seven per-tier setters
   (`date-<col>-now` ... `date-<col>-flat`), 32 new keys total.
-  Order matters: write the bulk `date = ...` setter before
-  per-column overrides, otherwise it will clobber them.
+  `lx` applies the bulk and per-column keys in specificity
+  order automatically, so you can write them in any order in
+  the theme block and the most specific one always wins.
   Per-column overrides are config-file only; the two-letter
   `LX_COLORS` codes keep working as bulk fan-out setters.
 - New `date-flat` theme key (and matching `LX_COLORS` code `dl`)

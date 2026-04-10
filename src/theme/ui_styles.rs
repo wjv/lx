@@ -467,10 +467,12 @@ impl UiStyles {
 
             // Per-timestamp-column overrides.  These write directly
             // to the named field, so theme authors can give each
-            // displayed timestamp column its own colour.  Order in
-            // the theme block matters: write `date = ...` (bulk)
-            // before per-column overrides, otherwise the bulk setter
-            // will clobber them.
+            // displayed timestamp column its own colour.  The
+            // caller (`apply_theme_def` in `theme/mod.rs`) sorts
+            // keys by specificity before calling `set_config`, so
+            // bulk `date*` setters are guaranteed to run before
+            // any `date-<col>*` override regardless of the order
+            // the keys appear in the theme block.
             "date-modified"        => self.date_modified.set_all(style),
             "date-modified-now"    => self.date_modified.now   = style,
             "date-modified-today"  => self.date_modified.today = style,

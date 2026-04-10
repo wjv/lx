@@ -284,8 +284,18 @@ impl Options {
     ) {
         use log::*;
 
-        // UI element overrides.
-        for (key, value) in &theme.ui {
+        // UI element overrides.  The underlying `theme.ui` is a
+        // `HashMap<String, String>`, whose iteration order is
+        // unspecified — so we sort by a specificity score before
+        // applying.  This is load-bearing for the per-timestamp
+        // column theme keys: the bulk `date = ...` setter (and the
+        // bulk `date-now = ...`, etc.) must run *before* any
+        // `date-modified = ...` or `date-modified-now = ...`
+        // override, otherwise the bulk setter clobbers the specific
+        // one.  See `theme_key_precedence` below for the buckets.
+        let mut entries: Vec<(&String, &String)> = theme.ui.iter().collect();
+        entries.sort_by_key(|(k, _)| theme_key_precedence(k));
+        for (key, value) in entries {
             if !ui.set_config(key, value) {
                 warn!("Unknown theme key '{key}'; ignoring");
             }
@@ -335,6 +345,105 @@ impl Options {
                 Err(e) => warn!("Bad style glob '{key}': {e}"),
             }
         }
+    }
+}
+
+
+/// Specificity bucket for a theme key.  [`Self::apply_theme_def`]
+/// sorts theme entries by this value before applying them, so
+/// more generic setters run before more specific ones and the
+/// specific ones "win" — which is what a theme author writing
+///
+/// ```toml
+/// date              = "blue"           # bulk
+/// date-now          = "bright cyan"    # bulk per-tier
+/// date-modified-now = "bright green"   # specific
+/// ```
+///
+/// expects from the fall-through, regardless of the order in
+/// which `HashMap` happened to hand the keys back.
+///
+/// Only the `date*` family currently needs ordering; everything
+/// else lands in a single neutral bucket where order is
+/// irrelevant (no two keys target the same field).
+fn theme_key_precedence(key: &str) -> u8 {
+    const COLUMNS: &[&str] = &["modified", "accessed", "changed", "created"];
+
+    // Neutral bucket for all non-date keys.
+    const NEUTRAL: u8 = 10;
+
+    // `date` alone — bulk across every column, every tier.
+    if key == "date" {
+        return 0;
+    }
+
+    let Some(rest) = key.strip_prefix("date-") else {
+        return NEUTRAL;
+    };
+
+    // `date-<col>` → bulk across every tier of one column.
+    if COLUMNS.contains(&rest) {
+        return 2;
+    }
+
+    // `date-<col>-<tier>` → most specific.
+    for col in COLUMNS {
+        if rest.strip_prefix(col).and_then(|r| r.strip_prefix('-')).is_some() {
+            return 3;
+        }
+    }
+
+    // Otherwise it's `date-<tier>` — bulk per-tier across every
+    // column (e.g. `date-now`, `date-today`, ..., `date-flat`).
+    1
+}
+
+#[cfg(test)]
+mod theme_key_precedence_test {
+    use super::theme_key_precedence;
+
+    #[test]
+    fn bulk_date_is_most_generic() {
+        assert_eq!(theme_key_precedence("date"), 0);
+    }
+
+    #[test]
+    fn bulk_per_tier_is_next() {
+        assert_eq!(theme_key_precedence("date-now"), 1);
+        assert_eq!(theme_key_precedence("date-today"), 1);
+        assert_eq!(theme_key_precedence("date-flat"), 1);
+    }
+
+    #[test]
+    fn bulk_per_column_overrides_bulk_per_tier() {
+        assert_eq!(theme_key_precedence("date-modified"), 2);
+        assert_eq!(theme_key_precedence("date-accessed"), 2);
+    }
+
+    #[test]
+    fn per_column_per_tier_is_most_specific() {
+        assert_eq!(theme_key_precedence("date-modified-now"), 3);
+        assert_eq!(theme_key_precedence("date-accessed-flat"), 3);
+        assert_eq!(theme_key_precedence("date-created-old"), 3);
+    }
+
+    #[test]
+    fn non_date_keys_land_in_neutral_bucket() {
+        assert_eq!(theme_key_precedence("directory"), 10);
+        assert_eq!(theme_key_precedence("size-number-byte"), 10);
+        assert_eq!(theme_key_precedence("permissions-user-read"), 10);
+    }
+
+    #[test]
+    fn buckets_order_correctly() {
+        // The whole point of the precedence function: sorting by it
+        // must put generic first, specific last.
+        assert!(theme_key_precedence("date") < theme_key_precedence("date-now"));
+        assert!(theme_key_precedence("date-now") < theme_key_precedence("date-modified"));
+        assert!(
+            theme_key_precedence("date-modified")
+                < theme_key_precedence("date-modified-now")
+        );
     }
 }
 

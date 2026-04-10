@@ -852,14 +852,14 @@ date-modified     = "bright green"    # the modified column only
 date-accessed-now = "bright magenta"  # only the freshest accessed files
 ```
 
-**Order matters.**  Theme keys are applied in the order they
-appear in the theme block, so write the bulk `date = ...`
-setter (and any bulk per-tier setters) *before* per-column
-overrides — otherwise the bulk setters will clobber them.  The
-example above produces a modified column that's bright green
-across the board, an accessed column that's white except for
-"now"-tier files (bright magenta), and changed/created columns
-that are white throughout.
+**Fall-through is automatic.**  Theme keys are applied by
+specificity, not by source-file order: bulk setters always run
+before per-column overrides, so you can write the keys in any
+order in the theme block and the most specific one always wins.
+The example above produces a modified column that's bright
+green across the board, an accessed column that's white except
+for "now"-tier files (bright magenta), and changed/created
+columns that are white throughout.
 
 Per-column overrides are config-file only; the two-letter
 `LX_COLORS` codes (`da`, `dn`, ...) keep working as bulk

@@ -520,20 +520,22 @@ total).  Per-column overrides write directly to the named
 field; only the unprefixed `date-*` keys above fan out to all
 four columns at once.
 
-**Order matters.**  `set_config` applies keys in the order they
-appear in the theme block, so write the bulk `date = ...`
-setter (and any bulk `date-now = ...` etc.) *before*
-per-column overrides — otherwise the bulk setters will clobber
-them.  Example:
+**Fall-through is automatic.**  `lx` applies theme keys by
+specificity: the bulk `date = ...` setter first, then bulk
+per-tier setters (`date-now`, `date-today`, ...), then bulk
+per-column setters (`date-modified`, `date-accessed`, ...),
+then per-column per-tier overrides (`date-modified-now`, ...).
+This means you can write them in any order in the theme block
+— the most specific key always wins.  Example:
 
     [theme.example]
-    date              = "blue"           # bulk: every column, every tier
-    date-now          = "bright cyan"    # bulk: now-tier on every column
+    date              = "blue"           # every column, every tier
+    date-now          = "bright cyan"    # now-tier on every column
     date-modified-now = "bright green"   # only the modified column's now
 
-After `set_config` runs in order, the modified column's `now`
-tier is bright green, the other three columns' `now` tiers are
-bright cyan, and every other tier on every column is blue.
+End state: the modified column's `now` tier is bright green,
+the other three columns' `now` tiers are bright cyan, and every
+other tier on every column is blue.
 
 Per-column overrides are available only via the config file.
 The two-letter `LX_COLORS` codes (`da`, `dn`, `dt`, ...) keep
