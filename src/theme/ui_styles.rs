@@ -198,11 +198,11 @@ impl UiStyles {
     ///   themeable (`size-major` / `size-minor`, `LX_COLORS` codes
     ///   `df` / `ds`) and serve as the column's "headline" colour
     ///   in non-tiered contexts like the `-CZ` count footer.
-    /// - When `gradient.date` is `false`, every age tier (`now`
-    ///   through `old`) is overwritten with `date.flat` on every
-    ///   timestamp column.  Theme authors set `date-flat` explicitly
-    ///   (or rely on the bulk `date = "..."` setter, which now also
-    ///   touches `flat`).
+    /// - For each timestamp column whose flag is `false`, every age
+    ///   tier (`now` through `old`) is overwritten with that column's
+    ///   `flat`.  Theme authors set `date-flat` explicitly (or rely
+    ///   on the bulk `date = "..."` setter, which also touches
+    ///   `flat`).
     ///
     /// Runs once at theme construction so the renderers themselves
     /// stay oblivious to the on/off state.
@@ -219,17 +219,24 @@ impl UiStyles {
             self.size.unit_giga   = self.size.minor;
             self.size.unit_huge   = self.size.minor;
         }
-        if !gradient.date {
-            self.date_for_each(|d| {
-                d.now   = d.flat;
-                d.today = d.flat;
-                d.week  = d.flat;
-                d.month = d.flat;
-                d.year  = d.flat;
-                d.old   = d.flat;
-            });
-        }
+        if !gradient.modified { flatten_date_age(&mut self.date_modified); }
+        if !gradient.accessed { flatten_date_age(&mut self.date_accessed); }
+        if !gradient.changed  { flatten_date_age(&mut self.date_changed);  }
+        if !gradient.created  { flatten_date_age(&mut self.date_created);  }
     }
+}
+
+/// Collapse a single [`DateAge`] to its `flat` colour: every age
+/// tier (`now` through `old`) becomes `flat`.  Used by
+/// [`UiStyles::apply_gradient_flags`] when a per-timestamp gradient
+/// flag is off.
+fn flatten_date_age(d: &mut DateAge) {
+    d.now   = d.flat;
+    d.today = d.flat;
+    d.week  = d.flat;
+    d.month = d.flat;
+    d.year  = d.flat;
+    d.old   = d.flat;
 }
 
 

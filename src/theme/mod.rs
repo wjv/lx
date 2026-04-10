@@ -31,9 +31,14 @@ pub struct Options {
 
 /// Per-column gradient on/off state.
 ///
-/// Each gradient-capable column (currently `size` and `date`) is
-/// either rendered with its full per-tier gradient (`true`) or
-/// collapsed to a single flat colour from the theme (`false`).
+/// Each gradient-capable column is either rendered with its full
+/// per-tier gradient (`true`) or collapsed to a single flat colour
+/// from the theme (`false`).  The four timestamp columns are
+/// addressed individually, so users can write
+/// `--gradient=modified` (gradient on the modified column only) or
+/// `--gradient=size,modified` (size + modified, others flat).  The
+/// bulk `--gradient=date` (and the hidden `timestamp` alias) flips
+/// all four timestamp flags at once.
 ///
 /// The collapse happens once at theme construction in `to_theme()`
 /// via [`UiStyles::apply_gradient_flags`]; the renderers themselves
@@ -41,19 +46,34 @@ pub struct Options {
 /// theme tells them.
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub struct GradientFlags {
-    pub size: bool,
-    pub date: bool,
+    pub size:     bool,
+    pub modified: bool,
+    pub accessed: bool,
+    pub changed:  bool,
+    pub created:  bool,
 }
 
 impl GradientFlags {
-    /// Both gradients on.  This is the default — themes that ship
+    /// All gradients on.  This is the default — themes that ship
     /// gradient values are designed to show them.
-    pub const ALL: Self = Self { size: true, date: true };
+    pub const ALL: Self = Self {
+        size:     true,
+        modified: true,
+        accessed: true,
+        changed:  true,
+        created:  true,
+    };
 
-    /// Both gradients off.  Each column collapses to its theme's
-    /// flat colour (`size.major`/`size.minor` for size, `date.flat`
-    /// for date).
-    pub const NONE: Self = Self { size: false, date: false };
+    /// All gradients off.  Each column collapses to its theme's
+    /// flat colour (`size.major`/`size.minor` for size, the
+    /// per-column `date_*.flat` for each timestamp).
+    pub const NONE: Self = Self {
+        size:     false,
+        modified: false,
+        accessed: false,
+        changed:  false,
+        created:  false,
+    };
 }
 
 impl Default for GradientFlags {
