@@ -1,6 +1,17 @@
-use nu_ansi_term::Style;
+use nu_ansi_term::{Color, Style};
 
 use crate::theme::lsc::Pair;
+
+
+/// Returns `true` iff `style`'s foreground is a 24-bit
+/// `Color::Rgb(...)` — i.e. exactly the case where Oklab
+/// interpolation toward another RGB anchor would produce a
+/// faithful result.  Palette colours (`Color::Fixed(n)`,
+/// `Color::Cyan`, …) and unset foregrounds return `false`.
+#[allow(dead_code)] // first caller lands in a later commit
+fn is_rgb_foreground(style: Style) -> bool {
+    matches!(style.foreground, Some(Color::Rgb(_, _, _)))
+}
 
 
 #[derive(Debug, Default, PartialEq)]
@@ -89,6 +100,28 @@ pub struct Size {
     pub unit_huge: Style,
 }
 
+impl Size {
+    /// True iff every `number_*` tier's foreground is a 24-bit
+    /// `Color::Rgb(...)`.  This is the precondition for building
+    /// a smooth-interpolated LUT for the size column: any palette
+    /// or unset anchor disqualifies the whole column, because
+    /// interpolating would produce RGB intermediate stops that
+    /// would get quantised back to the palette by `nu_ansi_term`
+    /// and land unpredictably on tier boundaries.
+    ///
+    /// The `unit_*` slots are intentionally excluded — the unit
+    /// suffix is a small grace note next to the number and stays
+    /// discrete regardless of whether smooth mode is on.
+    #[allow(dead_code)] // first caller lands in a later commit
+    pub(crate) fn is_smoothable(&self) -> bool {
+        is_rgb_foreground(self.number_byte)
+            && is_rgb_foreground(self.number_kilo)
+            && is_rgb_foreground(self.number_mega)
+            && is_rgb_foreground(self.number_giga)
+            && is_rgb_foreground(self.number_huge)
+    }
+}
+
 /// Age-based timestamp styles.  Six tiers from "just now" to "old",
 /// plus a single `flat` colour used when the date column's gradient
 /// is disabled.
@@ -119,6 +152,24 @@ impl DateAge {
         self.year = style;
         self.old = style;
         self.flat = style;
+    }
+
+    /// True iff every tier's foreground is a 24-bit
+    /// `Color::Rgb(...)`.  Precondition for building a smooth-
+    /// interpolated LUT for this timestamp column; see
+    /// `Size::is_smoothable` for the rationale.
+    ///
+    /// The `flat` slot is intentionally excluded — it's the
+    /// fallback for when the column's gradient is off, and its
+    /// colour has no effect on smoothing.
+    #[allow(dead_code)] // first caller lands in a later commit
+    pub(crate) fn is_smoothable(&self) -> bool {
+        is_rgb_foreground(self.now)
+            && is_rgb_foreground(self.today)
+            && is_rgb_foreground(self.week)
+            && is_rgb_foreground(self.month)
+            && is_rgb_foreground(self.year)
+            && is_rgb_foreground(self.old)
     }
 
     /// Pick the style for a given age in seconds.
@@ -522,5 +573,147 @@ impl UiStyles {
         }
 
         true
+    }
+}
+
+
+#[cfg(test)]
+mod is_smoothable_test {
+    use super::*;
+
+    fn rgb(r: u8, g: u8, b: u8) -> Style {
+        Style::from(Color::Rgb(r, g, b))
+    }
+
+    fn fixed(n: u8) -> Style {
+        Style::from(Color::Fixed(n))
+    }
+
+    #[test]
+    fn size_all_rgb_is_smoothable() {
+        let size = Size {
+            number_byte: rgb(0x10, 0x10, 0x10),
+            number_kilo: rgb(0x20, 0x20, 0x20),
+            number_mega: rgb(0x40, 0x40, 0x40),
+            number_giga: rgb(0x80, 0x80, 0x80),
+            number_huge: rgb(0xC0, 0xC0, 0xC0),
+            ..Size::default()
+        };
+        assert!(size.is_smoothable());
+    }
+
+    #[test]
+    fn size_default_is_not_smoothable() {
+        // Default styles have no foreground set.
+        assert!(!Size::default().is_smoothable());
+    }
+
+    #[test]
+    fn size_one_palette_anchor_disqualifies_the_column() {
+        let size = Size {
+            number_byte: rgb(0x10, 0x10, 0x10),
+            number_kilo: rgb(0x20, 0x20, 0x20),
+            number_mega: fixed(196), // palette colour
+            number_giga: rgb(0x80, 0x80, 0x80),
+            number_huge: rgb(0xC0, 0xC0, 0xC0),
+            ..Size::default()
+        };
+        assert!(!size.is_smoothable());
+    }
+
+    #[test]
+    fn size_one_unset_anchor_disqualifies_the_column() {
+        let size = Size {
+            number_byte: rgb(0x10, 0x10, 0x10),
+            number_kilo: rgb(0x20, 0x20, 0x20),
+            number_mega: Style::default(), // foreground is None
+            number_giga: rgb(0x80, 0x80, 0x80),
+            number_huge: rgb(0xC0, 0xC0, 0xC0),
+            ..Size::default()
+        };
+        assert!(!size.is_smoothable());
+    }
+
+    #[test]
+    fn size_ignores_unit_slots() {
+        // unit_* fields stay discrete by design; having palette
+        // colours there must not disable smoothing.
+        let size = Size {
+            number_byte: rgb(0x10, 0x10, 0x10),
+            number_kilo: rgb(0x20, 0x20, 0x20),
+            number_mega: rgb(0x40, 0x40, 0x40),
+            number_giga: rgb(0x80, 0x80, 0x80),
+            number_huge: rgb(0xC0, 0xC0, 0xC0),
+            unit_byte: fixed(244),
+            unit_kilo: fixed(244),
+            unit_mega: fixed(244),
+            unit_giga: fixed(244),
+            unit_huge: fixed(244),
+            ..Size::default()
+        };
+        assert!(size.is_smoothable());
+    }
+
+    #[test]
+    fn date_all_rgb_is_smoothable() {
+        let date = DateAge {
+            now:   rgb(0x3D, 0xD7, 0xD7),
+            today: rgb(0x3D, 0xD7, 0xD7),
+            week:  rgb(0x3A, 0xAB, 0xAE),
+            month: rgb(0x3B, 0x8E, 0xD8),
+            year:  rgb(0x88, 0x88, 0x88),
+            old:   rgb(0x5C, 0x5C, 0x5C),
+            flat:  Style::default(),
+        };
+        assert!(date.is_smoothable());
+    }
+
+    #[test]
+    fn date_default_is_not_smoothable() {
+        assert!(!DateAge::default().is_smoothable());
+    }
+
+    #[test]
+    fn date_one_palette_tier_disqualifies_the_column() {
+        let date = DateAge {
+            now:   rgb(0x3D, 0xD7, 0xD7),
+            today: rgb(0x3D, 0xD7, 0xD7),
+            week:  fixed(30),   // palette
+            month: rgb(0x3B, 0x8E, 0xD8),
+            year:  rgb(0x88, 0x88, 0x88),
+            old:   rgb(0x5C, 0x5C, 0x5C),
+            flat:  Style::default(),
+        };
+        assert!(!date.is_smoothable());
+    }
+
+    #[test]
+    fn date_one_unset_tier_disqualifies_the_column() {
+        let date = DateAge {
+            now:   rgb(0x3D, 0xD7, 0xD7),
+            today: Style::default(),
+            week:  rgb(0x3A, 0xAB, 0xAE),
+            month: rgb(0x3B, 0x8E, 0xD8),
+            year:  rgb(0x88, 0x88, 0x88),
+            old:   rgb(0x5C, 0x5C, 0x5C),
+            flat:  Style::default(),
+        };
+        assert!(!date.is_smoothable());
+    }
+
+    #[test]
+    fn date_ignores_flat_slot() {
+        // `flat` is the no-gradient fallback; its value must not
+        // affect whether the tier chain is smoothable.
+        let date = DateAge {
+            now:   rgb(0x3D, 0xD7, 0xD7),
+            today: rgb(0x3D, 0xD7, 0xD7),
+            week:  rgb(0x3A, 0xAB, 0xAE),
+            month: rgb(0x3B, 0x8E, 0xD8),
+            year:  rgb(0x88, 0x88, 0x88),
+            old:   rgb(0x5C, 0x5C, 0x5C),
+            flat:  fixed(244), // palette, but doesn't matter
+        };
+        assert!(date.is_smoothable());
     }
 }
