@@ -155,9 +155,98 @@ pub fn build_smooth_lut(anchors: &[(f32, Style)]) -> SmoothLut {
     lut
 }
 
+/// Map a file size in bytes onto the smooth-gradient scale.
+///
+/// Returns a float in `[0.0, 1.0]` log-scaled such that each
+/// builtin size tier lands exactly on its LUT anchor position:
+///
+/// | bytes                | position |
+/// |----------------------|----------|
+/// | 0                    | 0.0 (clamped) |
+/// | 1 (`byte`)           | 0.0      |
+/// | 1 KiB (`kilo`)       | 0.25     |
+/// | 1 MiB (`mega`)       | 0.5      |
+/// | 1 GiB (`giga`)       | 0.75     |
+/// | 1 TiB (`huge`)       | 1.0      |
+/// | > 1 TiB              | 1.0 (clamped) |
+///
+/// The anchors are powers of 1024, so the mapping is a single
+/// `log2` divided by 40 (four decades of `log2(1024)` = 10 each).
+/// No piecewise logic needed.
+#[allow(dead_code)] // first caller lands in commit 5
+pub fn size_to_position(bytes: u64) -> f32 {
+    const HUGE_ANCHOR: u64 = 1_u64 << 40; // 1 TiB
+    const LOG2_HUGE: f32 = 40.0;
+
+    if bytes == 0 {
+        return 0.0;
+    }
+    if bytes > HUGE_ANCHOR {
+        return 1.0;
+    }
+    ((bytes as f32).log2() / LOG2_HUGE).clamp(0.0, 1.0)
+}
+
+/// Map a file age in seconds onto the smooth-gradient scale.
+///
+/// Returns a float in `[0.0, 1.0]` log-scaled such that each
+/// builtin age tier lands exactly on its LUT anchor position:
+///
+/// | age (seconds)    | position | anchor              |
+/// |------------------|----------|---------------------|
+/// | 0                | 0.0 (clamped) |                |
+/// | 1                | 0.0      | `now`               |
+/// | 3600 (1 hour)    | 0.2      | `today`             |
+/// | 86400 (1 day)    | 0.4      | `week`              |
+/// | 604800 (1 week)  | 0.6      | `month`             |
+/// | 2592000 (30 d)   | 0.8      | `year`              |
+/// | 31536000 (1 yr)  | 1.0      | `old`               |
+/// | > 1 year         | 1.0 (clamped) |                |
+///
+/// The anchors aren't evenly log-spaced (1 sec → 1 hour is
+/// ~11.8 log₂ units; 1 hour → 1 day is ~4.6), so the mapping is
+/// piecewise linear in `log2(age)` between adjacent anchors.
+/// Each anchor pair gets a fifth of the position range (0.2).
+///
+/// Anchor positions match the "upper boundary of each tier" rule:
+/// a file exactly 1 hour old lands on the `today` anchor (the
+/// upper bound of the `now` tier range), and so on.
+#[allow(dead_code)] // first caller lands in commit 5
+pub fn age_to_position(age_secs: u64) -> f32 {
+    const ANCHORS: [u64; 6] = [
+        1,         // `now`   — scale origin (anything ≤ 1 sec clamps here)
+        3_600,     // `today` — 1 hour
+        86_400,    // `week`  — 1 day
+        604_800,   // `month` — 1 week
+        2_592_000, // `year`  — 30 days
+        31_536_000, // `old`  — 1 year
+    ];
+    const POSITIONS: [f32; 6] = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
+
+    if age_secs <= ANCHORS[0] {
+        return 0.0;
+    }
+    if age_secs >= ANCHORS[5] {
+        return 1.0;
+    }
+
+    // Find the bracketing anchor pair and interpolate linearly in
+    // log2(age) space.  Anchor count is tiny (5 segments), so a
+    // linear search is fine.
+    for i in 0..5 {
+        if age_secs <= ANCHORS[i + 1] {
+            let lo_log = (ANCHORS[i] as f32).log2();
+            let hi_log = (ANCHORS[i + 1] as f32).log2();
+            let t = ((age_secs as f32).log2() - lo_log) / (hi_log - lo_log);
+            return POSITIONS[i] + t * (POSITIONS[i + 1] - POSITIONS[i]);
+        }
+    }
+    1.0
+}
+
 /// Anchor layout for a `Size` column: five tiers evenly spaced
 /// along [0.0, 1.0] by tier index.  The log-scale mapping from
-/// bytes to position lives in the renderer (commit 4); the LUT
+/// bytes to position lives in [`size_to_position`]; the LUT
 /// itself is perceptually uniform in colour, not in bytes.
 pub(crate) fn size_anchors(size: &Size) -> [(f32, Style); 5] {
     [
@@ -370,6 +459,121 @@ mod test {
 
         assert_eq!(fg(anchors[0].1), (0x10, 0x10, 0x10));
         assert_eq!(fg(anchors[5].1), (0x60, 0x60, 0x60));
+    }
+
+    mod position_mapping {
+        use super::*;
+
+        /// Absolute tolerance for position comparisons — large
+        /// enough to swallow f32 log rounding, small enough that a
+        /// tier-boundary error would still fail the test (each
+        /// segment is 0.2 wide).
+        const EPS: f32 = 0.001;
+
+        fn close(actual: f32, expected: f32) -> bool {
+            (actual - expected).abs() <= EPS
+        }
+
+        #[test]
+        fn size_boundary_values() {
+            assert!(close(size_to_position(0), 0.0));
+            assert!(close(size_to_position(1), 0.0));
+            assert!(close(size_to_position(1024), 0.25));
+            assert!(close(size_to_position(1024 * 1024), 0.5));
+            assert!(close(size_to_position(1024 * 1024 * 1024), 0.75));
+            assert!(close(size_to_position(1_u64 << 40), 1.0));
+        }
+
+        #[test]
+        fn size_clamps_beyond_huge_anchor() {
+            assert_eq!(size_to_position(1_u64 << 41), 1.0);
+            assert_eq!(size_to_position(1_u64 << 50), 1.0);
+            assert_eq!(size_to_position(u64::MAX), 1.0);
+        }
+
+        #[test]
+        fn size_is_monotonic() {
+            let samples: Vec<f32> = (0..=40)
+                .map(|i| size_to_position(1_u64 << i))
+                .collect();
+            for window in samples.windows(2) {
+                assert!(
+                    window[0] <= window[1],
+                    "size_to_position not monotonic: {samples:?}",
+                );
+            }
+        }
+
+        #[test]
+        fn size_log_midpoints_land_at_segment_centres() {
+            // Halfway between byte (1) and kilo (1024) on a log
+            // scale is 32 (= 2^5 = halfway in log₂ between 2^0 and
+            // 2^10).  Its position should be ~0.125 (half of 0.25).
+            assert!(close(size_to_position(32), 0.125));
+            // And between kilo and mega: 32 KiB = 2^15 → position
+            // halfway between 0.25 and 0.5 = 0.375.
+            assert!(close(size_to_position(32 * 1024), 0.375));
+        }
+
+        #[test]
+        fn age_boundary_values() {
+            assert!(close(age_to_position(0), 0.0));
+            assert!(close(age_to_position(1), 0.0));
+            assert!(close(age_to_position(3_600), 0.2));
+            assert!(close(age_to_position(86_400), 0.4));
+            assert!(close(age_to_position(604_800), 0.6));
+            assert!(close(age_to_position(2_592_000), 0.8));
+            assert!(close(age_to_position(31_536_000), 1.0));
+        }
+
+        #[test]
+        fn age_clamps_beyond_old_anchor() {
+            assert_eq!(age_to_position(31_536_001), 1.0);
+            assert_eq!(age_to_position(10_u64 * 31_536_000), 1.0);
+            assert_eq!(age_to_position(u64::MAX), 1.0);
+        }
+
+        #[test]
+        fn age_is_monotonic() {
+            // Log-ish sweep: powers of 2 from 1 sec to ~1 year.
+            let samples: Vec<f32> = (0..=25)
+                .map(|i| age_to_position(1_u64 << i))
+                .collect();
+            for window in samples.windows(2) {
+                assert!(
+                    window[0] <= window[1],
+                    "age_to_position not monotonic: {samples:?}",
+                );
+            }
+        }
+
+        /// Geometric midpoint of the first segment: 60 seconds is
+        /// halfway between 1 sec and 3600 sec on a log₂ scale
+        /// (2^0 → 2^~11.81, midpoint at 2^~5.9 ≈ 59.6).  Its
+        /// position should be very close to 0.1, the midpoint of
+        /// the [0.0, 0.2] segment.
+        #[test]
+        fn age_log_midpoint_of_first_segment() {
+            assert!(
+                close(age_to_position(60), 0.1),
+                "age_to_position(60) = {}",
+                age_to_position(60),
+            );
+        }
+
+        /// 1 week is at position 0.6 (the `month` anchor), 1 day
+        /// at 0.4 (the `week` anchor).  The geometric midpoint of
+        /// that segment is √(86400 × 604800) ≈ 228552 s ≈ 2.645
+        /// days, which should sit exactly at position 0.5.
+        #[test]
+        fn age_log_midpoint_of_week_month_segment() {
+            let geometric_midpoint = ((86_400_f64 * 604_800_f64).sqrt()) as u64;
+            let pos = age_to_position(geometric_midpoint);
+            assert!(
+                close(pos, 0.5),
+                "log midpoint ({geometric_midpoint}s) → position {pos}, expected ~0.5",
+            );
+        }
     }
 
     /// End-to-end integration: run the smooth-gradient build
