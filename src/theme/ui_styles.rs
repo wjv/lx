@@ -15,7 +15,16 @@ pub struct UiStyles {
     pub vcs:        Git,
 
     pub punctuation:  Style,
-    pub date:         DateAge,
+    /// Per-timestamp-column age styles.  All four columns share the
+    /// same shape but can be themed independently via the
+    /// `date-modified-*` / `date-accessed-*` / `date-changed-*` /
+    /// `date-created-*` config keys.  The bulk `date = ...` /
+    /// `date-now = ...` / etc. setters fan out to all four via
+    /// [`UiStyles::date_for_each`].
+    pub date_modified: DateAge,
+    pub date_accessed: DateAge,
+    pub date_changed:  DateAge,
+    pub date_created:  DateAge,
     pub inode:        Style,
     pub blocks:       Style,
     pub header:       Style,
@@ -165,6 +174,21 @@ impl UiStyles {
         Self::default()
     }
 
+    /// Apply a closure to every per-timestamp-column [`DateAge`]
+    /// instance.  Used by the bulk `date = ...` / `date-now = ...` /
+    /// etc. setters and by the `da` / `dn` / ... `LX_COLORS` codes,
+    /// so that theme authors who write a single `date` block see it
+    /// applied to every timestamp column.
+    ///
+    /// Per-column overrides (e.g. `date-modified-now = ...`) write
+    /// directly to the named field and do not go through this helper.
+    pub(crate) fn date_for_each<F: FnMut(&mut DateAge)>(&mut self, mut f: F) {
+        f(&mut self.date_modified);
+        f(&mut self.date_accessed);
+        f(&mut self.date_changed);
+        f(&mut self.date_created);
+    }
+
     /// Collapse the per-tier values of any column whose gradient is
     /// disabled into a single flat colour from the theme.
     ///
@@ -175,9 +199,10 @@ impl UiStyles {
     ///   `df` / `ds`) and serve as the column's "headline" colour
     ///   in non-tiered contexts like the `-CZ` count footer.
     /// - When `gradient.date` is `false`, every age tier (`now`
-    ///   through `old`) is overwritten with `date.flat`.  Theme
-    ///   authors set `date-flat` explicitly (or rely on the bulk
-    ///   `date = "..."` setter, which now also touches `flat`).
+    ///   through `old`) is overwritten with `date.flat` on every
+    ///   timestamp column.  Theme authors set `date-flat` explicitly
+    ///   (or rely on the bulk `date = "..."` setter, which now also
+    ///   touches `flat`).
     ///
     /// Runs once at theme construction so the renderers themselves
     /// stay oblivious to the on/off state.
@@ -195,12 +220,14 @@ impl UiStyles {
             self.size.unit_huge   = self.size.minor;
         }
         if !gradient.date {
-            self.date.now   = self.date.flat;
-            self.date.today = self.date.flat;
-            self.date.week  = self.date.flat;
-            self.date.month = self.date.flat;
-            self.date.year  = self.date.flat;
-            self.date.old   = self.date.flat;
+            self.date_for_each(|d| {
+                d.now   = d.flat;
+                d.today = d.flat;
+                d.week  = d.flat;
+                d.month = d.flat;
+                d.year  = d.flat;
+                d.old   = d.flat;
+            });
         }
     }
 }
@@ -289,14 +316,17 @@ impl UiStyles {
             "gt" => self.vcs.typechange           = pair.to_style(),
 
             "xx" => self.punctuation              = pair.to_style(),
-            "da" => self.date.set_all(pair.to_style()),
-            "dn" => self.date.now                = pair.to_style(),
-            "dt" => self.date.today              = pair.to_style(),
-            "dw" => self.date.week               = pair.to_style(),
-            "dm" => self.date.month              = pair.to_style(),
-            "dy" => self.date.year               = pair.to_style(),
-            "do" => self.date.old                = pair.to_style(),
-            "dl" => self.date.flat               = pair.to_style(),
+            // The two-letter `LX_COLORS` codes for date are bulk
+            // setters: each fans out to all four timestamp columns.
+            // Per-column overrides are config-file only by design.
+            "da" => { let s = pair.to_style(); self.date_for_each(|d| d.set_all(s)); }
+            "dn" => { let s = pair.to_style(); self.date_for_each(|d| d.now   = s); }
+            "dt" => { let s = pair.to_style(); self.date_for_each(|d| d.today = s); }
+            "dw" => { let s = pair.to_style(); self.date_for_each(|d| d.week  = s); }
+            "dm" => { let s = pair.to_style(); self.date_for_each(|d| d.month = s); }
+            "dy" => { let s = pair.to_style(); self.date_for_each(|d| d.year  = s); }
+            "do" => { let s = pair.to_style(); self.date_for_each(|d| d.old   = s); }
+            "dl" => { let s = pair.to_style(); self.date_for_each(|d| d.flat  = s); }
             "in" => self.inode                    = pair.to_style(),
             "bl" => self.blocks                   = pair.to_style(),
             "hd" => self.header                   = pair.to_style(),
@@ -418,14 +448,17 @@ impl UiStyles {
 
             // UI elements
             "punctuation"      => self.punctuation      = style,
-            "date"             => self.date.set_all(style),
-            "date-now"         => self.date.now           = style,
-            "date-today"       => self.date.today         = style,
-            "date-week"        => self.date.week          = style,
-            "date-month"       => self.date.month         = style,
-            "date-year"        => self.date.year          = style,
-            "date-old"         => self.date.old           = style,
-            "date-flat"        => self.date.flat          = style,
+            // Bulk date setters fan out to all four timestamp columns.
+            // Per-column variants (`date-modified-now` etc.) write
+            // directly to the named field — see commit 4.
+            "date"             => self.date_for_each(|d| d.set_all(style)),
+            "date-now"         => self.date_for_each(|d| d.now   = style),
+            "date-today"       => self.date_for_each(|d| d.today = style),
+            "date-week"        => self.date_for_each(|d| d.week  = style),
+            "date-month"       => self.date_for_each(|d| d.month = style),
+            "date-year"        => self.date_for_each(|d| d.year  = style),
+            "date-old"         => self.date_for_each(|d| d.old   = style),
+            "date-flat"        => self.date_for_each(|d| d.flat  = style),
             "inode"            => self.inode             = style,
             "blocks"           => self.blocks            = style,
             "header"           => self.header            = style,

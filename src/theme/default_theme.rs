@@ -6,6 +6,19 @@ use crate::theme::ui_styles::*;
 
 impl UiStyles {
     pub fn default_theme() -> Self {
+        // ANSI date "gradient" collapses to a single colour —
+        // matches the historical exa behaviour.  The age-based
+        // gradient is reserved for lx-256 and lx-24bit.
+        // `set_all()` covers `flat` too, so the no-gradient
+        // path picks up the same Blue.  All four timestamp columns
+        // start identical and can be overridden individually via
+        // `date-modified-*` etc. theme keys.
+        let date = {
+            let mut d = DateAge::default();
+            d.set_all(Blue.normal());
+            d
+        };
+
         Self {
             colourful: true,
 
@@ -94,16 +107,10 @@ impl UiStyles {
             // the terminal foreground.  lx-256 and lx-24bit will use
             // Fixed/RGB greys for visual subordination.
             punctuation:  Style::default(),
-            // ANSI date "gradient" collapses to a single colour —
-            // matches the historical exa behaviour.  The age-based
-            // gradient is reserved for lx-256 and lx-24bit.
-            // `set_all()` covers `flat` too, so the no-gradient
-            // path picks up the same Blue.
-            date: {
-                let mut d = DateAge::default();
-                d.set_all(Blue.normal());
-                d
-            },
+            date_modified: date,
+            date_accessed: date,
+            date_changed:  date,
+            date_created:  date,
             inode:        Purple.normal(),
             blocks:       Cyan.normal(),
             octal:        Purple.normal(),
@@ -125,6 +132,22 @@ impl UiStyles {
     /// smoother gradients and tasteful chrome.  Designed to look
     /// good on both light and dark backgrounds.
     pub fn lx_256_theme() -> Self {
+        // Smooth date gradient: cyan → blue → grey.
+        // Mid-tone blues: visible on both light and dark.
+        // `flat` matches the `week` tier — a mid-teal that sits
+        // comfortably alongside the other column colours without
+        // leaning hot or cold.  All four timestamp columns start
+        // identical; per-column overrides via `date-modified-*` etc.
+        let date = DateAge {
+            now:   Fixed(38).bold(),    // turquoise
+            today: Fixed(38).normal(),  // turquoise
+            week:  Fixed(32).normal(),  // deeper teal
+            month: Fixed(27).normal(),  // royal blue
+            year:  Fixed(244).normal(), // medium grey
+            old:   Fixed(240).normal(), // dark grey
+            flat:  Fixed(32).normal(),  // = week
+        };
+
         Self {
             colourful: true,
 
@@ -208,20 +231,10 @@ impl UiStyles {
             },
 
             punctuation:  Fixed(244).normal(),  // medium grey
-            // Smooth date gradient: cyan → blue → grey.
-            // Mid-tone blues: visible on both light and dark.
-            // `flat` matches the `week` tier — a mid-teal that
-            // sits comfortably alongside the other column colours
-            // without leaning hot or cold.
-            date: DateAge {
-                now:   Fixed(38).bold(),    // turquoise
-                today: Fixed(38).normal(),  // turquoise
-                week:  Fixed(32).normal(),  // deeper teal
-                month: Fixed(27).normal(),  // royal blue
-                year:  Fixed(244).normal(), // medium grey
-                old:   Fixed(240).normal(), // dark grey
-                flat:  Fixed(32).normal(),  // = week
-            },
+            date_modified: date,
+            date_accessed: date,
+            date_changed:  date,
+            date_created:  date,
             inode:        Fixed(141).normal(),
             blocks:       Fixed(38).normal(),
             octal:        Fixed(141).normal(),
@@ -260,10 +273,24 @@ impl UiStyles {
         let dark_grey  = Rgb(0x5c, 0x5c, 0x5c);  // very old
 
         // Date gradient: hot cyan → blue → grey.
+        // `flat` matches the `week` tier (teal) — a mid-tone that
+        // reads cleanly on its own when the gradient is disabled,
+        // without favouring "recent" or "ancient".  All four
+        // timestamp columns start identical; per-column overrides
+        // via `date-modified-*` etc.
         let date_now   = Rgb(0x3d, 0xd7, 0xd7);  // bright cyan
         let date_today = Rgb(0x3d, 0xd7, 0xd7);  // cyan
         let date_week  = teal;
         let date_month = blue;
+        let date = DateAge {
+            now:   date_now.bold(),
+            today: date_today.normal(),
+            week:  date_week.normal(),
+            month: date_month.normal(),
+            year:  mid_grey.normal(),
+            old:   dark_grey.normal(),
+            flat:  date_week.normal(),  // = teal
+        };
 
         // Size gradient: chartreuse → olive → gold → orange → red-orange.
         let size_byte = Rgb(0x7e, 0xb3, 0x3b);
@@ -353,18 +380,10 @@ impl UiStyles {
             },
 
             punctuation:  mid_grey.normal(),
-            // `flat` matches the `week` tier (teal) — a mid-tone
-            // that reads cleanly on its own when the gradient is
-            // disabled, without favouring "recent" or "ancient".
-            date: DateAge {
-                now:   date_now.bold(),
-                today: date_today.normal(),
-                week:  date_week.normal(),
-                month: date_month.normal(),
-                year:  mid_grey.normal(),
-                old:   dark_grey.normal(),
-                flat:  date_week.normal(),  // = teal
-            },
+            date_modified: date,
+            date_accessed: date,
+            date_changed:  date,
+            date_created:  date,
             inode:        mauve.normal(),
             blocks:       teal.normal(),
             octal:        mauve.normal(),
