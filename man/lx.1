@@ -1,0 +1,1214 @@
+.Dd April 10, 2026
+.Dt LX 1
+.Os
+.Sh NAME
+.Nm lx
+.Nd a modern file lister
+.Sh SYNOPSIS
+.Nm
+.Op Ar options
+.Op Ar files ...
+.Sh DESCRIPTION
+.Nm
+is a modern replacement for
+.Xr ls 1 .
+It uses colours for information by default, helping you distinguish
+between many types of files.
+It has extra features not present in the original
+.Xr ls 1 ,
+such as viewing VCS status for a directory, recursing into directories
+with a tree view, and compounding detail levels with
+.Fl l ,
+.Fl ll ,
+and
+.Fl lll .
+.Sh OPTIONS
+.Ss Display options
+.Bl -tag -width Ds
+.It Fl 1 , Fl -oneline
+Display one entry per line.
+.It Fl l , Fl -long
+Display extended file metadata as a table.
+Repeat for more detail:
+.Fl l
+(basic),
+.Fl ll
+(+ group, VCS),
+.Fl lll
+(+ header, all timestamps, links, blocks).
+.It Fl G , Fl -grid
+Display entries as a grid (default).
+.It Fl x , Fl -across
+Sort the grid across, rather than downwards.
+.It Fl R , Fl -recurse
+Recurse into directories.
+.It Fl T , Fl -tree
+Recurse into directories as a tree.
+.It Fl L , Fl -level Ns = Ns Ar DEPTH
+Limit the depth of recursion.
+.It Fl -classify Ns Op = Ns Ar WHEN
+Display file kind indicators next to file names.
+.Ar WHEN
+is
+.Cm always ,
+.Cm auto ,
+or
+.Cm never .
+.It Fl C , Fl -count
+Print a summary to stderr showing the number of items displayed.
+When combined with
+.Fl Z Ns / Ns Fl -total-size ,
+also shows the total size of displayed items.
+In tree views, expanded directories are not counted towards the total
+(their children account for themselves); pruned or depth-limited
+directories use their recursive total.
+The size respects
+.Fl b
+(bytes) and
+.Fl B
+(binary) formatting.
+Works with all view modes including tree and recursive listings.
+.It Fl -colour Ns = Ns Ar WHEN
+When to use terminal colours.
+.Ar WHEN
+is
+.Cm always ,
+.Cm auto ,
+or
+.Cm never .
+Alias:
+.Fl -color .
+.It Fl -gradient Ns Op = Ns Ar COLUMNS
+Per-column gradient on/off.
+.Ar COLUMNS
+is a comma-separated list of column names that should render with
+their gradient.
+The recognised columns are
+.Cm size
+plus the four timestamp columns
+.Cm modified ,
+.Cm accessed ,
+.Cm changed ,
+and
+.Cm created ;
+the bulk token
+.Cm date
+flips all four timestamp columns at once.
+Special tokens
+.Cm none
+(no gradients) and
+.Cm all
+(every gradient-capable column, the default) only make sense alone.
+Bare
+.Fl -gradient
+is equivalent to
+.Fl -gradient Ns = Ns Cm all .
+.Pp
+Examples:
+.Bd -literal -offset indent
+lx -lt --gradient=modified         # gradient on modified, others flat
+lx -lt --gradient=size,modified    # size and modified gradient
+lx -lt --gradient=accessed,created # mix and match
+lx -lt --gradient=date             # bulk: every timestamp column
+.Ed
+.Pp
+The flat colour each column collapses to when its gradient is
+disabled comes from the active theme:
+.Sy size-major
+/
+.Sy size-minor
+for the size column,
+.Sy date-flat
+for each timestamp column.
+Each timestamp column also has its own per-column flat
+.Pq Sy date-modified-flat , No etc\&. ,
+see
+.Xr lxconfig.toml 5
+for the full set of theme keys.
+.It Fl -no-gradient
+Hidden alias for
+.Fl -gradient Ns = Ns Cm none .
+Turns off the size gradient and every timestamp column's gradient.
+.It Fl -smooth
+Smoothly interpolate gradients between the theme's per-tier anchor
+colours.
+Instead of the six discrete date tiers (or five size tiers) snapping
+at each boundary, each file gets its own colour proportional to its
+position on a log scale between adjacent anchors.
+The interpolation happens in perceptually uniform Oklab space so
+transitions don't pass through muddy midpoints.
+.Pp
+Only takes effect on 24-bit themes whose anchor colours are all
+.Sy Color::Rgb
+\(em the builtin
+.Sy lx-24bit
+theme, the curated
+.Sy solarized-\&* ,
+.Sy catppuccin-\&* ,
+.Sy gruvbox-\&* ,
+.Sy nord-\&*
+themes, and any user theme that uses hex or
+.Sy rgb\&:
+values throughout.
+On 256-colour or basic ANSI themes
+.Fl -smooth
+is silently a no-op.
+Columns whose gradient is off
+.Pq e.g. Fl -gradient Ns = Ns Cm size , Fl -no-gradient
+are also unaffected.
+.Pp
+Default: off.
+Opt in per-invocation with
+.Fl -smooth ,
+per-process with
+.Ev LX_PERSONALITY ,
+or permanently with
+.Sy smooth = true
+in your personality config.
+.Pp
+The formulas come from Bj\(:orn Ottosson,
+.Dq A perceptual color space for image processing
+(2020),
+.Lk https://bottosson.github.io/posts/oklab/ .
+.It Fl -no-smooth
+Hidden suppressor for
+.Fl -smooth .
+Useful for turning off a personality setting from the command line.
+.Pp
+Timestamps are also coloured by age: recent files appear brighter,
+older files fade towards grey.
+The six tiers
+.Pq Sy date-now No through Sy date-old
+are theme keys, and each timestamp column can override them
+individually
+.Pq Sy date-modified-now , No etc\&. ;
+see
+.Xr lxconfig.toml 5 .
+.It Fl -icons Ns Op = Ns Ar WHEN
+Display icons next to file names.
+.Ar WHEN
+is
+.Cm always ,
+.Cm auto ,
+or
+.Cm never .
+.It Fl -no-icons
+Don't display icons.
+Alias for
+.Fl -icons Ns = Ns Cm never .
+.It Fl w , Fl -width Ns = Ns Ar COLS
+Set the terminal width explicitly, overriding auto-detection and the
+.Ev COLUMNS
+environment variable.
+.It Fl A , Fl -absolute
+Display fully resolved absolute file paths.
+.It Fl -hyperlink Ns Op = Ns Ar WHEN
+Display file names as clickable OSC 8 hyperlinks.
+.Ar WHEN
+is
+.Cm always ,
+.Cm auto ,
+or
+.Cm never .
+.It Fl -quotes Ns Op = Ns Ar WHEN
+Quote file names containing spaces.
+.Ar WHEN
+is
+.Cm always ,
+.Cm auto ,
+or
+.Cm never .
+.It Fl -theme Ns = Ns Ar NAME
+Select a named theme from the config file.
+.El
+.Ss Filtering options
+.Bl -tag -width Ds
+.It Fl a , Fl -all
+Show hidden and dot files.
+Use twice
+.Pq Fl aa
+to also show
+.Pa \&.
+and
+.Pa .. .
+.It Fl d , Fl -list-dirs
+List directories as regular files.
+.It Fl D , Fl -only-dirs
+List only directories, not files.
+.It Fl f , Fl -only-files
+List only regular files, not directories.
+.It Fl I , Fl -ignore Ns = Ns Ar GLOBS
+Glob patterns, pipe-separated, of files to hide completely.
+Alias:
+.Fl -ignore-glob .
+.It Fl P , Fl -prune Ns = Ns Ar GLOBS
+Glob patterns, pipe-separated, of directories to show but not recurse
+into.
+The directory itself is displayed (with metadata and
+.Fl -total-size
+if active), but its children are hidden.
+Only meaningful with
+.Fl T
+or
+.Fl R ;
+silently ignored otherwise.
+Alias:
+.Fl -prune-glob .
+.It Fl -symlinks Ns = Ns Ar MODE
+How to handle symbolic links.
+.Ar MODE
+is
+.Cm show
+(default),
+.Cm hide ,
+or
+.Cm follow .
+.Cm show
+displays symlinks as-is.
+.Cm hide
+removes symlinks from listings.
+.Cm follow
+dereferences symlinks, showing the target's metadata, and recurses
+into symlinked directories in
+.Fl T Ns / Ns Fl R
+mode.
+Broken symlinks are always shown regardless of mode.
+.El
+.Pp
+See also
+.Fl -vcs-ignore
+under
+.Sx VCS INTEGRATION
+for hiding files matched by repository ignore rules.
+.Ss Sorting options
+.Bl -tag -width Ds
+.It Fl r , Fl -reverse
+Reverse the sort order.
+.It Fl s , Fl -sort Ns = Ns Ar FIELD
+Which field to sort by.
+.El
+.Pp
+Valid sort fields, by category:
+.Bl -tag -width "Ownership and mode" -offset indent
+.It Sy Name / extension
+.Cm name ,
+.Cm Name ,
+.Cm extension ,
+.Cm Extension ,
+.Cm version
+.It Sy Size and allocation
+.Cm size ,
+.Cm blocks ,
+.Cm links
+.It Sy Ownership and mode
+.Cm permissions ,
+.Cm flags ,
+.Cm user ,
+.Cm User ,
+.Cm group ,
+.Cm Group ,
+.Cm uid ,
+.Cm gid
+.It Sy Time
+.Cm modified ,
+.Cm changed ,
+.Cm accessed ,
+.Cm created
+.It Sy VCS
+.Cm vcs
+.It Sy Miscellaneous
+.Cm inode ,
+.Cm type ,
+.Cm none
+.El
+.Pp
+As a general rule, any column-add long flag is also accepted as a
+sort field name.
+.Fl -permissions
+the column flag has
+.Cm permissions
+the sort field,
+.Fl -filesize
+has
+.Cm filesize ,
+and so on.
+Short aliases are also accepted where the column flag has them.
+.Pp
+The
+.Cm modified
+sort field has the aliases
+.Cm date ,
+.Cm time ,
+.Cm mod ,
+and
+.Cm newest .
+Its reverse order has the aliases
+.Cm age
+and
+.Cm oldest .
+Other aliases:
+.Bl -bullet -offset indent -compact
+.It
+.Cm ext
+/
+.Cm Ext
+for
+.Cm extension
+/
+.Cm Extension
+.It
+.Cm filesize
+for
+.Cm size
+.It
+.Cm mode ,
+.Cm octal
+for
+.Cm permissions
+.It
+.Cm ch
+for
+.Cm changed
+.It
+.Cm acc
+for
+.Cm accessed
+.It
+.Cm cr
+for
+.Cm created
+.El
+.Pp
+Sort fields starting with a capital letter sort uppercase before
+lowercase: A then B then a then b.
+Fields starting with a lowercase letter mix them: A then a then B
+then b.
+This applies to
+.Cm name Ns / Ns Cm Name ,
+.Cm extension Ns / Ns Cm Extension ,
+.Cm user Ns / Ns Cm User ,
+and
+.Cm group Ns / Ns Cm Group .
+.Pp
+.Sy -s version
+is an alias for
+.Sy -s name
+and exists for users migrating from tools that use a separate flag.
+.Nm Ns 's
+default name sort already handles embedded numbers naturally
+.Pq Sy v1.10 No sorts after Sy v1.2
+via
+.Em natord .
+.Pp
+.Sy -s permissions
+sorts by the numeric octal value of the permission bits, independent
+of whether the display is symbolic or octal.
+.Sy -s flags
+sorts on the raw bit pattern of platform file flags (macOS/BSD
+.Xr chflags 1 ,
+Linux
+.Xr chattr 1 ) .
+.Pp
+.Sy -s user
+and
+.Sy -s group
+sort by resolved owner/group name, falling back to UID/GID for
+unresolvable entries.
+.Sy -s uid
+and
+.Sy -s gid
+sort by the raw numeric ID regardless of whether a name is available.
+.Pp
+.Sy -s vcs
+sorts by VCS status with attention-worthy states (conflicted,
+modified, added, etc.) first and unmodified files last.
+In grid and lines views (where no VCS cache is available) it falls
+back to name order.
+Secondary sort within a status group is by name.
+.Pp
+With
+.Fl Z Ns / Ns Fl -total-size ,
+sorting by
+.Cm size
+uses the recursive directory total instead of the inode size.
+.Bl -tag -width Ds
+.It Fl -group-dirs Ns = Ns Ar WHEN
+Group directories before or after other files.
+.Ar WHEN
+is
+.Cm first ,
+.Cm last ,
+or
+.Cm none .
+Directory grouping partitions the listing into two blocks
+(directories and non-directories); the primary sort field then orders
+entries within each block independently.
+.It Fl F , Fl -dirs-first
+Directories first (short for
+.Fl -group-dirs Ns = Ns Cm first ) .
+Legacy alias:
+.Fl -group-directories-first .
+.It Fl J , Fl -dirs-last
+Directories last (short for
+.Fl -group-dirs Ns = Ns Cm last ) .
+Legacy alias:
+.Fl -group-directories-last .
+.It Fl -no-dirs-first , Fl -no-dirs-last
+Hidden suppressors for
+.Fl F
+/
+.Fl J .
+Either one forces
+.Fl -group-dirs Ns = Ns Cm none ,
+useful for turning off a personality's default grouping from the
+command line.
+.El
+.Ss Long view options
+These options affect the columns displayed in long view
+.Pq Fl l .
+.Bl -tag -width Ds
+.It Fl -size-style Ns = Ns Ar STYLE
+How to display file sizes.
+.Ar STYLE
+is
+.Cm decimal
+(default: k, M, G prefixes),
+.Cm binary
+(KiB, MiB, GiB), or
+.Cm bytes
+(raw count).
+.It Fl B , Fl -binary
+Alias for
+.Fl -size-style Ns = Ns Cm binary .
+.It Fl b , Fl -bytes
+Alias for
+.Fl -size-style Ns = Ns Cm bytes .
+.It Fl K , Fl -decimal
+Alias for
+.Fl -size-style Ns = Ns Cm decimal .
+Useful for overriding a personality that sets
+.Cm binary
+or
+.Cm bytes
+back to the default.
+.It Fl g , Fl -group
+List each file's group name.
+The group is coloured in three tiers: your primary group, a
+supplementary group you belong to, or other.
+.It Fl -uid
+Show the numeric user ID column (long-form only).
+Composes with
+.Fl u Ns / Ns Fl -user :
+.Sy lx -lug --uid --gid
+shows both names and IDs side-by-side.
+.It Fl -gid
+Show the numeric group ID column (long-form only).
+.It Fl h , Fl -header
+Add a header row to each column.
+.It Fl H , Fl -links
+List each file's number of hard links.
+.It Fl i , Fl -inode
+List each file's inode number.
+.It Fl m , Fl -modified
+Add the modified timestamp column to the long listing.
+.It Fl c , Fl -changed
+Add the changed timestamp column to the long listing.
+.It Fl -accessed
+Add the accessed timestamp column to the long listing.
+.It Fl -created
+Add the created timestamp column to the long listing.
+.It Fl t
+Compounding timestamp shortcut.
+.Fl t
+adds
+.Cm modified ,
+.Fl tt
+adds
+.Cm modified
+and
+.Cm changed ,
+.Fl ttt
+adds all four timestamps
+.Pq Cm modified , changed , created , accessed .
+Composes with
+.Fl l ,
+.Fl -format ,
+and
+.Fl -columns .
+Unlike the individual flags,
+.Fl t
+has no long form \(em its only sensible spelling is the compounding
+short.
+.It Fl -time-style Ns = Ns Ar STYLE
+How to format timestamps.
+Built-in styles:
+.Cm default ,
+.Cm iso ,
+.Cm long-iso ,
+.Cm full-iso ,
+.Cm relative .
+A custom
+.Xr strftime 3
+format can be specified with a leading
+.Sq +
+.Pq e.g. Sy --time-style='+%d %b %Y' .
+The
+.Cm relative
+style shows human-friendly durations such as
+.Dq 2 hours ago
+or
+.Dq 3 days ago .
+.It Fl S , Fl -blocks
+List each file's number of file system blocks.
+.It Fl Z , Fl -total-size
+Show total recursive size for directories.
+When combined with
+.Fl -sort Ns = Ns Cm size ,
+sorting uses the recursive total.
+.It Fl @ , Fl -extended
+List each file's extended attributes and sizes.
+.It Fl o , Fl -octal
+List each file's permissions in octal format.
+Alias:
+.Fl -octal-permissions .
+.It Fl O , Fl -flags
+Show platform file flags.
+On macOS and
+.Fx ,
+these are the flags set by
+.Xr chflags 1
+and shown by
+.Sy ls -lO
+(macOS) or
+.Sy ls -lo
+.Pq Fx
+(e.g.
+.Cm hidden ,
+.Cm uchg ,
+.Cm uappnd ,
+.Cm nodump ,
+.Cm uarch ) .
+On Linux, these are the file attributes set by
+.Xr chattr 1
+and shown by
+.Xr lsattr 1
+(e.g.
+.Cm immutable ,
+.Cm append ,
+.Cm nodump ,
+.Cm noatime ) .
+Shows
+.Sq -
+when no flags are set.
+Available via
+.Fl -columns Ns = Ns Cm flags .
+.El
+.Ss Column and format selection
+.Bl -tag -width Ds
+.It Fl -columns Ns = Ns Ar COLS
+Comma-separated list of columns to display.
+Overrides the
+.Fl l
+tier.
+Implies long view.
+Valid names:
+.Cm permissions ,
+.Cm size ,
+.Cm user ,
+.Cm uid ,
+.Cm group ,
+.Cm gid ,
+.Cm links ,
+.Cm inode ,
+.Cm blocks ,
+.Cm octal ,
+.Cm flags ,
+.Cm modified ,
+.Cm changed ,
+.Cm accessed ,
+.Cm created ,
+.Cm vcs .
+.Cm perms
+is accepted as a backward-compatible alias for
+.Cm permissions .
+.It Fl -format Ns = Ns Ar NAME
+Select a named column format.
+Compiled-in formats:
+.Cm long ,
+.Cm long2 ,
+.Cm long3 .
+Additional formats may be defined in the config file.
+Implies long view.
+.El
+.Pp
+Precedence:
+.Fl -columns
+>
+.Fl -format
+>
+.Fl l
+tier > individual flags.
+.Ss Column overrides
+Every column and display option has a negative form for overriding
+personality defaults.
+For flags with a short form, a
+.Fl -no-X
+alias is also accepted (e.g.
+.Fl -no-h
+for
+.Fl -no-header ,
+.Fl -no-Z
+for
+.Fl -no-total-size ,
+.Fl -no-C
+for
+.Fl -no-count ,
+.Fl -no-g
+for
+.Fl -no-group ,
+.Fl -no-i
+for
+.Fl -no-inode ,
+.Fl -no-H
+for
+.Fl -no-links ,
+.Fl -no-S
+for
+.Fl -no-blocks ,
+.Fl -no-o
+for
+.Fl -no-octal ,
+.Fl -no-u
+for
+.Fl -no-user ,
+.Fl -no-z
+for
+.Fl -no-filesize ,
+.Fl -no-M
+for
+.Fl -no-permissions ,
+.Fl -no-m
+for
+.Fl -no-modified ,
+.Fl -no-c
+for
+.Fl -no-changed ) .
+.Bl -tag -width Ds
+.It Fl M , Fl -permissions , Fl -no-permissions
+Show or suppress the permissions field.
+.Fl -mode
+/
+.Fl -no-mode
+are accepted as long aliases (matching traditional Unix terminology).
+.Fl -no-M
+is a hidden short-letter alias for
+.Fl -no-permissions .
+.It Fl z , Fl -filesize , Fl -no-filesize
+Show or suppress the file size field.
+.Fl -size
+/
+.Fl -no-size
+are accepted as long aliases.
+.Fl -no-z
+is a hidden short-letter alias for
+.Fl -no-filesize .
+.It Fl u , Fl -user , Fl -no-user
+Show or suppress the user field.
+.Fl -no-u
+is a hidden short-letter alias for
+.Fl -no-user .
+.It Fl -uid , Fl -no-uid
+Show or suppress the numeric user ID column (long-form only).
+.It Fl -gid , Fl -no-gid
+Show or suppress the numeric group ID column (long-form only).
+.It Fl -no-time
+Clear all timestamp columns from the base format.
+Runs
+.Em before
+individual timestamp adds, so
+.Sy --no-time --accessed
+leaves just the accessed column.
+Accepts
+.Fl -no-timestamps
+as a hidden alias.
+.It Fl -no-modified , Fl -no-changed , Fl -no-accessed , Fl -no-created
+Suppress individual timestamp columns.
+.Fl -no-m
+and
+.Fl -no-c
+are accepted as hidden short-letter aliases for
+.Fl -no-modified
+and
+.Fl -no-changed
+respectively.
+Unlike
+.Fl -no-time ,
+these run
+.Em after
+individual adds, so they beat an explicit
+.Fl -modified
+on the same command line.
+.It Fl -no-inode
+Suppress the inode field.
+.It Fl -no-group
+Suppress the group field.
+.It Fl -no-links
+Suppress the hard links field.
+.It Fl -no-blocks
+Suppress the blocks field.
+.It Fl -no-octal
+Suppress the octal permissions column.
+.It Fl -no-header
+Suppress the header row.
+.It Fl -no-count
+Suppress the
+.Fl C Ns / Ns Fl -count
+summary.
+.It Fl -no-total-size
+Suppress
+.Fl Z Ns / Ns Fl -total-size .
+.El
+.Sh PERSONALITIES
+Personalities are
+.Nm Ns 's
+answer to
+.Sy alias ll='ls -l' :
+a structured, inheritable, introspectable way to have multiple
+.Dq modes
+for listing files, without shell configuration.
+A personality is a named bundle of flags and settings, activated
+either by the name
+.Nm
+is invoked under (via an
+.Sy argv[0]
+symlink), by the
+.Fl p Ns / Ns Fl -personality
+flag, by the
+.Ev LX_PERSONALITY
+environment variable, or by the compiled-in default when bare
+.Nm
+is run.
+.Pp
+Resolution precedence (highest to lowest):
+.Fl p
+flag,
+.Sy argv[0]
+symlink name,
+.Ev LX_PERSONALITY ,
+compiled-in default
+.Pq Cm lx .
+When
+.Nm
+is invoked by its own name, the
+.Sy argv[0]
+step is skipped so that
+.Ev LX_PERSONALITY
+can take effect.
+An unknown name from
+.Fl p
+or
+.Ev LX_PERSONALITY
+is an error; an unknown
+.Sy argv[0]
+name falls through silently.
+.Bl -tag -width Ds
+.It Fl p , Fl -personality Ns = Ns Ar NAME
+Apply a named personality for this invocation.
+Equivalent to invoking
+.Nm
+via an
+.Sy argv[0]
+symlink with the same name.
+.El
+.Pp
+Compiled-in personalities:
+.Bl -tag -width "Cm tree" -offset indent -compact
+.It Cm lx
+the default, used when
+.Nm
+is invoked as itself.
+.It Cm ll
+long view equivalent to
+.Sy lx -l ,
+with VCS status and directories grouped first.
+.It Cm la
+like
+.Cm ll ,
+plus hidden files.
+.It Cm lll
+tier-3 long view with header, all timestamps, and extra metadata
+columns.
+.It Cm tree
+recursive tree view with directories first.
+.It Cm ls
+tries to mimic POSIX
+.Xr ls 1 .
+.El
+.Pp
+Additional personalities may be defined in the config file.
+Every CLI flag has a corresponding config key, so a personality
+definition is simply the flags you would type on the command line,
+spelled out as TOML.
+Personalities support inheritance
+.Pq Sy inherits = \(dqNAME\(dq
+to build on another personality's settings, and may select a theme
+.Pq Sy theme = \(dqNAME\(dq :
+.Bd -literal -offset indent
+[personality.work]
+inherits = "ll"
+ignore = "*.tmp|*.bak"
+time-style = "long-iso"
+theme = "catppuccin-mocha"
+.Ed
+.Pp
+When
+.Nm
+is invoked via a symlink whose name matches a personality, that
+personality is applied automatically.
+For example, if
+.Sy ll
+is a symlink to
+.Nm
+on your
+.Ev PATH ,
+running
+.Sy ll
+is equivalent to
+.Sy lx -p ll .
+This is the recommended way to use personalities in daily work \(em
+create the symlinks once, and never type
+.Fl p
+again.
+.Pp
+For the full syntax, including every personality setting key, the
+inheritance semantics, and the conditional
+.Sy [[when]]
+block vocabulary for environment-based overrides, see the
+.Sx PERSONALITIES
+section of
+.Xr lxconfig.toml 5 .
+.Sh VCS INTEGRATION
+.Bl -tag -width Ds
+.It Fl -vcs Ns = Ns Ar BACKEND
+Select the VCS backend.
+.Ar BACKEND
+is
+.Cm auto ,
+.Cm git ,
+.Cm jj ,
+or
+.Cm none .
+Default:
+.Cm auto
+(prefers jj if
+.Pa .jj/
+exists, falls back to git).
+The
+.Cm jj
+backend requires
+.Nm
+to be built with the
+.Sy jj
+feature flag.
+.It Fl -vcs-status
+Show per-file VCS status column.
+The column header shows the active backend:
+.Sy Git
+or
+.Sy JJ .
+Status characters:
+.Sq -
+not modified,
+.Sq M
+modified,
+.Sq A
+added (jj) /
+.Sq N
+new (git),
+.Sq D
+deleted,
+.Sq R
+renamed,
+.Sq C
+copied,
+.Sq I
+ignored,
+.Sq U
+untracked,
+.Sq \&!
+conflicted.
+git shows two columns (staged + unstaged); when both are the same,
+they collapse into one character.
+jj shows two columns: change status
+.Pq Sq @ No vs Sq @-
+and tracking status
+.Pq U untracked, I ignored, space = tracked .
+.It Fl -vcs-ignore
+Hide files ignored by VCS and VCS metadata directories
+.Pq Pa .git , Pa .jj .
+Works with both git and jj backends.
+.It Fl -vcs-repos
+Show a per-directory VCS repository indicator column.
+For each directory, shows
+.Sq G
+(git repo),
+.Sq J
+(jj repo), or
+.Sq -
+(not a repo).
+Git repos also show the current branch name.
+Useful for scanning workspace directories containing multiple
+repositories.
+.El
+.Pp
+Note: the legacy
+.Fl -git
+and
+.Fl -git-ignore
+flags have been removed.
+Use
+.Fl -vcs-status
+and
+.Fl -vcs-ignore
+instead.
+.Sh CONFIGURATION
+.Nm
+reads a TOML configuration file from these locations (first found
+wins):
+.Bl -enum -offset indent -compact
+.It
+.Ev LX_CONFIG
+\(em explicit path
+.It
+.Pa ~/.lxconfig.toml
+.It
+.Pa $XDG_CONFIG_HOME/lx/config.toml
+.It
+.Pa ~/Library/Application Support/lx/config.toml
+(macOS)
+.El
+.Pp
+Run
+.Sy lx --init-config
+to generate a commented starter file.
+.Pp
+The config file includes a
+.Sy version
+field to track the schema version.
+The current version is
+.Sy \(dq0.5\(dq .
+If you have a legacy config from an earlier version, run
+.Sy lx --upgrade-config
+to migrate it (migrations from 0.1 through 0.4 are all supported; a
+.Pa .bak
+of the original is saved automatically).
+.Pp
+For the full config file format \(em every section type, every key,
+the conditional
+.Sy [[when]]
+block syntax for environment-based personality overrides, and the
+complete theme/style/class vocabulary \(em see
+.Xr lxconfig.toml 5 .
+.Bl -tag -width Ds
+.It Fl -show-config
+Show a coloured summary of the active configuration and exit.
+.It Fl -init-config
+Generate a commented starter config file at
+.Pa ~/.lxconfig.toml .
+.It Fl -upgrade-config
+Upgrade a legacy config file to the current format.
+.It Fl -save-as Ns = Ns Ar NAME
+Save the CLI flags from this invocation as a named personality in
+.Pa conf.d/ Ns Ar NAME Ns Pa .toml .
+The saved definition inherits from the active personality and
+contains only the flags you typed on this command line.
+If the target file already exists, the previous file is backed up
+with a
+.Pa .bak
+suffix.
+Exits after saving without listing files.
+.El
+.Pp
+The
+.Fl -dump-*
+flags output copy-pasteable TOML definitions.
+Each accepts an optional
+.Sy = Ns Ar NAME
+to dump a single definition, or dumps all when used bare:
+.Bl -tag -width Ds
+.It Fl -dump-class Ns Op = Ns Ar NAME
+Dump file-type class definitions.
+.It Fl -dump-format Ns Op = Ns Ar NAME
+Dump column format definitions.
+.It Fl -dump-personality Ns Op = Ns Ar NAME
+Dump personality definitions (before inheritance merging).
+.It Fl -dump-theme Ns Op = Ns Ar NAME
+Dump theme definitions.
+.It Fl -dump-style Ns Op = Ns Ar NAME
+Dump style definitions.
+.El
+.Sh DROP-IN DIRECTORY
+After loading the main config file,
+.Nm
+scans a
+.Pa conf.d/
+directory for additional TOML fragments.
+Each
+.Pa *.toml
+file in the directory is loaded in alphabetical order and merged
+into the configuration.
+Later files override earlier ones by name.
+.Pp
+The drop-in directory is searched at:
+.Bl -enum -offset indent -compact
+.It
+The parent directory of the main config file, plus
+.Pa conf.d/
+.It
+.Pa $XDG_CONFIG_HOME/lx/conf.d/
+(default:
+.Pa ~/.config/lx/conf.d/ )
+.It
+.Pa ~/Library/Application Support/lx/conf.d/
+(macOS)
+.El
+.Pp
+Drop-in files do not need a
+.Sy version
+field.
+They may contain any combination of
+.Sy [theme.*] ,
+.Sy [style.*] ,
+.Sy [class] ,
+.Sy [personality.*] ,
+and
+.Sy [format.*]
+sections.
+.Pp
+.Nm
+ships with a library of curated themes in the
+.Pa themes/
+directory of the source tree \(em copy any of them to
+.Pa conf.d/
+to activate.
+.Sh SHELL COMPLETIONS
+.Bl -tag -width Ds
+.It Fl -completions Ns = Ns Ar SHELL
+Generate shell completion script for
+.Ar SHELL
+and write it to stdout.
+.Ar SHELL
+is one of
+.Cm bash ,
+.Cm zsh ,
+.Cm fish ,
+.Cm elvish ,
+or
+.Cm powershell .
+.El
+.Pp
+Quick activation for the current session:
+.Bd -literal -offset indent
+# bash
+source <(lx --completions bash)
+
+# zsh
+source <(lx --completions zsh)
+
+# fish
+lx --completions fish | source
+.Ed
+.Pp
+Or save to the standard location for permanent installation, e.g.:
+.Bd -literal -offset indent
+lx --completions bash > ~/.local/share/bash-completion/completions/lx
+lx --completions zsh  > ~/.zfunc/_lx
+lx --completions fish > ~/.config/fish/completions/lx.fish
+.Ed
+.Pp
+(For zsh,
+.Pa ~/.zfunc
+must be in your
+.Ev fpath . )
+.Sh ENVIRONMENT
+.Bl -tag -width Ds
+.It Ev LX_CONFIG
+Explicit path to the config file.
+.It Ev LX_DEBUG
+Enable debug logging.
+Set to
+.Sy 1
+for debug,
+.Sy trace
+for trace level.
+.It Ev LX_GRID_ROWS
+Minimum rows before the grid-details view activates.
+Also settable as
+.Sy grid-rows
+in a personality definition (config takes precedence).
+.It Ev LX_ICON_SPACING
+Number of spaces between an icon and its filename.
+Also settable as
+.Sy icon-spacing
+in a personality definition (config takes precedence).
+.It Ev LX_PERSONALITY
+Session-level personality selection.
+Equivalent to
+.Sy -p Ar NAME
+but lower in precedence than both
+.Fl p
+and
+.Sy argv[0]
+symlink dispatch.
+Useful for setting a default personality per terminal or shell
+session.
+.It Ev LS_COLORS
+Standard file-type colour scheme.
+.It Ev COLUMNS
+Override terminal width.
+.It Ev TIME_STYLE
+Default timestamp style (overridden by
+.Fl -time-style ) .
+.It Ev NO_COLOR
+Disable colours.
+See
+.Lk https://no-color.org/ .
+.El
+.Sh EXIT STATUS
+.Bl -tag -width "0" -compact
+.It 0
+Success.
+.It 1
+Runtime error (I/O error during operation).
+.It 3
+Options error (invalid command-line arguments).
+.El
+.Sh FEATURES
+.Nm
+has optional feature flags that control which VCS backends are
+compiled in.
+These are selected at build time with
+.Sy cargo build --features .
+.Bl -tag -width Ds
+.It Sy git Pq default
+Git support via the
+.Sy git2
+crate.
+.It Sy jj Pq opt-in
+Jujutsu support via the
+.Sy jj-lib
+crate.
+Adds approximately 5 MB to the binary size.
+Build with:
+.Sy cargo build --features jj .
+.El
+.Sh SEE ALSO
+.Xr lxconfig.toml 5
+.Sh AUTHORS
+.Nm
+is maintained by
+.An Johann Visagie ,
+based on exa by
+.An Benjamin Sago .
+Source code:
+.Lk https://github.com/wjv/lx

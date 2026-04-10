@@ -15,12 +15,12 @@ tweak something.
 
 - **`lx --help`** is the authoritative flag reference.  Every flag
   is listed there with a one-line description.
-- **`man lx`** (or [`man/lx.1.md`](../man/lx.1.md)) is the long-form
-  command reference.  Look here for the exact semantics of a flag.
-- **`man lxconfig.toml`** (or
-  [`man/lxconfig.toml.5.md`](../man/lxconfig.toml.5.md)) is the
-  reference for the configuration file format.  Every key, every
-  section, every accepted value.
+- **`man lx`** is the long-form command reference.  Look here for the
+  exact semantics of a flag.  (Source:
+  [`man/lx.1`](../man/lx.1), written in mdoc.)
+- **`man lxconfig.toml`** is the reference for the configuration file
+  format.  Every key, every section, every accepted value.  (Source:
+  [`man/lxconfig.toml.5`](../man/lxconfig.toml.5).)
 - **[`docs/DESIGN.md`](DESIGN.md)** explains the design philosophy
   behind `lx`'s CLI — *why* the flags are shaped the way they are.
 - **This guide** is narrative and example-first.  It shows you how
@@ -416,8 +416,7 @@ mkdir -p ~/.config/lx/conf.d
 cp themes/dracula.toml ~/.config/lx/conf.d/
 ```
 
-See [`man/lxconfig.toml.5.md`](../man/lxconfig.toml.5.md) for the
-full reference.
+See `man lxconfig.toml` for the full reference.
 
 
 ## Themes, styles, and classes
@@ -506,8 +505,7 @@ data   = ["*.csv", "*.json", "*.xml"]
 `lossless`, `crypto`, `document`, `compressed`, `compiled`, `temp`,
 and `immediate` (build/project files).  These definitions are
 omitted from `--init-config`'s output for brevity; see
-[`man/lxconfig.toml.5.md`](../man/lxconfig.toml.5.md) for the
-full list.  Redefining a class name in your config overrides the
+`man lxconfig.toml` for the full list.  Redefining a class name in your config overrides the
 compiled-in version.
 
 **Starting from a clean slate.**  If you want no compiled-in
@@ -1049,10 +1047,12 @@ personality cascade — set `LX_DEBUG=1` in the environment and
 - **[`docs/DESIGN.md`](DESIGN.md)** — the design philosophy behind
   `lx`'s CLI.  Read this when you want to understand *why* things
   are shaped the way they are.
-- **[`man/lx.1.md`](../man/lx.1.md)** — long-form command reference.
-- **[`man/lxconfig.toml.5.md`](../man/lxconfig.toml.5.md)** —
-  complete reference for the configuration file format, including
-  every theme key, style syntax, and the full built-in class list.
+- **`man lx`** — long-form command reference.  (mdoc source at
+  [`man/lx.1`](../man/lx.1).)
+- **`man lxconfig.toml`** — complete reference for the configuration
+  file format, including every theme key, style syntax, and the full
+  built-in class list.  (mdoc source at
+  [`man/lxconfig.toml.5`](../man/lxconfig.toml.5).)
 - **[`CHANGELOG.md`](../CHANGELOG.md)** — release notes.
 - **[`themes/README.md`](../themes/README.md)** — how to write
   your own theme.

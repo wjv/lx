@@ -5,19 +5,18 @@
 default:
     @just --list -u
 
-# Build man pages from markdown source
-man:
-    pandoc man/lx.1.md -s -t man -o man/lx.1
-    pandoc man/lxconfig.toml.5.md -s -t man -o man/lxconfig.toml.5
-    @echo "Generated man/lx.1 and man/lxconfig.toml.5"
-
 # Preview the lx(1) man page
-man-preview: man
+man-preview:
     man ./man/lx.1
 
 # Preview the lxconfig.toml(5) man page
-man-config-preview: man
+man-config-preview:
     man ./man/lxconfig.toml.5
+
+# Lint the man pages (requires mandoc)
+man-lint:
+    mandoc -Tlint -Wwarning man/lx.1
+    mandoc -Tlint -Wwarning man/lxconfig.toml.5
 
 # Build debug binary (git only)
 build:
@@ -56,7 +55,7 @@ lint-all:
     cargo clippy --features jj
 
 # Install lx to ~/.local/bin with man pages (git only)
-install: release man
+install: release
     @mkdir -p ~/.local/bin
     @mkdir -p ~/.local/share/man/man1
     @mkdir -p ~/.local/share/man/man5
@@ -67,7 +66,7 @@ install: release man
     @echo "Installed man pages to ~/.local/share/man/"
 
 # Install lx with jj support
-install-jj: release-jj man
+install-jj: release-jj
     @mkdir -p ~/.local/bin
     @mkdir -p ~/.local/share/man/man1
     @mkdir -p ~/.local/share/man/man5

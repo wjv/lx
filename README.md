@@ -191,9 +191,10 @@ completions — run `just -l` to see the recipes.
   `lx`'s CLI; why things are shaped the way they are.
 - **[`docs/UPGRADING.md`](docs/UPGRADING.md)** — breaking changes per
   release, with migration notes and justifications.
-- **`man lx`** ([source](man/lx.1.md)) — command reference.
-- **`man lxconfig.toml`** ([source](man/lxconfig.toml.5.md)) —
-  configuration file reference.
+- **`man lx`** — command reference (installed alongside the binary;
+  mdoc source in [`man/lx.1`](man/lx.1)).
+- **`man lxconfig.toml`** — configuration file reference (mdoc source
+  in [`man/lxconfig.toml.5`](man/lxconfig.toml.5)).
 - **[`CHANGELOG.md`](CHANGELOG.md)** — release notes.
 - **`lx --help`** — online flag reference.
 

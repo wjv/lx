@@ -83,6 +83,17 @@ All notable changes to lx are documented here. lx is forked from
 
 ### Changed
 
+- **Man pages rewritten in `mdoc(7)`**, hand-authored and committed
+  directly as `man/lx.1` and `man/lxconfig.toml.5`.  Drops the
+  Markdown-plus-pandoc build pipeline entirely: the `.1`/`.5` files
+  are now the source, semantically tagged with `.Fl`/`.Ar`/`.Ev`/
+  `.Cm`/`.Pa` instead of presentational bold/italic conventions.
+  Fixes a long-standing rendering issue where pandoc mapped
+  backticks to `\f[CR]` (constant-width Roman, which has no terminal
+  glyph), leaving every flag name, token value, and environment
+  variable as undifferentiated plain text.  `just man-lint` validates
+  both pages with `mandoc -Tlint -Wwarning`; `just install` and the
+  release CI no longer invoke pandoc.
 - Non-clap fatal errors now use the same `error:` prefix as clap
   (bold red on a TTY, plain otherwise, `NO_COLOR`-aware) instead
   of the old `lx: ` prefix.  Clap-generated and our own errors

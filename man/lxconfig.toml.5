@@ -1,0 +1,1087 @@
+.Dd April 10, 2026
+.Dt LXCONFIG.TOML 5
+.Os
+.Sh NAME
+.Nm lxconfig.toml
+.Nd configuration file for
+.Xr lx 1
+.Sh SYNOPSIS
+.Nm lx
+searches for a TOML configuration file in these locations (first
+found wins):
+.Bl -enum -offset indent -compact
+.It
+.Ev LX_CONFIG
+\(em explicit path override
+.It
+.Pa ~/.lxconfig.toml
+\(em simple home directory location
+.It
+.Pa $XDG_CONFIG_HOME/lx/config.toml
+(default
+.Pa ~/.config/lx/config.toml )
+.It
+.Pa ~/Library/Application Support/lx/config.toml
+(macOS only)
+.El
+.Pp
+Run
+.Sy lx --init-config
+to generate a commented starter file at
+.Pa ~/.lxconfig.toml .
+.Sh DESCRIPTION
+The
+.Nm lx
+configuration file is written in TOML.
+It has the following top-level sections:
+.Bl -tag -width Ds
+.It Sy version
+Config schema version (required).
+.It Sy [format]
+Named column layouts for long view (flat section; each key is a
+format name).
+.It Sy [personality.NAME]
+Named bundles of format, columns, and settings.
+.It Sy [theme.NAME]
+Named colour themes for UI elements.
+.It Sy [class]
+File-type class definitions \(em named lists of glob patterns.
+.It Sy [style.NAME]
+Named sets of file colour rules.
+Can reference classes by name and/or match files directly by glob
+pattern or exact filename.
+.El
+.Sh VERSIONING
+Every configuration file must declare a schema version at the top:
+.Bd -literal -offset indent
+version = "0.5"
+.Ed
+.Pp
+This is the
+.Em config schema version ,
+not the
+.Nm lx
+release version.
+It only increments when the config format changes in a way that
+requires migration.
+.Pp
+.Bl -tag -width "Config version" -offset indent -compact
+.It Sy "(none)"
+lx 0.1.x \(em original format with
+.Sy [defaults]
+.It Sy "0.2"
+lx 0.2.0+ \(em personalities replace
+.Sy [defaults]
+.It Sy "0.3"
+lx 0.3.0+ \(em classes, flat formats, exa style chain
+.It Sy "0.4"
+lx 0.7.0+ \(em conditional overrides
+.Pq Sy [[when]] No blocks
+.It Sy "0.5"
+lx 0.8.0+ \(em
+.Sy time
+and
+.Sy numeric
+settings removed; timestamps and UID/GID now ordinary columns
+.It Sy "0.6"
+lx 0.9.0+ \(em
+.Sy [[when]]
+env conditions accept TOML arrays and glob patterns
+.El
+.Pp
+Versions
+.Sy "0.3" ,
+.Sy "0.4" ,
+and
+.Sy "0.5"
+are still accepted by
+.Nm lx
+0.9+ (0.6 is a strict superset), with caveats:
+.Sy [[when]]
+blocks in a
+.Sy "0.3"
+config trigger a warning, and the
+.Sy time = \(dq...\(dq
+and
+.Sy numeric = ...
+settings (valid in 0.3/0.4) trigger deprecation warnings at load time
+and are ignored.
+.Pp
+If
+.Nm lx
+encounters a config file with an older version (or no version
+field), it refuses to load it and prints a message directing the user
+to run:
+.Bd -literal -offset indent
+lx --upgrade-config
+.Ed
+.Pp
+This command migrates the config to the current format (0.1\(->0.5,
+0.2\(->0.5, 0.3\(->0.5, and 0.4\(->0.5 are all supported) and saves
+the original as
+.Pa ~/.lxconfig.toml.bak .
+The 0.3\(->0.5 and 0.4\(->0.5 migrations only bump the version string
+(and warn if
+.Sy time = \(dq...\(dq
+or
+.Sy numeric = ...
+are present); earlier migrations also restructure the file.
+.Sh FORMATS
+A format defines a column layout for long view.
+Formats are defined as keys in a flat
+.Sy [format]
+section.
+Each key is a format name; its value is either a TOML array or a
+comma-separated string of column names:
+.Bd -literal -offset indent
+[format]
+long  = ["permissions", "size", "user", "modified"]
+long2 = ["permissions", "size", "user", "group", "modified", "vcs"]
+long3 = ["permissions", "links", "size", "blocks", "user", "group",
+         "modified", "changed", "created", "accessed", "vcs"]
+compact = "permissions,size,modified"
+.Ed
+.Pp
+Three compiled-in formats correspond to the
+.Fl l
+tier system:
+.Bl -tag -width "Tier 3: -lll" -offset indent -compact
+.It Sy Tier 1: -l
+.Sy long
+\(em permissions, size, user, modified
+.It Sy Tier 2: -ll
+.Sy long2
+\(em permissions, size, user, group, modified, vcs
+.It Sy Tier 3: -lll
+.Sy long3
+\(em permissions, links, size, blocks, user, group, modified,
+changed, created, accessed, vcs
+.El
+.Pp
+Defining a format with a compiled-in name in the config file
+overrides the built-in.
+Custom formats are used via
+.Sy --format= Ns Ar NAME
+or referenced from personality definitions.
+.Ss Valid column names
+.Bl -tag -width "permissions (alias perms)"
+.It Cm permissions Pq alias Cm perms
+File permissions.
+.It Cm size Pq alias Cm filesize
+File size.
+.It Cm user
+Owning user.
+.It Cm group
+Owning group.
+.It Cm links
+Hard link count.
+.It Cm inode
+Inode number.
+.It Cm blocks
+File system block count.
+.It Cm octal
+Octal permissions.
+.It Cm modified
+Last modification timestamp.
+.It Cm changed
+Last status change timestamp.
+.It Cm accessed
+Last access timestamp.
+.It Cm created
+Creation timestamp.
+.It Cm vcs
+VCS status column.
+.El
+.Sh PERSONALITIES
+A personality bundles a format, columns, and settings under a name.
+Invoke a personality with
+.Sy --personality= Ns Ar NAME ,
+.Sy -p Ar NAME ,
+or via an
+.Sy argv[0]
+symlink.
+.Bd -literal -offset indent
+[personality.ll]
+inherits = "lx"
+format = "long2"
+group-dirs = "first"
+.Ed
+.Ss Structural fields
+.Bl -tag -width Ds
+.It Sy inherits
+Name of a parent personality (see
+.Sx Inheritance
+below).
+.It Sy format
+Reference to a named format (looked up in
+.Sy [format] ) .
+.It Sy columns
+Inline column list; overrides
+.Sy format
+if both are given.
+Accepts a TOML array or comma-separated string.
+.El
+.Pp
+All other keys in a personality section are
+.Em settings
+\(em each corresponds to a CLI flag.
+Boolean flags take
+.Sy true Ns / Ns Sy false ;
+value flags take a string or integer.
+.Ss Setting keys
+.Sy Display options\&:
+.Bl -item -offset indent -compact
+.It
+.Sy oneline Pq bool ,
+.Sy long Pq bool ,
+.Sy grid Pq bool ,
+.Sy across Pq bool ,
+.Sy recurse Pq bool ,
+.Sy tree Pq bool ,
+.Sy classify Pq string: Cm always Ns / Ns Cm auto Ns / Ns Cm never ,
+.Sy colour Pq string: Cm always Ns / Ns Cm auto Ns / Ns Cm never ,
+.Sy gradient Pq string: comma-separated size/date/modified/accessed/changed/created, or all/none ,
+.Sy smooth Pq bool: interpolate gradients between anchors on 24-bit themes ,
+.Sy icons Pq string: Cm always Ns / Ns Cm auto Ns / Ns Cm never ,
+.Sy width Pq integer ,
+.Sy absolute Pq bool ,
+.Sy hyperlink Pq string: Cm always Ns / Ns Cm auto Ns / Ns Cm never ,
+.Sy quotes Pq string: Cm always Ns / Ns Cm auto Ns / Ns Cm never ,
+.Sy theme Pq string: named theme ,
+.Sy count Pq bool .
+.El
+.Pp
+.Sy Filtering and sorting\&:
+.Bl -item -offset indent -compact
+.It
+.Sy all Pq bool ,
+.Sy list-dirs Pq bool ,
+.Sy level Pq integer ,
+.Sy reverse Pq bool ,
+.Sy sort Pq string ,
+.Sy group-dirs Pq string: Cm first Ns / Ns Cm last Ns / Ns Cm none ,
+.Sy only-dirs Pq bool ,
+.Sy only-files Pq bool ,
+.Sy ignore Pq string: pipe-separated globs ,
+.Sy prune Pq string: pipe-separated globs ,
+.Sy symlinks Pq string: Cm show Ns / Ns Cm hide Ns / Ns Cm follow .
+.El
+.Pp
+.Sy Long view options\&:
+.Bl -item -offset indent -compact
+.It
+.Sy size-style Pq string: Cm decimal Ns / Ns Cm binary Ns / Ns Cm bytes ,
+.Sy binary Pq bool ,
+.Sy bytes Pq bool ,
+.Sy header Pq bool ,
+.Sy inode Pq bool ,
+.Sy links Pq bool ,
+.Sy blocks Pq bool ,
+.Sy group Pq bool ,
+.Sy uid Pq bool ,
+.Sy gid Pq bool ,
+.Sy time-style Pq string: Cm default Ns / Ns Cm iso Ns / Ns Cm long-iso Ns / Ns Cm full-iso Ns / Ns Cm relative Ns / Ns Cm +FORMAT ,
+.Sy modified Pq bool ,
+.Sy changed Pq bool ,
+.Sy accessed Pq bool ,
+.Sy created Pq bool ,
+.Sy total-size Pq bool ,
+.Sy extended Pq bool ,
+.Sy octal-permissions Pq bool ,
+.Sy flags Pq bool ,
+.Sy permissions Pq bool ,
+.Sy filesize Pq bool ,
+.Sy user Pq bool .
+.El
+.Pp
+.Sy Layout tuning\&:
+.Bl -tag -width Ds -offset indent
+.It Sy grid-rows Pq integer
+Minimum rows before the grid-details view activates.
+Equivalent to the
+.Ev LX_GRID_ROWS
+environment variable; the config key takes precedence.
+.It Sy icon-spacing Pq integer
+Number of spaces between an icon and its filename.
+Equivalent to
+.Ev LX_ICON_SPACING ;
+the config key takes precedence.
+.El
+.Pp
+.Sy Numeric formatting\&:
+.Bl -tag -width Ds -offset indent
+.It Sy decimal-point Pq string
+Override the locale's decimal separator.
+Exactly one character.
+.It Sy thousands-separator Pq string
+Override the locale's thousands separator.
+Zero or one character; empty string disables grouping.
+.El
+.Pp
+Both apply to
+.Em counts
+(file sizes in all
+.Sy size-style
+modes,
+.Sy --total-size
+totals,
+.Sy -CZ
+summaries, block counts, link counts) but not to
+.Em IDs
+(inodes, UID, GID).
+Always 3-digit grouping.
+Setting these in
+.Sy [personality.default]
+makes them global.
+.Pp
+Removed in 0.5:
+.Sy time
+(string naming a single timestamp field) and
+.Sy numeric
+(boolean).
+The
+.Sy time
+setting is replaced by the individual
+.Sy modified Ns / Ns Sy changed Ns / Ns Sy accessed Ns / Ns Sy created
+booleans (which are additive in 0.8+); set
+.Sy no-time = true
+to start from an empty timestamp set.
+The
+.Sy numeric
+setting is replaced by the new first-class
+.Sy uid
+and
+.Sy gid
+columns.
+For the old
+.Sy "ls -n" Ns Ns No -style
+numeric-only view, use
+.Sy uid = true , gid = true , no-user = true , no-group = true
+\(em or better, use
+.Sy --columns
+to pick exactly the columns you want.
+.Pp
+.Sy VCS\&:
+.Bl -item -offset indent -compact
+.It
+.Sy vcs Pq string: Cm auto Ns / Ns Cm git Ns / Ns Cm jj Ns / Ns Cm none ,
+.Sy vcs-status Pq bool ,
+.Sy vcs-ignore Pq bool ,
+.Sy vcs-repos Pq bool .
+.El
+.Pp
+.Sy Negation (override personality defaults)\&:
+.Bl -item -offset indent -compact
+.It
+.Sy no-permissions Pq bool ,
+.Sy no-filesize Pq bool ,
+.Sy no-user Pq bool ,
+.Sy no-uid Pq bool ,
+.Sy no-gid Pq bool ,
+.Sy no-time Pq bool ,
+.Sy no-modified Pq bool ,
+.Sy no-changed Pq bool ,
+.Sy no-accessed Pq bool ,
+.Sy no-created Pq bool ,
+.Sy no-icons Pq bool ,
+.Sy no-inode Pq bool ,
+.Sy no-group Pq bool ,
+.Sy no-links Pq bool ,
+.Sy no-blocks Pq bool ,
+.Sy no-octal Pq bool ,
+.Sy no-header Pq bool ,
+.Sy no-count Pq bool ,
+.Sy no-total-size Pq bool .
+.El
+.Pp
+.Sy no-time
+clears all timestamp columns from the base format as a bulk
+shortcut; it runs before individual adds, so combining it with e.g.
+.Sy accessed = true
+leaves just the accessed column.
+.Sy no-modified Ns / Ns Sy no-changed Ns / Ns Sy no-accessed Ns / Ns Sy no-created
+suppress individual timestamp columns after adds have been applied.
+.Pp
+.Sy Column visibility (positive)\&:
+.Bl -item -offset indent -compact
+.It
+.Sy permissions Pq bool ,
+.Sy filesize Pq bool ,
+.Sy user Pq bool .
+.El
+.Ss Inheritance
+Personalities support single inheritance via
+.Sy inherits = \(dqNAME\(dq .
+The child's
+.Sy format
+and
+.Sy columns
+replace the parent's entirely.
+Settings are merged key-by-key, with the child's values winning on
+conflict.
+.Pp
+Inheritance chains of arbitrary depth are supported.
+Cycle detection prevents infinite loops.
+.Pp
+A common pattern is to define a shared base personality:
+.Bd -literal -offset indent
+default ---+---> lx ---+---> ll ---+---> lt
+           |           |           \e---> la
+           |           \e---> lll
+           \e---> tree
+
+ls  (standalone -- no inherits)
+.Ed
+.Pp
+Example:
+.Bd -literal -offset indent
+[personality.default]
+colour = "auto"
+time-style = "default"
+group-dirs = "none"
+icons = "never"
+
+[personality.lx]
+inherits = "default"
+
+[personality.ll]
+inherits = "lx"
+format = "long2"
+group-dirs = "first"
+
+[personality.lt]
+inherits = "ll"
+sort = "age"
+
+[personality.ls]
+grid = true
+across = true
+.Ed
+.Pp
+In this example,
+.Cm lt
+inherits
+.Sy group-dirs = \(dqfirst\(dq
+and
+.Sy format = \(dqlong2\(dq
+from
+.Cm ll ,
+which in turn inherits
+.Sy colour = \(dqauto\(dq
+and the other defaults from
+.Cm lx
+and
+.Cm default .
+The
+.Cm ls
+personality stands alone \(em it has no
+.Sy inherits
+and receives no inherited settings.
+.Pp
+Compiled-in personalities
+.Pq Cm ll , la , lll , tree , ls
+are used as fallbacks when a name is not defined in the config file.
+.Ss Conditional overrides
+A personality's settings can vary based on environment variables
+using
+.Sy [[personality.NAME.when]]
+blocks.
+Each block specifies conditions and settings to overlay when all
+conditions match.
+.Pp
+Conditions use
+.Sy env.VAR = value
+where the TOML value type determines the check:
+.Bl -tag -width Ds
+.It Sy env.VAR = \(dqstring\(dq
+Exact string match against the variable's value.
+If the string contains any of
+.Sq * ,
+.Sq \&? ,
+or
+.Sq \&[ ,
+it is matched as a glob pattern instead (added in 0.6).
+.It Sy env.VAR = [\(dqstring\(dq, \(dqstring\(dq]
+TOML array \(em matches if any element matches.
+Each element is independently matched as a literal or a glob.
+Added in 0.6.
+.It Sy env.VAR = true
+Variable must be set (to any value, including empty).
+.It Sy env.VAR = false
+Variable must be truly unset (not just empty).
+.El
+.Pp
+All conditions within a single block must match (AND logic).
+.Pp
+.Sy Examples\&:
+.Bd -literal -offset indent
+# Icons only in terminals with Nerd Font support.
+[personality.lx]
+icons = "never"
+
+[[personality.lx.when]]
+env.TERM_PROGRAM = "ghostty"
+icons = "always"
+
+# Disable colour over SSH.
+[[personality.lx.when]]
+env.SSH_CONNECTION = true
+colour = "never"
+
+# Auto-select theme tier based on terminal capability.
+# Glob match against TERM, array of accepted COLORTERM values.
+[personality.default]
+theme = "exa"
+
+[[personality.default.when]]
+env.TERM = "*-256color"
+theme = "lx-256"
+
+[[personality.default.when]]
+env.COLORTERM = ["truecolor", "24bit"]
+theme = "lx-24bit"
+.Ed
+.Pp
+.Sy Evaluation rules\&:
+.Bl -bullet -offset indent -compact
+.It
+All conditions in a block must match (AND logic).
+.It
+Multiple
+.Sy when
+blocks are tried in order; all matching blocks apply, with later
+blocks overriding earlier ones.
+.It
+The base personality (without
+.Sy when )
+is the default when no block matches.
+.It
+.Sy when
+blocks are inherited: a parent personality's
+.Sy when
+blocks are applied first, then the child's.
+.El
+.Pp
+Requires
+.Sy version = \(dq0.4\(dq
+or later in the config file.
+.Ss argv[0] dispatch
+When
+.Nm lx
+is invoked via a symlink whose name matches a personality, that
+personality is applied automatically.
+For example, if
+.Sy ll
+is a symlink to
+.Nm lx ,
+running
+.Sy ll
+is equivalent to
+.Sy lx -pll .
+.Sh THEMES
+A theme defines colours for UI elements.
+Themes are selected through personalities
+.Pq Sy theme = \(dqNAME\(dq
+or the
+.Sy --theme= Ns Ar NAME
+CLI flag.
+.Bd -literal -offset indent
+[theme.ocean]
+inherits = "exa"
+directory = "bold dodgerblue"
+executable = "bold springgreen"
+symlink = "mediumturquoise"
+date = "steelblue"
+.Ed
+.Ss Structural fields
+.Bl -tag -width Ds
+.It Sy inherits
+Inherit from another theme.
+The parent's UI keys are applied first; this theme's keys override.
+The special name
+.Sy \(dqexa\(dq
+refers to the compiled-in default theme.
+Without
+.Sy inherits ,
+a theme starts from a blank slate.
+.It Sy use-style
+Name of a
+.Sy [style.NAME]
+set to apply.
+.El
+.Ss UI element keys
+All other keys in a theme section set the colour for a specific UI
+element.
+Each key takes a colour value (see
+.Sx COLOUR VALUES
+below).
+.Pp
+.Sy File kinds\&:
+.Bl -item -offset indent -compact
+.It
+.Sy normal , directory , symlink , pipe , block-device , char-device , socket , special , executable .
+.El
+.Pp
+.Sy Permissions\&:
+.Bl -item -offset indent -compact
+.It
+.Sy permissions-user-read , permissions-user-write , permissions-user-execute , permissions-user-execute-other , permissions-group-read , permissions-group-write , permissions-group-execute , permissions-other-read , permissions-other-write , permissions-other-execute , permissions-special-user , permissions-special-other , permissions-attribute .
+.El
+.Pp
+The legacy short form
+.Sy perm-user-read , perm-user-write , perm-user-exec ,
+etc. is also accepted as an alias.
+.Pp
+.Sy Size\&:
+.Bl -item -offset indent -compact
+.It
+.Sy size-number-byte , size-number-kilo , size-number-mega , size-number-giga , size-number-huge , size-unit-byte , size-unit-kilo , size-unit-mega , size-unit-giga , size-unit-huge , size-number
+(bulk: sets all number magnitudes),
+.Sy size-unit
+(bulk: sets all unit magnitudes),
+.Sy size-major , size-minor .
+.El
+.Pp
+.Sy Users\&:
+.Bl -item -offset indent -compact
+.It
+.Sy user-you , user-other , group-yours , group-member , group-other , uid-you , uid-other , gid-yours , gid-member , gid-other .
+.El
+.Pp
+Group columns distinguish three tiers:
+.Sy *-yours
+(your primary group),
+.Sy *-member
+(a supplementary group you belong to), and
+.Sy *-other
+(not your group).
+The
+.Sy member
+tier indicates you have group-permission access to the file.
+.Pp
+The
+.Sy uid-*
+and
+.Sy gid-*
+slots style the dedicated
+.Sy --uid
+and
+.Sy --gid
+columns.
+All curated themes and the builtin default set all identity slots
+explicitly.
+.Pp
+.Sy Links\&:
+.Bl -item -offset indent -compact
+.It
+.Sy links , links-multi .
+.El
+.Pp
+.Sy VCS\&:
+.Bl -item -offset indent -compact
+.It
+.Sy vcs-new , vcs-modified , vcs-deleted , vcs-renamed , vcs-typechange , vcs-ignored , vcs-conflicted .
+.El
+.Pp
+.Sy UI elements\&:
+.Bl -item -offset indent -compact
+.It
+.Sy punctuation , inode , blocks , header , octal , symlink-path , control-char , broken-symlink , broken-overlay .
+.El
+.Pp
+.Sy Timestamps (age-based gradient)\&:
+.Bl -tag -width Ds -offset indent -compact
+.It Sy date
+bulk setter \(em sets all tiers at once on every timestamp column
+.It Sy date-now
+< 1 hour
+.It Sy date-today
+< 24 hours
+.It Sy date-week
+< 7 days
+.It Sy date-month
+< 30 days
+.It Sy date-year
+< 365 days
+.It Sy date-old
+> 1 year
+.It Sy date-flat
+the single colour each timestamp column uses when its gradient is
+disabled
+.El
+.Pp
+Setting
+.Sy date
+alone is backwards compatible \(em all timestamps render in the same
+colour, including the flat fallback.
+Setting individual tiers creates a gradient that shows file age at a
+glance, and
+.Sy date-flat
+lets a theme define what colour the column collapses to when the
+gradient is turned off.
+.Pp
+.Sy Per-timestamp-column overrides\&:
+Each of the four timestamp columns
+.Pq Cm modified , accessed , changed , created
+can be themed independently.
+For each column, the same eight slots exist with a
+.Sy date- Ns Ar col Ns Sy -
+prefix:
+.Bd -literal -offset indent
+date-modified             (bulk for the modified column)
+date-modified-now
+date-modified-today
+date-modified-week
+date-modified-month
+date-modified-year
+date-modified-old
+date-modified-flat
+.Ed
+.Pp
+The same eight keys exist for
+.Sy date-accessed-* ,
+.Sy date-changed-* ,
+and
+.Sy date-created-*
+(32 per-column keys total).
+Per-column overrides write directly to the named field; only the
+unprefixed
+.Sy date-*
+keys above fan out to all four columns at once.
+.Pp
+.Sy Fall-through is automatic.
+.Nm lx
+applies theme keys by specificity: the bulk
+.Sy date = ...
+setter first, then bulk per-tier setters
+.Pq Sy date-now , date-today , No ... ,
+then bulk per-column setters
+.Pq Sy date-modified , date-accessed , No ... ,
+then per-column per-tier overrides
+.Pq Sy date-modified-now , No ... .
+This means you can write them in any order in the theme block \(em
+the most specific key always wins.
+Example:
+.Bd -literal -offset indent
+[theme.example]
+date              = "blue"           # every column, every tier
+date-now          = "bright cyan"    # now-tier on every column
+date-modified-now = "bright green"   # only the modified column's now
+.Ed
+.Pp
+End state: the modified column's
+.Sy now
+tier is bright green, the other three columns'
+.Sy now
+tiers are bright cyan, and every other tier on every column is blue.
+.Ss The compiled-in "exa" theme
+The special theme name
+.Sy \(dqexa\(dq
+provides the following defaults.
+Use
+.Sy inherits = \(dqexa\(dq
+and override individual keys to customise:
+.Bd -literal -offset indent
+[theme.exa]
+# File kinds
+normal = ""
+directory = "bold blue"
+symlink = "cyan"
+pipe = "yellow"
+block-device = "bold yellow"
+char-device = "bold yellow"
+socket = "bold red"
+special = "yellow"
+executable = "bold green"
+
+# Permissions
+permissions-user-read = "bold yellow"
+permissions-user-write = "bold red"
+permissions-user-execute = "bold underline green"
+permissions-user-execute-other = "bold green"
+permissions-group-read = "yellow"
+permissions-group-write = "red"
+permissions-group-execute = "green"
+permissions-other-read = "yellow"
+permissions-other-write = "red"
+permissions-other-execute = "green"
+permissions-special-user = "purple"
+permissions-special-other = "purple"
+permissions-attribute = ""
+
+# Size (set per-tier keys size-number-byte..huge for a
+# gradient; see --gradient(1) to switch the gradient on/off)
+size-number = "bold green"
+size-unit = "green"
+size-major = "bold green"
+size-minor = "green"
+
+# Users and groups
+user-you = "bold yellow"
+user-other = ""
+group-yours = "bold yellow"
+group-other = ""
+
+# Links
+links = "bold red"
+links-multi = "bold red"
+
+# VCS status
+vcs-new = "green"
+vcs-modified = "blue"
+vcs-deleted = "red"
+vcs-renamed = "yellow"
+vcs-typechange = "purple"
+vcs-ignored = "dimmed"
+vcs-conflicted = "red"
+
+# UI elements
+punctuation = "38;5;244"
+date = "blue"
+inode = "purple"
+blocks = "cyan"
+header = "underline"
+octal = "purple"
+symlink-path = "cyan"
+control-char = "red"
+broken-symlink = "red"
+broken-overlay = "underline"
+.Ed
+.Sh CLASSES
+The
+.Sy [class]
+section defines named lists of glob patterns that represent
+file-type categories.
+Classes are referenced from styles (see below).
+.Bd -literal -offset indent
+[class]
+source = ["*.rs", "*.py", "*.js", "*.go", "*.c"]
+data   = ["*.csv", "*.json", "*.xml", "*.yaml"]
+.Ed
+.Pp
+User-defined classes in
+.Sy [class]
+override any compiled-in definition of the same name.
+.Ss Compiled-in class definitions
+.Nm lx
+ships with the following compiled-in classes.
+To override one, redefine it in
+.Sy [class]
+with the same name.
+.Bd -literal -offset indent
+image:
+    *.png *.jfi *.jfif *.jif *.jpe *.jpeg *.jpg *.gif *.bmp
+    *.tiff *.tif *.ppm *.pgm *.pbm *.pnm *.webp *.raw *.arw
+    *.svg *.stl *.eps *.dvi *.ps *.cbr *.jpf *.cbz *.xpm
+    *.ico *.cr2 *.orf *.nef *.heif *.avif *.jxl *.j2k *.jp2
+    *.j2c *.jpx
+
+video:
+    *.avi *.flv *.m2v *.m4v *.mkv *.mov *.mp4 *.mpeg *.mpg
+    *.ogm *.ogv *.vob *.wmv *.webm *.m2ts *.heic
+
+music:
+    *.aac *.m4a *.mp3 *.ogg *.wma *.mka *.opus
+
+lossless:
+    *.alac *.ape *.flac *.wav
+
+crypto:
+    *.asc *.enc *.gpg *.pgp *.sig *.signature *.pfx *.p12
+
+document:
+    *.djvu *.doc *.docx *.dvi *.eml *.eps *.fotd *.key
+    *.keynote *.numbers *.odp *.odt *.pages *.pdf *.ppt
+    *.pptx *.rtf *.xls *.xlsx
+
+compressed:
+    *.zip *.tar *.Z *.z *.gz *.bz2 *.a *.ar *.7z *.iso *.dmg
+    *.tc *.rar *.par *.tgz *.xz *.txz *.lz *.tlz *.lzma
+    *.deb *.rpm *.zst *.lz4 *.cpio
+
+compiled:
+    *.class *.elc *.hi *.o *.pyc *.zwc *.ko
+
+temp:
+    *.tmp *.swp *.swo *.swn *.bak *.bkp *.bk
+
+immediate:
+    Makefile Cargo.toml SConstruct CMakeLists.txt build.gradle
+    pom.xml Rakefile package.json Gruntfile.js Gruntfile.coffee
+    BUILD BUILD.bazel WORKSPACE build.xml Podfile
+    webpack.config.js meson.build composer.json RoboFile.php
+    PKGBUILD Justfile Procfile Dockerfile Containerfile
+    Vagrantfile Brewfile Gemfile Pipfile build.sbt mix.exs
+    bsconfig.json tsconfig.json
+.Ed
+.Sh STYLES
+Named sets of file colour rules, referenced from themes via
+.Sy use-style = \(dqNAME\(dq .
+.Pp
+Styles can reference classes using bare dotted TOML keys, or match
+files directly using quoted keys:
+.Bl -tag -width Ds
+.It Sy class.NAME = \(dqcolour\(dq
+Reference a named class.
+Applies the colour to every pattern in the class definition.
+.It Sy \(dq*.ext\(dq = \(dqcolour\(dq
+Glob pattern (quoted key containing metacharacters
+.Sq * ,
+.Sq \&? ,
+.Sq \&[ ) .
+.It Sy \(dqMakefile\(dq = \(dqcolour\(dq
+Exact filename match (quoted key without metacharacters).
+.El
+.Pp
+All file pattern keys
+.Em must be quoted .
+Bare unquoted keys are reserved for class references.
+.Bd -literal -offset indent
+[style.exa]
+class.temp       = "38;5;244"
+class.immediate  = "bold underline yellow"
+class.image      = "38;5;133"
+class.video      = "38;5;135"
+class.music      = "38;5;92"
+class.lossless   = "38;5;93"
+class.crypto     = "38;5;109"
+class.document   = "38;5;105"
+class.compressed = "red"
+class.compiled   = "38;5;137"
+
+[style.dev]
+class.source     = "#ff8700"
+"*.toml"         = "sandybrown"
+"*.md"           = "cornflowerblue"
+"Makefile"       = "bold underline yellow"
+"Cargo.toml"     = "bold #ff8700"
+.Ed
+.Pp
+The compiled-in
+.Sy \(dqexa\(dq
+style provides default file-type colouring.
+To disable it, use a theme that references a different style (or no
+style at all).
+If two classes have overlapping patterns, the result is unspecified.
+.Sh COLOUR VALUES
+Colour values in themes and style sets accept a space-separated
+string of modifiers and a colour specifier.
+Tokens may appear in any order.
+.Pp
+.Sy Modifiers\&:
+.Bl -item -offset indent -compact
+.It
+.Cm bold ,
+.Cm dimmed Pq alias Cm dim ,
+.Cm italic ,
+.Cm underline ,
+.Cm strikethrough ,
+.Cm blink ,
+.Cm reverse ,
+.Cm hidden .
+.El
+.Pp
+.Sy Named ANSI colours\&:
+.Bl -item -offset indent -compact
+.It
+.Cm black ,
+.Cm red ,
+.Cm green ,
+.Cm yellow ,
+.Cm blue ,
+.Cm purple Pq alias Cm magenta ,
+.Cm cyan ,
+.Cm white .
+.El
+.Pp
+.Sy X11/CSS colour names\&:
+The full set of ~148 standard X11 colour names is supported
+(case-insensitive).
+Examples:
+.Cm tomato ,
+.Cm cornflowerblue ,
+.Cm darkslategray ,
+.Cm dodgerblue ,
+.Cm springgreen ,
+.Cm salmon ,
+.Cm peru ,
+.Cm steelblue ,
+.Cm wheat .
+.Pp
+.Sy Hex\&:
+.Sy #RRGGBB
+or
+.Sy #RGB .
+Examples:
+.Sy #ff8700 ,
+.Sy #f00 .
+.Pp
+.Sy 256-colour\&:
+Raw ANSI 256-colour code:
+.Sy 38;5\&; Ns Ar NUMBER
+(foreground) or
+.Sy 48;5\&; Ns Ar NUMBER
+(background).
+Example:
+.Sy 38;5;208 .
+.Pp
+.Sy RGB\&:
+Raw ANSI true-colour code:
+.Sy 38;2\&; Ns Ar R;G;B
+(foreground) or
+.Sy 48;2\&; Ns Ar R;G;B
+(background).
+Example:
+.Sy 38;2;255;135;0 .
+.Pp
+Modifiers can be combined with any colour specifier:
+.Bd -literal -offset indent
+"bold blue"
+"bold underline red"
+"dimmed cyan"
+"bold #ff8700"
+"bold tomato"
+"italic 38;5;208"
+.Ed
+.Pp
+A value containing only modifiers (e.g.
+.Sy \(dqbold underline\(dq )
+uses the terminal's default foreground colour.
+.Sh PRECEDENCE
+Colour settings are resolved in the following order, from lowest to
+highest priority:
+.Bl -enum -offset indent
+.It
+.Sy Built-in defaults
+\(em the compiled-in exa theme.
+.It
+.Ev LS_COLORS
+\(em standard file-type colour scheme.
+.It
+.Sy Theme
+\(em config-file theme (selected via personality or
+.Sy --theme ) .
+The theme's UI element keys and style set colours override all
+environment variable settings.
+.El
+.Pp
+Within a theme,
+.Sy inherits
+is resolved first (parent applied, then child overrides).
+Style sets referenced by
+.Sy use-style
+are applied after UI element keys.
+The compiled-in
+.Sy \(dqexa\(dq
+style provides default file-type colouring; to disable it, use a
+theme that references a different style or no style at all.
+.Sh SEE ALSO
+.Xr lx 1
+.Sh AUTHORS
+.Nm lx
+is maintained by
+.An Johann Visagie ,
+based on exa by
+.An Benjamin Sago .
+Source code:
+.Lk https://github.com/wjv/lx
