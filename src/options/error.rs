@@ -13,7 +13,8 @@ pub enum OptionsError {
     Unsupported(String),
 
     /// A very specific edge case where --tree can't be used with --all twice.
-    #[error("Option --tree is useless given --all --all")]
+    #[error("the argument '--tree' cannot be used with '--all --all' \
+             (listing '.' and '..' in tree mode would recurse forever)")]
     TreeAllAll,
 
     /// A numeric option was given that failed to be parsed as a number.

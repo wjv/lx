@@ -100,9 +100,23 @@ fn main() {
     match try_main() {
         Ok(code) => std::process::exit(code),
         Err(e) => {
-            eprintln!("lx: {e}");
+            eprintln!("{} {e}", error_label());
             std::process::exit(e.exit_code());
         }
+    }
+}
+
+
+/// Format the "error:" label the way clap does: bold red when stderr is
+/// a terminal and `NO_COLOR` is unset, plain otherwise.  Keeps our
+/// non-clap fatal errors visually consistent with clap's own output.
+fn error_label() -> &'static str {
+    use std::io::IsTerminal;
+
+    if env::var_os("NO_COLOR").is_none() && io::stderr().is_terminal() {
+        "\x1b[1m\x1b[31merror:\x1b[0m"
+    } else {
+        "error:"
     }
 }
 

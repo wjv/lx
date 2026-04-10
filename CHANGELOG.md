@@ -82,6 +82,16 @@ All notable changes to lx are documented here. lx is forked from
 - Hidden `--no-dirs-first` / `--no-dirs-last` suppressors, for
   cancelling a personality's `group-dirs` default from the command
   line.  Either flag is equivalent to `--group-dirs=none`.
+
+### Changed
+
+- Non-clap fatal errors now use the same `error:` prefix as clap
+  (bold red on a TTY, plain otherwise, `NO_COLOR`-aware) instead
+  of the old `lx: ` prefix.  Clap-generated and our own errors
+  are now visually indistinguishable.
+- Friendlier `--tree --all --all` error message: explains that
+  listing `.` and `..` in tree mode would recurse forever,
+  phrased in the same style as clap's conflict errors.
 - Dependabot for Cargo + GitHub Actions dependency updates.
 - `cargo-deny` in CI (licence compliance + security advisories).
 - Weekly scheduled security audit workflow.
