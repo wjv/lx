@@ -234,9 +234,12 @@ pub static COLUMN_REGISTRY: &[ColumnDef] = &[
     ColumnDef {
         column: Column::Permissions,
         name: "permissions",
-        // `perms` kept as an alias for backward compatibility with
-        // pre-0.8 configs that use `columns = ["perms", ...]`.
-        aliases: &["perms"],
+        // `perms` kept for backward compatibility with pre-0.8 configs
+        // that use `columns = ["perms", ...]`; `mode` matches the
+        // `--mode` flag alias and the `mode` sort field, so the
+        // permissions column is reachable by the same three names from
+        // every surface (`--columns=`, `-s`, `--mode`/`--permissions`).
+        aliases: &["perms", "mode"],
         #[cfg(unix)]
         header: "Permissions",
         #[cfg(windows)]

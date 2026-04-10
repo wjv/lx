@@ -83,6 +83,21 @@ All notable changes to lx are documented here. lx is forked from
 
 ### Changed
 
+- **Flag-alias hygiene.**  `--ignore-glob` and `--prune-glob` are
+  now hidden aliases of `--ignore` and `--prune` (previously
+  visible).  `--octal-permissions` no longer appears as an
+  annotation in `--help` next to `--octal` (still accepted on the
+  CLI).  All three were eza-compatibility long forms surfaced in
+  `--help` for discoverability; the short canonical names are
+  shorter, unambiguous, and less cluttered, so the long forms now
+  live as silent compat shims rather than promoted aliases.
+- **`mode` accepted everywhere `permissions` is.**  The `--mode`
+  flag alias has existed since 0.8 but the spelling was missing
+  from `--columns=` (column registry only knew `permissions` and
+  `perms`) and from theme keys (only `permissions-*` and `perm-*`
+  prefixes existed).  Both gaps closed: `--columns=mode` works,
+  and theme keys like `mode-user-read = "red"` work alongside the
+  existing `permissions-user-read` and `perm-user-read` spellings.
 - **Man pages rewritten in `mdoc(7)`**, hand-authored and committed
   directly as `man/lx.1` and `man/lxconfig.toml.5`.  Drops the
   Markdown-plus-pandoc build pipeline entirely: the `.1`/`.5` files

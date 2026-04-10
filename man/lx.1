@@ -239,8 +239,9 @@ List only directories, not files.
 List only regular files, not directories.
 .It Fl I , Fl -ignore Ns = Ns Ar GLOBS
 Glob patterns, pipe-separated, of files to hide completely.
-Alias:
-.Fl -ignore-glob .
+Also accepted:
+.Fl -ignore-glob
+.Pq exa/eza compatibility .
 .It Fl P , Fl -prune Ns = Ns Ar GLOBS
 Glob patterns, pipe-separated, of directories to show but not recurse
 into.
@@ -252,8 +253,9 @@ Only meaningful with
 or
 .Fl R ;
 silently ignored otherwise.
-Alias:
-.Fl -prune-glob .
+Also accepted:
+.Fl -prune-glob
+.Pq exa/eza compatibility .
 .It Fl -symlinks Ns = Ns Ar MODE
 How to handle symbolic links.
 .Ar MODE
@@ -569,8 +571,9 @@ sorting uses the recursive total.
 List each file's extended attributes and sizes.
 .It Fl o , Fl -octal
 List each file's permissions in octal format.
-Alias:
-.Fl -octal-permissions .
+Also accepted:
+.Fl -octal-permissions
+.Pq exa/eza compatibility .
 .It Fl O , Fl -flags
 Show platform file flags.
 On macOS and
@@ -629,7 +632,9 @@ Valid names:
 .Cm created ,
 .Cm vcs .
 .Cm perms
-is accepted as a backward-compatible alias for
+and
+.Cm mode
+are accepted as aliases for
 .Cm permissions .
 .It Fl -format Ns = Ns Ar NAME
 Select a named column format.
