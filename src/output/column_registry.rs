@@ -165,22 +165,38 @@ fn render_flags(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> Text
 
 fn render_modified(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
     use crate::output::render::TimeRender;
-    file.modified_time().render(&ctx.theme.ui.date_modified, ctx.time_format)
+    file.modified_time().render(
+        &ctx.theme.ui.date_modified,
+        ctx.theme.ui.smooth_luts.modified.as_deref(),
+        ctx.time_format,
+    )
 }
 
 fn render_changed(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
     use crate::output::render::TimeRender;
-    file.changed_time().render(&ctx.theme.ui.date_changed, ctx.time_format)
+    file.changed_time().render(
+        &ctx.theme.ui.date_changed,
+        ctx.theme.ui.smooth_luts.changed.as_deref(),
+        ctx.time_format,
+    )
 }
 
 fn render_accessed(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
     use crate::output::render::TimeRender;
-    file.accessed_time().render(&ctx.theme.ui.date_accessed, ctx.time_format)
+    file.accessed_time().render(
+        &ctx.theme.ui.date_accessed,
+        ctx.theme.ui.smooth_luts.accessed.as_deref(),
+        ctx.time_format,
+    )
 }
 
 fn render_created(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
     use crate::output::render::TimeRender;
-    file.created_time().render(&ctx.theme.ui.date_created, ctx.time_format)
+    file.created_time().render(
+        &ctx.theme.ui.date_created,
+        ctx.theme.ui.smooth_luts.created.as_deref(),
+        ctx.time_format,
+    )
 }
 
 

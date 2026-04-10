@@ -17,6 +17,7 @@ pub use self::error::ThemeError;
 
 mod oklab;
 mod smooth;
+pub use self::smooth::age_to_position;
 
 
 #[derive(PartialEq, Eq, Debug)]
@@ -838,8 +839,17 @@ impl render::PermissionsColours for Theme {
 }
 
 impl render::SizeColours for Theme {
-    fn size(&self, prefix: Option<unit_prefix::Prefix>) -> Style {
+    fn size(&self, bytes: u64, prefix: Option<unit_prefix::Prefix>) -> Style {
         use unit_prefix::Prefix::*;
+
+        // Smooth gradient: look up the LUT bucket when the
+        // theme has one.  Otherwise fall through to the
+        // discrete per-tier match below.
+        if let Some(lut) = self.ui.smooth_luts.size.as_deref() {
+            let position = smooth::size_to_position(bytes);
+            let bucket = (position * 255.0).round() as usize;
+            return lut[bucket.min(255)];
+        }
 
         match prefix {
             Some(Kilo | Kibi) => self.ui.size.number_kilo,

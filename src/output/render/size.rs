@@ -31,12 +31,12 @@ impl f::Size {
                 // But format the number directly using the locale.
                 let string = numerics.format_int(size);
 
-                return TextCell::paint(colours.size(prefix), string);
+                return TextCell::paint(colours.size(size, prefix), string);
             }
         };
 
         let (prefix, n) = match result {
-            NumberPrefix::Standalone(b)   => return TextCell::paint(colours.size(None), numerics.format_int(b)),
+            NumberPrefix::Standalone(b)   => return TextCell::paint(colours.size(size, None), numerics.format_int(b)),
             NumberPrefix::Prefixed(p, n)  => (p, n),
         };
 
@@ -51,7 +51,7 @@ impl f::Size {
             // symbol is guaranteed to be ASCII since unit prefixes are hardcoded.
             width: DisplayWidth::from(&*number) + symbol.len(),
             contents: vec![
-                colours.size(Some(prefix)).paint(number),
+                colours.size(size, Some(prefix)).paint(number),
                 colours.unit(Some(prefix)).paint(symbol),
             ].into(),
         }
@@ -77,7 +77,15 @@ impl f::DeviceIDs {
 
 
 pub trait Colours {
-    fn size(&self, prefix: Option<Prefix>) -> Style;
+    /// Pick the style for a file-size number.
+    ///
+    /// `bytes` is the raw file size; `prefix` is the unit prefix
+    /// chosen by the caller for display.  Discrete-tier themes
+    /// only need `prefix`; smooth-gradient themes use `bytes`
+    /// for a LUT lookup keyed on log-scaled size.  In
+    /// `JustBytes` mode the caller still passes the prefix so
+    /// the discrete fallback lands on the right tier.
+    fn size(&self, bytes: u64, prefix: Option<Prefix>) -> Style;
     fn unit(&self, prefix: Option<Prefix>) -> Style;
     fn no_size(&self) -> Style;
 
@@ -103,7 +111,7 @@ pub mod test {
     struct TestColours;
 
     impl Colours for TestColours {
-        fn size(&self, _prefix: Option<Prefix>) -> Style { Fixed(66).normal() }
+        fn size(&self, _bytes: u64, _prefix: Option<Prefix>) -> Style { Fixed(66).normal() }
         fn unit(&self, _prefix: Option<Prefix>) -> Style { Fixed(77).bold() }
         fn no_size(&self)          -> Style { Black.italic() }
 
