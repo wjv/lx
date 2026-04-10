@@ -16,6 +16,7 @@ mod error;
 pub use self::error::ThemeError;
 
 mod oklab;
+mod smooth;
 
 
 #[derive(PartialEq, Eq, Debug)]
@@ -47,12 +48,20 @@ pub struct Options {
 /// don't know about the on/off state — they just read whatever the
 /// theme tells them.
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
+#[allow(clippy::struct_excessive_bools)] // one bool per gradient column is the natural shape
 pub struct GradientFlags {
     pub size:     bool,
     pub modified: bool,
     pub accessed: bool,
     pub changed:  bool,
     pub created:  bool,
+
+    /// Whether to smooth the gradients into a 256-stop
+    /// perceptually-uniform interpolation between the theme's
+    /// per-tier anchors.  Opt-in via `--smooth`; has no effect on
+    /// columns whose gradient flag is off, or on themes whose
+    /// anchors aren't all 24-bit `Color::Rgb`.
+    pub smooth: bool,
 }
 
 impl GradientFlags {
@@ -64,6 +73,7 @@ impl GradientFlags {
         accessed: true,
         changed:  true,
         created:  true,
+        smooth:   false,
     };
 
     /// All gradients off.  Each column collapses to its theme's
@@ -75,6 +85,7 @@ impl GradientFlags {
         accessed: false,
         changed:  false,
         created:  false,
+        smooth:   false,
     };
 }
 

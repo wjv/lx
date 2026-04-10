@@ -1,6 +1,7 @@
 use nu_ansi_term::{Color, Style};
 
 use crate::theme::lsc::Pair;
+use crate::theme::smooth::{self, SmoothLuts};
 
 
 /// Returns `true` iff `style`'s foreground is a 24-bit
@@ -46,6 +47,15 @@ pub struct UiStyles {
     pub control_char:         Style,
     pub broken_symlink:       Style,
     pub broken_path_overlay:  Style,
+
+    /// Precomputed smooth-gradient LUTs, populated by
+    /// [`UiStyles::apply_gradient_flags`] when the caller sets
+    /// `gradient.smooth = true` and the column's anchors are
+    /// all 24-bit `Color::Rgb`.  The renderer reads these
+    /// through a per-column accessor and falls back to the
+    /// discrete per-tier fields on [`Size`] / [`DateAge`] when
+    /// the LUT is absent.
+    pub smooth_luts: SmoothLuts,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -257,7 +267,41 @@ impl UiStyles {
     ///
     /// Runs once at theme construction so the renderers themselves
     /// stay oblivious to the on/off state.
+    ///
+    /// When `gradient.smooth` is set, this also builds 256-stop
+    /// smooth-interpolated LUTs for each gradient-capable column
+    /// whose theme anchors are all 24-bit `Color::Rgb`.  The LUT
+    /// build runs **before** flattening, so columns with gradients
+    /// off don't get a (pointless) LUT of their flat colour, and
+    /// columns with gradients on but non-RGB anchors are silently
+    /// left in discrete mode.
     pub fn apply_gradient_flags(&mut self, gradient: super::GradientFlags) {
+        // Phase 1: build smooth LUTs from the original per-tier
+        // anchor colours, before they're flattened.
+        if gradient.smooth {
+            if gradient.size && self.size.is_smoothable() {
+                self.smooth_luts.size =
+                    Some(smooth::build_smooth_lut(&smooth::size_anchors(&self.size)));
+            }
+            if gradient.modified && self.date_modified.is_smoothable() {
+                self.smooth_luts.modified =
+                    Some(smooth::build_smooth_lut(&smooth::date_anchors(&self.date_modified)));
+            }
+            if gradient.accessed && self.date_accessed.is_smoothable() {
+                self.smooth_luts.accessed =
+                    Some(smooth::build_smooth_lut(&smooth::date_anchors(&self.date_accessed)));
+            }
+            if gradient.changed && self.date_changed.is_smoothable() {
+                self.smooth_luts.changed =
+                    Some(smooth::build_smooth_lut(&smooth::date_anchors(&self.date_changed)));
+            }
+            if gradient.created && self.date_created.is_smoothable() {
+                self.smooth_luts.created =
+                    Some(smooth::build_smooth_lut(&smooth::date_anchors(&self.date_created)));
+            }
+        }
+
+        // Phase 2: flatten columns whose gradient is off.
         if !gradient.size {
             self.size.number_byte = self.size.major;
             self.size.number_kilo = self.size.major;

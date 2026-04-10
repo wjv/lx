@@ -1,6 +1,7 @@
 use nu_ansi_term::Style;
 use nu_ansi_term::Color::*;
 
+use crate::theme::smooth::SmoothLuts;
 use crate::theme::ui_styles::*;
 
 
@@ -121,6 +122,8 @@ impl UiStyles {
             control_char:         Red.normal(),
             broken_symlink:       Red.normal(),
             broken_path_overlay:  Style::default().underline(),
+
+            smooth_luts: SmoothLuts::default(),
         }
     }
 }
@@ -245,6 +248,8 @@ impl UiStyles {
             control_char:         Fixed(167).normal(),
             broken_symlink:       Fixed(167).normal(),
             broken_path_overlay:  Style::default().underline(),
+
+            smooth_luts: SmoothLuts::default(),
         }
     }
 }
@@ -394,6 +399,8 @@ impl UiStyles {
             control_char:         coral.normal(),
             broken_symlink:       coral.normal(),
             broken_path_overlay:  Style::default().underline(),
+
+            smooth_luts: SmoothLuts::default(),
         }
     }
 }
