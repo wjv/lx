@@ -15,6 +15,8 @@ mod default_theme;
 mod error;
 pub use self::error::ThemeError;
 
+mod oklab;
+
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct Options {
