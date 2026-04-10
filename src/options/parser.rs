@@ -260,17 +260,22 @@ impl clap::builder::TypedValueParser for ColumnsParser {
 
 /// `TypedValueParser` for `--gradient`.
 ///
-/// Accepts a comma-separated list of column names (`size`, `date`),
-/// or one of the special tokens `none` / `all`.  Tokens may not be
-/// mixed with column names — `none` and `all` only make sense alone.
-/// On a typo (`--gradient=siz`) clap's "did you mean" suggests the
-/// closest known token via the `possible_values()` advertised here.
+/// Accepts a comma-separated list of column names — `size` plus the
+/// four timestamp columns (`modified`, `accessed`, `changed`,
+/// `created`) — or one of the special tokens `none` / `all` /
+/// `date`.  Tokens may not be mixed with column names: `none` and
+/// `all` only make sense alone.  On a typo (`--gradient=siz`)
+/// clap's "did you mean" suggests the closest known token via the
+/// `possible_values()` advertised here.
+///
+/// `date` is a bulk setter that flips all four per-timestamp flags
+/// at once — useful when the user wants every timestamp column
+/// gradient-coloured but the size column flat.
 ///
 /// Hidden aliases: `filesize` for `size` and `timestamp` for `date`,
-/// matching the column-add flag spellings (`--filesize`, see also
-/// timestamp flags).  These are accepted but not advertised in
-/// `[possible values: ...]` — they exist so users who reach for the
-/// column-add name don't get a surprise rejection.
+/// matching the column-add flag spellings.  These are accepted but
+/// not advertised in `[possible values: ...]` — they exist so users
+/// who reach for the column-add name don't get a surprise rejection.
 #[derive(Clone)]
 struct GradientParser;
 
@@ -280,7 +285,10 @@ impl GradientParser {
     /// `timestamp`) are attached via `PossibleValue::alias()` in
     /// `token_values()` below; they participate in clap's "did you
     /// mean" computation without cluttering the help output.
-    const TOKENS: &'static [&'static str] = &["none", "all", "size", "date"];
+    const TOKENS: &'static [&'static str] = &[
+        "none", "all", "size", "date",
+        "modified", "accessed", "changed", "created",
+    ];
 
     /// `PossibleValue` objects for the parser, with hidden aliases
     /// attached.  Used both for error construction and the
@@ -291,6 +299,10 @@ impl GradientParser {
             PossibleValue::new("all"),
             PossibleValue::new("size").alias("filesize"),
             PossibleValue::new("date").alias("timestamp"),
+            PossibleValue::new("modified"),
+            PossibleValue::new("accessed"),
+            PossibleValue::new("changed"),
+            PossibleValue::new("created"),
         ]
     }
 }
@@ -313,7 +325,9 @@ impl clap::builder::TypedValueParser for GradientParser {
             let tok = tok.trim();
             match tok {
                 "none" | "all" => saw_none_or_all = true,
-                "size" | "filesize" | "date" | "timestamp" => saw_column = true,
+                "size" | "filesize"
+                | "date" | "timestamp"
+                | "modified" | "accessed" | "changed" | "created" => saw_column = true,
                 _ => {
                     // Unknown token — let PossibleValuesParser
                     // construct the error so we get the same
@@ -958,7 +972,7 @@ Environment:\n  \
             .default_missing_value(""))
         .arg(Arg::new(flags::GRADIENT)
             .long("gradient")
-            .help("Per-column gradient on/off\n[size, date, all, none]")
+            .help("Per-column gradient on/off\n[size, date, modified, accessed, changed, created, all, none]")
             .help_heading("Appearance")
             .action(ArgAction::Set)
             .value_name("COLUMNS")
