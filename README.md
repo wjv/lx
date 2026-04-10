@@ -136,6 +136,24 @@ on repository ignore rules.
 The jj backend is opt-in at compile time to keep the default binary small 
 — Homebrew and pre-built release binaries include it.
 
+### Fast, even on slow filesystems
+
+A big tree shouldn't make `lx` feel sluggish. When computing recursive sizes, 
+`lx` walks each directory **once**. An in-memory cache catches cases where the 
+same directory would otherwise be visited twice.
+
+```sh
+lx -lTZ ~/Projects    # long + tree + total size, in one pass
+```
+
+This is most visible on high-latency filesystems like NFS, where
+every extra `stat()` round-trip costs real milliseconds: `lx` 0.9
+lists large NFS-hosted trees in roughly a tenth of the wall time
+earlier `lx` releases took.
+
+Local SSDs benefit too — just less visibly, because there's less
+latency to save in the first place.
+
 > For a walkthrough of *everything* above, see the [user guide](docs/GUIDE.md)!
 
 
