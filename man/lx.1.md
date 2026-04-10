@@ -266,6 +266,11 @@ Legacy alias: `--group-directories-first`.
 : Directories last (short for `--group-dirs=last`).
 Legacy alias: `--group-directories-last`.
 
+`--no-dirs-first`, `--no-dirs-last`
+: Hidden suppressors for `-F` / `-J`.  Either one forces
+`--group-dirs=none`, useful for turning off a personality's default
+grouping from the command line.
+
 
 LONG VIEW OPTIONS
 =================

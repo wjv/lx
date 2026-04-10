@@ -79,6 +79,9 @@ All notable changes to lx are documented here. lx is forked from
   brighter gradients), and `the-exa-future` (a 24-bit tribute
   to the original exa look).
 - Error on unknown `--theme=NAME` (exit 3, same as unknown `-p`).
+- Hidden `--no-dirs-first` / `--no-dirs-last` suppressors, for
+  cancelling a personality's `group-dirs` default from the command
+  line.  Either flag is equivalent to `--group-dirs=none`.
 - Dependabot for Cargo + GitHub Actions dependency updates.
 - `cargo-deny` in CI (licence compliance + security advisories).
 - Weekly scheduled security audit workflow.

@@ -29,6 +29,14 @@ impl FileFilter {
 
 impl GroupDirs {
     fn deduce(matches: &MatchedFlags) -> Self {
+        // Hidden --no-dirs-first / --no-dirs-last suppress any prior
+        // selection (e.g. from a personality) — aliases for
+        // --group-dirs=none.  Checked first so the early returns
+        // below don't skip them.
+        if matches.has(flags::NO_DIRS_FIRST) || matches.has(flags::NO_DIRS_LAST) {
+            return Self::None;
+        }
+
         // --group-dirs=first|last|none takes priority
         if let Some(word) = matches.get(flags::GROUP_DIRS) {
             return match word {

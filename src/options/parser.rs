@@ -723,6 +723,14 @@ Environment:\n  \
             .help_heading("Filtering & Sorting")
             .action(ArgAction::SetTrue)
             .overrides_with_all([flags::GROUP_DIRS, flags::DIRS_FIRST]))
+        .arg(Arg::new(flags::NO_DIRS_FIRST)
+            .long("no-dirs-first")
+            .hide(true)
+            .action(ArgAction::Count))
+        .arg(Arg::new(flags::NO_DIRS_LAST)
+            .long("no-dirs-last")
+            .hide(true)
+            .action(ArgAction::Count))
 
         // ── Column / format / personality ─────────────────────────
 
@@ -972,7 +980,8 @@ Environment:\n  \
             .default_missing_value(""))
         .arg(Arg::new(flags::GRADIENT)
             .long("gradient")
-            .help("Per-column gradient on/off\n[size, date, modified, accessed, changed, created, all, none]")
+            .help("Per-column gradient on/off\n[all, none, size, date,\n \
+                  modified, accessed, changed, created]")
             .help_heading("Appearance")
             .action(ArgAction::Set)
             .value_name("COLUMNS")
@@ -987,7 +996,7 @@ Environment:\n  \
             .action(ArgAction::Count))
         .arg(Arg::new(flags::SMOOTH)
             .long("smooth")
-            .help("Smoothly interpolate gradients between theme anchors\n[24-bit themes only]")
+            .help("Smoothly interpolate gradients\n[24-bit themes only]")
             .help_heading("Appearance")
             .action(ArgAction::Count))
         .arg(Arg::new(flags::NO_SMOOTH)

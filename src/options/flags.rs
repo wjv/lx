@@ -27,6 +27,8 @@ pub const SYMLINKS: &str = "symlinks";
 pub const GROUP_DIRS: &str = "group-dirs";
 pub const DIRS_FIRST: &str = "group-directories-first";
 pub const DIRS_LAST: &str = "group-directories-last";
+pub const NO_DIRS_FIRST: &str = "no-dirs-first";
+pub const NO_DIRS_LAST: &str = "no-dirs-last";
 pub const ONLY_DIRS: &str = "only-dirs";
 pub const ONLY_FILES: &str = "only-files";
 

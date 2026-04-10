@@ -291,6 +291,44 @@ fn group_directories_first_legacy() {
         }));
 }
 
+#[test]
+fn no_dirs_first_suppresses_dirs_first() {
+    // Hidden --no-dirs-first overrides an earlier -F (typical use:
+    // suppressing a personality's group-dirs=first default).
+    let dir = tempdir().expect("failed to create tempdir");
+    fs::write(dir.path().join("aaa_file.txt"), "").unwrap();
+    fs::create_dir(dir.path().join("zzz_dir")).unwrap();
+
+    lx_no_colour()
+        .args(["-1", "-F", "--no-dirs-first"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::function(|output: &str| {
+            let dir_pos = output.find("zzz_dir").unwrap();
+            let file_pos = output.find("aaa_file.txt").unwrap();
+            file_pos < dir_pos  // sorted alphabetically, dirs no longer pulled forward
+        }));
+}
+
+#[test]
+fn no_dirs_last_suppresses_dirs_last() {
+    let dir = tempdir().expect("failed to create tempdir");
+    fs::write(dir.path().join("aaa_file.txt"), "").unwrap();
+    fs::create_dir(dir.path().join("zzz_dir")).unwrap();
+
+    lx_no_colour()
+        .args(["-1", "-J", "--no-dirs-last"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::function(|output: &str| {
+            let dir_pos = output.find("zzz_dir").unwrap();
+            let file_pos = output.find("aaa_file.txt").unwrap();
+            file_pos < dir_pos
+        }));
+}
+
 
 // ── Batch D: expanded sort fields ──────────────────────────
 
