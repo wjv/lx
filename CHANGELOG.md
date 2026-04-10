@@ -101,6 +101,14 @@ All notable changes to lx are documented here. lx is forked from
 - Friendlier `--tree --all --all` error message: explains that
   listing `.` and `..` in tree mode would recurse forever,
   phrased in the same style as clap's conflict errors.
+- `--dump-theme` output groups `date-*` keys into a structured
+  block: bulk keys first in canonical tier order (`now`, `today`,
+  `week`, `month`, `year`, `old`, `flat`), then each per-column
+  family (`modified`, `accessed`, `changed`, `created`) in the
+  same tier order, with blank lines between groups.  Previously,
+  per-column keys were interleaved alphabetically with bulk
+  keys, obscuring the "baseline + per-column overrides" structure
+  that theme authors almost always write.
 - Dependabot for Cargo + GitHub Actions dependency updates.
 - `cargo-deny` in CI (licence compliance + security advisories).
 - Weekly scheduled security audit workflow.

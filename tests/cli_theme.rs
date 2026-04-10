@@ -619,6 +619,68 @@ fn per_column_date_keys_round_trip_through_dump_theme() {
     }
 }
 
+/// `--dump-theme` groups `date-*` keys into a structured block
+/// instead of interleaving them alphabetically with each other and
+/// with non-date keys.  Expected shape: bulk keys first in canonical
+/// tier order, then each per-column family in canonical column
+/// order (modified / accessed / changed / created), each group in
+/// tier order, blank lines between groups, and the whole block
+/// sitting at the alphabetical position where plain `date` would
+/// fall.
+#[test]
+fn dump_theme_groups_date_keys_by_column() {
+    let (_dir, mut cmd) = lx_with_theme(r#"
+        version = "0.3"
+        [theme.grouped]
+        inherits = "exa"
+        directory = "bold blue"
+        size-major = "white"
+        date-created-now   = "red"
+        date-now           = "cyan"
+        date-modified-week = "yellow"
+        date-accessed-flat = "green"
+        date-today         = "magenta"
+        date-changed-now   = "orange"
+    "#);
+
+    let assertion = cmd
+        .args(["--dump-theme=grouped"])
+        .assert()
+        .success();
+    let dump = String::from_utf8(assertion.get_output().stdout.clone()).unwrap();
+
+    // Strip the header lines and the [theme.grouped]/inherits/use-style
+    // preamble so we can assert on the body alone.
+    let body: Vec<&str> = dump.lines()
+        .skip_while(|l| !l.starts_with("date") && !l.starts_with("directory"))
+        .collect();
+
+    // Expected body, in exact order.  Blank lines separate the bulk
+    // block from each per-column block, and the whole date block
+    // from the trailing non-date keys.
+    let expected = vec![
+        "date-now = \"cyan\"",
+        "date-today = \"magenta\"",
+        "",
+        "date-modified-week = \"yellow\"",
+        "",
+        "date-accessed-flat = \"green\"",
+        "",
+        "date-changed-now = \"orange\"",
+        "",
+        "date-created-now = \"red\"",
+        "",
+        "directory = \"bold blue\"",
+        "size-major = \"white\"",
+    ];
+
+    assert_eq!(
+        body, expected,
+        "--dump-theme body does not match expected structured order:\n{dump}"
+    );
+}
+
+
 /// Spot-check the rendered-output side: running `lx -lll --theme=X`
 /// with per-column overrides produces an output whose ANSI escapes
 /// contain the expected per-column colours.  This exercises the
