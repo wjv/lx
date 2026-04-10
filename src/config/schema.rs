@@ -261,15 +261,6 @@ impl StringOrList {
             Self::List(v) => v.join(","),
         }
     }
-
-    /// Convert to a Vec of individual column names.
-    #[allow(dead_code)]  // will be used once view.rs reads columns directly
-    pub fn to_vec(&self) -> Vec<String> {
-        match self {
-            Self::Str(s) => s.split(',').map(|s| s.trim().to_string()).collect(),
-            Self::List(v) => v.clone(),
-        }
-    }
 }
 
 impl<'de> Deserialize<'de> for StringOrList {

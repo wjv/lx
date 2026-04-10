@@ -933,7 +933,6 @@ fn apply_overlay(mut base: Style, overlay: Style) -> Style {
 
 
 #[cfg(test)]
-#[allow(unused_macro_rules)]
 mod customs_test {
     use super::*;
     use crate::theme::ui_styles::UiStyles;
@@ -971,28 +970,6 @@ mod customs_test {
 
                 let (result, _reset) = definitions.parse_colour_vars(&mut UiStyles::default());
                 assert_eq!(ExtensionMappings { mappings }, result);
-            }
-        };
-        ($name:ident:  ls $ls:expr, lx $lx:expr  =>  colours $expected:ident -> $process_expected:expr, exts $mappings:expr) => {
-            #[test]
-            fn $name() {
-                let mut $expected = UiStyles::colourful(false);
-                $process_expected();
-
-                let mappings: Vec<(glob::Pattern, Style)>
-                    = $mappings.into_iter()
-                               .map(|t| (glob::Pattern::new(t.0).unwrap(), t.1))
-                               .collect();
-
-                let definitions = Definitions {
-                    ls:  Some($ls.into()),
-                    lx: Some($lx.into()),
-                };
-
-                let mut meh = UiStyles::colourful(false);
-                let (result, _reset) = definitions.parse_colour_vars(&vars, &mut meh);
-                assert_eq!(ExtensionMappings { mappings }, result);
-                assert_eq!($expected, meh);
             }
         };
     }

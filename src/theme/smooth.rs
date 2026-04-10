@@ -258,7 +258,7 @@ pub(crate) fn size_anchors(size: &Size) -> [(f32, Style); 5] {
 
 /// Anchor layout for a `DateAge` column: six tiers evenly
 /// spaced along [0.0, 1.0] by tier index.  The log-scale mapping
-/// from age to position lives in the renderer (commit 4).
+/// from age to position lives in the renderer.
 pub(crate) fn date_anchors(date: &DateAge) -> [(f32, Style); 6] {
     [
         (0.0, date.now),
