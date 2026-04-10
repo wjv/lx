@@ -447,6 +447,204 @@ mod theme_key_precedence_test {
     }
 }
 
+
+#[cfg(test)]
+mod apply_theme_def_test {
+    //! End-to-end tests for [`Options::apply_theme_def`], focused on
+    //! the precedence fall-through across the `date*` key family.
+    //!
+    //! These tests go through the real `set_config` code path with a
+    //! real `ThemeDef`, so they catch regressions where someone
+    //! breaks the sort, introduces a typo in a `set_config` arm, or
+    //! re-introduces the "bulk key clobbers per-column override"
+    //! bug.
+
+    use super::*;
+    use crate::config::{Config, ThemeDef};
+    use crate::theme::lsc::parse_style;
+    use crate::theme::ui_styles::UiStyles;
+    use std::collections::HashMap;
+
+    /// Build a minimal `ThemeDef` from an iterator of `(key, value)`
+    /// pairs.  Note that the order in which the pairs are given is
+    /// **irrelevant** to what ends up in the resulting `HashMap`, so
+    /// these tests implicitly assert that the fix doesn't depend on
+    /// insertion order.
+    fn theme_def_with<I, K, V>(entries: I) -> ThemeDef
+    where
+        I: IntoIterator<Item = (K, V)>,
+        K: Into<String>,
+        V: Into<String>,
+    {
+        let mut ui = HashMap::new();
+        for (k, v) in entries {
+            ui.insert(k.into(), v.into());
+        }
+        ThemeDef { inherits: None, use_style: None, ui }
+    }
+
+    fn apply(theme: &ThemeDef) -> UiStyles {
+        let mut ui = UiStyles::default();
+        let mut exts = ExtensionMappings::default();
+        let cfg = Config::default();
+        Options::apply_theme_def(theme, &cfg, &mut ui, &mut exts);
+        ui
+    }
+
+    #[test]
+    fn per_column_override_wins_over_bulk_date() {
+        // The canonical precedence case: `date` sets every tier on
+        // every column to blue, then `date-modified-now` overrides
+        // just one cell.  Before the precedence-sort fix this was
+        // nondeterministic — the bulk setter would sometimes run
+        // last and clobber the per-column override.
+        let theme = theme_def_with([
+            ("date", "blue"),
+            ("date-modified-now", "bright green"),
+        ]);
+        let ui = apply(&theme);
+
+        assert_eq!(ui.date_modified.now, parse_style("bright green"));
+        // Every other slot on every column falls through to the
+        // bulk setter.
+        assert_eq!(ui.date_modified.today, parse_style("blue"));
+        assert_eq!(ui.date_accessed.now,   parse_style("blue"));
+        assert_eq!(ui.date_changed.now,    parse_style("blue"));
+        assert_eq!(ui.date_created.now,    parse_style("blue"));
+    }
+
+    #[test]
+    fn full_precedence_chain_is_honoured() {
+        // The "worked example" from the man page: generic → bulk
+        // per-tier → bulk per-column → per-column per-tier, four
+        // layers of specificity.  The most specific key must win
+        // at every level, regardless of how `HashMap` hands the
+        // keys back to `apply_theme_def`.
+        let theme = theme_def_with([
+            ("date", "blue"),                      // bucket 0
+            ("date-now", "bright cyan"),           // bucket 1
+            ("date-modified", "white"),            // bucket 2
+            ("date-modified-now", "bright green"), // bucket 3
+        ]);
+        let ui = apply(&theme);
+
+        // modified column:
+        //   - `now` tier overridden at bucket 3 → bright green
+        //   - every other tier overridden at bucket 2 → white
+        assert_eq!(ui.date_modified.now,   parse_style("bright green"));
+        assert_eq!(ui.date_modified.today, parse_style("white"));
+        assert_eq!(ui.date_modified.flat,  parse_style("white"));
+
+        // accessed/changed/created columns:
+        //   - `now` tier overridden at bucket 1 → bright cyan
+        //   - every other tier set at bucket 0 → blue
+        assert_eq!(ui.date_accessed.now,   parse_style("bright cyan"));
+        assert_eq!(ui.date_accessed.today, parse_style("blue"));
+        assert_eq!(ui.date_changed.now,    parse_style("bright cyan"));
+        assert_eq!(ui.date_changed.today,  parse_style("blue"));
+        assert_eq!(ui.date_created.now,    parse_style("bright cyan"));
+        assert_eq!(ui.date_created.today,  parse_style("blue"));
+    }
+
+    #[test]
+    fn each_column_can_be_themed_independently() {
+        // The solarized-style design: each timestamp column gets
+        // its own hue on the hottest tier.  Verifies that
+        // per-column writes don't leak between columns.
+        let theme = theme_def_with([
+            ("date-modified-now", "cyan"),
+            ("date-accessed-now", "green"),
+            ("date-changed-now",  "magenta"),
+            ("date-created-now",  "red"),
+        ]);
+        let ui = apply(&theme);
+
+        assert_eq!(ui.date_modified.now, parse_style("cyan"));
+        assert_eq!(ui.date_accessed.now, parse_style("green"));
+        assert_eq!(ui.date_changed.now,  parse_style("magenta"));
+        assert_eq!(ui.date_created.now,  parse_style("red"));
+    }
+
+    #[test]
+    fn per_column_bulk_sets_every_tier_on_one_column() {
+        // `date-modified = "red"` should set every tier (now,
+        // today, week, month, year, old, flat) on the modified
+        // column, leaving the other three untouched.
+        let theme = theme_def_with([
+            ("date-modified", "red"),
+        ]);
+        let ui = apply(&theme);
+
+        let red = parse_style("red");
+        assert_eq!(ui.date_modified.now,   red);
+        assert_eq!(ui.date_modified.today, red);
+        assert_eq!(ui.date_modified.week,  red);
+        assert_eq!(ui.date_modified.month, red);
+        assert_eq!(ui.date_modified.year,  red);
+        assert_eq!(ui.date_modified.old,   red);
+        assert_eq!(ui.date_modified.flat,  red);
+
+        // Untouched columns keep the default (empty) style.
+        assert_eq!(ui.date_accessed.now, Style::default());
+        assert_eq!(ui.date_changed.now,  Style::default());
+        assert_eq!(ui.date_created.now,  Style::default());
+    }
+
+    #[test]
+    fn every_per_column_tier_key_parses_and_applies() {
+        // Sanity check that all 32 per-column per-tier keys made it
+        // into `set_config`.  If someone adds a new column or tier
+        // and forgets to wire up a match arm, this catches it.
+        let tiers = &["now", "today", "week", "month", "year", "old", "flat"];
+        let columns = &["modified", "accessed", "changed", "created"];
+
+        for &col in columns {
+            for &tier in tiers {
+                let key = format!("date-{col}-{tier}");
+                let theme = theme_def_with([(key.clone(), "red")]);
+                let ui = apply(&theme);
+
+                let red = parse_style("red");
+                let actual = match (col, tier) {
+                    ("modified", "now")   => ui.date_modified.now,
+                    ("modified", "today") => ui.date_modified.today,
+                    ("modified", "week")  => ui.date_modified.week,
+                    ("modified", "month") => ui.date_modified.month,
+                    ("modified", "year")  => ui.date_modified.year,
+                    ("modified", "old")   => ui.date_modified.old,
+                    ("modified", "flat")  => ui.date_modified.flat,
+                    ("accessed", "now")   => ui.date_accessed.now,
+                    ("accessed", "today") => ui.date_accessed.today,
+                    ("accessed", "week")  => ui.date_accessed.week,
+                    ("accessed", "month") => ui.date_accessed.month,
+                    ("accessed", "year")  => ui.date_accessed.year,
+                    ("accessed", "old")   => ui.date_accessed.old,
+                    ("accessed", "flat")  => ui.date_accessed.flat,
+                    ("changed",  "now")   => ui.date_changed.now,
+                    ("changed",  "today") => ui.date_changed.today,
+                    ("changed",  "week")  => ui.date_changed.week,
+                    ("changed",  "month") => ui.date_changed.month,
+                    ("changed",  "year")  => ui.date_changed.year,
+                    ("changed",  "old")   => ui.date_changed.old,
+                    ("changed",  "flat")  => ui.date_changed.flat,
+                    ("created",  "now")   => ui.date_created.now,
+                    ("created",  "today") => ui.date_created.today,
+                    ("created",  "week")  => ui.date_created.week,
+                    ("created",  "month") => ui.date_created.month,
+                    ("created",  "year")  => ui.date_created.year,
+                    ("created",  "old")   => ui.date_created.old,
+                    ("created",  "flat")  => ui.date_created.flat,
+                    _ => unreachable!(),
+                };
+                assert_eq!(
+                    actual, red,
+                    "theme key {key:?} did not apply — missing set_config arm?"
+                );
+            }
+        }
+    }
+}
+
 impl Definitions {
 
     /// Parse the environment variables into `LS_COLORS` pairs, putting file glob

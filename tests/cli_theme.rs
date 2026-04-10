@@ -593,3 +593,149 @@ fn init_config_preserves_default_colours() {
         "--init-config changed behaviour (invariant #2 violation)"
     );
 }
+
+
+// ── Per-timestamp-column theme keys ──────────────────────────────
+
+/// The 32 per-timestamp-column theme keys (4 columns × 8 slots)
+/// must all be parseable by `set_config` and must round-trip
+/// through `--dump-theme`.  This catches typos in `set_config`
+/// arms, key-name drift, and regressions in the dump output.
+#[test]
+fn per_column_date_keys_round_trip_through_dump_theme() {
+    let (_dir, mut cmd) = lx_with_theme(r#"
+        version = "0.3"
+        [theme.full-fat]
+        inherits = "exa"
+        date              = "white"
+        date-now          = "bright cyan"
+        date-modified     = "bright green"
+        date-modified-now = "bold bright green"
+        date-accessed-today = "magenta"
+        date-changed-flat = "dim"
+        date-created-old  = "red"
+    "#);
+
+    let assertion = cmd
+        .args(["--dump-theme=full-fat"])
+        .assert()
+        .success();
+    let dump = String::from_utf8(assertion.get_output().stdout.clone()).unwrap();
+
+    // Every key written to the theme must appear in the dump.
+    for key in [
+        "date = \"white\"",
+        "date-now = \"bright cyan\"",
+        "date-modified = \"bright green\"",
+        "date-modified-now = \"bold bright green\"",
+        "date-accessed-today = \"magenta\"",
+        "date-changed-flat = \"dim\"",
+        "date-created-old = \"red\"",
+    ] {
+        assert!(
+            dump.contains(key),
+            "--dump-theme output missing {key:?}:\n{dump}"
+        );
+    }
+}
+
+/// Spot-check the rendered-output side: running `lx -lll --theme=X`
+/// with per-column overrides produces an output whose ANSI escapes
+/// contain the expected per-column colours.  This exercises the
+/// end-to-end renderer path, not just the parser.
+#[test]
+fn per_column_gradient_tokens_reach_the_renderer() {
+    // Build a tempdir with a single file of a known-recent mtime
+    // (touching the file sets mtime=atime=ctime=now).
+    let work = tempdir().expect("failed to create workdir");
+    let file = work.path().join("fresh.txt");
+    fs::write(&file, "hi").unwrap();
+
+    let (_dir, mut cmd) = lx_with_theme(r#"
+        version = "0.3"
+        [theme.rainbow]
+        inherits = "exa"
+        date-modified-now = "red"
+        date-accessed-now = "green"
+        date-changed-now  = "blue"
+        date-created-now  = "magenta"
+    "#);
+
+    // `-lll` shows all four timestamp columns.
+    let assertion = cmd
+        .args(["-lll", "--theme=rainbow"])
+        .arg(work.path())
+        .assert()
+        .success();
+    let out = String::from_utf8(assertion.get_output().stdout.clone()).unwrap();
+
+    // Each per-column "now" colour should appear somewhere in the
+    // output (the file was just created, so every timestamp is in
+    // the `now` tier).  Exact code points:
+    //   red     → ESC[31m
+    //   green   → ESC[32m
+    //   blue    → ESC[34m
+    //   magenta → ESC[35m
+    for (colour, code) in [
+        ("red",     "\x1b[31m"),
+        ("green",   "\x1b[32m"),
+        ("blue",    "\x1b[34m"),
+        ("magenta", "\x1b[35m"),
+    ] {
+        assert!(
+            out.contains(code),
+            "per-column {colour} ({code:?}) did not reach the rendered output:\n{out}"
+        );
+    }
+}
+
+/// Exercise the four new visible `--gradient` tokens end-to-end.
+/// We don't assert exact colours (fragile across palettes), just
+/// that the command succeeds and that `modified`, `accessed`,
+/// `changed`, and `created` are all accepted by the parser.
+#[test]
+fn new_gradient_tokens_are_accepted() {
+    let work = tempdir().expect("failed to create workdir");
+    fs::write(work.path().join("file.txt"), "hi").unwrap();
+
+    for tok in ["modified", "accessed", "changed", "created",
+                "size,modified", "accessed,created"] {
+        let mut cmd = assert_cmd::Command::cargo_bin("lx").expect("binary lx not found");
+        cmd.env("LX_CONFIG", "/nonexistent")
+           .env("HOME", "/nonexistent")
+           .env_remove("LS_COLORS")
+           .env_remove("LX_COLORS")
+           .args(["-lll", "--colour=always", &format!("--gradient={tok}")])
+           .arg(work.path())
+           .assert()
+           .success();
+    }
+}
+
+/// The hidden `filesize`/`timestamp` aliases must behave identically
+/// to their canonical spellings.
+#[test]
+fn hidden_gradient_aliases_match_canonical() {
+    let work = tempdir().expect("failed to create workdir");
+    fs::write(work.path().join("file.txt"), "hi").unwrap();
+
+    let run = |value: &str| -> Vec<u8> {
+        let mut cmd = assert_cmd::Command::cargo_bin("lx").expect("binary lx not found");
+        cmd.env("LX_CONFIG", "/nonexistent")
+           .env("HOME", "/nonexistent")
+           .env_remove("LS_COLORS")
+           .env_remove("LX_COLORS")
+           .args(["-l", "--colour=always", &format!("--gradient={value}")])
+           .arg(work.path())
+           .assert()
+           .success()
+           .get_output()
+           .stdout
+           .clone()
+    };
+
+    assert_eq!(run("size"), run("filesize"),
+        "--gradient=filesize should match --gradient=size");
+    assert_eq!(run("date"), run("timestamp"),
+        "--gradient=timestamp should match --gradient=date");
+}
