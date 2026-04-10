@@ -53,7 +53,7 @@ impl f::Group {
 
     /// Compute the style for this group.  Three tiers: primary group,
     /// supplementary group (you have group access), or other.
-    /// Uses `getgroups()` (cached in MY_GROUPS) rather than
+    /// Uses `getgroups()` (cached in `MY_GROUPS`) rather than
     /// `/etc/group` membership lists, so macOS Directory Services
     /// groups and LDAP groups are handled correctly.
     /// `gid_column` selects the `gid_*` style slots.

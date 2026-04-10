@@ -29,9 +29,8 @@ impl UseColours {
             None => Self::Automatic,
         };
 
-        let word = match matches.get(flags::COLOR) {
-            Some(w)  => w,
-            None => return Ok(default_value),
+        let Some(word) = matches.get(flags::COLOR) else {
+            return Ok(default_value);
         };
 
         // Clap validates the value, so this match is exhaustive over accepted inputs.

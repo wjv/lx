@@ -75,9 +75,9 @@ impl LxError {
         match self {
             Self::Options(_)
             | Self::Theme(_)
-            | Self::Config(ConfigError::InheritanceCycle { .. })
-            | Self::Config(ConfigError::MissingParent { .. })
-            | Self::Config(ConfigError::NotFound { .. }) => exits::OPTIONS_ERROR,
+            | Self::Config(ConfigError::InheritanceCycle { .. }
+                          | ConfigError::MissingParent { .. }
+                          | ConfigError::NotFound { .. }) => exits::OPTIONS_ERROR,
             _ => exits::RUNTIME_ERROR,
         }
     }
@@ -230,10 +230,10 @@ fn try_main() -> Result<i32, LxError> {
             let mut numeric = locale::Numeric::load_user_locale()
                 .unwrap_or_else(|_| locale::Numeric::english());
             if let Some(ref dp) = options.view.table_options().and_then(|t| t.decimal_point.clone()) {
-                numeric.decimal_sep = dp.clone();
+                numeric.decimal_sep.clone_from(dp);
             }
             if let Some(ref ts) = options.view.table_options().and_then(|t| t.thousands_separator.clone()) {
-                numeric.thousands_sep = ts.clone();
+                numeric.thousands_sep.clone_from(ts);
             }
 
             let lx = Lx { options, writer, input_paths, theme, console_width, vcs, item_count: 0, size_total: 0, numeric };

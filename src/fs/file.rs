@@ -509,11 +509,10 @@ impl<'dir> File<'dir> {
 
         // Check the (dev, ino) cache before walking.
         #[cfg(unix)]
-        if let Some(key) = cache_key {
-            if let Some(&cached) = DIR_SIZE_CACHE.lock().unwrap().get(&key) {
+        if let Some(key) = cache_key
+            && let Some(&cached) = DIR_SIZE_CACHE.lock().unwrap().get(&key) {
                 return cached;
             }
-        }
 
         let entries: Vec<_> = match std::fs::read_dir(path) {
             Ok(e) => e.filter_map(std::result::Result::ok).collect(),
@@ -521,10 +520,7 @@ impl<'dir> File<'dir> {
         };
 
         let size: u64 = entries.par_iter().map(|entry| {
-            let ft = match entry.file_type() {
-                Ok(ft) => ft,
-                Err(_) => return 0,
-            };
+            let Ok(ft) = entry.file_type() else { return 0 };
 
             if ft.is_dir() {
                 // Extract (dev, ino) from the entry's metadata for

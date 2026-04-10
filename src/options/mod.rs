@@ -277,11 +277,12 @@ impl Options {
     /// status column. It's only worth trying to discover a repository if the
     /// results will end up being displayed.
     pub fn should_scan_for_vcs(&self) -> bool {
+        use crate::output::table::Column;
+
         if self.filter.vcs_ignore == VcsIgnore::CheckAndIgnore {
             return true;
         }
 
-        use crate::output::table::Column;
         match self.view.mode {
             Mode::Details(details::Options { table: Some(ref table), .. }) |
             Mode::GridDetails(grid_details::Options { details: details::Options { table: Some(ref table), .. }, .. }) => {

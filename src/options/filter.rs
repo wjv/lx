@@ -165,9 +165,8 @@ impl IgnorePatterns {
     /// Parse glob patterns from an arbitrary flag (used for both
     /// `--ignore-glob` and `--prune`).
     pub fn deduce_from(matches: &MatchedFlags, flag: &str) -> Result<Self, OptionsError> {
-        let inputs = match matches.get(flag) {
-            Some(is)  => is,
-            None      => return Ok(Self::empty()),
+        let Some(inputs) = matches.get(flag) else {
+            return Ok(Self::empty());
         };
 
         let (patterns, mut errors) = Self::parse_from_iter(inputs.split('|'));

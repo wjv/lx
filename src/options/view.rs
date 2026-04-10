@@ -322,13 +322,12 @@ fn canonical_insert_pos(columns: &[Column], col: Column) -> usize {
 fn apply_individual_adds(matches: &MatchedFlags, columns: &mut Vec<Column>) {
     use crate::output::column_registry::COLUMN_REGISTRY;
 
-    for def in COLUMN_REGISTRY.iter() {
-        if let Some(flag) = def.add_flag {
-            if matches.has(flag) && !columns.contains(&def.column) {
+    for def in COLUMN_REGISTRY {
+        if let Some(flag) = def.add_flag
+            && matches.has(flag) && !columns.contains(&def.column) {
                 let pos = canonical_insert_pos(columns, def.column);
                 columns.insert(pos, def.column);
             }
-        }
     }
 }
 
@@ -387,7 +386,7 @@ fn apply_suppressions(matches: &MatchedFlags, columns: &mut Vec<Column>) {
     use crate::output::column_registry::COLUMN_REGISTRY;
 
     // Registry-driven suppressions.
-    for def in COLUMN_REGISTRY.iter() {
+    for def in COLUMN_REGISTRY {
         if let Some(flag) = def.suppress_flag {
             let show_overrides = def.show_flag.is_some_and(|sf| matches.has(sf));
             if matches.has(flag) && !show_overrides {
@@ -397,13 +396,12 @@ fn apply_suppressions(matches: &MatchedFlags, columns: &mut Vec<Column>) {
     }
 
     // Registry-driven re-enables.
-    for def in COLUMN_REGISTRY.iter() {
-        if let Some(flag) = def.show_flag {
-            if matches.has(flag) && !columns.contains(&def.column) {
+    for def in COLUMN_REGISTRY {
+        if let Some(flag) = def.show_flag
+            && matches.has(flag) && !columns.contains(&def.column) {
                 let pos = canonical_insert_pos(columns, def.column);
                 columns.insert(pos, def.column);
             }
-        }
     }
 }
 
@@ -456,6 +454,8 @@ impl TimeFormat {
 
     /// Determine how time should be formatted in timestamp columns.
     fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
+        use crate::options::vars;
+
         // CLI value: clap's value_parser already validated it via
         // `parse_time_style`, so anything that arrives here is one of
         // the known styles or a `+strftime` custom format.
@@ -463,7 +463,6 @@ impl TimeFormat {
             return Ok(Self::from_str(w));
         }
 
-        use crate::options::vars;
         match vars.get(vars::TIME_STYLE) {
             Some(ref t) if ! t.is_empty()  => {
                 // Environment variable — not validated; silently fall

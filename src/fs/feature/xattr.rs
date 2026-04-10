@@ -28,10 +28,17 @@ impl FileAttributes for Path {
 }
 
 
-/// Attributes which can be passed to `Attribute::list_with_flags`
+/// Whether the platform lister should chase symlinks when reading
+/// extended attributes.  Both variants are matched by the macOS and
+/// Linux `Lister` impls (the Linux path picks between
+/// `listxattr`/`llistxattr` etc.), but only `Yes` is constructed
+/// today — `lx` always follows symlinks for xattr lookups.  The
+/// `No` variant is latent infrastructure for honouring an explicit
+/// don't-follow request (e.g. wiring this up to `--symlinks=hide`).
+/// Drop the variant — and the `allow` — once that decision lands.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 #[derive(Copy, Clone)]
-#[allow(dead_code)]  // No variant used by platform lister internals
+#[allow(dead_code)] // `No` variant is constructed nowhere yet; see doc comment
 pub enum FollowSymlinks {
     Yes,
     No,
@@ -50,11 +57,8 @@ pub fn list_attrs(lister: &lister::Lister, path: &Path) -> io::Result<Vec<Attrib
     use std::cmp::Ordering;
     use std::ffi::CString;
 
-    let c_path = match path.to_str().and_then(|s| CString::new(s).ok()) {
-        Some(cstring) => cstring,
-        None => {
-            return Err(io::Error::other("Error: path somehow contained a NUL?"));
-        }
+    let Some(c_path) = path.to_str().and_then(|s| CString::new(s).ok()) else {
+        return Err(io::Error::other("Error: path somehow contained a NUL?"));
     };
 
     let bufsize = lister.listxattr_first(&c_path);

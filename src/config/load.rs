@@ -86,12 +86,12 @@ pub fn find_config_path() -> Option<PathBuf> {
 /// standalone file.
 pub(super) fn find_drop_in_dir(main_config: Option<&Path>) -> Option<PathBuf> {
     // If the main config is in a directory, look for conf.d/ there.
-    if let Some(config_path) = main_config {
-        if let Some(parent) = config_path.parent() {
-            let d = parent.join("conf.d");
-            if d.is_dir() {
-                return Some(d);
-            }
+    if let Some(config_path) = main_config
+        && let Some(parent) = config_path.parent()
+    {
+        let d = parent.join("conf.d");
+        if d.is_dir() {
+            return Some(d);
         }
     }
 
@@ -123,7 +123,7 @@ pub(super) fn find_drop_in_dir(main_config: Option<&Path>) -> Option<PathBuf> {
 fn load_drop_ins(dir: &Path) -> Vec<(PathBuf, Config)> {
     let mut entries: Vec<PathBuf> = match fs::read_dir(dir) {
         Ok(rd) => rd
-            .filter_map(|e| e.ok())
+            .filter_map(std::result::Result::ok)
             .map(|e| e.path())
             .filter(|p| p.extension().is_some_and(|ext| ext == "toml"))
             .collect(),

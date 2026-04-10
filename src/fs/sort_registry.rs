@@ -29,9 +29,12 @@ pub struct SortFieldDef {
     /// Additional accepted names.  Always hidden from `--help`.
     pub aliases: &'static [&'static str],
 
-    /// One-line human description.  Currently unused by the
-    /// rendering code but useful for future `--help` improvements
-    /// and for documentation generation.
+    /// One-line human description of the sort field.  Populated for
+    /// every entry but not yet read by any code path; the 0.10 audit
+    /// will decide whether to surface these in `--help` (e.g. via a
+    /// `--help=sort` section) or delete the field altogether.  Until
+    /// then, treat any change here as user-visible documentation —
+    /// keep the wording crisp.
     #[allow(dead_code)]
     pub description: &'static str,
 

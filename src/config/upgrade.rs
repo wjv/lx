@@ -10,6 +10,7 @@
 //!   purely additive — old configs work unchanged)
 
 use std::collections::HashMap;
+use std::fmt::Write as _;
 use std::fs;
 use std::path::PathBuf;
 
@@ -129,19 +130,17 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
         .map_err(|source| ConfigError::Parse { path: path.clone(), source })?;
 
     let mut out = String::new();
-    out.push_str(&format!("version = \"{CONFIG_VERSION}\"\n"));
+    writeln!(out, "version = \"{CONFIG_VERSION}\"").unwrap();
 
     // Formats — always emit as flat [format] section.
     if !legacy.format.is_empty() {
         out.push_str("\n[format]\n");
         for (name, columns) in &legacy.format {
-            out.push_str(&format!(
-                "{name} = [{}]\n",
-                columns.iter()
-                    .map(|c| format!("\"{c}\""))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ));
+            let cols = columns.iter()
+                .map(|c| format!("\"{c}\""))
+                .collect::<Vec<_>>()
+                .join(", ");
+            writeln!(out, "{name} = [{cols}]").unwrap();
         }
     }
 
@@ -149,7 +148,7 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
     if version == "0.1" && !legacy.defaults.is_empty() {
         out.push_str("\n[personality.default]\n");
         for (key, value) in &legacy.defaults {
-            out.push_str(&format!("{key} = {value}\n"));
+            writeln!(out, "{key} = {value}").unwrap();
         }
 
         // Ensure [personality.lx] inherits from "default".
@@ -160,7 +159,7 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
             if let Some(lx_p) = legacy.personality.get("lx") {
                 for (key, value) in lx_p {
                     if key != "inherits" {
-                        out.push_str(&format!("{key} = {value}\n"));
+                        writeln!(out, "{key} = {value}").unwrap();
                     }
                 }
             }
@@ -174,9 +173,9 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
         if version == "0.1" && name == "lx" {
             continue;  // already handled above
         }
-        out.push_str(&format!("\n[personality.{name}]\n"));
+        writeln!(out, "\n[personality.{name}]").unwrap();
         for (key, value) in settings {
-            out.push_str(&format!("{key} = {value}\n"));
+            writeln!(out, "{key} = {value}").unwrap();
         }
     }
 

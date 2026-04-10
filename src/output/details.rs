@@ -207,7 +207,7 @@ impl<'a> Render<'a> {
         // rayon scope reads cached values — no dir_total_size() triggered
         // during rendering, no deferral or row-patching needed.
         let total_size_active = table.as_ref()
-            .is_some_and(|t| t.total_size_active());
+            .is_some_and(super::table::Table::total_size_active);
         if total_size_active && self.recurse.is_some() {
             use rayon::prelude::*;
             src.par_iter().for_each(|f| {
@@ -327,11 +327,11 @@ impl<'a> Render<'a> {
                     // Not expanded (pruned or depth-limited): use total
                     // size if available, otherwise skip.
                     let total_size_active = table.as_ref()
-                        .is_some_and(|t| t.total_size_active());
-                    if total_size_active {
-                        if let crate::fs::fields::Size::Some(s) = egg.file.total_size() {
-                            *size_total += s;
-                        }
+                        .is_some_and(super::table::Table::total_size_active);
+                    if total_size_active
+                        && let crate::fs::fields::Size::Some(s) = egg.file.total_size()
+                    {
+                        *size_total += s;
                     }
                 }
                 // Expanded directories: children account for themselves.

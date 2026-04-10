@@ -95,15 +95,15 @@ fn render_permissions(ctx: &RenderContext<'_>, file: &File<'_>, xattrs: bool) ->
 
 fn render_size(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
     if ctx.total_size {
-        file.total_size().render(ctx.theme, ctx.size_format, &ctx.numeric)
+        file.total_size().render(ctx.theme, ctx.size_format, ctx.numeric)
     } else {
-        file.size().render(ctx.theme, ctx.size_format, &ctx.numeric)
+        file.size().render(ctx.theme, ctx.size_format, ctx.numeric)
     }
 }
 
 #[cfg(unix)]
 fn render_hard_links(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
-    file.links().render(ctx.theme, &ctx.numeric)
+    file.links().render(ctx.theme, ctx.numeric)
 }
 
 #[cfg(unix)]

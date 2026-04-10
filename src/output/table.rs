@@ -208,7 +208,7 @@ pub struct Row {
     cells: Vec<TextCell>,
 }
 
-impl<'a, 'f> Table<'a> {
+impl<'a> Table<'a> {
     pub fn total_size_active(&self) -> bool {
         self.total_size
     }
@@ -225,10 +225,10 @@ impl<'a, 'f> Table<'a> {
         // Start with the system locale, then apply personality overrides.
         let mut numeric = env.numeric.clone();
         if let Some(ref dp) = options.decimal_point {
-            numeric.decimal_sep = dp.clone();
+            numeric.decimal_sep.clone_from(dp);
         }
         if let Some(ref ts) = options.thousands_separator {
-            numeric.thousands_sep = ts.clone();
+            numeric.thousands_sep.clone_from(ts);
         }
 
         Table {
