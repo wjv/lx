@@ -786,30 +786,39 @@ A personality can set `size-style = "binary"` (or `"bytes"` or
 
 ### Gradients on size and date
 
-Two columns render gradients out of the box: **size** (5 tiers
-from byte to huge) and **date** (6 tiers from "just now" to
-"old").  The compiled-in `lx-256` and `lx-24bit` themes ship
-gradients tuned to their palette, and every curated theme in
-[`themes/`](../themes) defines its tier colours explicitly.
+Two kinds of column render gradients out of the box: **size**
+(5 tiers from byte to huge) and the four **timestamp** columns
+— modified, accessed, changed, and created — each with 6 age
+tiers from "just now" to "old".  The compiled-in `lx-256` and
+`lx-24bit` themes ship gradients tuned to their palette, and
+every curated theme in [`themes/`](../themes) defines its tier
+colours explicitly.
 
-Switch gradients off with `--gradient`:
+Switch gradients on or off with `--gradient`:
 
 ```sh
-lx -l                       # default: gradients on for both
-lx -l --gradient=size       # only the size column
-lx -l --gradient=date       # only the date column
-lx -l --no-gradient         # both columns flat
-lx -l --gradient=none       # equivalent to --no-gradient
+lx -lt                              # default: gradients on for everything
+lx -lt --gradient=size              # only the size column
+lx -lt --gradient=modified          # only the modified column
+lx -lt --gradient=size,modified     # size and modified, others flat
+lx -lt --gradient=accessed,created  # mix and match per-column
+lx -lt --gradient=date              # bulk: every timestamp column
+lx -lt --no-gradient                # everything flat
+lx -lt --gradient=none              # equivalent to --no-gradient
 ```
 
 The same vocabulary works as a personality config key:
-`gradient = "all"` (default), `"size"`, `"date"`, or `"none"`.
+`gradient = "all"` (default), `"size"`, `"date"` (bulk all
+timestamps), `"none"`, or any comma-separated combination
+(`"size,modified"`, `"modified,accessed,created"`, etc.).
 
 When a column's gradient is off, it falls back to the theme's
-*flat* slots — `size-major`/`size-minor` for size and
-`date-flat` for the date.  All shipped themes set these
-explicitly, so a flat column still picks up the theme's palette
-rather than a generic fallback.
+*flat* slots — `size-major`/`size-minor` for size, and the
+per-column `date-modified-flat` / `date-accessed-flat` /
+`date-changed-flat` / `date-created-flat` for each timestamp
+(or the bulk `date-flat` to set all four at once).  All shipped
+themes set these explicitly, so a flat column still picks up
+the theme's palette rather than a generic fallback.
 
 ### Timestamp colours
 
@@ -826,9 +835,35 @@ older files fade towards grey.  Six tiers:
 | `date-old`   | > 1 year   | dark grey      |
 
 Setting `date = "steelblue"` in a theme sets all six tiers (and
-`date-flat`) to the same colour (backwards compatible).  Set
+`date-flat`) to the same colour, on every timestamp column.  Set
 individual tiers to create a custom gradient, or set `date-flat`
 on its own to control the colour `--no-gradient` falls back to.
+
+**Per-column overrides.**  Each timestamp column can be themed
+independently.  For each of `modified`, `accessed`, `changed`,
+and `created` there's a `date-<col>` bulk setter and seven
+per-tier setters with a `date-<col>-` prefix:
+
+```toml
+[theme.example]
+inherits          = "lx-256"
+date              = "white"           # bulk: every column, every tier
+date-modified     = "bright green"    # the modified column only
+date-accessed-now = "bright magenta"  # only the freshest accessed files
+```
+
+**Order matters.**  Theme keys are applied in the order they
+appear in the theme block, so write the bulk `date = ...`
+setter (and any bulk per-tier setters) *before* per-column
+overrides — otherwise the bulk setters will clobber them.  The
+example above produces a modified column that's bright green
+across the board, an accessed column that's white except for
+"now"-tier files (bright magenta), and changed/created columns
+that are white throughout.
+
+Per-column overrides are config-file only; the two-letter
+`LX_COLORS` codes (`da`, `dn`, ...) keep working as bulk
+setters that fan out to all four columns.
 
 ### Summary footer
 

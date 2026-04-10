@@ -104,16 +104,19 @@ that themes ship their own values), and the timestamp gradient
 had no equivalent knob at all.
 
 In 0.9 it's replaced by **`--gradient`**, a per-column on/off
-switch for the size and date columns:
+switch covering the size column and each of the four timestamp
+columns individually:
 
 ```sh
-lx -l                                 # default: gradient on for both
-lx -l --gradient=size                 # size only, flat dates
-lx -l --gradient=date                 # dates only, flat size
-lx -l --gradient=size,date            # explicit "both"
-lx -l --gradient=all                  # alias for "both"
-lx -l --gradient=none                 # all flat
-lx -l --no-gradient                   # alias for --gradient=none
+lx -lt                                # default: gradient on for everything
+lx -lt --gradient=size                # size only, flat timestamps
+lx -lt --gradient=date                # bulk: every timestamp column on
+lx -lt --gradient=modified            # only the modified column
+lx -lt --gradient=size,modified       # size and modified, others flat
+lx -lt --gradient=accessed,created    # mix and match per-column
+lx -lt --gradient=all                 # everything on
+lx -lt --gradient=none                # everything flat
+lx -lt --no-gradient                  # alias for --gradient=none
 ```
 
 The same vocabulary works in a personality:
@@ -136,10 +139,22 @@ indistinguishable.
 
 **Off-state colours are themeable.**  With `--no-gradient`, the
 size column collapses to the theme's `size-major` (numbers) and
-`size-minor` (units) slots, and the date column collapses to a
-new `date-flat` slot.  All three slots existed (or were added)
-explicitly across the curated themes, so `--no-gradient` produces
-a sensibly themed flat column rather than a fall-through mess.
+`size-minor` (units) slots, and each timestamp column collapses
+to its own `date-<col>-flat` slot (or the bulk `date-flat`,
+which fans out to all four).  All these slots existed (or were
+added) explicitly across the curated themes, so `--no-gradient`
+produces a sensibly themed flat column rather than a fall-through
+mess.
+
+**Per-timestamp-column theming is new in 0.9.**  The four
+timestamp columns (modified, accessed, changed, created) used to
+share one set of `date-*` colours; in 0.9 each column can be
+themed independently via `date-<col>` and `date-<col>-<tier>`
+keys (32 new keys total).  Existing themes are unaffected — the
+unprefixed `date-*` keys still fan out to all four columns.  See
+the GUIDE for the worked example.  Per-column overrides are
+config-file only; the two-letter `LX_COLORS` codes (`da`, `dn`,
+...) keep working as bulk fan-out setters.
 
 **`--upgrade-config` migrates old configs automatically.**  Run
 `lx --upgrade-config` and any `colour-scale = "..."` line inside

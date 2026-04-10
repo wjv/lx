@@ -194,7 +194,7 @@ Display options:
 : `oneline` (bool), `long` (bool), `grid` (bool), `across` (bool),
 `recurse` (bool), `tree` (bool), `classify` (string: `always`/`auto`/`never`),
 `colour` (string: `always`/`auto`/`never`),
-`gradient` (string: comma-separated `size`/`date`, or `all`/`none`),
+`gradient` (string: comma-separated `size`/`date`/`modified`/`accessed`/`changed`/`created`, or `all`/`none`),
 `icons` (string: `always`/`auto`/`never`),
 `width` (integer), `absolute` (bool), `hyperlink` (string:
 `always`/`auto`/`never`), `quotes` (string: `always`/`auto`/`never`),
@@ -488,11 +488,12 @@ all identity slots explicitly.
 
 **Timestamps (age-based gradient):**
 
-: `date` (bulk setter — sets all tiers at once),
+: `date` (bulk setter — sets all tiers at once on every
+timestamp column),
 `date-now` (< 1 hour), `date-today` (< 24 hours),
 `date-week` (< 7 days), `date-month` (< 30 days),
 `date-year` (< 365 days), `date-old` (> 1 year),
-`date-flat` (the single colour the date column uses
+`date-flat` (the single colour each timestamp column uses
 when its gradient is disabled).
 
 Setting `date` alone is backwards compatible — all timestamps
@@ -500,6 +501,44 @@ render in the same colour, including the flat fallback.  Setting
 individual tiers creates a gradient that shows file age at a
 glance, and `date-flat` lets a theme define what colour the
 column collapses to when the gradient is turned off.
+
+**Per-timestamp-column overrides:**
+
+: Each of the four timestamp columns (`modified`, `accessed`,
+`changed`, `created`) can be themed independently.  For each
+column, the same eight slots exist with a `date-<col>-` prefix:
+
+    `date-modified` (bulk for the modified column),
+    `date-modified-now`, `date-modified-today`,
+    `date-modified-week`, `date-modified-month`,
+    `date-modified-year`, `date-modified-old`,
+    `date-modified-flat`.
+
+The same eight keys exist for `date-accessed-*`,
+`date-changed-*`, and `date-created-*` (32 per-column keys
+total).  Per-column overrides write directly to the named
+field; only the unprefixed `date-*` keys above fan out to all
+four columns at once.
+
+**Order matters.**  `set_config` applies keys in the order they
+appear in the theme block, so write the bulk `date = ...`
+setter (and any bulk `date-now = ...` etc.) *before*
+per-column overrides — otherwise the bulk setters will clobber
+them.  Example:
+
+    [theme.example]
+    date              = "blue"           # bulk: every column, every tier
+    date-now          = "bright cyan"    # bulk: now-tier on every column
+    date-modified-now = "bright green"   # only the modified column's now
+
+After `set_config` runs in order, the modified column's `now`
+tier is bright green, the other three columns' `now` tiers are
+bright cyan, and every other tier on every column is blue.
+
+Per-column overrides are available only via the config file.
+The two-letter `LX_COLORS` codes (`da`, `dn`, `dt`, ...) keep
+working as bulk setters that fan out to all four columns;
+there are no per-column equivalents in `LX_COLORS`.
 
 The compiled-in "exa" theme
 ---------------------------

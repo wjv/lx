@@ -63,23 +63,39 @@ Alias: `--color`.
 
 `--gradient`[`=COLUMNS`]
 : Per-column gradient on/off.  COLUMNS is a comma-separated list
-of column names that should render with their gradient
-(currently `size` and `date`), or one of the special tokens
-`none` (no gradients) or `all` (every gradient-capable column,
-the default).  Bare `--gradient` is equivalent to `--gradient=all`.
+of column names that should render with their gradient.  The
+recognised columns are `size` plus the four timestamp columns
+`modified`, `accessed`, `changed`, and `created`; the bulk
+token `date` flips all four timestamp columns at once.
+Special tokens `none` (no gradients) and `all` (every
+gradient-capable column, the default) only make sense alone.
+Bare `--gradient` is equivalent to `--gradient=all`.
+
+Examples:
+
+```
+lx -lt --gradient=modified         # gradient on modified, others flat
+lx -lt --gradient=size,modified    # size and modified gradient
+lx -lt --gradient=accessed,created # mix and match
+lx -lt --gradient=date             # bulk: every timestamp column
+```
 
 The flat colour each column collapses to when its gradient is
 disabled comes from the active theme: `size-major` / `size-minor`
-for the size column, `date-flat` for the date column.  See
-**lxconfig.toml**(5) for theme keys.
+for the size column, `date-flat` for each timestamp column.  Each
+timestamp column also has its own per-column flat
+(`date-modified-flat`, etc.) — see **lxconfig.toml**(5) for the
+full set of theme keys.
 
 `--no-gradient`
-: Hidden alias for `--gradient=none`.  Turns off both the size
-and date gradients.
+: Hidden alias for `--gradient=none`.  Turns off the size gradient
+and every timestamp column's gradient.
 
 Timestamps are also coloured by age: recent files appear brighter,
 older files fade towards grey.  The six tiers (`date-now` through
-`date-old`) are theme keys — see **lxconfig.toml**(5).
+`date-old`) are theme keys, and each timestamp column can override
+them individually (`date-modified-now` etc.) — see
+**lxconfig.toml**(5).
 
 `--icons`[`=WHEN`]
 : Display icons next to file names. WHEN is `always`, `auto`, or `never`.

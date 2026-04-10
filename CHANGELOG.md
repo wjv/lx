@@ -39,10 +39,23 @@ All notable changes to lx are documented here. lx is forked from
 - New light-background curated themes: Catppuccin Latte,
   Gruvbox Light, Nord Light.
 - **`--gradient`** — per-column gradient on/off for the size and
-  date columns.  Vocabulary: `none` / `size` / `date` / `all`
-  (default `all`).  Comma-combinable: `--gradient=size,date`.
+  timestamp columns.  Vocabulary: `none` / `size` / `date` /
+  `modified` / `accessed` / `changed` / `created` / `all`
+  (default `all`).  `date` is a bulk setter that flips all four
+  timestamp columns at once; `modified`/`accessed`/`changed`/
+  `created` flip just one.  Comma-combinable:
+  `--gradient=size,modified` or `--gradient=accessed,created`.
   `--no-gradient` is an alias for `--gradient=none`.  Personality
   config key: `gradient = "all"`.  Replaces `--colour-scale`.
+- **Per-timestamp-column theme keys** — each of the four timestamp
+  columns (`modified`, `accessed`, `changed`, `created`) can be
+  themed independently.  For each column there's a `date-<col>`
+  bulk setter and seven per-tier setters
+  (`date-<col>-now` ... `date-<col>-flat`), 32 new keys total.
+  Order matters: write the bulk `date = ...` setter before
+  per-column overrides, otherwise it will clobber them.
+  Per-column overrides are config-file only; the two-letter
+  `LX_COLORS` codes keep working as bulk fan-out setters.
 - New `date-flat` theme key (and matching `LX_COLORS` code `dl`)
   for the colour the date column uses when its gradient is off.
   Curated themes set it explicitly; child themes inherit it
