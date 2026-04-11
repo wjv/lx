@@ -57,7 +57,7 @@ or
 .It Fl C , Fl -count
 Print a summary to stderr showing the number of items displayed.
 When combined with
-.Fl Z Ns / Ns Fl -total-size ,
+.Fl Z Ns / Ns Fl -total ,
 also shows the total size of displayed items.
 In tree views, expanded directories are not counted towards the total
 (their children account for themselves); pruned or depth-limited
@@ -246,7 +246,7 @@ Also accepted:
 Glob patterns, pipe-separated, of directories to show but not recurse
 into.
 The directory itself is displayed (with metadata and
-.Fl -total-size
+.Fl -total
 if active), but its children are hidden.
 Only meaningful with
 .Fl T
@@ -429,7 +429,7 @@ back to name order.
 Secondary sort within a status group is by name.
 .Pp
 With
-.Fl Z Ns / Ns Fl -total-size ,
+.Fl Z Ns / Ns Fl -total ,
 sorting by
 .Cm size
 uses the recursive directory total instead of the inode size.
@@ -562,8 +562,10 @@ or
 .Dq 3 days ago .
 .It Fl S , Fl -blocks
 List each file's number of file system blocks.
-.It Fl Z , Fl -total-size
+.It Fl Z , Fl -total
 Show total recursive size for directories.
+.Fl -total-size
+is also accepted as a long-form alias.
 When combined with
 .Fl -sort Ns = Ns Cm size ,
 sorting uses the recursive total.
@@ -664,7 +666,7 @@ for
 .Fl -no-header ,
 .Fl -no-Z
 for
-.Fl -no-total-size ,
+.Fl -no-total ,
 .Fl -no-C
 for
 .Fl -no-count ,
@@ -769,9 +771,9 @@ Suppress the header row.
 Suppress the
 .Fl C Ns / Ns Fl -count
 summary.
-.It Fl -no-total-size
+.It Fl -no-total
 Suppress
-.Fl Z Ns / Ns Fl -total-size .
+.Fl Z Ns / Ns Fl -total .
 .El
 .Sh PERSONALITIES
 Personalities are

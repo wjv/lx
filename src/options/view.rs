@@ -161,7 +161,7 @@ impl TableOptions {
         let time_format = TimeFormat::deduce(matches, vars)?;
         let size_format = SizeFormat::deduce(matches);
         let columns = deduce_columns(matches, long_count)?;
-        let total_size = matches.has(flags::TOTAL_SIZE) && !matches.has(flags::NO_TOTAL_SIZE);
+        let total_size = matches.has(flags::TOTAL) && !matches.has(flags::NO_TOTAL);
         let decimal_point = matches.get("decimal-point").map(String::from);
         let thousands_separator = matches.get("thousands-separator").map(String::from);
         Ok(Self { size_format, time_format, columns, total_size, decimal_point, thousands_separator })

@@ -300,6 +300,16 @@ The `--upgrade-config` flow is unaffected — it still reads the
 config file directly and runs even when the schema is too old
 for normal operation.
 
+### `--total-size` is now `--total`
+
+The recursive-size flag's canonical name is now `--total` (and
+its suppressor `--no-total`).  `--total-size` is preserved as a
+*visible* alias in `--help` because it's the well-known long
+form, so users grep-ping `--help` for `total-size` will still
+find it.  The config keys `total-size` and `no-total-size`
+continue to work as backward-compatible setting keys, so no
+action is required for existing configs or scripts.
+
 ### `--filesize` is now `--size`
 
 The file-size column flag's canonical name is now `--size` (and

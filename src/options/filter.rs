@@ -17,7 +17,7 @@ impl FileFilter {
             only_dirs:        matches.has(flags::ONLY_DIRS),
             only_files:       matches.has(flags::ONLY_FILES),
             sort_field:       SortField::deduce(matches)?,
-            sort_by_total_size: matches.has(flags::TOTAL_SIZE),
+            sort_by_total_size: matches.has(flags::TOTAL),
             dot_filter:       DotFilter::deduce(matches)?,
             ignore_patterns:  IgnorePatterns::deduce(matches)?,
             prune_patterns:   IgnorePatterns::deduce_from(matches, flags::PRUNE)?,

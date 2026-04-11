@@ -285,7 +285,7 @@ value flags take a string or integer.
 .Sy changed Pq bool ,
 .Sy accessed Pq bool ,
 .Sy created Pq bool ,
-.Sy total-size Pq bool ,
+.Sy total Pq bool ,
 .Sy extended Pq bool ,
 .Sy octal-permissions Pq bool ,
 .Sy flags Pq bool ,
@@ -295,8 +295,13 @@ value flags take a string or integer.
 .El
 .Pp
 .Cm filesize
-is accepted as a backward-compatible alias for
-.Sy size .
+and
+.Cm total-size
+are accepted as backward-compatible aliases for
+.Sy size
+and
+.Sy total
+respectively.
 .Pp
 .Sy Layout tuning\&:
 .Bl -tag -width Ds -offset indent
@@ -327,7 +332,7 @@ Both apply to
 (file sizes in all
 .Sy size-style
 modes,
-.Sy --total-size
+.Sy --total
 totals,
 .Sy -CZ
 summaries, block counts, link counts) but not to
@@ -395,12 +400,17 @@ to pick exactly the columns you want.
 .Sy no-octal Pq bool ,
 .Sy no-header Pq bool ,
 .Sy no-count Pq bool ,
-.Sy no-total-size Pq bool .
+.Sy no-total Pq bool .
 .El
 .Pp
 .Cm no-filesize
-is accepted as a backward-compatible alias for
-.Sy no-size .
+and
+.Cm no-total-size
+are accepted as backward-compatible aliases for
+.Sy no-size
+and
+.Sy no-total
+respectively.
 .Pp
 .Sy no-time
 clears all timestamp columns from the base format as a bulk

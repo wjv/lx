@@ -77,11 +77,11 @@ pub const NO_FLAGS: &str = "no-flags";
 pub const NO_HEADER: &str = "no-header";
 pub const NO_OCTAL: &str = "no-octal";
 pub const NO_COUNT: &str = "no-count";
-pub const NO_TOTAL_SIZE: &str = "no-total-size";
+pub const NO_TOTAL: &str = "no-total";
 pub const NO_VCS_STATUS: &str = "no-vcs-status";
 pub const NO_VCS_REPOS: &str = "no-vcs-repos";
 
-pub const TOTAL_SIZE: &str = "total-size";
+pub const TOTAL: &str = "total";
 
 // column / format / personality selection
 pub const COLUMNS: &str = "columns";

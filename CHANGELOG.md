@@ -83,6 +83,14 @@ All notable changes to lx are documented here. lx is forked from
 
 ### Changed
 
+- **`--total-size` is now `--total`** (and `--no-total-size` is
+  now `--no-total`).  `--total-size` stays as a *visible* alias
+  in `--help` because it's the well-known long form, and the
+  config keys `total-size` and `no-total-size` still work as
+  backward-compatible setting keys.  Same cross-surface
+  consistency rationale as the `--filesize` → `--size` rename
+  below; see [`docs/UPGRADING.md`](docs/UPGRADING.md) for the
+  detail.
 - **`--filesize` is now `--size`** (and `--no-filesize` is now
   `--no-size`).  The file-size column's canonical flag name now
   matches its internal column name (`size` in `--columns=`, `-s`,

@@ -70,7 +70,10 @@ pub(crate) static SETTING_FLAGS: &[SettingDef] = &[
     SettingDef { key: "changed",       flag: "--changed",        kind: SettingKind::Bool },
     SettingDef { key: "accessed",      flag: "--accessed",       kind: SettingKind::Bool },
     SettingDef { key: "created",       flag: "--created",        kind: SettingKind::Bool },
-    SettingDef { key: "total-size",    flag: "--total-size",     kind: SettingKind::Bool },
+    SettingDef { key: "total",         flag: "--total",          kind: SettingKind::Bool },
+    // `total-size` kept as a backward-compat alias for the
+    // pre-rename canonical name; both produce the same flag.
+    SettingDef { key: "total-size",    flag: "--total",          kind: SettingKind::Bool },
     SettingDef { key: "count",         flag: "--count",          kind: SettingKind::Bool },
     SettingDef { key: "extended",      flag: "--extended",       kind: SettingKind::Bool },
     SettingDef { key: "octal-permissions", flag: "--octal-permissions", kind: SettingKind::Bool },
@@ -137,7 +140,8 @@ pub(crate) static SETTING_FLAGS: &[SettingDef] = &[
     SettingDef { key: "no-octal",      flag: "--no-octal",       kind: SettingKind::Bool },
     SettingDef { key: "no-header",     flag: "--no-header",      kind: SettingKind::Bool },
     SettingDef { key: "no-count",      flag: "--no-count",       kind: SettingKind::Bool },
-    SettingDef { key: "no-total-size", flag: "--no-total-size",  kind: SettingKind::Bool },
+    SettingDef { key: "no-total",      flag: "--no-total",       kind: SettingKind::Bool },
+    SettingDef { key: "no-total-size", flag: "--no-total",       kind: SettingKind::Bool },
     SettingDef { key: "no-vcs-status", flag: "--no-vcs-status",  kind: SettingKind::Bool },
     SettingDef { key: "no-vcs-repos",  flag: "--no-vcs-repos",   kind: SettingKind::Bool },
 ];
