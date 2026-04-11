@@ -287,20 +287,22 @@ value flags take a string or integer.
 .Sy created Pq bool ,
 .Sy total Pq bool ,
 .Sy extended Pq bool ,
-.Sy octal-permissions Pq bool ,
+.Sy octal Pq bool ,
 .Sy flags Pq bool ,
 .Sy permissions Pq bool ,
 .Sy size Pq bool ,
 .Sy user Pq bool .
 .El
 .Pp
-.Cm filesize
+.Cm filesize ,
+.Cm total-size ,
 and
-.Cm total-size
+.Cm octal-permissions
 are accepted as backward-compatible aliases for
-.Sy size
+.Sy size ,
+.Sy total ,
 and
-.Sy total
+.Sy octal
 respectively.
 .Pp
 .Sy Layout tuning\&:

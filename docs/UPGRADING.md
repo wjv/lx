@@ -300,6 +300,14 @@ The `--upgrade-config` flow is unaffected — it still reads the
 config file directly and runs even when the schema is too old
 for normal operation.
 
+### `octal-permissions` config key is now `octal`
+
+The CLI flag was renamed to `--octal` back in 0.5; the config
+key kept the old name `octal-permissions` until now.  The
+canonical setting key is now `octal`; `octal-permissions` still
+works as a backward-compatible alias.  Same cross-surface
+consistency motivation as the flag-rename items above.
+
 ### `--total-size` is now `--total`
 
 The recursive-size flag's canonical name is now `--total` (and

@@ -83,6 +83,11 @@ All notable changes to lx are documented here. lx is forked from
 
 ### Changed
 
+- **`octal-permissions` config key is now `octal`** to match the
+  canonical `--octal` flag.  `octal-permissions` continues to work
+  as a backward-compatible setting key; the CLI side was already
+  using `--octal` as canonical.  Closes the same internal-vs-flag
+  mismatch the `--filesize` and `--total-size` renames addressed.
 - **`--total-size` is now `--total`** (and `--no-total-size` is
   now `--no-total`).  `--total-size` stays as a *visible* alias
   in `--help` because it's the well-known long form, and the

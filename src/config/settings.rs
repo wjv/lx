@@ -76,7 +76,10 @@ pub(crate) static SETTING_FLAGS: &[SettingDef] = &[
     SettingDef { key: "total-size",    flag: "--total",          kind: SettingKind::Bool },
     SettingDef { key: "count",         flag: "--count",          kind: SettingKind::Bool },
     SettingDef { key: "extended",      flag: "--extended",       kind: SettingKind::Bool },
-    SettingDef { key: "octal-permissions", flag: "--octal-permissions", kind: SettingKind::Bool },
+    SettingDef { key: "octal",         flag: "--octal",          kind: SettingKind::Bool },
+    // `octal-permissions` kept as a backward-compat alias for the
+    // pre-rename canonical name; both produce the same flag.
+    SettingDef { key: "octal-permissions", flag: "--octal",      kind: SettingKind::Bool },
 
     SettingDef { key: "flags",         flag: "--flags",          kind: SettingKind::Bool },
 
