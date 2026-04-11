@@ -139,6 +139,7 @@ pub(crate) static SETTING_FLAGS: &[SettingDef] = &[
     SettingDef { key: "no-gid",        flag: "--no-gid",         kind: SettingKind::Bool },
     SettingDef { key: "no-links",      flag: "--no-links",       kind: SettingKind::Bool },
     SettingDef { key: "no-blocks",     flag: "--no-blocks",      kind: SettingKind::Bool },
+    SettingDef { key: "no-extended",   flag: "--no-extended",    kind: SettingKind::Bool },
     SettingDef { key: "no-flags",      flag: "--no-flags",       kind: SettingKind::Bool },
     SettingDef { key: "no-octal",      flag: "--no-octal",       kind: SettingKind::Bool },
     SettingDef { key: "no-header",     flag: "--no-header",      kind: SettingKind::Bool },

@@ -84,7 +84,7 @@ impl details::Options {
         Self {
             table: None,
             header: false,
-            xattr: xattr::ENABLED && matches.has(flags::EXTENDED),
+            xattr: xattr::ENABLED && matches.has(flags::EXTENDED) && !matches.has(flags::NO_EXTENDED),
         }
     }
 
@@ -92,7 +92,7 @@ impl details::Options {
         Ok(Self {
             table: Some(TableOptions::deduce(matches, vars, long_count)?),
             header: (matches.has(flags::HEADER) || long_count >= 3) && !matches.has(flags::NO_HEADER),
-            xattr: xattr::ENABLED && matches.has(flags::EXTENDED),
+            xattr: xattr::ENABLED && matches.has(flags::EXTENDED) && !matches.has(flags::NO_EXTENDED),
         })
     }
 }

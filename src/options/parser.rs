@@ -710,7 +710,8 @@ Environment:\n  \
             .short('@').long("extended")
             .help("Show extended attributes and sizes")
             .help_heading("Long view")
-            .action(ArgAction::Count))
+            .action(ArgAction::Count)
+            .overrides_with(flags::NO_EXTENDED))
 
         // ── Filtering and sorting ─────────────────────────────────
 
@@ -955,6 +956,11 @@ Environment:\n  \
             .long("no-blocks").alias("no-S")
             .hide(true)
             .action(ArgAction::Count))
+        .arg(Arg::new(flags::NO_EXTENDED)
+            .long("no-extended").alias("no-@")
+            .hide(true)
+            .action(ArgAction::Count)
+            .overrides_with(flags::EXTENDED))
         .arg(Arg::new(flags::NO_FLAGS)
             .long("no-flags").alias("no-O")
             .hide(true)

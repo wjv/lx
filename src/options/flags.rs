@@ -73,6 +73,7 @@ pub const NO_UID: &str = "no-uid";
 pub const NO_GID: &str = "no-gid";
 pub const NO_LINKS: &str = "no-links";
 pub const NO_BLOCKS: &str = "no-blocks";
+pub const NO_EXTENDED: &str = "no-extended";
 pub const NO_FLAGS: &str = "no-flags";
 pub const NO_HEADER: &str = "no-header";
 pub const NO_OCTAL: &str = "no-octal";
