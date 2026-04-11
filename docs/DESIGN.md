@@ -1,50 +1,122 @@
 # lx — CLI design principles
 
-This document outlines the design principles behind `lx`'s command-line
-interface.
+> *"I know it when I see it"*
+>
+> — US Supreme Court Justice Potter Stewart, who was not talking
+>   about good CLI design at the time, but might as well have been.
 
-`lx` was born from some frustration with `exa`'s accumulated flag
-surface — the kind of interface where you end up building a stack
-of shell aliases for daily use. Two complementary approaches
-address this:
+A real problem with trying to enumerate the aspects of a "good"
+command-line interface is that it is mostly characterised by
+*absences*: the absence of frustration, the absence of friction or painful
+sticking points, the absence of time spent hunting for the flag
+you need.  When discussing design goals we're forced to enumerate
+positive choices, but it's worth bearing in mind that we were
+designign for *absences*.
 
-1. **Make the base UI consistent and approachable** — so you don't
-   *need* aliases in the first place.
-2. **Replace aliases with something better** — *personalities*: named,
-   inheritable, structured bundles of settings.
+`lx` was born from such frustrations *not* being absent from
+the CLIs of existing file listing tools — from POSIX `ls`
+through to modern "ls-likes" such as `exa`, the dormant project
+from which `lx` was forked.
 
-These turned out to be parallel solutions to the same problem.  A
-good base UI means personalities become a power-user tool for presets,
-not a crutch for a confusing interface.  Both are better for existing;
-they complement one another.
+Convoluted, sub-optimal CLI design leads to usage anti-patterns:
 
-A third layer — **conditional config** — lets personalities adapt to
-context (terminal emulator, SSH session) without shell-level scripting.
+The average user would probably only ever learn the one or two
+flags they use most often, and resort to the man page when they
+needed more.  Often they would be unaware that their file lister
+*could* do more.
+
+The power user would respond by building a
+stack of shell aliases so they wouldn't have to remember a whole
+lot of flags.  This has been so common that some aliases have
+almost become traditional: `ll` for `ls -l`, `la` for `ls -la`.
+
+`lx` attempts to address this with two complementary approaches:
+
+1. **Make the base CLI consistent and approachable** — so you
+   don't *need* aliases in the first place.
+2. **Replace aliases with something better** —
+   *personalities*: named, inheritable, structured bundles of
+   settings.
+
+Identifying a problem is not the same thing as solving it, but
+try to solve it we did. The process is iterative and
+usage-centric: "I think this change will smooth usage, so let's
+make it and see if I'm right."  Extracting a list of positive
+design goals is something that happens only after the fact.
+
+Try `lx` and decide for yourself whether it succeeds.  Feedback
+would be hugely appreciated.
+
+Note: `lx` is not a drop-in replacement for `ls`, `exa`, or any
+other ls-like.  Where a consistent design conflicts with legacy
+conventions, consistency wins — though well-established
+conventions are not broken needlessly.
 
 
 ## Design goals
 
-1. **Consistency over compatibility.**  `lx` is not a drop-in replacement
-   for `ls` or `exa`.  Where a consistent design conflicts with legacy
-   conventions, consistency wins.
+In no particular order:
 
-2. **Every flag should have a logical partner.**  If there's a `--foo`,
-   there should be a `--no-foo`.  If there's a short flag `-X`, it should
-   pair with a related short flag.
+1. **Orthogonality.** Flags don't reach across class boundaries to
+   do work that belongs elsewhere.  `-Z` (`--total`) only modifies
+   the size column — it doesn't pull a size column in, doesn't
+   switch to long view, doesn't change the sort field.  If you want
+   a size column, ask for it; if you want it shown as a recursive
+   total, pair `-Z` with the column flag.  Each flag does one thing
+   in one class; the classes (view modes, column selection,
+   modifiers, appearance) compose freely without surprises.
 
-3. **No magic.**  `lx` should work the same with or without a config file.
-   `--init-config` generates a config that documents the defaults but
-   doesn't change them.
+2. **Discoverable negations.** Every flag with a meaningful inverse
+   has a `--no-*` counterpart.  `--size` adds the file size column;
+   `--no-size` removes it.  Short flags negate the same way:
+   `--no-z` negates `-z` without your having to remember whether
+   the long form is `--size` or `--filesize`.
 
-4. **Composability.**  Personalities, formats, themes, styles, and classes
-   are independent named entities that compose naturally.  Nothing is
-   hard-wired to anything else.
+3. **Compounding shortcuts.** Where a flag has a natural intensity
+   dimension, repeating it cranks the dial.  `-l` is a long listing,
+   `-ll` shows more columns, `-lll` shows more still.  `-t` does the
+   same for timestamp columns.  No new vocabulary to memorise — the
+   flag you already know goes further.
 
+4. **Logical and paired short flags.** Widely-used functionality
+   gets a short flag, preferably a mnemonic for its purpose (`-u`
+   for `--user`, `-g` for `--group`, `-m` for `--modified`).
+   Related functionality gets visibly related letters: `-z` enables
+   the file si**z**e column; `-Z` enables the recursive total
+   modifier on it.  `-d` lists directories as files; `-D` lists
+   *only* directories.
+
+5. **Long flags for less-common functionality.** When a feature is
+   used rarely, an easy-to-remember verbose flag saves you from
+   grepping `--help`.  Individual column-add flags exist for power
+   users, but `--columns=size,permissions,user` is the answer when
+   you can't remember the short forms.
+
+6. **Guessable flag names.** Beyond canonical names, `lx` accepts
+   hidden aliases for spellings users might guess from other
+   ls-likes — `--filesize` for `--size`, `--total-size` for
+   `--total`, `--ignore-glob` for `--ignore`.  These are silent
+   compat shims, not promoted alternatives, but they work when you
+   reach for them.
+
+7. **`lx --help` is a designed UI**, not a text dump.  It shows a
+   curated overview of the surface without overwhelming you with
+   details that can be deduced from the patterns.  If you need the
+   full reference, the man page is for that.
+
+8. **Shell completion** is a first-class part of the discoverability
+   story.  `lx` ships completions for all common shells (and a few
+   uncommon ones).  Tab through your way to the flag you want.
+
+9. **Sane defaults out of the box.** `lx` is usable immediately
+    after installation, with no config file required.  When you do
+    write one, `--init-config` documents the compiled-in defaults
+    without changing them.
 
 ## Personalities
 
 Shell aliases have been the standard way to customise `ls` behaviour
-for decades.  Personalities are lx's answer to the same need, but
+for decades.  Personalities are `lx`'s answer to the same need, but
 with several advantages over aliases:
 
 - **Structured.**  A personality is a named TOML section, not a
@@ -122,12 +194,12 @@ and "modified" over "blocks" and "user" — that gap was inherited
 from `exa`, not a principled decision.  With it closed, every
 metadata column has the same four-flag shape:
 
-| Role            | Shape              |
-|-----------------|--------------------|
-| Add             | `--COLUMN` / short |
+| Role            | Shape                                         |
+|-----------------|-----------------------------------------------|
+| Add             | `--COLUMN` / short                            |
 | Suppress        | `--no-COLUMN` / `--no-X` (hidden short alias) |
-| Sort ascending  | `-s COLUMN`        |
-| Sort descending | `-rs COLUMN`       |
+| Sort ascending  | `-s COLUMN`                                   |
+| Sort descending | `-rs COLUMN`                                  |
 
 So `-ls blocks` is a long listing sorted by block count, and
 `-l --columns=user,uid,name -s uid` is an audit view sorted by
@@ -258,93 +330,3 @@ Each layer has a clear role: config defines *what*, conditionals
 adapt to *where*, CLI flags handle *this time*.
 
 
-## Short flag reference
-
-Shipped 0.8 allocations.
-
-**Display / layout**
-
-| Flag | Long form       | Purpose                                  |
-|------|-----------------|------------------------------------------|
-| `-1` | `--oneline`     | One entry per line                       |
-| `-l` | `--long`        | Long view (compounds: `-ll`, `-lll`)     |
-| `-G` | `--grid`        | Grid view (default)                      |
-| `-x` | `--across`      | Sort grid across                         |
-| `-T` | `--tree`        | Tree view                                |
-| `-R` | `--recurse`     | Recurse into directories                 |
-| `-L` | `--level`       | Depth limit for `-T` / `-R`              |
-| `-C` | `--count`       | Item count to stderr (`-CZ` adds total size) |
-| `-w` | `--width`       | Terminal width override                  |
-| `-A` | `--absolute`    | Show absolute paths                      |
-
-**Filtering and sort**
-
-| Flag | Long form       | Purpose                                  |
-|------|-----------------|------------------------------------------|
-| `-a` | `--all`         | Show hidden files (`-aa` for `.`/`..`)   |
-| `-d` | `--list-dirs`   | Treat directories as files               |
-| `-D` | `--only-dirs`   | Show only directories                    |
-| `-f` | `--only-files`  | Show only files                          |
-| `-F` | `--dirs-first`  | Directories first (`--group-dirs=first`) |
-| `-J` | `--dirs-last`   | Directories last (`--group-dirs=last`)   |
-| `-I` | `--ignore`      | Glob patterns to hide                    |
-| `-P` | `--prune`       | Glob patterns to show but not recurse    |
-| `-s` | `--sort`        | Sort field                               |
-| `-r` | `--reverse`     | Reverse sort order                       |
-
-**Long-view columns** (canonical order)
-
-| Flag | Long form                   | Purpose                     |
-|------|-----------------------------|-----------------------------|
-| `-i` | `--inode`                   | Inode number                |
-| `-o` | `--octal`                   | Octal permissions           |
-| `-M` | `--permissions` / `--mode`  | Symbolic permission bits    |
-| `-O` | `--flags`                   | Platform file flags         |
-| `-H` | `--links`                   | Hard link count             |
-| `-z` | `--filesize` / `--size`     | File size                   |
-| `-Z` | `--total-size`              | Recursive directory totals  |
-| `-S` | `--blocks`                  | Allocated block count       |
-| `-u` | `--user`                    | Owner name                  |
-| `-g` | `--group`                   | Group name                  |
-| `-@` | `--extended`                | Extended attributes         |
-| `-h` | `--header`                  | Header row                  |
-| `-b` | `--bytes`                   | Raw byte counts             |
-| `-K` | `--decimal`                 | Decimal size prefixes (k, M, G) |
-| `-B` | `--binary`                  | Binary size prefixes (KiB)  |
-
-**Timestamps**
-
-| Flag    | Long form    | Purpose                                       |
-|---------|--------------|-----------------------------------------------|
-| `-m`    | `--modified` | Modification time                             |
-| `-c`    | `--changed`  | Status-change time                            |
-| `-t`    | (none)       | Compounding tier: `-t`/`-tt`/`-ttt`           |
-
-`--accessed` and `--created` are long-only.  `--uid`, `--gid`,
-`--vcs-status`, and `--vcs-repos` are also long-only — niche
-enough that reserving a single-letter short flag would be
-wasteful.
-
-**Meta**
-
-| Flag | Long form       | Purpose              |
-|------|-----------------|----------------------|
-| `-p` | `--personality` | Select a personality |
-| `-v` | `--version`     | Show version         |
-| `-?` | `--help`        | Show help            |
-
-### Notable changes in 0.8
-
-- `-n` / `--numeric` has been retired.  Use `--uid` and/or `--gid`
-  as first-class columns instead, or define a `numeric`
-  personality.
-- `-t` used to select a single timestamp field (`-t FIELD` with
-  `--time`).  It now compounds: `-t` / `-tt` / `-ttt`.  The long
-  form `--time` has been dropped.
-- `-u` used to be `--accessed`; it is now `--user`.  `-U` (previously
-  `--created`) has been freed.
-- `-M` (`--permissions` / `--mode`) and `-z` (`--filesize` /
-  `--size`) are new in 0.8.
-- The `perms` column name has been renamed to `permissions`.
-  `perms` is still accepted as a backward-compat alias by
-  `--columns=` (but not by `-s`).
