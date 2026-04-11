@@ -83,6 +83,14 @@ All notable changes to lx are documented here. lx is forked from
 
 ### Changed
 
+- **`--filesize` is now `--size`** (and `--no-filesize` is now
+  `--no-size`).  The file-size column's canonical flag name now
+  matches its internal column name (`size` in `--columns=`, `-s`,
+  and the registry), closing a long-standing cross-surface
+  mismatch.  `--filesize` and `--no-filesize` are still accepted
+  as hidden CLI aliases; the config keys `filesize` and
+  `no-filesize` still work as backward-compatible setting keys.
+  See [`docs/UPGRADING.md`](docs/UPGRADING.md) for the rationale.
 - **Flag-alias hygiene.**  `--ignore-glob` and `--prune-glob` are
   now hidden aliases of `--ignore` and `--prune` (previously
   visible).  `--octal-permissions` no longer appears as an

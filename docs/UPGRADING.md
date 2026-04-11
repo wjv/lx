@@ -300,6 +300,22 @@ The `--upgrade-config` flow is unaffected — it still reads the
 config file directly and runs even when the schema is too old
 for normal operation.
 
+### `--filesize` is now `--size`
+
+The file-size column flag's canonical name is now `--size` (and
+its suppressor `--no-size`), matching the column's internal name
+in `--columns=size`, `-s size`, and the column registry.  The
+old spellings `--filesize` and `--no-filesize` still work as
+hidden CLI aliases, and the old config keys `filesize` and
+`no-filesize` still work as backward-compatible setting keys, so
+no action is required for existing configs or scripts.  New
+material should prefer the canonical `size` / `no-size` form.
+
+The motivation is cross-surface consistency: before this change,
+the column was called `size` everywhere except at the flag
+layer, where it was called `filesize`.  Now all four surfaces
+agree.
+
 
 ## Upgrading to 0.8
 

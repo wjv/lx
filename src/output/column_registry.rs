@@ -284,8 +284,8 @@ pub static COLUMN_REGISTRY: &[ColumnDef] = &[
         alignment: Alignment::Right,
         canonical_position: 5,
         add_flag: None,
-        suppress_flag: Some(flags::NO_FILESIZE),
-        show_flag: Some(flags::SHOW_FILESIZE),
+        suppress_flag: Some(flags::NO_SIZE),
+        show_flag: Some(flags::SHOW_SIZE),
         render: render_size,
     },
     #[cfg(unix)]

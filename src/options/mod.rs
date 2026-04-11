@@ -202,7 +202,8 @@ impl Options {
             // IDs, British/American aliases share a single Clap ID).
             let clap_id = match def.key {
                 "permissions"  => flags::SHOW_PERMISSIONS,
-                "filesize"     => flags::SHOW_FILESIZE,
+                "size"         => flags::SHOW_SIZE,
+                "filesize"     => flags::SHOW_SIZE,
                 "user"         => flags::SHOW_USER,
                 "colour"       => flags::COLOR,
                 "color"        => flags::COLOR,

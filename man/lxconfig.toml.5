@@ -164,8 +164,8 @@ Custom formats are used via
 .Sy --format= Ns Ar NAME
 or referenced from personality definitions.
 .Ss Valid column names
-.Bl -tag -width "permissions (alias perms)"
-.It Cm permissions Pq alias Cm perms
+.Bl -tag -width "permissions (alias perms, mode)"
+.It Cm permissions Pq aliases Cm perms , mode
 File permissions.
 .It Cm size Pq alias Cm filesize
 File size.
@@ -290,9 +290,13 @@ value flags take a string or integer.
 .Sy octal-permissions Pq bool ,
 .Sy flags Pq bool ,
 .Sy permissions Pq bool ,
-.Sy filesize Pq bool ,
+.Sy size Pq bool ,
 .Sy user Pq bool .
 .El
+.Pp
+.Cm filesize
+is accepted as a backward-compatible alias for
+.Sy size .
 .Pp
 .Sy Layout tuning\&:
 .Bl -tag -width Ds -offset indent
@@ -374,7 +378,7 @@ to pick exactly the columns you want.
 .Bl -item -offset indent -compact
 .It
 .Sy no-permissions Pq bool ,
-.Sy no-filesize Pq bool ,
+.Sy no-size Pq bool ,
 .Sy no-user Pq bool ,
 .Sy no-uid Pq bool ,
 .Sy no-gid Pq bool ,
@@ -394,6 +398,10 @@ to pick exactly the columns you want.
 .Sy no-total-size Pq bool .
 .El
 .Pp
+.Cm no-filesize
+is accepted as a backward-compatible alias for
+.Sy no-size .
+.Pp
 .Sy no-time
 clears all timestamp columns from the base format as a bulk
 shortcut; it runs before individual adds, so combining it with e.g.
@@ -406,7 +414,7 @@ suppress individual timestamp columns after adds have been applied.
 .Bl -item -offset indent -compact
 .It
 .Sy permissions Pq bool ,
-.Sy filesize Pq bool ,
+.Sy size Pq bool ,
 .Sy user Pq bool .
 .El
 .Ss Inheritance

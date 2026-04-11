@@ -330,9 +330,9 @@ sort field name.
 the column flag has
 .Cm permissions
 the sort field,
-.Fl -filesize
+.Fl -size
 has
-.Cm filesize ,
+.Cm size ,
 and so on.
 Short aliases are also accepted where the column flag has them.
 .Pp
@@ -688,7 +688,7 @@ for
 .Fl -no-user ,
 .Fl -no-z
 for
-.Fl -no-filesize ,
+.Fl -no-size ,
 .Fl -no-M
 for
 .Fl -no-permissions ,
@@ -708,15 +708,15 @@ are accepted as long aliases (matching traditional Unix terminology).
 .Fl -no-M
 is a hidden short-letter alias for
 .Fl -no-permissions .
-.It Fl z , Fl -filesize , Fl -no-filesize
+.It Fl z , Fl -size , Fl -no-size
 Show or suppress the file size field.
-.Fl -size
+.Fl -filesize
 /
-.Fl -no-size
-are accepted as long aliases.
+.Fl -no-filesize
+are accepted as hidden aliases.
 .Fl -no-z
 is a hidden short-letter alias for
-.Fl -no-filesize .
+.Fl -no-size .
 .It Fl u , Fl -user , Fl -no-user
 Show or suppress the user field.
 .Fl -no-u

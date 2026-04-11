@@ -110,12 +110,16 @@ pub(crate) static SETTING_FLAGS: &[SettingDef] = &[
 
     // explicit column enablers
     SettingDef { key: "permissions",   flag: "--permissions",    kind: SettingKind::Bool },
-    SettingDef { key: "filesize",      flag: "--filesize",       kind: SettingKind::Bool },
+    SettingDef { key: "size",          flag: "--size",           kind: SettingKind::Bool },
+    // `filesize` kept as a backward-compat alias for the
+    // pre-rename canonical name; both produce the same flag.
+    SettingDef { key: "filesize",      flag: "--size",           kind: SettingKind::Bool },
     SettingDef { key: "user",          flag: "--user",           kind: SettingKind::Bool },
 
     // column suppressors
     SettingDef { key: "no-permissions", flag: "--no-permissions", kind: SettingKind::Bool },
-    SettingDef { key: "no-filesize",   flag: "--no-filesize",    kind: SettingKind::Bool },
+    SettingDef { key: "no-size",       flag: "--no-size",        kind: SettingKind::Bool },
+    SettingDef { key: "no-filesize",   flag: "--no-size",        kind: SettingKind::Bool },
     SettingDef { key: "no-user",       flag: "--no-user",        kind: SettingKind::Bool },
     SettingDef { key: "no-time",       flag: "--no-time",        kind: SettingKind::Bool },
     SettingDef { key: "no-modified",   flag: "--no-modified",    kind: SettingKind::Bool },

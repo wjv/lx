@@ -54,12 +54,12 @@ pub const TIME_STYLE: &str = "time-style";
 
 // explicit column enablers (positive counterparts of --no-*)
 pub const SHOW_PERMISSIONS: &str = "show-permissions";
-pub const SHOW_FILESIZE: &str = "show-filesize";
+pub const SHOW_SIZE: &str = "show-size";
 pub const SHOW_USER: &str = "show-user";
 
 // suppressing columns
 pub const NO_PERMISSIONS: &str = "no-permissions";
-pub const NO_FILESIZE: &str = "no-filesize";
+pub const NO_SIZE: &str = "no-size";
 pub const NO_USER: &str = "no-user";
 pub const NO_TIME: &str = "no-time";
 pub const NO_MODIFIED: &str = "no-modified";
