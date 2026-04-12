@@ -1137,6 +1137,34 @@ lx --completions fish > ~/.config/fish/completions/lx.fish
 .Pa ~/.zfunc
 must be in your
 .Ev fpath . )
+.Pp
+For
+.Cm bash ,
+.Cm zsh ,
+and
+.Cm fish ,
+the generated script also registers completions for every
+personality symlink found in
+.Ev PATH
+that points to the
+.Nm
+binary.
+For example, if
+.Pa ll
+and
+.Pa tree
+are symlinks to
+.Nm ,
+tab completion works for those names too.
+Regenerate completions after creating or removing personality
+symlinks.
+.Pp
+.Cm elvish
+and
+.Cm powershell
+completions cover the
+.Nm
+command only.
 .Sh ENVIRONMENT
 .Bl -tag -width Ds
 .It Ev LX_CONFIG

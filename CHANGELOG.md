@@ -7,6 +7,14 @@ All notable changes to lx are documented here. lx is forked from
 
 ### Added
 
+- **Shell completions cover personality symlinks.**  For bash, zsh,
+  and fish, `lx --completions SHELL` now also registers completions
+  for every symlink in `$PATH` that points to the `lx` binary, so
+  `ll <TAB>`, `tree <TAB>`, etc. work out of the box.  Discovery
+  is automatic; only genuine symlinks to the running binary are
+  registered (no risk of shadowing the real `tree(1)` or `ls(1)`).
+  Regenerate completions after creating or removing symlinks.
+  Elvish and PowerShell completions are unaffected.
 - `$LX_PERSONALITY` environment variable for session-level
   personality selection.  Resolution pipeline:
   `-p` → argv[0] → `$LX_PERSONALITY` → default.

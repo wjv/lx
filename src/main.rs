@@ -121,6 +121,50 @@ fn error_label() -> &'static str {
 }
 
 
+/// Discover personality names for shell-completion alias registration
+/// by scanning `$PATH` for symlinks that resolve to the same binary
+/// as the running process.  Returns a sorted, deduplicated list;
+/// `lx` itself is excluded (it already has completions from the
+/// primary `generate()` call).
+///
+/// No compiled-in fallback: registering completions for names like
+/// `tree` or `ls` without checking whether the user has actually
+/// symlinked them to `lx` would shadow the *real* `tree(1)` / `ls(1)`
+/// completions.  Only names that genuinely resolve to our binary are
+/// safe to register.
+fn personality_completion_names() -> Vec<String> {
+    let (Ok(our_exe), Some(path_var)) = (
+        std::env::current_exe().and_then(|p| p.canonicalize()),
+        std::env::var_os("PATH"),
+    ) else {
+        return Vec::new();
+    };
+
+    let mut names = Vec::new();
+    for dir in std::env::split_paths(&path_var) {
+        let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+        for entry in entries.filter_map(Result::ok) {
+            let path = entry.path();
+            // Only check symlinks — skip regular files and dirs.
+            let Ok(meta) = path.symlink_metadata() else { continue };
+            if !meta.is_symlink() { continue }
+            // Does this symlink resolve to our binary?
+            let Ok(target) = path.canonicalize() else { continue };
+            if target != our_exe { continue }
+            if let Some(name) = path.file_name().and_then(|n| n.to_str())
+                && name != "lx"
+                && !names.iter().any(|n| n == name)
+            {
+                names.push(name.to_string());
+            }
+        }
+    }
+
+    names.sort();
+    names
+}
+
+
 /// Fallible body of `main()`.  Returns the desired process exit code on
 /// success or a top-level `LxError` to be reported by the wrapper.
 fn try_main() -> Result<i32, LxError> {
@@ -261,8 +305,43 @@ fn try_main() -> Result<i32, LxError> {
         }
 
         OptionsResult::Completions(shell) => {
+            use std::io::Write;
+
             let mut cmd = crate::options::parser::build_command();
-            clap_complete::generate(shell, &mut cmd, "lx", &mut io::stdout());
+            let mut out = io::stdout();
+            clap_complete::generate(shell, &mut cmd, "lx", &mut out);
+
+            // Register the same completions for personality names that
+            // users symlink to `lx`.  Start with the compiled-in names
+            // (so completions work before symlinks are created), then
+            // discover any extra symlinks pointing to this binary in
+            // $PATH (catches user-defined personalities).
+            let names = personality_completion_names();
+            if !names.is_empty() {
+                let joined = names.join(" ");
+                match shell {
+                    clap_complete::Shell::Bash => {
+                        let _ = write!(out, "\n\
+                            if [[ \"${{BASH_VERSINFO[0]}}\" -eq 4 && \
+                            \"${{BASH_VERSINFO[1]}}\" -ge 4 || \
+                            \"${{BASH_VERSINFO[0]}}\" -gt 4 ]]; then\n    \
+                            complete -F _lx -o nosort -o bashdefault -o default {joined}\n\
+                            else\n    \
+                            complete -F _lx -o bashdefault -o default {joined}\n\
+                            fi\n");
+                    }
+                    clap_complete::Shell::Zsh => {
+                        let _ = writeln!(out, "\ncompdef _lx {joined}");
+                    }
+                    clap_complete::Shell::Fish => {
+                        let _ = writeln!(out);
+                        for name in &names {
+                            let _ = writeln!(out, "complete -c {name} -w lx");
+                        }
+                    }
+                    _ => {} // Elvish, PowerShell — contributions welcome
+                }
+            }
         }
 
         OptionsResult::InitConfig => {

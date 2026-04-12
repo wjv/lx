@@ -1010,6 +1010,18 @@ lx --completions fish > ~/.config/fish/completions/lx.fish
 Alternatively, add a `source <(lx --completions …)` line to your
 shell's rc file to generate completions on the fly at startup.
 
+### Personality symlinks
+
+For bash, zsh, and fish, the generated completions also cover any
+personality symlinks found in `$PATH` that point to the `lx` binary.
+If you've symlinked `ll`, `la`, and `tree` to `lx`, tab completion
+works for those names too — no extra setup needed.
+
+Regenerate completions after creating or removing personality
+symlinks.
+
+Elvish and PowerShell completions cover the `lx` command only.
+
 
 ## Debugging your configuration
 
