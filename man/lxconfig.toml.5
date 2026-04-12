@@ -6,16 +6,23 @@
 .Nd configuration file for
 .Xr lx 1
 .Sh SYNOPSIS
+.Pa ~/.lxconfig.toml
+.Pp
+.Pa $XDG_CONFIG_HOME/lx/config.toml
+.Pp
+.Pa ~/Library/Application Support/lx/config.toml
+.Sh DESCRIPTION
+The
 .Nm lx
-searches for a TOML configuration file in these locations (first
-found wins):
+configuration file is written in TOML.
+.Nm lx
+searches for it in these locations (first found wins):
 .Bl -enum -offset indent -compact
 .It
 .Ev LX_CONFIG
 \(em explicit path override
 .It
 .Pa ~/.lxconfig.toml
-\(em simple home directory location
 .It
 .Pa $XDG_CONFIG_HOME/lx/config.toml
 (default
@@ -29,10 +36,6 @@ Run
 .Sy lx --init-config
 to generate a commented starter file at
 .Pa ~/.lxconfig.toml .
-.Sh DESCRIPTION
-The
-.Nm lx
-configuration file is written in TOML.
 It has the following top-level sections:
 .Bl -tag -width Ds
 .It Sy version
@@ -54,7 +57,7 @@ pattern or exact filename.
 .Sh VERSIONING
 Every configuration file must declare a schema version at the top:
 .Bd -literal -offset indent
-version = "0.5"
+version = "0.6"
 .Ed
 .Pp
 This is the
@@ -116,16 +119,24 @@ to run:
 lx --upgrade-config
 .Ed
 .Pp
-This command migrates the config to the current format (0.1\(->0.5,
-0.2\(->0.5, 0.3\(->0.5, and 0.4\(->0.5 are all supported) and saves
+This command migrates the config from any older version
+(0.1 through 0.5) to the current format and saves
 the original as
 .Pa ~/.lxconfig.toml.bak .
-The 0.3\(->0.5 and 0.4\(->0.5 migrations only bump the version string
-(and warn if
-.Sy time = \(dq...\(dq
+Migrations from 0.1 and 0.2 restructure the file
+(flattening formats, converting
+.Sy [defaults]
+to personalities).
+Migrations from 0.3, 0.4, and 0.5 bump the version string
+and inject auto-selection
+.Sy [[when]]
+blocks into
+.Sy [personality.default] ;
+they also warn if the removed
+.Sy time
 or
-.Sy numeric = ...
-are present); earlier migrations also restructure the file.
+.Sy numeric
+settings are present.
 .Sh FORMATS
 A format defines a column layout for long view.
 Formats are defined as keys in a flat
@@ -164,7 +175,7 @@ Custom formats are used via
 .Sy --format= Ns Ar NAME
 or referenced from personality definitions.
 .Ss Valid column names
-.Bl -tag -width "permissions (alias perms, mode)"
+.Bl -tag -width "permissions (alias perms, mode)" -compact
 .It Cm permissions Pq aliases Cm perms , mode
 File permissions.
 .It Cm size Pq alias Cm filesize
@@ -193,7 +204,8 @@ Creation timestamp.
 VCS status column.
 .El
 .Sh PERSONALITIES
-A personality bundles a format, columns, and settings under a name.
+A personality bundles a named set of settings \(em including a
+column layout \(em under a name.
 Invoke a personality with
 .Sy --personality= Ns Ar NAME ,
 .Sy -p Ar NAME ,
@@ -224,7 +236,9 @@ Accepts a TOML array or comma-separated string.
 .Pp
 All other keys in a personality section are
 .Em settings
-\(em each corresponds to a CLI flag.
+\(em each corresponds to a CLI flag (see
+.Xr lx 1
+for the full flag reference).
 Boolean flags take
 .Sy true Ns / Ns Sy false ;
 value flags take a string or integer.
@@ -381,7 +395,7 @@ to pick exactly the columns you want.
 .Sy vcs-repos Pq bool .
 .El
 .Pp
-.Sy Negation (override personality defaults)\&:
+.Sy Negation\&:
 .Bl -item -offset indent -compact
 .It
 .Sy no-permissions Pq bool ,
@@ -399,6 +413,8 @@ to pick exactly the columns you want.
 .Sy no-group Pq bool ,
 .Sy no-links Pq bool ,
 .Sy no-blocks Pq bool ,
+.Sy no-extended Pq bool ,
+.Sy no-flags Pq bool ,
 .Sy no-octal Pq bool ,
 .Sy no-header Pq bool ,
 .Sy no-count Pq bool ,

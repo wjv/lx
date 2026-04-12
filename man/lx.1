@@ -81,109 +81,36 @@ Alias:
 .It Fl -gradient Ns Op = Ns Ar COLUMNS
 Per-column gradient on/off.
 .Ar COLUMNS
-is a comma-separated list of column names that should render with
-their gradient.
-The recognised columns are
-.Cm size
-plus the four timestamp columns
+is a comma-separated list:
+.Cm size ,
 .Cm modified ,
 .Cm accessed ,
 .Cm changed ,
-and
-.Cm created ;
+.Cm created ,
 the bulk token
 .Cm date
-flips all four timestamp columns at once.
-Special tokens
-.Cm none
-(no gradients) and
+(all four timestamp columns), or
 .Cm all
-(every gradient-capable column, the default) only make sense alone.
-Bare
-.Fl -gradient
-is equivalent to
-.Fl -gradient Ns = Ns Cm all .
-.Pp
-Examples:
-.Bd -literal -offset indent
-lx -lt --gradient=modified         # gradient on modified, others flat
-lx -lt --gradient=size,modified    # size and modified gradient
-lx -lt --gradient=accessed,created # mix and match
-lx -lt --gradient=date             # bulk: every timestamp column
-.Ed
-.Pp
-The flat colour each column collapses to when its gradient is
-disabled comes from the active theme:
-.Sy size-major
-/
-.Sy size-minor
-for the size column,
-.Sy date-flat
-for each timestamp column.
-Each timestamp column also has its own per-column flat
-.Pq Sy date-modified-flat , No etc\&. ,
-see
+(default) /
+.Cm none .
+See
 .Xr lxconfig.toml 5
-for the full set of theme keys.
+for the theme keys that control flat colours when a column's
+gradient is off.
 .It Fl -no-gradient
 Hidden alias for
 .Fl -gradient Ns = Ns Cm none .
-Turns off the size gradient and every timestamp column's gradient.
 .It Fl -smooth
-Smoothly interpolate gradients between the theme's per-tier anchor
-colours.
-Instead of the six discrete date tiers (or five size tiers) snapping
-at each boundary, each file gets its own colour proportional to its
-position on a log scale between adjacent anchors.
-The interpolation happens in perceptually uniform Oklab space so
-transitions don't pass through muddy midpoints.
-.Pp
-Only takes effect on 24-bit themes whose anchor colours are all
-.Sy Color::Rgb
-\(em the builtin
-.Sy lx-24bit
-theme, the curated
-.Sy solarized-\&* ,
-.Sy catppuccin-\&* ,
-.Sy gruvbox-\&* ,
-.Sy nord-\&*
-themes, and any user theme that uses hex or
-.Sy rgb\&:
-values throughout.
-On 256-colour or basic ANSI themes
-.Fl -smooth
-is silently a no-op.
-Columns whose gradient is off
-.Pq e.g. Fl -gradient Ns = Ns Cm size , Fl -no-gradient
-are also unaffected.
-.Pp
+Perceptually uniform interpolation between the theme's per-tier
+anchor colours, so gradients transition smoothly instead of
+snapping at tier boundaries.
+Only takes effect on 24-bit themes
+.Pq Sy lx-24bit , No the curated themes, or any theme using hex/rgb values ;
+silently a no-op on 256-colour or basic ANSI themes.
 Default: off.
-Opt in per-invocation with
-.Fl -smooth ,
-per-process with
-.Ev LX_PERSONALITY ,
-or permanently with
-.Sy smooth = true
-in your personality config.
-.Pp
-The formulas come from Bj\(:orn Ottosson,
-.Dq A perceptual color space for image processing
-(2020),
-.Lk https://bottosson.github.io/posts/oklab/ .
 .It Fl -no-smooth
 Hidden suppressor for
 .Fl -smooth .
-Useful for turning off a personality setting from the command line.
-.Pp
-Timestamps are also coloured by age: recent files appear brighter,
-older files fade towards grey.
-The six tiers
-.Pq Sy date-now No through Sy date-old
-are theme keys, and each timestamp column can override them
-individually
-.Pq Sy date-modified-now , No etc\&. ;
-see
-.Xr lxconfig.toml 5 .
 .It Fl -icons Ns Op = Ns Ar WHEN
 Display icons next to file names.
 .Ar WHEN
@@ -237,14 +164,17 @@ List directories as regular files.
 List only directories, not files.
 .It Fl f , Fl -only-files
 List only regular files, not directories.
-.It Fl I , Fl -ignore Ns = Ns Ar GLOBS
-Glob patterns, pipe-separated, of files to hide completely.
+.It Fl I , Fl -ignore Ns = Ns Ar GLOB Ns | Ns Ar GLOB Ns |...
+Glob patterns of files to hide completely.
+Multiple patterns are separated by
+.Sq | .
 Also accepted:
 .Fl -ignore-glob
-.Pq exa/eza compatibility .
-.It Fl P , Fl -prune Ns = Ns Ar GLOBS
-Glob patterns, pipe-separated, of directories to show but not recurse
-into.
+.
+.It Fl P , Fl -prune Ns = Ns Ar GLOB Ns | Ns Ar GLOB Ns |...
+Glob patterns of directories to show but not recurse into.
+Multiple patterns are separated by
+.Sq | .
 The directory itself is displayed (with metadata and
 .Fl -total
 if active), but its children are hidden.
@@ -255,7 +185,7 @@ or
 silently ignored otherwise.
 Also accepted:
 .Fl -prune-glob
-.Pq exa/eza compatibility .
+.
 .It Fl -symlinks Ns = Ns Ar MODE
 How to handle symbolic links.
 .Ar MODE
@@ -291,7 +221,7 @@ Which field to sort by.
 .El
 .Pp
 Valid sort fields, by category:
-.Bl -tag -width "Ownership and mode" -offset indent
+.Bl -tag -width "Ownership and mode" -offset indent -compact
 .It Sy Name / extension
 .Cm name ,
 .Cm Name ,
@@ -334,7 +264,6 @@ the sort field,
 has
 .Cm size ,
 and so on.
-Short aliases are also accepted where the column flag has them.
 .Pp
 The
 .Cm modified
@@ -468,7 +397,84 @@ command line.
 .Ss Long view options
 These options affect the columns displayed in long view
 .Pq Fl l .
+Flags are listed in canonical column order; this is the order
+columns appear in the output, and may be overridden with
+.Fl -columns
+(see below).
+.Pp
+Every column-add flag has a matching
+.Fl -no-*
+suppressor for overriding personality defaults.
+Flags with a short form also accept
+.Fl -no-X
+(e.g.
+.Fl -no-z
+for
+.Fl -no-size ) .
 .Bl -tag -width Ds
+.It Fl i , Fl -inode
+Add the inode column to the long listing.
+Suppressor:
+.Fl -no-inode
+/
+.Fl -no-i .
+.It Fl o , Fl -octal
+Add the octal permissions column to the long listing.
+Also accepted:
+.Fl -octal-permissions .
+Suppressor:
+.Fl -no-octal
+/
+.Fl -no-o .
+.It Fl M , Fl -permissions
+Add the permissions column to the long listing.
+.Fl -mode
+is accepted as an alias.
+Suppressor:
+.Fl -no-permissions
+/
+.Fl -no-mode
+/
+.Fl -no-M .
+.It Fl O , Fl -flags
+Add the file flags column to the long listing.
+On macOS and
+.Fx ,
+these are the flags set by
+.Xr chflags 1
+(e.g.
+.Cm hidden ,
+.Cm uchg ,
+.Cm nodump ) .
+On Linux, these are the file attributes set by
+.Xr chattr 1
+(e.g.
+.Cm immutable ,
+.Cm append ,
+.Cm nodump ) .
+Shows
+.Sq -
+when no flags are set.
+Suppressor:
+.Fl -no-flags
+/
+.Fl -no-O .
+.It Fl H , Fl -links
+Add the hard link count column to the long listing.
+Suppressor:
+.Fl -no-links
+/
+.Fl -no-H .
+.It Fl z , Fl -size
+Add the file size column to the long listing.
+.Fl -filesize
+is accepted as a hidden alias.
+Suppressor:
+.Fl -no-size
+/
+.Fl -no-filesize
+/
+.Fl -no-z .
 .It Fl -size-style Ns = Ns Ar STYLE
 How to display file sizes.
 .Ar STYLE
@@ -479,12 +485,6 @@ is
 (KiB, MiB, GiB), or
 .Cm bytes
 (raw count).
-.It Fl B , Fl -binary
-Alias for
-.Fl -size-style Ns = Ns Cm binary .
-.It Fl b , Fl -bytes
-Alias for
-.Fl -size-style Ns = Ns Cm bytes .
 .It Fl K , Fl -decimal
 Alias for
 .Fl -size-style Ns = Ns Cm decimal .
@@ -493,32 +493,71 @@ Useful for overriding a personality that sets
 or
 .Cm bytes
 back to the default.
+.It Fl B , Fl -binary
+Alias for
+.Fl -size-style Ns = Ns Cm binary .
+.It Fl b , Fl -bytes
+Alias for
+.Fl -size-style Ns = Ns Cm bytes .
+.It Fl Z , Fl -total
+Show total recursive size for directories.
+.Fl -total-size
+is also accepted as a long-form alias.
+When combined with
+.Fl -sort Ns = Ns Cm size ,
+sorting uses the recursive total.
+Suppressor:
+.Fl -no-total
+/
+.Fl -no-Z .
+.It Fl S , Fl -blocks
+Add the block count column to the long listing.
+Suppressor:
+.Fl -no-blocks
+/
+.Fl -no-S .
+.It Fl u , Fl -user
+Add the user column to the long listing.
+Suppressor:
+.Fl -no-user
+/
+.Fl -no-u .
+.It Fl -uid
+Add the numeric user ID column to the long listing.
+Suppressor:
+.Fl -no-uid .
 .It Fl g , Fl -group
-List each file's group name.
+Add the group column to the long listing.
 The group is coloured in three tiers: your primary group, a
 supplementary group you belong to, or other.
-.It Fl -uid
-Show the numeric user ID column (long-form only).
-Composes with
-.Fl u Ns / Ns Fl -user :
-.Sy lx -lug --uid --gid
-shows both names and IDs side-by-side.
+Suppressor:
+.Fl -no-group
+/
+.Fl -no-g .
 .It Fl -gid
-Show the numeric group ID column (long-form only).
-.It Fl h , Fl -header
-Add a header row to each column.
-.It Fl H , Fl -links
-List each file's number of hard links.
-.It Fl i , Fl -inode
-List each file's inode number.
+Add the numeric group ID column to the long listing.
+Suppressor:
+.Fl -no-gid .
 .It Fl m , Fl -modified
 Add the modified timestamp column to the long listing.
+Suppressor:
+.Fl -no-modified
+/
+.Fl -no-m .
 .It Fl c , Fl -changed
 Add the changed timestamp column to the long listing.
+Suppressor:
+.Fl -no-changed
+/
+.Fl -no-c .
 .It Fl -accessed
 Add the accessed timestamp column to the long listing.
+Suppressor:
+.Fl -no-accessed .
 .It Fl -created
 Add the created timestamp column to the long listing.
+Suppressor:
+.Fl -no-created .
 .It Fl t
 Compounding timestamp shortcut.
 .Fl t
@@ -560,53 +599,50 @@ style shows human-friendly durations such as
 .Dq 2 hours ago
 or
 .Dq 3 days ago .
-.It Fl S , Fl -blocks
-List each file's number of file system blocks.
-.It Fl Z , Fl -total
-Show total recursive size for directories.
-.Fl -total-size
-is also accepted as a long-form alias.
-When combined with
-.Fl -sort Ns = Ns Cm size ,
-sorting uses the recursive total.
+.It Fl -no-time
+Clear all timestamp columns from the base format.
+Runs
+.Em before
+individual timestamp adds, so
+.Sy --no-time --accessed
+leaves just the accessed column.
+Per-column suppressors
+.Pq Fl -no-modified No etc.
+run
+.Em after
+adds.
+Accepts
+.Fl -no-timestamps
+as a hidden alias.
 .It Fl @ , Fl -extended
 List each file's extended attributes and sizes.
-.It Fl o , Fl -octal
-List each file's permissions in octal format.
-Also accepted:
-.Fl -octal-permissions
-.Pq exa/eza compatibility .
-.It Fl O , Fl -flags
-Show platform file flags.
-On macOS and
-.Fx ,
-these are the flags set by
-.Xr chflags 1
-and shown by
-.Sy ls -lO
-(macOS) or
-.Sy ls -lo
-.Pq Fx
-(e.g.
-.Cm hidden ,
-.Cm uchg ,
-.Cm uappnd ,
-.Cm nodump ,
-.Cm uarch ) .
-On Linux, these are the file attributes set by
-.Xr chattr 1
-and shown by
-.Xr lsattr 1
-(e.g.
-.Cm immutable ,
-.Cm append ,
-.Cm nodump ,
-.Cm noatime ) .
-Shows
-.Sq -
-when no flags are set.
-Available via
-.Fl -columns Ns = Ns Cm flags .
+Suppressor:
+.Fl -no-extended
+/
+.Fl -no-@ .
+.It Fl h , Fl -header
+Add a header row to each column.
+Suppressor:
+.Fl -no-header
+/
+.Fl -no-h .
+.It Fl C , Fl -count
+Print a summary to stderr showing the number of items displayed.
+When combined with
+.Fl Z Ns / Ns Fl -total ,
+also shows the total size of displayed items.
+In tree views, expanded directories are not counted towards the total
+(their children account for themselves); pruned or depth-limited
+directories use their recursive total.
+The size respects
+.Fl b
+(bytes) and
+.Fl B
+(binary) formatting.
+Suppressor:
+.Fl -no-count
+/
+.Fl -no-C .
 .El
 .Ss Column and format selection
 .Bl -tag -width Ds
@@ -655,126 +691,6 @@ Precedence:
 >
 .Fl l
 tier > individual flags.
-.Ss Column overrides
-Every column and display option has a negative form for overriding
-personality defaults.
-For flags with a short form, a
-.Fl -no-X
-alias is also accepted (e.g.
-.Fl -no-h
-for
-.Fl -no-header ,
-.Fl -no-Z
-for
-.Fl -no-total ,
-.Fl -no-C
-for
-.Fl -no-count ,
-.Fl -no-g
-for
-.Fl -no-group ,
-.Fl -no-i
-for
-.Fl -no-inode ,
-.Fl -no-H
-for
-.Fl -no-links ,
-.Fl -no-S
-for
-.Fl -no-blocks ,
-.Fl -no-o
-for
-.Fl -no-octal ,
-.Fl -no-u
-for
-.Fl -no-user ,
-.Fl -no-z
-for
-.Fl -no-size ,
-.Fl -no-M
-for
-.Fl -no-permissions ,
-.Fl -no-m
-for
-.Fl -no-modified ,
-.Fl -no-c
-for
-.Fl -no-changed ) .
-.Bl -tag -width Ds
-.It Fl M , Fl -permissions , Fl -no-permissions
-Show or suppress the permissions field.
-.Fl -mode
-/
-.Fl -no-mode
-are accepted as long aliases (matching traditional Unix terminology).
-.Fl -no-M
-is a hidden short-letter alias for
-.Fl -no-permissions .
-.It Fl z , Fl -size , Fl -no-size
-Show or suppress the file size field.
-.Fl -filesize
-/
-.Fl -no-filesize
-are accepted as hidden aliases.
-.Fl -no-z
-is a hidden short-letter alias for
-.Fl -no-size .
-.It Fl u , Fl -user , Fl -no-user
-Show or suppress the user field.
-.Fl -no-u
-is a hidden short-letter alias for
-.Fl -no-user .
-.It Fl -uid , Fl -no-uid
-Show or suppress the numeric user ID column (long-form only).
-.It Fl -gid , Fl -no-gid
-Show or suppress the numeric group ID column (long-form only).
-.It Fl -no-time
-Clear all timestamp columns from the base format.
-Runs
-.Em before
-individual timestamp adds, so
-.Sy --no-time --accessed
-leaves just the accessed column.
-Accepts
-.Fl -no-timestamps
-as a hidden alias.
-.It Fl -no-modified , Fl -no-changed , Fl -no-accessed , Fl -no-created
-Suppress individual timestamp columns.
-.Fl -no-m
-and
-.Fl -no-c
-are accepted as hidden short-letter aliases for
-.Fl -no-modified
-and
-.Fl -no-changed
-respectively.
-Unlike
-.Fl -no-time ,
-these run
-.Em after
-individual adds, so they beat an explicit
-.Fl -modified
-on the same command line.
-.It Fl -no-inode
-Suppress the inode field.
-.It Fl -no-group
-Suppress the group field.
-.It Fl -no-links
-Suppress the hard links field.
-.It Fl -no-blocks
-Suppress the blocks field.
-.It Fl -no-octal
-Suppress the octal permissions column.
-.It Fl -no-header
-Suppress the header row.
-.It Fl -no-count
-Suppress the
-.Fl C Ns / Ns Fl -count
-summary.
-.It Fl -no-total
-Suppress
-.Fl Z Ns / Ns Fl -total .
-.El
 .Sh PERSONALITIES
 Personalities are
 .Nm Ns 's
@@ -1003,10 +919,10 @@ The config file includes a
 .Sy version
 field to track the schema version.
 The current version is
-.Sy \(dq0.5\(dq .
+.Sy \(dq0.6\(dq .
 If you have a legacy config from an earlier version, run
 .Sy lx --upgrade-config
-to migrate it (migrations from 0.1 through 0.4 are all supported; a
+to migrate it (migrations from 0.1 through 0.5 are all supported; a
 .Pa .bak
 of the original is saved automatically).
 .Pp
