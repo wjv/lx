@@ -151,7 +151,7 @@ pub(crate) static SETTING_FLAGS: &[SettingDef] = &[
 ];
 
 /// Look up a setting definition by config key name.
-fn find_setting(key: &str) -> Option<&'static SettingDef> {
+pub(crate) fn find_setting(key: &str) -> Option<&'static SettingDef> {
     SETTING_FLAGS.iter().find(|s| s.key == key)
 }
 
@@ -207,6 +207,16 @@ pub(super) fn settings_to_args(settings: &HashMap<String, toml::Value>, context:
                 };
                 if truthy {
                     args.push(def.flag.into());
+                } else {
+                    // `key = false` means "suppress this, even if
+                    // inherited".  Look up the corresponding `no-key`
+                    // entry and emit its flag.  If no negation exists
+                    // (e.g. `tree = false`), the false is a no-op —
+                    // view-mode flags don't have suppressors.
+                    let neg_key = format!("no-{key}");
+                    if let Some(neg_def) = find_setting(&neg_key) {
+                        args.push(neg_def.flag.into());
+                    }
                 }
             }
             SettingKind::Str => {

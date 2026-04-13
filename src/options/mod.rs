@@ -192,7 +192,7 @@ impl Options {
     /// Only captures flags the user actually typed, not personality defaults.
     fn extract_cli_settings(matches: &clap::ArgMatches) -> std::collections::HashMap<String, toml::Value> {
         use std::collections::HashMap;
-        use crate::config::{SETTING_FLAGS, SettingKind};
+        use crate::config::{SETTING_FLAGS, SettingKind, find_setting};
 
         let mut settings: HashMap<String, toml::Value> = HashMap::new();
 
@@ -270,6 +270,39 @@ impl Options {
         // The personality config uses `format` to express detail tiers,
         // but the simplest save is just `long = true` (already captured
         // above as a Bool).  Advanced users can edit the file.
+
+        // Rewrite `no-X = true` as `X = false` when the positive
+        // counterpart is a Bool setting.  With three-state Bool
+        // semantics, `X = false` emits `--no-X` at load time, so the
+        // saved personality is correct and reads more naturally.
+        // Exceptions: `no-time` (no positive `time` key — it's a bulk
+        // clear), `no-icons`/`no-gradient` (positive is Str, not Bool).
+        let neg_keys: Vec<String> = settings.keys()
+            .filter(|k| k.starts_with("no-"))
+            .cloned()
+            .collect();
+        for neg_key in neg_keys {
+            let pos_key = neg_key.strip_prefix("no-").unwrap().to_string();
+            if let Some(pos_def) = find_setting(&pos_key) {
+                if matches!(pos_def.kind, SettingKind::Bool) {
+                    settings.remove(&neg_key);
+                    settings.insert(pos_key, toml::Value::Boolean(false));
+                }
+            }
+        }
+
+        // Remove backward-compat alias keys when the canonical key
+        // for the same setting is also present (avoids redundant
+        // entries like both `size = false` and `filesize = false`).
+        for (canonical, alias) in [
+            ("size", "filesize"),
+            ("total", "total-size"),
+            ("octal", "octal-permissions"),
+        ] {
+            if settings.contains_key(canonical) {
+                settings.remove(alias);
+            }
+        }
 
         settings
     }

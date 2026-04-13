@@ -239,9 +239,30 @@ All other keys in a personality section are
 \(em each corresponds to a CLI flag (see
 .Xr lx 1
 for the full flag reference).
-Boolean flags take
-.Sy true Ns / Ns Sy false ;
-value flags take a string or integer.
+Value flags take a string or integer.
+Boolean flags have three states:
+.Bl -tag -width "absent" -offset indent -compact
+.It Sy true
+Enable (emit the flag).
+.It Sy false
+Suppress, even if inherited from a parent personality or format.
+For example,
+.Sy size = false
+in a child personality suppresses the size column that the
+parent's format would otherwise include.
+.It absent
+No opinion \(em inherit from the parent personality, or use
+the compiled-in default if the key does not appear in any
+ancestor.
+.El
+.Pp
+The legacy
+.Sy no-*
+keys
+.Pq Sy no-size = true , No etc.
+are still accepted and equivalent to setting the positive key
+to
+.Sy false .
 .Ss Setting keys
 .Sy Display options\&:
 .Bl -item -offset indent -compact
@@ -395,56 +416,15 @@ to pick exactly the columns you want.
 .Sy vcs-repos Pq bool .
 .El
 .Pp
-.Sy Negation\&:
-.Bl -item -offset indent -compact
-.It
-.Sy no-permissions Pq bool ,
-.Sy no-size Pq bool ,
-.Sy no-user Pq bool ,
-.Sy no-uid Pq bool ,
-.Sy no-gid Pq bool ,
-.Sy no-time Pq bool ,
-.Sy no-modified Pq bool ,
-.Sy no-changed Pq bool ,
-.Sy no-accessed Pq bool ,
-.Sy no-created Pq bool ,
-.Sy no-icons Pq bool ,
-.Sy no-inode Pq bool ,
-.Sy no-group Pq bool ,
-.Sy no-links Pq bool ,
-.Sy no-blocks Pq bool ,
-.Sy no-extended Pq bool ,
-.Sy no-flags Pq bool ,
-.Sy no-octal Pq bool ,
-.Sy no-header Pq bool ,
-.Sy no-count Pq bool ,
-.Sy no-total Pq bool .
-.El
-.Pp
-.Cm no-filesize
-and
-.Cm no-total-size
-are accepted as backward-compatible aliases for
-.Sy no-size
-and
-.Sy no-total
-respectively.
-.Pp
-.Sy no-time
+.Sy Special case\&:
+.Sy no-time = true
 clears all timestamp columns from the base format as a bulk
-shortcut; it runs before individual adds, so combining it with e.g.
+shortcut; it runs before individual adds, so combining it with
 .Sy accessed = true
 leaves just the accessed column.
-.Sy no-modified Ns / Ns Sy no-changed Ns / Ns Sy no-accessed Ns / Ns Sy no-created
-suppress individual timestamp columns after adds have been applied.
-.Pp
-.Sy Column visibility (positive)\&:
-.Bl -item -offset indent -compact
-.It
-.Sy permissions Pq bool ,
-.Sy size Pq bool ,
-.Sy user Pq bool .
-.El
+.Sy no-time
+has no positive counterpart and cannot be expressed as
+.Sy time = false .
 .Ss Inheritance
 Personalities support single inheritance via
 .Sy inherits = \(dqNAME\(dq .

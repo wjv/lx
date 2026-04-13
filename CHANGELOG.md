@@ -91,6 +91,16 @@ All notable changes to lx are documented here. lx is forked from
 
 ### Changed
 
+- **`key = false` now suppresses inherited columns.**  Previously,
+  setting a Bool personality key to `false` was a no-op — only
+  the `no-key = true` form could suppress a column inherited from
+  a parent personality or format.  Now `size = false` in a child
+  personality actively suppresses the size column, `modified =
+  false` suppresses modified, and so on.  The old `no-key = true`
+  form still works.  `--save-as` now emits the `key = false` form
+  rather than `no-key = true`.  Exception: `no-time = true` is
+  unchanged (it's a bulk clear with different precedence, not a
+  column negation).
 - **`octal-permissions` config key is now `octal`** to match the
   canonical `--octal` flag.  `octal-permissions` continues to work
   as a backward-compatible setting key; the CLI side was already

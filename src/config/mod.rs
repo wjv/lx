@@ -60,7 +60,7 @@ pub use self::error::ConfigError;
 
 pub use self::store::{config, init_config};
 
-pub(crate) use self::settings::{SETTING_FLAGS, SettingKind};
+pub(crate) use self::settings::{SETTING_FLAGS, SettingKind, find_setting};
 
 pub use self::schema::{Config, StyleDef, ThemeDef};
 

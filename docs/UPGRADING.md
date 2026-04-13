@@ -32,6 +32,27 @@ migrate to the 0.6 schema.  The migration is mostly cosmetic
 into your `[personality.default]` section so you get the new
 theme tiers automatically.
 
+### `key = false` now suppresses inherited columns
+
+In previous releases, setting a Bool personality key to `false`
+was a no-op — `size = false` in a child personality didn't
+suppress the size column inherited from the parent's format.
+The only way to suppress was `no-size = true`.  This was a bug
+rather than a design choice, and contradicted the intuitive
+reading of `false`.
+
+From 0.9, `key = false` means "suppress this column even if
+inherited".  Three states:
+
+| Syntax         | Meaning                                      |
+|----------------|----------------------------------------------|
+| `size = true`  | Add the size column                          |
+| `size = false` | Suppress the size column (even if inherited) |
+| *(key absent)* | No opinion — inherit from parent/format      |
+
+The old `no-size = true` form still works and is equivalent to
+`size = false`.  No action is required for existing configs.
+
 ### Auto-selection of theme tiers
 
 The new compiled-in `default` personality has two `[[when]]`
@@ -159,11 +180,11 @@ the GUIDE for the worked example.
 a `[personality.X]` (or `[[personality.X.when]]`) block is
 rewritten:
 
-| Old value                 | New value          |
-|---------------------------|--------------------|
-| `colour-scale = "none"`   | `gradient = "none"` |
-| `colour-scale = "16"`     | `gradient = "all"`  |
-| `colour-scale = "256"`    | `gradient = "all"`  |
+| Old value               | New value           |
+|-------------------------|---------------------|
+| `colour-scale = "none"` | `gradient = "none"` |
+| `colour-scale = "16"`   | `gradient = "all"`  |
+| `colour-scale = "256"`  | `gradient = "all"`  |
 
 The bit-depth distinction is gone: `16` and `256` both meant
 "draw the gradient", which is now `all`.
