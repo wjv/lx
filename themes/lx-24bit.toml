@@ -1,0 +1,90 @@
+# The compiled-in "lx-24bit" theme for lx
+# 24-bit truecolour — smoothest gradients, most polished palette.
+# Designed for both light and dark backgrounds.
+#
+# This file is a TOML representation of the compiled-in default.
+# Copy to ~/.config/lx/conf.d/ and edit to customise.
+
+[theme.lx-24bit]
+inherits = "exa"
+use-style = "exa"
+
+# File kinds
+directory = "bold #3b8ed8"        # soft blue
+symlink = "#3aabae"               # turquoise
+pipe = "#cba135"                  # amber
+block-device = "bold #cba135"
+char-device = "bold #cba135"
+socket = "bold #d76060"           # salmon
+special = "#cba135"
+executable = "bold #5fb55f"       # sage
+
+# Permissions
+permissions-user-read = "bold #cba135"
+permissions-user-write = "bold #d76060"
+permissions-user-execute = "bold #5fb55f"
+permissions-user-execute-other = "bold #5fb55f"
+permissions-group-read = "#cba135"
+permissions-group-write = "#d76060"
+permissions-group-execute = "#5fb55f"
+permissions-other-read = "#cba135"
+permissions-other-write = "#d76060"
+permissions-other-execute = "#5fb55f"
+permissions-special-user = "#a98ce0"    # soft lavender
+permissions-special-other = "#a98ce0"
+
+# Size gradient: chartreuse → olive → gold → orange → red-orange
+size-major = "bold #5fb55f"
+size-minor = "#5fb55f"
+size-number-byte = "#7eb33b"      # chartreuse
+size-number-kilo = "#a8b53b"      # mid olive
+size-number-mega = "#d2a531"      # gold
+size-number-giga = "#cf7a2e"      # orange
+size-number-huge = "#c54e3a"      # red-orange
+size-unit-byte = "#888888"
+size-unit-kilo = "#888888"
+size-unit-mega = "#888888"
+size-unit-giga = "#888888"
+size-unit-huge = "#888888"
+
+# Users
+user-you = "bold #cba135"         # amber
+group-yours = "bold #cba135"
+group-member = "#cba135"
+uid-you = "bold #3aabae"          # turquoise
+gid-yours = "bold #3aabae"
+gid-member = "#3aabae"
+
+# Links
+links = "bold #d76060"
+links-multi = "48;2;203;161;53"   # amber background
+
+# VCS
+vcs-new = "#5fb55f"
+vcs-modified = "#3b8ed8"
+vcs-deleted = "#d76060"
+vcs-renamed = "#cba135"
+vcs-typechange = "#a98ce0"
+vcs-ignored = "#888888"
+vcs-conflicted = "bold #d76060"
+
+# Date gradient: bright cyan → teal → blue → grey
+date-now = "bold #3dd7d7"         # bright cyan
+date-today = "#3dd7d7"
+date-week = "#3aabae"             # teal
+date-month = "#3b8ed8"            # soft blue
+date-year = "#888888"             # mid grey
+date-old = "#5c5c5c"              # dark grey
+date-flat = "#3aabae"             # = teal
+
+# Other UI
+punctuation = "#888888"           # mid grey
+inode = "#a98ce0"
+blocks = "#3aabae"
+octal = "#a98ce0"
+flags = "#cba135"
+header = "bold underline #3b8ed8" # soft blue
+symlink-path = "#3aabae"
+control-char = "#d76060"
+broken-symlink = "#d76060"
+broken-overlay = "underline"

@@ -1,0 +1,90 @@
+# The compiled-in "lx-256" theme for lx
+# 256-colour xterm palette, balanced for both light and dark
+# backgrounds.
+#
+# This file is a TOML representation of the compiled-in default.
+# Copy to ~/.config/lx/conf.d/ and edit to customise.
+
+[theme.lx-256]
+inherits = "exa"
+use-style = "exa"
+
+# File kinds
+directory = "bold 38;5;33"        # soft blue
+symlink = "38;5;38"               # turquoise
+pipe = "38;5;178"                 # muted gold
+block-device = "bold 38;5;178"
+char-device = "bold 38;5;178"
+socket = "bold 38;5;167"          # salmon
+special = "38;5;178"
+executable = "bold 38;5;41"       # medium green
+
+# Permissions
+permissions-user-read = "bold 38;5;178"
+permissions-user-write = "bold 38;5;167"
+permissions-user-execute = "bold 38;5;41"
+permissions-user-execute-other = "bold 38;5;41"
+permissions-group-read = "38;5;178"
+permissions-group-write = "38;5;167"
+permissions-group-execute = "38;5;41"
+permissions-other-read = "38;5;178"
+permissions-other-write = "38;5;167"
+permissions-other-execute = "38;5;41"
+permissions-special-user = "38;5;141"   # mauve
+permissions-special-other = "38;5;141"
+
+# Size gradient: green → yellow → orange → red
+size-major = "bold 38;5;41"
+size-minor = "38;5;41"
+size-number-byte = "38;5;76"      # chartreuse
+size-number-kilo = "38;5;142"     # mid olive
+size-number-mega = "38;5;178"     # gold
+size-number-giga = "38;5;172"     # orange
+size-number-huge = "38;5;160"     # red
+size-unit-byte = "38;5;244"
+size-unit-kilo = "38;5;244"
+size-unit-mega = "38;5;244"
+size-unit-giga = "38;5;244"
+size-unit-huge = "38;5;244"
+
+# Users
+user-you = "bold 38;5;178"        # gold
+group-yours = "bold 38;5;178"
+group-member = "38;5;178"
+uid-you = "bold 38;5;38"          # turquoise
+gid-yours = "bold 38;5;38"
+gid-member = "38;5;38"
+
+# Links
+links = "bold 38;5;167"
+links-multi = "48;5;178"          # gold background
+
+# VCS
+vcs-new = "38;5;41"
+vcs-modified = "38;5;33"
+vcs-deleted = "38;5;167"
+vcs-renamed = "38;5;178"
+vcs-typechange = "38;5;141"
+vcs-ignored = "38;5;244"
+vcs-conflicted = "bold 38;5;167"
+
+# Date gradient: cyan → blue → grey
+date-now = "bold 38;5;38"         # turquoise
+date-today = "38;5;38"
+date-week = "38;5;32"             # deeper teal
+date-month = "38;5;27"            # royal blue
+date-year = "38;5;244"            # medium grey
+date-old = "38;5;240"             # dark grey
+date-flat = "38;5;32"             # = week
+
+# Other UI
+punctuation = "38;5;244"          # medium grey
+inode = "38;5;141"
+blocks = "38;5;38"
+octal = "38;5;141"
+flags = "38;5;178"
+header = "bold underline 38;5;33" # soft blue
+symlink-path = "38;5;38"
+control-char = "38;5;167"
+broken-symlink = "38;5;167"
+broken-overlay = "underline"

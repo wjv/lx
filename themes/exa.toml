@@ -1,0 +1,81 @@
+# The compiled-in "exa" theme for lx
+# Strict 8-colour ANSI — the heritage exa look.
+#
+# This file is a TOML representation of the compiled-in default.
+# Copy to ~/.config/lx/conf.d/ and edit to customise.
+
+[theme.exa]
+use-style = "exa"
+
+# File kinds
+directory = "bold blue"
+symlink = "cyan"
+pipe = "yellow"
+block-device = "bold yellow"
+char-device = "bold yellow"
+socket = "bold red"
+special = "yellow"
+executable = "bold green"
+
+# Permissions
+permissions-user-read = "bold yellow"
+permissions-user-write = "bold red"
+permissions-user-execute = "bold green"
+permissions-user-execute-other = "bold green"
+permissions-group-read = "yellow"
+permissions-group-write = "red"
+permissions-group-execute = "green"
+permissions-other-read = "yellow"
+permissions-other-write = "red"
+permissions-other-execute = "green"
+permissions-special-user = "purple"
+permissions-special-other = "purple"
+
+# Size gradient: green → yellow → red → purple
+size-major = "bold green"
+size-minor = "green"
+size-number-byte = "green"
+size-number-kilo = "bold green"
+size-number-mega = "yellow"
+size-number-giga = "red"
+size-number-huge = "purple"
+size-unit-byte = "green"
+size-unit-kilo = "bold green"
+size-unit-mega = "yellow"
+size-unit-giga = "red"
+size-unit-huge = "purple"
+
+# Users
+user-you = "bold yellow"
+group-yours = "bold yellow"
+group-member = "yellow"
+uid-you = "bold cyan"
+gid-yours = "bold cyan"
+gid-member = "cyan"
+
+# Links
+links = "bold red"
+links-multi = "31;43"   # red on yellow
+
+# VCS
+vcs-new = "green"
+vcs-modified = "blue"
+vcs-deleted = "red"
+vcs-renamed = "yellow"
+vcs-typechange = "purple"
+vcs-ignored = "dimmed"
+vcs-conflicted = "red"
+
+# Date (all timestamps, flat — no age gradient)
+date = "blue"
+
+# Other UI
+inode = "purple"
+blocks = "cyan"
+octal = "purple"
+flags = "yellow"
+header = "underline"
+symlink-path = "cyan"
+control-char = "red"
+broken-symlink = "red"
+broken-overlay = "underline"
