@@ -67,7 +67,7 @@ jobs:
           merge-multiple: true
       - name: Stage man pages for release
         run: cp man/lx.1 man/lxconfig.toml.5 .
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: |
             lx-*
