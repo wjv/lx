@@ -109,7 +109,11 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
         // COLORTERM=truecolor).
         "default" => Some(PersonalityDef {
             settings: HashMap::from([
-                ("theme".into(), toml::Value::String("exa".into())),
+                ("gradient".into(), Str("all".into())),
+                ("group-dirs".into(), Str("none".into())),
+                ("icons".into(), Str("never".into())),
+                ("classify".into(), Str("never".into())),
+                ("theme".into(), Str("exa".into())),
             ]),
             when: vec![
                 ConditionalOverride {

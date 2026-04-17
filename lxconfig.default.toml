@@ -49,14 +49,17 @@ long3 = ["permissions", "links", "size", "blocks", "user", "group",
 
 ## Shared base: settings that all personalities inherit.
 [personality.default]
-colour = "auto"               # always / auto / never
-gradient = "all"              # all / none / size / date / size,date
-# smooth = false              # 24-bit themes only: interpolate between anchors
-time-style = "default"        # default / iso / long-iso / full-iso
 group-dirs = "none"           # first / last / none
 icons = "never"               # always / auto / never
 classify = "never"            # always / auto / never
+gradient = "all"              # all / none / size / date / size,date
 theme = "exa"                 # named theme (see below)
+# colour = "auto"             # always / auto / never (overrides $NO_COLOR)
+# time-style = "default"      # default / iso / long-iso / full-iso (overrides $TIME_STYLE)
+# smooth = false              # 24-bit themes only: use smooth gradients
+# header = false              # show column headers in long view
+# hyperlink = "never"         # always / auto / never — OSC 8 clickable paths
+# vcs-ignore = false          # respect VCS ignore file (e.g. .gitignore)
 
 ## Auto-select a richer theme on capable terminals.  Order matters:
 ## later blocks win, so the truecolour block runs second.  Delete
@@ -186,9 +189,9 @@ across = true
 ## Without `inherits`, a theme starts from a blank slate.
 ##
 ## Three compiled-in themes ship with lx:
-##   "exa"      strict 8-colour ANSI (the heritage exa look)
-##   "lx-256"   256-colour, balanced for both light and dark
-##   "lx-24bit" 24-bit truecolour, smoothest gradients
+## * "exa"      strict 8-colour ANSI (the heritage exa look)
+## * "lx-256"   256-colour, balanced for both light and dark
+## * "lx-24bit" 24-bit truecolour, smoothest gradients
 ##
 ## The default personality auto-selects the best variant for your
 ## terminal (see the [[when]] blocks above).
@@ -241,6 +244,7 @@ across = true
 # [class]
 # source = ["*.rs", "*.py", "*.js", "*.go", "*.c", "*.cpp"]
 # data   = ["*.csv", "*.json", "*.xml", "*.yaml", "*.h5"]
+# build  = ["Makefile", "Justfile", "*.mk", "CMakeLists.txt"]
 
 
 ## ── Style sets ───────────────────────────────────────────────────
@@ -261,17 +265,17 @@ across = true
 ## If two classes have overlapping patterns, the result is
 ## unspecified.  The built-in classes have no overlaps.
 
-# [style.exa]
-# class.temp       = "38;5;244"
-# class.immediate  = "bold underline yellow"
-# class.image      = "38;5;133"
-# class.video      = "38;5;135"
-# class.music      = "38;5;92"
-# class.lossless   = "38;5;93"
-# class.crypto     = "38;5;109"
-# class.document   = "38;5;105"
-# class.compressed = "red"
-# class.compiled   = "38;5;137"
+[style.exa]
+class.temp       = "38;5;244"
+class.immediate  = "bold underline yellow"
+class.image      = "38;5;133"
+class.video      = "38;5;135"
+class.music      = "38;5;92"
+class.lossless   = "38;5;93"
+class.crypto     = "38;5;109"
+class.document   = "38;5;105"
+class.compressed = "red"
+class.compiled   = "38;5;137"
 
 ## Custom styles — define your own and reference from a theme:
 

@@ -695,6 +695,61 @@ temp = ["*.tmp", "*.bak"]
 }
 
 
+// ── --init-config invariant ──────────────────────────────────────
+//
+// The generated config must be a no-op: lx with the generated config
+// must produce identical --dump-* output to lx with no config at all.
+
+#[test]
+fn init_config_does_not_change_defaults() {
+    let dir = tempdir().expect("failed to create tempdir");
+    let config_path = dir.path().join(".lxconfig.toml");
+
+    // Generate the default config file.
+    lx()
+        .arg("--init-config")
+        .env("HOME", dir.path())
+        .env_remove("LX_CONFIG")
+        .assert()
+        .success();
+
+    assert!(config_path.exists(), "config file should have been created");
+
+    // For each dump flag, compare output with the generated config
+    // against output with no config (LX_CONFIG=/dev/null).
+    // Pin TERM and COLORTERM so the [[when]] blocks resolve the same
+    // way in both runs.
+    for flag in [
+        "--dump-format",
+        "--dump-personality",
+        "--dump-style",
+        "--dump-class",
+    ] {
+        let with_config = lx()
+            .arg(flag)
+            .env("LX_CONFIG", &config_path)
+            .env("TERM", "xterm-256color")
+            .env("COLORTERM", "truecolor")
+            .output()
+            .expect("failed to run lx with config");
+
+        let without_config = lx()
+            .arg(flag)
+            .env("LX_CONFIG", "/dev/null")
+            .env("TERM", "xterm-256color")
+            .env("COLORTERM", "truecolor")
+            .output()
+            .expect("failed to run lx without config");
+
+        assert_eq!(
+            String::from_utf8_lossy(&with_config.stdout),
+            String::from_utf8_lossy(&without_config.stdout),
+            "{flag} output differs between generated config and no config",
+        );
+    }
+}
+
+
 // ── Three-state Bool config semantics ───────────────────────────
 
 /// `key = false` in a child personality suppresses a column that
