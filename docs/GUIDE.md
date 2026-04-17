@@ -496,6 +496,9 @@ between the fixed colours in the gradient by using the `--smooth` flag.
 This is useful for creating a more visually appealing gradient,
 especially when dealing with a large number of files or directories.
 
+The interpolation formulas come from Björn Ottosson's 2020
+paper on Oklab, <https://bottosson.github.io/posts/oklab/>.
+
 > Note: On a terminal that doesn't support truecolour, `--smooth` is a no-op.
 
 
@@ -1352,93 +1355,6 @@ cp themes/dracula.toml ~/.config/lx/conf.d/
 lx -l --theme=dracula
 ```
 
-### Smooth gradients (24-bit themes)
-
-By default the size and timestamp columns paint in discrete
-tiers: a file under 1 hour old is one colour, 1 hour to 1 day
-another, 1 day to 1 week another, and so on.  On truecolour
-themes the tier boundaries can be visibly staircased.  Pass
-`--smooth` to interpolate between the tier anchors in Oklab
-colour space, giving each file a colour proportional to its
-position on a log scale between the neighbouring anchors:
-
-```sh
-lx -l --theme=lx-24bit --smooth
-```
-
-`--smooth` only takes effect on themes whose anchor colours
-are all 24-bit RGB (`lx-24bit` and the curated `solarized-*` /
-`catppuccin-*` / `gruvbox-*` / `nord-*` pairs qualify; the
-ANSI `exa` theme and the 256-colour `lx-256` theme don't).
-On non-qualifying themes it's silently a no-op.  Columns whose
-gradient is off also stay flat regardless.
-
-To make smoothing your default, set `smooth = true` in a
-personality:
-
-```toml
-[personality.lx]
-theme = "lx-24bit"
-smooth = true
-```
-
-The interpolation formulas come from Björn Ottosson's 2020
-paper on Oklab, <https://bottosson.github.io/posts/oklab/>.
-
-The same vocabulary works as a personality config key:
-`gradient = "all"` (default), `"size"`, `"date"` (bulk all
-timestamps), `"none"`, or any comma-separated combination
-(`"size,modified"`, `"modified,accessed,created"`, etc.).
-
-When a column's gradient is off, it falls back to the theme's
-*flat* slots — `size-major`/`size-minor` for size, and the
-per-column `date-modified-flat` / `date-accessed-flat` /
-`date-changed-flat` / `date-created-flat` for each timestamp
-(or the bulk `date-flat` to set all four at once).  All shipped
-themes set these explicitly, so a flat column still picks up
-the theme's palette rather than a generic fallback.
-
-### Timestamp colours
-
-Timestamps are coloured by age — recent files appear brighter,
-older files fade towards grey.  Six tiers:
-
-| Theme key    | Age        | Builtin colour |
-|--------------|------------|----------------|
-| `date-now`   | < 1 hour   | bright cyan    |
-| `date-today` | < 24 hours | cyan           |
-| `date-week`  | < 7 days   | bold blue      |
-| `date-month` | < 30 days  | blue           |
-| `date-year`  | < 365 days | grey           |
-| `date-old`   | > 1 year   | dark grey      |
-
-Setting `date = "steelblue"` in a theme sets all six tiers (and
-`date-flat`) to the same colour, on every timestamp column.  Set
-individual tiers to create a custom gradient, or set `date-flat`
-on its own to control the colour `--no-gradient` falls back to.
-
-**Per-column overrides.**  Each timestamp column can be themed
-independently.  For each of `modified`, `accessed`, `changed`,
-and `created` there's a `date-<col>` bulk setter and seven
-per-tier setters with a `date-<col>-` prefix:
-
-```toml
-[theme.example]
-inherits          = "lx-256"
-date              = "white"           # bulk: every column, every tier
-date-modified     = "bright green"    # the modified column only
-date-accessed-now = "bright magenta"  # only the freshest accessed files
-```
-
-**Fall-through is automatic.**  Theme keys are applied by
-specificity, not by source-file order: bulk setters always run
-before per-column overrides, so you can write the keys in any
-order in the theme block and the most specific one always wins.
-The example above produces a modified column that's bright
-green across the board, an accessed column that's white except
-for "now"-tier files (bright magenta), and changed/created
-columns that are white throughout.
-
 
 ## VCS integration
 
@@ -1537,7 +1453,6 @@ has no staging area:
 `--vcs-ignore` works with both backends (under the hood, the jj
 backend delegates to `git2` for ignore-file handling so global,
 per-directory, and `info/exclude` layers all behave correctly).
-
 
 
 ## Shell completions
@@ -1709,27 +1624,9 @@ wasteful.
 | `-v` | `--version`     | Show version         |
 | `-?` | `--help`        | Show help            |
 
-### Notable changes in 0.8
-
-- `-n` / `--numeric` has been retired.  Use `--uid` and/or `--gid`
-  as first-class columns instead, or define a `numeric`
-  personality.
-- `-t` used to select a single timestamp field (`-t FIELD` with
-  `--time`).  It now compounds: `-t` / `-tt` / `-ttt`.  The long
-  form `--time` has been dropped.
-- `-u` used to be `--accessed`; it is now `--user`.  `-U` (previously
-  `--created`) has been freed.
-- `-M` (`--permissions` / `--mode`) and `-z` (`--size`)
-  are new in 0.8.
-- The `perms` column name has been renamed to `permissions`.
-  `perms` is still accepted as a backward-compat alias by
-  `--columns=` (but not by `-s`).
 
 ## Further reading
 
-- **[`docs/DESIGN.md`](DESIGN.md)** — the design philosophy behind
-  `lx`'s CLI.  Read this when you want to understand *why* things
-  are shaped the way they are.
 - **`man lx`** — long-form command reference.  (mdoc source at
   [`man/lx.1`](../man/lx.1).)
 - **`man lxconfig.toml`** — complete reference for the configuration
