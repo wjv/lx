@@ -259,7 +259,7 @@ ancestor.
 The legacy
 .Sy no-*
 keys
-.Pq Sy no-size = true , No etc.
+.Pq Sy no-size = true , No etc.\&
 are still accepted and equivalent to setting the positive key
 to
 .Sy false .
@@ -625,90 +625,203 @@ Name of a
 .Sy [style.NAME]
 set to apply.
 .El
-.Ss UI element keys
-All other keys in a theme section set the colour for a specific UI
+.Ss Theme keys
+All other keys in a theme section set the colour for a specific
 element.
 Each key takes a colour value (see
 .Sx COLOUR VALUES
 below).
 .Pp
 .Sy File kinds\&:
-.Bl -item -offset indent -compact
-.It
-.Sy normal , directory , symlink , pipe , block-device , char-device , socket , special , executable .
+.Bl -tag -width Ds -offset indent -compact
+.It Sy normal
+regular files with no special properties
+.It Sy directory
+directories
+.It Sy symlink
+symbolic links (the link itself, not its target)
+.It Sy pipe
+named pipes (FIFOs)
+.It Sy block-device
+block device files
+.It Sy char-device
+character device files
+.It Sy socket
+UNIX domain sockets
+.It Sy special
+other special file types
+.It Sy executable
+files with the execute bit set
+.It Sy broken-symlink
+symlinks whose target does not exist
+.El
+.Pp
+.Sy Filename display\&:
+.Bl -tag -width Ds -offset indent -compact
+.It Sy symlink-path
+the target path shown after a symlink arrow
+.It Sy control-char
+escaped control characters in filenames
+.It Sy broken-overlay
+a style modifier applied on top of
+.Sy broken-symlink
+and
+.Sy control-char
+when rendering broken symlink targets (default: underline)
 .El
 .Pp
 .Sy Permissions\&:
+.Pp
+Nine keys for the
+.Cm rwx
+bits, split by user/group/other:
 .Bl -item -offset indent -compact
 .It
-.Sy permissions-user-read , permissions-user-write , permissions-user-execute , permissions-user-execute-other , permissions-group-read , permissions-group-write , permissions-group-execute , permissions-other-read , permissions-other-write , permissions-other-execute , permissions-special-user , permissions-special-other , permissions-attribute .
+.Sy permissions-user-read , permissions-user-write , permissions-user-execute ,
+.Sy permissions-group-read , permissions-group-write , permissions-group-execute ,
+.Sy permissions-other-read , permissions-other-write , permissions-other-execute .
 .El
 .Pp
-The legacy short form
-.Sy perm-user-read , perm-user-write , perm-user-exec ,
-etc. is also accepted as an alias, as is
-.Sy mode-user-read , mode-user-write , mode-user-exec ,
-etc., matching the
-.Fl -mode
-flag alias and the
-.Cm mode
-sort field.
+Plus five special keys:
+.Bl -tag -width Ds -offset indent -compact
+.It Sy permissions-user-execute-other
+the execute bit on files owned by another user
+.It Sy permissions-special-user
+setuid bit
+.It Sy permissions-special-other
+setgid and sticky bits
+.It Sy permissions-attribute
+extended attributes marker
+.Pq Cm @
+.It Sy octal
+octal permission digits
+.Pq Fl o
+.El
 .Pp
-.Sy Size\&:
-.Bl -item -offset indent -compact
-.It
-.Sy size-number-byte , size-number-kilo , size-number-mega , size-number-giga , size-number-huge , size-unit-byte , size-unit-kilo , size-unit-mega , size-unit-giga , size-unit-huge , size-number
-(bulk: sets all number magnitudes),
+The legacy short forms
+.Sy perm-user-read , perm-user-exec ,
+etc.\& and
+.Sy mode-user-read , mode-user-exec ,
+etc.\& are also accepted as aliases.
+.Pp
+.Sy Size (magnitude-based gradient)\&:
+.Pp
+File sizes are rendered in two parts: a
+.Em number
+and a
+.Em unit
+suffix.
+Each part has five magnitude tiers:
+.Bl -tag -width Ds -offset indent -compact
+.It Sy size-number-byte , size-unit-byte
+< 1 KB (bytes)
+.It Sy size-number-kilo , size-unit-kilo
+kilobytes / kibibytes
+.It Sy size-number-mega , size-unit-mega
+megabytes / mebibytes
+.It Sy size-number-giga , size-unit-giga
+gigabytes / gibibytes
+.It Sy size-number-huge , size-unit-huge
+terabytes and above
+.It Sy size-number
+bulk setter \(em sets all five number tiers at once
+.It Sy size-unit
+bulk setter \(em sets all five unit tiers at once
+.It Sy size-major
+the single colour all size numbers collapse to when the size
+gradient is disabled; also used for device major numbers
+.It Sy size-minor
+the single colour all size units collapse to when the size
+gradient is disabled; also used for device minor numbers
+.El
+.Pp
+Setting
+.Sy size-number
+alone is backwards compatible \(em all number tiers render in
+the same colour, and
+.Sy size-major
+is also set so the column collapses correctly when the gradient
+is turned off.
+The same applies to
 .Sy size-unit
-(bulk: sets all unit magnitudes),
-.Sy size-major , size-minor .
-.El
+and
+.Sy size-minor .
 .Pp
-.Sy Users\&:
-.Bl -item -offset indent -compact
-.It
-.Sy user-you , user-other , group-yours , group-member , group-other , uid-you , uid-other , gid-yours , gid-member , gid-other .
+.Sy Users and groups\&:
+.Bl -tag -width Ds -offset indent -compact
+.It Sy user-you
+the current user's own name
+.It Sy user-other
+any other user
+.It Sy group-yours
+your primary group
+.It Sy group-member
+a supplementary group you belong to (you have group-permission
+access)
+.It Sy group-other
+a group you do not belong to
 .El
-.Pp
-Group columns distinguish three tiers:
-.Sy *-yours
-(your primary group),
-.Sy *-member
-(a supplementary group you belong to), and
-.Sy *-other
-(not your group).
-The
-.Sy member
-tier indicates you have group-permission access to the file.
 .Pp
 The
 .Sy uid-*
 and
 .Sy gid-*
-slots style the dedicated
-.Sy --uid
+keys use the same three tiers
+.Pq Sy *-you/*-yours , *-member , *-other
+and style the dedicated
+.Fl -uid
 and
-.Sy --gid
-columns.
-All curated themes and the builtin default set all identity slots
-explicitly.
-.Pp
-.Sy Links\&:
+.Fl -gid
+numeric ID columns:
 .Bl -item -offset indent -compact
 .It
-.Sy links , links-multi .
+.Sy uid-you , uid-other , gid-yours , gid-member , gid-other .
+.El
+.Pp
+.Sy Links\&:
+.Bl -tag -width Ds -offset indent -compact
+.It Sy links
+hard-link count (single link)
+.It Sy links-multi
+hard-link count when the file has multiple hard links
 .El
 .Pp
 .Sy VCS\&:
-.Bl -item -offset indent -compact
-.It
-.Sy vcs-new , vcs-modified , vcs-deleted , vcs-renamed , vcs-typechange , vcs-ignored , vcs-conflicted .
+.Bl -tag -width Ds -offset indent -compact
+.It Sy vcs-new
+newly added / untracked file
+.It Sy vcs-modified
+modified file
+.It Sy vcs-deleted
+deleted file
+.It Sy vcs-renamed
+renamed file
+.It Sy vcs-typechange
+file whose type changed (e.g.\& regular \(-> symlink)
+.It Sy vcs-ignored
+file matched by ignore rules
+.It Sy vcs-conflicted
+file with unresolved merge conflicts
 .El
 .Pp
-.Sy UI elements\&:
-.Bl -item -offset indent -compact
-.It
-.Sy punctuation , inode , blocks , header , octal , symlink-path , control-char , broken-symlink , broken-overlay .
+.Sy Other columns\&:
+.Bl -tag -width Ds -offset indent -compact
+.It Sy inode
+inode numbers
+.Pq Fl i
+.It Sy blocks
+file-system block counts
+.Pq Fl S
+.El
+.Pp
+.Sy Display\&:
+.Bl -tag -width Ds -offset indent -compact
+.It Sy header
+column header text
+.Pq Fl h
+.It Sy punctuation
+separator characters: permission dashes, the device-ID comma,
+the symlink arrow, and placeholder dashes in empty columns
 .El
 .Pp
 .Sy Timestamps (age-based gradient)\&:
@@ -749,16 +862,14 @@ can be themed independently.
 For each column, the same eight slots exist with a
 .Sy date- Ns Ar col Ns Sy -
 prefix:
-.Bd -literal -offset indent
-date-modified             (bulk for the modified column)
-date-modified-now
-date-modified-today
-date-modified-week
-date-modified-month
-date-modified-year
-date-modified-old
-date-modified-flat
-.Ed
+.Bl -tag -width Ds -offset indent -compact
+.It Sy date-modified
+bulk setter for the modified column
+.It Sy date-modified-now , date-modified-today , date-modified-week , date-modified-month , date-modified-year , date-modified-old
+per-tier overrides for the modified column
+.It Sy date-modified-flat
+flat fallback for the modified column when its gradient is disabled
+.El
 .Pp
 The same eight keys exist for
 .Sy date-accessed-* ,
@@ -1099,6 +1210,13 @@ style provides default file-type colouring; to disable it, use a
 theme that references a different style or no style at all.
 .Sh SEE ALSO
 .Xr lx 1
+.Sh REFERENCES
+.Rs
+.%A "Björn Ottosson"
+.%T "A perceptual color space for image processing"
+.%D 2020
+.%U https://bottosson.github.io/posts/oklab/
+.Re
 .Sh AUTHORS
 .Nm lx
 is maintained by
