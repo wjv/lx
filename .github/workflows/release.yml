@@ -27,12 +27,18 @@ jobs:
         if: matrix.cross
         run: |
           sudo dpkg --add-architecture arm64
-          # Pin existing sources to amd64 only (handles both .list and .sources formats).
-          for f in /etc/apt/sources.list.d/*.sources; do
-            [ -f "$f" ] && grep -q '^Architectures:' "$f" || sudo sed -i '/^Types:/a Architectures: amd64' "$f" || true
-          done
+          # Pin ALL existing sources to amd64 only so apt doesn't try to
+          # fetch arm64 indices from mirrors that don't carry them.
+          # Covers: /etc/apt/sources.list, sources.list.d/*.list, and
+          # sources.list.d/*.sources (DEB822 format).
+          if [ -f /etc/apt/sources.list ]; then
+            sudo sed -i '/^deb \(http\|https\)/s|^deb |deb [arch=amd64] |' /etc/apt/sources.list
+          fi
           for f in /etc/apt/sources.list.d/*.list; do
             [ -f "$f" ] && sudo sed -i '/^deb \(http\|https\)/s|^deb |deb [arch=amd64] |' "$f" || true
+          done
+          for f in /etc/apt/sources.list.d/*.sources; do
+            [ -f "$f" ] && grep -q '^Architectures:' "$f" || sudo sed -i '/^Types:/a Architectures: amd64' "$f" || true
           done
           # Add arm64 ports repository.
           echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main restricted universe' | sudo tee /etc/apt/sources.list.d/arm64.list
