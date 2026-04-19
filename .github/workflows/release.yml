@@ -11,7 +11,7 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-22.04
           - target: aarch64-unknown-linux-gnu
-            os: ubuntu-22.04
+            os: ubuntu-latest
             cross: true
           - target: x86_64-apple-darwin
             os: macos-latest
@@ -23,29 +23,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-      - name: Install cross-compilation tools
+      - name: Install cross
         if: matrix.cross
-        run: |
-          sudo dpkg --add-architecture arm64
-          # Pin existing sources to amd64 only (handles both .list and .sources formats).
-          for f in /etc/apt/sources.list.d/*.sources; do
-            [ -f "$f" ] && grep -q '^Architectures:' "$f" || sudo sed -i '/^Types:/a Architectures: amd64' "$f" || true
-          done
-          for f in /etc/apt/sources.list.d/*.list; do
-            [ -f "$f" ] && sudo sed -i '/^deb \(http\|https\)/s|^deb |deb [arch=amd64] |' "$f" || true
-          done
-          # Add arm64 ports repository.
-          echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main restricted universe' | sudo tee /etc/apt/sources.list.d/arm64.list
-          echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted universe' | sudo tee -a /etc/apt/sources.list.d/arm64.list
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu zlib1g-dev:arm64
-      - name: Set cross-linker
+        uses: taiki-e/install-action@cross
+      - name: Build (cross)
         if: matrix.cross
-        run: |
-          mkdir -p .cargo
-          echo '[target.aarch64-unknown-linux-gnu]' >> .cargo/config.toml
-          echo 'linker = "aarch64-linux-gnu-gcc"' >> .cargo/config.toml
-      - run: cargo build --release --features jj --target ${{ matrix.target }}
+        run: cross build --release --features jj --target ${{ matrix.target }}
+      - name: Build (native)
+        if: ${{ !matrix.cross }}
+        run: cargo build --release --features jj --target ${{ matrix.target }}
       - name: Rename binary with target triple
         run: |
           mkdir -p dist
