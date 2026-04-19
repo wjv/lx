@@ -641,4 +641,4 @@ measure, not a destination.
 
 For the design rationale behind the orthogonal flag surface as a
 whole — why it's shaped the way it is, not just what changed —
-see [`DESIGN.md`](DESIGN.md#the-orthogonal-cli).
+see the [user guide](GUIDE.md).

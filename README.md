@@ -80,7 +80,7 @@ the amount of detail shown. Similarly `-t`, `-tt` and `-ttt` show progressively
 more timestamp fields.
 
 CLI flags are divided into four **disjoint classes** that stay out of each
-other's way.  See [`docs/DESIGN.md`](docs/DESIGN.md) for the full design story.
+other's way.
 
 ### Zero config, or every detail
 
@@ -205,8 +205,6 @@ completions — run `just -l` to see the recipes.
 
 - **[`docs/GUIDE.md`](docs/GUIDE.md)** — the user guide: personalities,
   configuration, themes, VCS, daily usage, shell completions.
-- **[`docs/DESIGN.md`](docs/DESIGN.md)** — the design philosophy behind
-  `lx`'s CLI; why things are shaped the way they are.
 - **[`docs/UPGRADING.md`](docs/UPGRADING.md)** — breaking changes per
   release, with migration notes and justifications.
 - **`man lx`** — command reference (installed alongside the binary;

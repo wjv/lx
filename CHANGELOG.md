@@ -3,7 +3,7 @@
 All notable changes to lx are documented here. lx is forked from
 [exa](https://github.com/ogham/exa) v0.10.1.
 
-## [Unreleased] — 0.9.0
+## [0.9.0] — 2026-04-19
 
 ### Added
 
@@ -163,6 +163,19 @@ All notable changes to lx are documented here. lx is forked from
   per-column keys were interleaved alphabetically with bulk
   keys, obscuring the "baseline + per-column overrides" structure
   that theme authors almost always write.
+- **Config template aligned with compiled-in defaults.**
+  `--init-config` now generates a config file where uncommented
+  TOML exactly matches the compiled-in default personality, and
+  commented entries show suggested settings.  An integration test
+  enforces this invariant.
+- **Compiled-in themes available as TOML reference** in `themes/`
+  (`exa.toml`, `lx-256.toml`, `lx-24bit.toml`).  Gives users a
+  starting point for minimal theme customisation.
+- **`lxconfig.toml(5)` theme key documentation overhauled.**  Every
+  key now has a brief description; the Size section mirrors the
+  Timestamps section with magnitude tiers and flat-fallback
+  semantics; `size-major`/`size-minor` are explained.  Oklab paper
+  citation added as an `Rs`/`Re` reference.
 - Dependabot for Cargo + GitHub Actions dependency updates.
 - `cargo-deny` in CI (licence compliance + security advisories).
 - Weekly scheduled security audit workflow.
@@ -194,8 +207,11 @@ All notable changes to lx are documented here. lx is forked from
   bug where the curated themes shipped with `permissions-*`
   keys (matching the column name) but the parser silently
   ignored them.  Backportable to 0.8.
-- Linux release builds pinned to `ubuntu-22.04` (glibc 2.35),
-  lowering the floor from glibc 2.39.
+- Linux x86_64 release builds pinned to `ubuntu-22.04` (glibc 2.35);
+  aarch64 cross-compiled via `cross` (glibc 2.31).
+- aarch64 cross-compilation switched from hand-rolled apt arch
+  pinning to the [`cross`](https://github.com/cross-rs/cross) tool,
+  matching ripgrep, fd, bat, and eza.
 - **Error handling refactor.**  Every fallible code path now
   bubbles a `thiserror`-based error type up to a single handler
   in `main()`.  New module-level error types (`ThemeError`),
@@ -246,6 +262,8 @@ All notable changes to lx are documented here. lx is forked from
   `LS_COLORS` is unchanged.  See
   [`docs/UPGRADING.md`](docs/UPGRADING.md) for the migration
   guide with a worked example.
+- **`docs/DESIGN.md` removed.**  The design philosophy is now
+  covered in the user guide and woven into `--help` output.
 
 
 ## [0.8.0] — 2026-04-07
