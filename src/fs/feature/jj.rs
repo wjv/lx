@@ -45,6 +45,8 @@ impl JjCache {
     /// Discover a jj workspace and build a cache of file statuses.
     /// Returns `None` if the paths are not inside a jj workspace.
     pub fn discover(paths: &[PathBuf]) -> Option<Self> {
+        use futures::StreamExt;
+
         let probe = if paths.is_empty() {
             PathBuf::from(".")
         } else {
@@ -143,7 +145,6 @@ impl JjCache {
         let mut statuses = HashMap::new();
         let matcher = EverythingMatcher;
 
-        use futures::StreamExt;
         let mut stream = parent_tree.diff_stream(&wc_tree, &matcher);
 
         rt.block_on(async {
@@ -210,7 +211,7 @@ impl JjCache {
     /// (from `jj git init --git-repo <path>`).
     fn open_git_repo(workdir: &Path) -> Option<git2::Repository> {
         let git_target_path = workdir.join(".jj/repo/store/git_target");
-        let target = if let Ok(t) = std::fs::read_to_string(&git_target_path) { t } else {
+        let Ok(target) = std::fs::read_to_string(&git_target_path) else {
             debug!("jj: no git_target found (ignores will not work)");
             return None;
         };

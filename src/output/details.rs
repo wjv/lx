@@ -296,7 +296,7 @@ impl<'a> Render<'a> {
         });
 
         // this is safe because all entries have been initialized above
-        let mut file_eggs = unsafe { std::mem::transmute::<_, Vec<Egg<'_>>>(file_eggs) };
+        let mut file_eggs = unsafe { std::mem::transmute::<Vec<MaybeUninit<Egg<'_>>>, Vec<Egg<'_>>>(file_eggs) };
 
         self.filter.sort_files(&mut file_eggs, self.vcs);
 

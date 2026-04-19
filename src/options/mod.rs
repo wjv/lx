@@ -283,11 +283,11 @@ impl Options {
             .collect();
         for neg_key in neg_keys {
             let pos_key = neg_key.strip_prefix("no-").unwrap().to_string();
-            if let Some(pos_def) = find_setting(&pos_key) {
-                if matches!(pos_def.kind, SettingKind::Bool) {
-                    settings.remove(&neg_key);
-                    settings.insert(pos_key, toml::Value::Boolean(false));
-                }
+            if let Some(pos_def) = find_setting(&pos_key)
+                && matches!(pos_def.kind, SettingKind::Bool)
+            {
+                settings.remove(&neg_key);
+                settings.insert(pos_key, toml::Value::Boolean(false));
             }
         }
 
