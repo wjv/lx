@@ -220,9 +220,26 @@ pub(super) fn settings_to_args(settings: &HashMap<String, toml::Value>, context:
                 }
             }
             SettingKind::Str => {
-                let s = if let toml::Value::String(s) = value { s.as_str() } else {
-                    warn!("Expected string for '{key}' in {context}; ignoring");
-                    continue;
+                let s = match value {
+                    toml::Value::String(s) => s.clone(),
+                    toml::Value::Array(arr) => {
+                        let mut parts = Vec::new();
+                        for item in arr {
+                            if let toml::Value::String(s) = item {
+                                parts.push(s.as_str().to_owned());
+                            } else {
+                                warn!("Expected string in array for '{key}' in {context}; ignoring element");
+                            }
+                        }
+                        if parts.is_empty() {
+                            continue;
+                        }
+                        parts.join("|")
+                    }
+                    _ => {
+                        warn!("Expected string or array for '{key}' in {context}; ignoring");
+                        continue;
+                    }
                 };
                 args.push(format!("{}={s}", def.flag).into());
             }
