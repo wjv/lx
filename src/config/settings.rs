@@ -10,7 +10,6 @@ use std::ffi::OsString;
 
 use log::*;
 
-
 /// How a TOML value maps to a CLI argument.
 pub(crate) enum SettingKind {
     /// String value: `--flag=VALUE`
@@ -31,6 +30,7 @@ pub(crate) struct SettingDef {
 /// Master table of all config keys that map to CLI flags.
 ///
 /// Adding a new flag to lx = adding one entry here.
+#[rustfmt::skip]
 pub(crate) static SETTING_FLAGS: &[SettingDef] = &[
     // display options
     SettingDef { key: "oneline",       flag: "--oneline",        kind: SettingKind::Bool },
@@ -163,18 +163,18 @@ fn removed_setting_hint(key: &str) -> Option<&'static str> {
         "time" => Some(
             "the `time` setting was removed in config version 0.5; \
              use `modified`, `changed`, `accessed`, or `created` \
-             (each a boolean) to add timestamp columns"
+             (each a boolean) to add timestamp columns",
         ),
         "numeric" => Some(
             "the `numeric` setting was removed in config version 0.5; \
              UID and GID are now first-class columns. Use \
              `uid = true, gid = true, no-user = true, no-group = true` \
-             for the old `-n` behaviour, or pick whichever columns you want"
+             for the old `-n` behaviour, or pick whichever columns you want",
         ),
         "colour-scale" | "color-scale" => Some(
             "the `colour-scale` setting was removed in config version 0.6; \
              use `gradient = \"all\"` (default) or \"none\"/\"size\"/\"date\". \
-             Run `lx --upgrade-config` to migrate automatically"
+             Run `lx --upgrade-config` to migrate automatically",
         ),
         _ => None,
     }
@@ -182,7 +182,10 @@ fn removed_setting_hint(key: &str) -> Option<&'static str> {
 
 /// Convert a settings map (from `[defaults]` or `[personality.*]`)
 /// into synthetic CLI arguments.  Unknown keys are warned about.
-pub(super) fn settings_to_args(settings: &HashMap<String, toml::Value>, context: &str) -> Vec<OsString> {
+pub(super) fn settings_to_args(
+    settings: &HashMap<String, toml::Value>,
+    context: &str,
+) -> Vec<OsString> {
     let mut args = Vec::new();
 
     for (key, value) in settings {
@@ -228,7 +231,9 @@ pub(super) fn settings_to_args(settings: &HashMap<String, toml::Value>, context:
                             if let toml::Value::String(s) = item {
                                 parts.push(s.as_str().to_owned());
                             } else {
-                                warn!("Expected string in array for '{key}' in {context}; ignoring element");
+                                warn!(
+                                    "Expected string in array for '{key}' in {context}; ignoring element"
+                                );
                             }
                         }
                         if parts.is_empty() {
@@ -247,7 +252,9 @@ pub(super) fn settings_to_args(settings: &HashMap<String, toml::Value>, context:
                 let n = match value {
                     toml::Value::Integer(n) => *n,
                     toml::Value::String(s) => {
-                        if let Ok(n) = s.parse::<i64>() { n } else {
+                        if let Ok(n) = s.parse::<i64>() {
+                            n
+                        } else {
                             warn!("Expected integer for '{key}' in {context}; ignoring");
                             continue;
                         }

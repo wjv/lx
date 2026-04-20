@@ -3,12 +3,11 @@
 
 mod support;
 
+use predicates::prelude::*;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
-use predicates::prelude::*;
 use support::lx_no_colour;
 use tempfile::tempdir;
-
 
 fn display_fixture() -> tempfile::TempDir {
     let dir = tempdir().expect("failed to create tempdir");
@@ -27,7 +26,6 @@ fn display_fixture() -> tempfile::TempDir {
     dir
 }
 
-
 // ── --absolute / -A ──────────────────────────────────────────────
 
 #[test]
@@ -39,7 +37,9 @@ fn absolute_shows_full_paths() {
         .arg(dir.path())
         .assert()
         .success()
-        .stdout(predicate::str::contains(dir.path().to_string_lossy().as_ref()));
+        .stdout(predicate::str::contains(
+            dir.path().to_string_lossy().as_ref(),
+        ));
 }
 
 #[test]
@@ -53,7 +53,6 @@ fn no_absolute_shows_relative_names() {
         .success()
         .stdout(predicate::str::contains(dir.path().to_string_lossy().as_ref()).not());
 }
-
 
 // ── --classify ───────────────────────────────────────────────────
 
@@ -83,7 +82,6 @@ fn classify_never_hides_indicators() {
         .stdout(predicate::str::contains("run.sh\n"));
 }
 
-
 // ── --octal / -o ─────────────────────────────────────────────────
 
 #[test]
@@ -110,7 +108,6 @@ fn octal_permissions_alias_works() {
         .stdout(predicate::str::is_match(r"0\d{3}").unwrap());
 }
 
-
 // ── --only-files / -f ────────────────────────────────────────────
 
 #[test]
@@ -125,7 +122,6 @@ fn only_files_hides_directories() {
         .stdout(predicate::str::contains("subdir").not())
         .stdout(predicate::str::contains("hello.rs"));
 }
-
 
 // ── --quotes ─────────────────────────────────────────────────────
 
@@ -153,7 +149,6 @@ fn quotes_never_no_wrapping() {
         .stdout(predicate::str::contains("\"space file.txt\"").not())
         .stdout(predicate::str::contains("space file.txt"));
 }
-
 
 // ── --flags / -O ─────────────────────────────────────────────────
 
@@ -260,7 +255,6 @@ fn flags_shows_uchg_on_macos() {
         .expect("failed to run chflags");
 }
 
-
 #[test]
 fn flags_short_flag() {
     let dir = display_fixture();
@@ -310,7 +304,6 @@ fn flags_shows_immutable_on_linux() {
         .status()
         .expect("failed to run chattr");
 }
-
 
 // ── --width / -w ─────────────────────────────────────────────────
 

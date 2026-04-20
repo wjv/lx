@@ -2,11 +2,10 @@
 
 mod support;
 
-use std::fs;
 use predicates::prelude::*;
+use std::fs;
 use support::lx_no_colour;
 use tempfile::tempdir;
-
 
 /// Create a tempdir with a few files for sorting tests.
 fn sorting_fixture() -> tempfile::TempDir {
@@ -16,7 +15,6 @@ fn sorting_fixture() -> tempfile::TempDir {
     fs::write(dir.path().join("cherry.txt"), "ccc").unwrap();
     dir
 }
-
 
 #[test]
 fn sort_name_case_insensitive() {
@@ -114,7 +112,6 @@ fn reverse_sort() {
         }));
 }
 
-
 // ── Dotfiles ──────────────────────────────────────────────────────
 
 #[test]
@@ -161,7 +158,6 @@ fn dot_and_dotdot_with_all_all() {
         .stdout(predicate::str::contains(".."));
 }
 
-
 // ── Ignore globs ──────────────────────────────────────────────────
 
 #[test]
@@ -198,7 +194,6 @@ fn ignore_glob_pipe_separated() {
         .stdout(predicate::str::contains("nope.tmp").not());
 }
 
-
 // ── Only dirs ─────────────────────────────────────────────────────
 
 #[test]
@@ -216,7 +211,6 @@ fn only_dirs_hides_files() {
         .stdout(predicate::str::contains("file.txt").not());
 }
 
-
 // ── Only files ────────────────────────────────────────────────────
 
 #[test]
@@ -233,7 +227,6 @@ fn only_files_hides_dirs() {
         .stdout(predicate::str::contains("file.txt"))
         .stdout(predicate::str::contains("subdir").not());
 }
-
 
 // ── Group directories ─────────────────────────────────────────────
 
@@ -307,7 +300,7 @@ fn no_dirs_first_suppresses_dirs_first() {
         .stdout(predicate::function(|output: &str| {
             let dir_pos = output.find("zzz_dir").unwrap();
             let file_pos = output.find("aaa_file.txt").unwrap();
-            file_pos < dir_pos  // sorted alphabetically, dirs no longer pulled forward
+            file_pos < dir_pos // sorted alphabetically, dirs no longer pulled forward
         }));
 }
 
@@ -328,7 +321,6 @@ fn no_dirs_last_suppresses_dirs_last() {
             file_pos < dir_pos
         }));
 }
-
 
 // ── Batch D: expanded sort fields ──────────────────────────
 

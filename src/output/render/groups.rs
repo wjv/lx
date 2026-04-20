@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::sync::LazyLock;
 
 use nu_ansi_term::Style;
-use uzers::{Users, Groups};
+use uzers::{Groups, Users};
 
 use crate::fs::fields as f;
 use crate::output::cell::TextCell;
@@ -26,15 +26,14 @@ static MY_GROUPS: LazyLock<HashSet<u32>> = LazyLock::new(|| {
     groups
 });
 
-
 impl f::Group {
     /// Render the group as its name, falling back to the numeric GID
     /// if the name can't be resolved.  Used for the `--group` column.
-    pub fn render<C: Colours, U: Users+Groups>(self, colours: &C, users: &U) -> TextCell {
+    pub fn render<C: Colours, U: Users + Groups>(self, colours: &C, users: &U) -> TextCell {
         let style = self.style(colours, users, /* gid_column= */ false);
         match self.lookup_name(users) {
             Some(name) => TextCell::paint(style, name),
-            None       => TextCell::paint(style, self.0.to_string()),
+            None => TextCell::paint(style, self.0.to_string()),
         }
     }
 
@@ -42,12 +41,16 @@ impl f::Group {
     /// column.  Uses the dedicated `gid_*` style slots so themes can
     /// distinguish it visually from the name column while still
     /// cascading from the `group_*` slots when unset.
-    pub fn render_gid<C: Colours, U: Users+Groups>(self, colours: &C, users: &U) -> TextCell {
-        TextCell::paint(self.style(colours, users, /* gid_column= */ true), self.0.to_string())
+    pub fn render_gid<C: Colours, U: Users + Groups>(self, colours: &C, users: &U) -> TextCell {
+        TextCell::paint(
+            self.style(colours, users, /* gid_column= */ true),
+            self.0.to_string(),
+        )
     }
 
-    fn lookup_name<U: Users+Groups>(self, users: &U) -> Option<String> {
-        users.get_group_by_gid(self.0)
+    fn lookup_name<U: Users + Groups>(self, users: &U) -> Option<String> {
+        users
+            .get_group_by_gid(self.0)
             .map(|g| g.name().to_string_lossy().into())
     }
 
@@ -57,7 +60,12 @@ impl f::Group {
     /// `/etc/group` membership lists, so macOS Directory Services
     /// groups and LDAP groups are handled correctly.
     /// `gid_column` selects the `gid_*` style slots.
-    fn style<C: Colours, U: Users+Groups>(self, colours: &C, _users: &U, gid_column: bool) -> Style {
+    fn style<C: Colours, U: Users + Groups>(
+        self,
+        colours: &C,
+        _users: &U,
+        gid_column: bool,
+    ) -> Style {
         let tier = if self.0 == uzers::get_effective_gid() {
             GroupTier::Primary
         } else if MY_GROUPS.contains(&self.0) {
@@ -68,11 +76,11 @@ impl f::Group {
 
         match (gid_column, tier) {
             (false, GroupTier::Primary) => colours.yours(),
-            (false, GroupTier::Member)  => colours.member(),
-            (false, GroupTier::Other)   => colours.not_yours(),
-            (true,  GroupTier::Primary) => colours.gid_yours(),
-            (true,  GroupTier::Member)  => colours.gid_member(),
-            (true,  GroupTier::Other)   => colours.gid_not_yours(),
+            (false, GroupTier::Member) => colours.member(),
+            (false, GroupTier::Other) => colours.not_yours(),
+            (true, GroupTier::Primary) => colours.gid_yours(),
+            (true, GroupTier::Member) => colours.gid_member(),
+            (true, GroupTier::Other) => colours.gid_not_yours(),
         }
     }
 }
@@ -82,7 +90,6 @@ enum GroupTier {
     Member,
     Other,
 }
-
 
 pub trait Colours {
     fn yours(&self) -> Style;
@@ -94,7 +101,6 @@ pub trait Colours {
     fn gid_not_yours(&self) -> Style;
 }
 
-
 #[cfg(test)]
 #[allow(unused_results)]
 pub mod test {
@@ -102,11 +108,10 @@ pub mod test {
     use crate::fs::fields as f;
     use crate::output::cell::TextCell;
 
-    use uzers::Group;
-    use uzers::mock::MockUsers;
     use nu_ansi_term::Color::*;
     use nu_ansi_term::Style;
-
+    use uzers::Group;
+    use uzers::mock::MockUsers;
 
     /// Test colours with distinct slots for name/GID columns so
     /// tests can verify `render_gid` picks up the GID-specific
@@ -115,14 +120,25 @@ pub mod test {
     struct TestColours;
 
     impl Colours for TestColours {
-        fn yours(&self)         -> Style { Fixed(80).normal() }
-        fn member(&self)        -> Style { Fixed(84).normal() }
-        fn not_yours(&self)     -> Style { Fixed(81).normal() }
-        fn gid_yours(&self)     -> Style { Fixed(82).normal() }
-        fn gid_member(&self)    -> Style { Fixed(85).normal() }
-        fn gid_not_yours(&self) -> Style { Fixed(83).normal() }
+        fn yours(&self) -> Style {
+            Fixed(80).normal()
+        }
+        fn member(&self) -> Style {
+            Fixed(84).normal()
+        }
+        fn not_yours(&self) -> Style {
+            Fixed(81).normal()
+        }
+        fn gid_yours(&self) -> Style {
+            Fixed(82).normal()
+        }
+        fn gid_member(&self) -> Style {
+            Fixed(85).normal()
+        }
+        fn gid_not_yours(&self) -> Style {
+            Fixed(83).normal()
+        }
     }
-
 
     /// Use a GID that's guaranteed not in the test runner's real
     /// supplementary group set.
@@ -168,9 +184,7 @@ pub mod test {
     fn member_group() {
         // Pick a supplementary group that isn't the primary.
         let egid = uzers::get_effective_gid();
-        let member_gid = super::MY_GROUPS.iter()
-            .find(|&&g| g != egid)
-            .copied();
+        let member_gid = super::MY_GROUPS.iter().find(|&&g| g != egid).copied();
 
         if let Some(gid) = member_gid {
             let mut users = MockUsers::with_current_uid(uzers::get_current_uid());
@@ -187,6 +201,9 @@ pub mod test {
     fn overflow() {
         let group = f::Group(2_147_483_648);
         let expected = TextCell::paint_str(Fixed(83).normal(), "2147483648");
-        assert_eq!(expected, group.render_gid(&TestColours, &MockUsers::with_current_uid(0)));
+        assert_eq!(
+            expected,
+            group.render_gid(&TestColours, &MockUsers::with_current_uid(0))
+        );
     }
 }

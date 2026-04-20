@@ -16,7 +16,7 @@ use std::ffi::OsString;
 
 use crate::fs::dir_action::DirAction;
 use crate::fs::filter::{FileFilter, VcsIgnore};
-use crate::output::{View, Mode, details, grid_details};
+use crate::output::{Mode, View, details, grid_details};
 use crate::theme::Options as ThemeOptions;
 
 mod dir_action;
@@ -27,14 +27,13 @@ mod theme;
 mod view;
 
 mod error;
-pub use self::error::{OptionsError, NumberSource};
+pub use self::error::{NumberSource, OptionsError};
 
 pub mod parser;
 use self::parser::MatchedFlags;
 
 pub mod vars;
 pub use self::vars::Vars;
-
 
 /// Which VCS backend to use.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,7 +52,6 @@ pub enum VcsBackend {
 /// user's command-line options.
 #[derive(Debug)]
 pub struct Options {
-
     /// The action to perform when encountering a directory rather than a
     /// regular file.
     pub dir_action: DirAction,
@@ -78,13 +76,13 @@ pub struct Options {
 }
 
 impl Options {
-
     /// Parse the given iterator of command-line strings into an Options
     /// struct and a list of free filenames, using the environment variables
     /// for extra options.
     #[allow(unused_results)]
     pub fn parse<V>(args: &[OsString], vars: &V) -> OptionsResult
-    where V: Vars,
+    where
+        V: Vars,
     {
         // Use Clap for validation, help, and version.
         // try_get_matches_from expects the binary name as the first argument.
@@ -98,9 +96,7 @@ impl Options {
                     ErrorKind::DisplayHelp | ErrorKind::DisplayVersion => {
                         OptionsResult::HelpOrVersion(e)
                     }
-                    _ => {
-                        OptionsResult::InvalidOptionsClap(e)
-                    }
+                    _ => OptionsResult::InvalidOptionsClap(e),
                 }
             }
             Ok(clap_matches) => {
@@ -113,45 +109,55 @@ impl Options {
                 }
 
                 if clap_matches.contains_id("dump-class")
-                    && clap_matches.value_source("dump-class") == Some(clap::parser::ValueSource::CommandLine)
+                    && clap_matches.value_source("dump-class")
+                        == Some(clap::parser::ValueSource::CommandLine)
                 {
-                    let name = clap_matches.get_one::<String>("dump-class")
+                    let name = clap_matches
+                        .get_one::<String>("dump-class")
                         .cloned()
                         .unwrap_or_default();
                     return OptionsResult::DumpClass(name);
                 }
 
                 if clap_matches.contains_id("dump-format")
-                    && clap_matches.value_source("dump-format") == Some(clap::parser::ValueSource::CommandLine)
+                    && clap_matches.value_source("dump-format")
+                        == Some(clap::parser::ValueSource::CommandLine)
                 {
-                    let name = clap_matches.get_one::<String>("dump-format")
+                    let name = clap_matches
+                        .get_one::<String>("dump-format")
                         .cloned()
                         .unwrap_or_default();
                     return OptionsResult::DumpFormat(name);
                 }
 
                 if clap_matches.contains_id("dump-personality")
-                    && clap_matches.value_source("dump-personality") == Some(clap::parser::ValueSource::CommandLine)
+                    && clap_matches.value_source("dump-personality")
+                        == Some(clap::parser::ValueSource::CommandLine)
                 {
-                    let name = clap_matches.get_one::<String>("dump-personality")
+                    let name = clap_matches
+                        .get_one::<String>("dump-personality")
                         .cloned()
                         .unwrap_or_default();
                     return OptionsResult::DumpPersonality(name);
                 }
 
                 if clap_matches.contains_id("dump-theme")
-                    && clap_matches.value_source("dump-theme") == Some(clap::parser::ValueSource::CommandLine)
+                    && clap_matches.value_source("dump-theme")
+                        == Some(clap::parser::ValueSource::CommandLine)
                 {
-                    let name = clap_matches.get_one::<String>("dump-theme")
+                    let name = clap_matches
+                        .get_one::<String>("dump-theme")
                         .cloned()
                         .unwrap_or_default();
                     return OptionsResult::DumpTheme(name);
                 }
 
                 if clap_matches.contains_id("dump-style")
-                    && clap_matches.value_source("dump-style") == Some(clap::parser::ValueSource::CommandLine)
+                    && clap_matches.value_source("dump-style")
+                        == Some(clap::parser::ValueSource::CommandLine)
                 {
-                    let name = clap_matches.get_one::<String>("dump-style")
+                    let name = clap_matches
+                        .get_one::<String>("dump-style")
                         .cloned()
                         .unwrap_or_default();
                     return OptionsResult::DumpStyle(name);
@@ -161,7 +167,7 @@ impl Options {
                     let settings = Self::extract_cli_settings(&clap_matches);
                     return OptionsResult::SaveAs(
                         name.clone(),
-                        None,  // inherits — set by main.rs from active personality
+                        None, // inherits — set by main.rs from active personality
                         settings,
                     );
                 }
@@ -174,14 +180,15 @@ impl Options {
                     return OptionsResult::UpgradeConfig;
                 }
 
-                let frees = clap_matches.get_many::<OsString>("FILE")
+                let frees = clap_matches
+                    .get_many::<OsString>("FILE")
                     .map(|vals| vals.cloned().collect())
                     .unwrap_or_default();
                 let flags = MatchedFlags::new(clap_matches);
 
                 match Self::deduce(&flags, vars) {
-                    Ok(options)  => OptionsResult::Ok(options, frees),
-                    Err(oe)      => OptionsResult::InvalidOptions(oe),
+                    Ok(options) => OptionsResult::Ok(options, frees),
+                    Err(oe) => OptionsResult::InvalidOptions(oe),
                 }
             }
         }
@@ -190,9 +197,11 @@ impl Options {
     /// Extract settings that were explicitly passed on the CLI, as a
     /// config-key → TOML-value map suitable for writing a personality file.
     /// Only captures flags the user actually typed, not personality defaults.
-    fn extract_cli_settings(matches: &clap::ArgMatches) -> std::collections::HashMap<String, toml::Value> {
-        use std::collections::HashMap;
+    fn extract_cli_settings(
+        matches: &clap::ArgMatches,
+    ) -> std::collections::HashMap<String, toml::Value> {
         use crate::config::{SETTING_FLAGS, SettingKind, find_setting};
+        use std::collections::HashMap;
 
         let mut settings: HashMap<String, toml::Value> = HashMap::new();
 
@@ -201,15 +210,15 @@ impl Options {
             // without "--", but some differ (column enablers use "show-*"
             // IDs, British/American aliases share a single Clap ID).
             let clap_id = match def.key {
-                "permissions"  => flags::SHOW_PERMISSIONS,
-                "size"         => flags::SHOW_SIZE,
-                "filesize"     => flags::SHOW_SIZE,
-                "user"         => flags::SHOW_USER,
-                "colour"       => flags::COLOR,
-                "color"        => flags::COLOR,
+                "permissions" => flags::SHOW_PERMISSIONS,
+                "size" => flags::SHOW_SIZE,
+                "filesize" => flags::SHOW_SIZE,
+                "user" => flags::SHOW_USER,
+                "colour" => flags::COLOR,
+                "color" => flags::COLOR,
                 "colour-scale" => flags::COLOR_SCALE,
-                "color-scale"  => flags::COLOR_SCALE,
-                "ignore"       => flags::IGNORE_GLOB,
+                "color-scale" => flags::COLOR_SCALE,
+                "ignore" => flags::IGNORE_GLOB,
                 _ => def.flag.strip_prefix("--").unwrap_or(def.flag),
             };
 
@@ -220,9 +229,7 @@ impl Options {
             }
 
             // Only include flags the user explicitly typed on this CLI.
-            if matches.value_source(clap_id)
-                != Some(clap::parser::ValueSource::CommandLine)
-            {
+            if matches.value_source(clap_id) != Some(clap::parser::ValueSource::CommandLine) {
                 continue;
             }
 
@@ -254,12 +261,14 @@ impl Options {
 
         // Handle compounding -t (TIME_TIER): expand to individual
         // timestamp booleans so they're saved as explicit config keys.
-        if matches.value_source(flags::TIME_TIER)
-            == Some(clap::parser::ValueSource::CommandLine)
-        {
+        if matches.value_source(flags::TIME_TIER) == Some(clap::parser::ValueSource::CommandLine) {
             let count = matches.get_count(flags::TIME_TIER);
-            if count >= 1 { settings.insert("modified".into(), toml::Value::Boolean(true)); }
-            if count >= 2 { settings.insert("changed".into(), toml::Value::Boolean(true)); }
+            if count >= 1 {
+                settings.insert("modified".into(), toml::Value::Boolean(true));
+            }
+            if count >= 2 {
+                settings.insert("changed".into(), toml::Value::Boolean(true));
+            }
             if count >= 3 {
                 settings.insert("created".into(), toml::Value::Boolean(true));
                 settings.insert("accessed".into(), toml::Value::Boolean(true));
@@ -277,7 +286,8 @@ impl Options {
         // saved personality is correct and reads more naturally.
         // Exceptions: `no-time` (no positive `time` key — it's a bulk
         // clear), `no-icons`/`no-gradient` (positive is Str, not Bool).
-        let neg_keys: Vec<String> = settings.keys()
+        let neg_keys: Vec<String> = settings
+            .keys()
             .filter(|k| k.starts_with("no-"))
             .cloned()
             .collect();
@@ -318,10 +328,18 @@ impl Options {
         }
 
         match self.view.mode {
-            Mode::Details(details::Options { table: Some(ref table), .. }) |
-            Mode::GridDetails(grid_details::Options { details: details::Options { table: Some(ref table), .. }, .. }) => {
-                table.columns.contains(&Column::VcsStatus)
-            }
+            Mode::Details(details::Options {
+                table: Some(ref table),
+                ..
+            })
+            | Mode::GridDetails(grid_details::Options {
+                details:
+                    details::Options {
+                        table: Some(ref table),
+                        ..
+                    },
+                ..
+            }) => table.columns.contains(&Column::VcsStatus),
             _ => false,
         }
     }
@@ -329,26 +347,27 @@ impl Options {
     /// Determines the complete set of options based on the given command-line
     /// arguments, after they've been parsed.
     fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
-        let wants_git = matches.has(flags::VCS_STATUS) || matches.has(flags::VCS_IGNORE)
+        let wants_git = matches.has(flags::VCS_STATUS)
+            || matches.has(flags::VCS_IGNORE)
             || matches.get(flags::VCS).is_some_and(|v| v != "none");
 
         if cfg!(not(feature = "git")) && wants_git {
             return Err(OptionsError::Unsupported(String::from(
-                "VCS options can't be used because the `git` feature was disabled in this build of lx"
+                "VCS options can't be used because the `git` feature was disabled in this build of lx",
             )));
         }
 
         if cfg!(not(feature = "jj")) && matches.get(flags::VCS) == Some("jj") {
             return Err(OptionsError::Unsupported(String::from(
-                "--vcs=jj can't be used because the `jj` feature was disabled in this build of lx"
+                "--vcs=jj can't be used because the `jj` feature was disabled in this build of lx",
             )));
         }
 
         let vcs_backend = match matches.get(flags::VCS) {
-            Some("git")  => VcsBackend::Git,
-            Some("jj")   => VcsBackend::Jj,
+            Some("git") => VcsBackend::Git,
+            Some("jj") => VcsBackend::Jj,
             Some("none") => VcsBackend::None,
-            _            => VcsBackend::Auto,
+            _ => VcsBackend::Auto,
         };
 
         let view = View::deduce(matches, vars)?;
@@ -357,15 +376,20 @@ impl Options {
         let theme = ThemeOptions::deduce(matches, vars)?;
         let count = matches.has(flags::COUNT) && !matches.has(flags::NO_COUNT);
 
-        Ok(Self { dir_action, filter, view, theme, vcs_backend, count })
+        Ok(Self {
+            dir_action,
+            filter,
+            view,
+            theme,
+            vcs_backend,
+            count,
+        })
     }
 }
-
 
 /// The result of the `Options::parse` function.
 #[derive(Debug)]
 pub enum OptionsResult {
-
     /// The options were parsed successfully.
     Ok(Options, Vec<OsString>),
 
@@ -408,9 +432,12 @@ pub enum OptionsResult {
 
     /// The user wants to save CLI flags as a personality.
     /// Contains: (name, inherits, settings as TOML key/value pairs).
-    SaveAs(String, Option<String>, std::collections::HashMap<String, toml::Value>),
+    SaveAs(
+        String,
+        Option<String>,
+        std::collections::HashMap<String, toml::Value>,
+    ),
 }
-
 
 #[cfg(test)]
 pub mod test {
@@ -421,13 +448,15 @@ pub mod test {
     /// function on the resulting `MatchedFlags`.  Returns a single-element
     /// `Vec` so existing test macros that iterate over results still work.
     pub fn parse_for_test<T, F>(inputs: &[&str], get: F) -> Vec<T>
-    where F: Fn(&MatchedFlags) -> T
+    where
+        F: Fn(&MatchedFlags) -> T,
     {
         let args: Vec<OsString> = std::iter::once(OsString::from("lx"))
             .chain(inputs.iter().map(|s| OsString::from(s)))
             .collect();
         let cmd = crate::options::parser::build_command();
-        let clap_matches = cmd.try_get_matches_from(&args)
+        let clap_matches = cmd
+            .try_get_matches_from(&args)
             .expect("Clap parse error in test");
         let mf = MatchedFlags::new(clap_matches);
         vec![get(&mf)]

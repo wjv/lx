@@ -2,11 +2,10 @@
 
 mod support;
 
-use std::fs;
 use predicates::prelude::*;
+use std::fs;
 use support::lx_no_colour;
 use tempfile::tempdir;
-
 
 /// Create a fixture directory with subdirectories and files.
 fn filtering_fixture() -> tempfile::TempDir {
@@ -29,7 +28,6 @@ fn filtering_fixture() -> tempfile::TempDir {
 
     dir
 }
-
 
 // ── --ignore / -I ────────────────────────────────────────────────
 
@@ -70,7 +68,6 @@ fn ignore_glob_alias_still_works() {
         .success()
         .stdout(predicate::str::contains("notes.tmp").not());
 }
-
 
 // ── --prune / -P ─────────────────────────────────────────────────
 
@@ -181,7 +178,6 @@ fn ignore_and_prune_compose() {
         .stdout(predicate::str::contains("main.rs"));
 }
 
-
 // ── --symlinks ───────────────────────────────────────────────────
 
 /// Create a fixture with regular files and symlinks.
@@ -279,6 +275,9 @@ fn symlinks_follow_recurses_into_linked_dirs() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     // inner.txt should appear twice — once under real_dir, once under linked_dir
-    assert_eq!(stdout.matches("inner.txt").count(), 2,
-        "Expected inner.txt twice (under real_dir and linked_dir), got:\n{stdout}");
+    assert_eq!(
+        stdout.matches("inner.txt").count(),
+        2,
+        "Expected inner.txt twice (under real_dir and linked_dir), got:\n{stdout}"
+    );
 }

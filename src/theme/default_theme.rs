@@ -1,11 +1,11 @@
-use nu_ansi_term::Style;
 use nu_ansi_term::Color::*;
+use nu_ansi_term::Style;
 
 use crate::theme::smooth::SmoothLuts;
 use crate::theme::ui_styles::*;
 
-
 impl UiStyles {
+    #[rustfmt::skip]
     pub fn default_theme() -> Self {
         // ANSI date "gradient" collapses to a single colour —
         // matches the historical exa behaviour.  The age-based
@@ -128,12 +128,12 @@ impl UiStyles {
     }
 }
 
-
 impl UiStyles {
     /// The compiled-in `lx-256` theme: refined, recognisably
     /// exa-derived, but using the 256-colour xterm palette for
     /// smoother gradients and tasteful chrome.  Designed to look
     /// good on both light and dark backgrounds.
+    #[rustfmt::skip]
     pub fn lx_256_theme() -> Self {
         // Smooth date gradient: cyan → blue → grey.
         // Mid-tone blues: visible on both light and dark.
@@ -254,7 +254,6 @@ impl UiStyles {
     }
 }
 
-
 impl UiStyles {
     /// The compiled-in `lx-24bit` theme: refined, recognisably
     /// exa-derived, using 24-bit truecolour for the smoothest
@@ -264,6 +263,7 @@ impl UiStyles {
     /// Same hue families as `lx-256`, just with hand-picked RGB
     /// values for cleaner integration with various background
     /// luminances.
+    #[rustfmt::skip]
     pub fn lx_24bit_theme() -> Self {
         // Hand-picked RGB constants for the lx-24bit palette.
         // Mid-saturation tones that work on both light and dark
@@ -404,5 +404,3 @@ impl UiStyles {
         }
     }
 }
-
-

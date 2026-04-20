@@ -4,13 +4,12 @@ use uzers::Users;
 use crate::fs::fields as f;
 use crate::output::cell::TextCell;
 
-
 impl f::User {
     /// Render the owner as their name, falling back to the numeric
     /// UID if the name can't be resolved.  Used for the `--user` column.
     pub fn render<C: Colours, U: Users>(self, colours: &C, users: &U) -> TextCell {
         let user_name = match users.get_user_by_uid(self.0) {
-            None       => self.0.to_string(),
+            None => self.0.to_string(),
             Some(user) => user.name().to_string_lossy().into(),
         };
 
@@ -26,16 +25,21 @@ impl f::User {
     }
 
     fn style<C: Colours, U: Users>(self, colours: &C, users: &U) -> Style {
-        if users.get_current_uid() == self.0 { colours.you() }
-        else                                  { colours.someone_else() }
+        if users.get_current_uid() == self.0 {
+            colours.you()
+        } else {
+            colours.someone_else()
+        }
     }
 
     fn uid_style<C: Colours, U: Users>(self, colours: &C, users: &U) -> Style {
-        if users.get_current_uid() == self.0 { colours.uid_you() }
-        else                                  { colours.uid_someone_else() }
+        if users.get_current_uid() == self.0 {
+            colours.uid_you()
+        } else {
+            colours.uid_someone_else()
+        }
     }
 }
-
 
 pub trait Colours {
     fn you(&self) -> Style;
@@ -51,7 +55,6 @@ pub trait Colours {
     fn uid_someone_else(&self) -> Style;
 }
 
-
 #[cfg(test)]
 #[allow(unused_results)]
 pub mod test {
@@ -59,11 +62,10 @@ pub mod test {
     use crate::fs::fields as f;
     use crate::output::cell::TextCell;
 
-    use uzers::User;
-    use uzers::mock::MockUsers;
     use nu_ansi_term::Color::*;
     use nu_ansi_term::Style;
-
+    use uzers::User;
+    use uzers::mock::MockUsers;
 
     /// Cascading test colours: the `uid_*` methods return slightly
     /// different styles than the `user_*` methods, so the tests can
@@ -73,12 +75,19 @@ pub mod test {
     struct TestColours;
 
     impl Colours for TestColours {
-        fn you(&self)              -> Style { Red.bold() }
-        fn someone_else(&self)     -> Style { Blue.underline() }
-        fn uid_you(&self)          -> Style { Red.normal() }
-        fn uid_someone_else(&self) -> Style { Blue.normal() }
+        fn you(&self) -> Style {
+            Red.bold()
+        }
+        fn someone_else(&self) -> Style {
+            Blue.underline()
+        }
+        fn uid_you(&self) -> Style {
+            Red.normal()
+        }
+        fn uid_someone_else(&self) -> Style {
+            Blue.normal()
+        }
     }
-
 
     #[test]
     fn named() {
@@ -122,13 +131,19 @@ pub mod test {
     fn different_unnamed_uid() {
         let user = f::User(1000);
         let expected = TextCell::paint_str(Blue.normal(), "1000");
-        assert_eq!(expected, user.render_uid(&TestColours, &MockUsers::with_current_uid(0)));
+        assert_eq!(
+            expected,
+            user.render_uid(&TestColours, &MockUsers::with_current_uid(0))
+        );
     }
 
     #[test]
     fn overflow() {
         let user = f::User(2_147_483_648);
         let expected = TextCell::paint_str(Blue.normal(), "2147483648");
-        assert_eq!(expected, user.render_uid(&TestColours, &MockUsers::with_current_uid(0)));
+        assert_eq!(
+            expected,
+            user.render_uid(&TestColours, &MockUsers::with_current_uid(0))
+        );
     }
 }

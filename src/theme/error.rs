@@ -2,7 +2,6 @@
 
 use thiserror::Error;
 
-
 /// Things that can go wrong when applying a configured theme.
 ///
 /// `apply_style()` and `apply_theme_def()` continue to use `warn!`
@@ -11,7 +10,6 @@ use thiserror::Error;
 /// "I can't even find the theme" path becomes a hard error.
 #[derive(Debug, Error)]
 pub enum ThemeError {
-
     /// `--theme=NAME` (or a name reached via inheritance) does not
     /// match a built-in theme or a `[theme.NAME]` config section.
     #[error("unknown theme '{name}'")]

@@ -1,25 +1,26 @@
 use crate::fs::feature::xattr;
-use crate::options::{flags, OptionsError, NumberSource, Vars};
 use crate::options::parser::MatchedFlags;
-use crate::output::{View, Mode, TerminalWidth, grid, details};
-use crate::output::grid_details::{self, RowThreshold};
+use crate::options::{NumberSource, OptionsError, Vars, flags};
 use crate::output::file_name::Options as FileStyle;
-use crate::output::table::{Column, TimeType, SizeFormat, Options as TableOptions};
+use crate::output::grid_details::{self, RowThreshold};
+use crate::output::table::{Column, Options as TableOptions, SizeFormat, TimeType};
 use crate::output::time::TimeFormat;
-
+use crate::output::{Mode, TerminalWidth, View, details, grid};
 
 impl View {
     pub fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
         let mode = Mode::deduce(matches, vars)?;
         let width = TerminalWidth::deduce(matches, vars)?;
         let file_style = FileStyle::deduce(matches, vars)?;
-        Ok(Self { mode, width, file_style })
+        Ok(Self {
+            mode,
+            width,
+            file_style,
+        })
     }
 }
 
-
 impl Mode {
-
     /// Determine which viewing mode to use based on the user's options.
     ///
     /// Clap's `overrides_with` ensures that conflicting flags (long/grid/
@@ -28,11 +29,11 @@ impl Mode {
     /// priority over grid when both are present.
     pub fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
         let long_count = matches.count(flags::LONG);
-        let has_columns = matches.get(flags::COLUMNS).is_some()
-            || matches.get(flags::FORMAT).is_some();
-        let long    = long_count > 0 || has_columns;
-        let tree    = matches.has(flags::TREE);
-        let grid    = matches.has(flags::GRID);
+        let has_columns =
+            matches.get(flags::COLUMNS).is_some() || matches.get(flags::FORMAT).is_some();
+        let long = long_count > 0 || has_columns;
+        let tree = matches.has(flags::TREE);
+        let grid = matches.has(flags::GRID);
         let oneline = matches.has(flags::ONE_LINE);
 
         // Tree takes priority over grid when combined with long.
@@ -45,7 +46,11 @@ impl Mode {
             let details = details::Options::deduce_long(matches, vars, long_count)?;
             let grid = grid::Options::deduce(matches);
             let row_threshold = RowThreshold::deduce(matches, vars)?;
-            let grid_details = grid_details::Options { grid, details, row_threshold };
+            let grid_details = grid_details::Options {
+                grid,
+                details,
+                row_threshold,
+            };
             return Ok(Self::GridDetails(grid_details));
         }
 
@@ -69,7 +74,6 @@ impl Mode {
     }
 }
 
-
 impl grid::Options {
     fn deduce(matches: &MatchedFlags) -> Self {
         Self {
@@ -78,25 +82,32 @@ impl grid::Options {
     }
 }
 
-
 impl details::Options {
     fn deduce_tree(matches: &MatchedFlags) -> Self {
         Self {
             table: None,
             header: false,
-            xattr: xattr::ENABLED && matches.has(flags::EXTENDED) && !matches.has(flags::NO_EXTENDED),
+            xattr: xattr::ENABLED
+                && matches.has(flags::EXTENDED)
+                && !matches.has(flags::NO_EXTENDED),
         }
     }
 
-    fn deduce_long<V: Vars>(matches: &MatchedFlags, vars: &V, long_count: u8) -> Result<Self, OptionsError> {
+    fn deduce_long<V: Vars>(
+        matches: &MatchedFlags,
+        vars: &V,
+        long_count: u8,
+    ) -> Result<Self, OptionsError> {
         Ok(Self {
             table: Some(TableOptions::deduce(matches, vars, long_count)?),
-            header: (matches.has(flags::HEADER) || long_count >= 3) && !matches.has(flags::NO_HEADER),
-            xattr: xattr::ENABLED && matches.has(flags::EXTENDED) && !matches.has(flags::NO_EXTENDED),
+            header: (matches.has(flags::HEADER) || long_count >= 3)
+                && !matches.has(flags::NO_HEADER),
+            xattr: xattr::ENABLED
+                && matches.has(flags::EXTENDED)
+                && !matches.has(flags::NO_EXTENDED),
         })
     }
 }
-
 
 impl TerminalWidth {
     fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
@@ -110,21 +121,17 @@ impl TerminalWidth {
         // COLUMNS environment variable.
         if let Some(columns) = vars.get(vars::COLUMNS).and_then(|s| s.into_string().ok()) {
             match columns.parse() {
-                Ok(width) => {
-                    Ok(Self::Set(width))
-                }
+                Ok(width) => Ok(Self::Set(width)),
                 Err(e) => {
                     let source = NumberSource::Env(vars::COLUMNS);
                     Err(OptionsError::FailedParse(columns, source, e))
                 }
             }
-        }
-        else {
+        } else {
             Ok(Self::Automatic)
         }
     }
 }
-
 
 impl RowThreshold {
     fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
@@ -134,53 +141,68 @@ impl RowThreshold {
         if let Some(rows) = matches.get("grid-rows") {
             return match rows.parse::<usize>() {
                 Ok(n) => Ok(Self::MinimumRows(n)),
-                Err(e) => Err(OptionsError::FailedParse(rows.into(), NumberSource::Arg("grid-rows"), e)),
+                Err(e) => Err(OptionsError::FailedParse(
+                    rows.into(),
+                    NumberSource::Arg("grid-rows"),
+                    e,
+                )),
             };
         }
 
-        if let Some(columns) = vars.get(vars::LX_GRID_ROWS).and_then(|s| s.into_string().ok()) {
+        if let Some(columns) = vars
+            .get(vars::LX_GRID_ROWS)
+            .and_then(|s| s.into_string().ok())
+        {
             match columns.parse() {
-                Ok(rows) => {
-                    Ok(Self::MinimumRows(rows))
-                }
+                Ok(rows) => Ok(Self::MinimumRows(rows)),
                 Err(e) => {
                     let source = NumberSource::Env(vars::LX_GRID_ROWS);
                     Err(OptionsError::FailedParse(columns, source, e))
                 }
             }
-        }
-        else {
+        } else {
             Ok(Self::AlwaysGrid)
         }
     }
 }
 
-
 impl TableOptions {
-    fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V, long_count: u8) -> Result<Self, OptionsError> {
+    fn deduce<V: Vars>(
+        matches: &MatchedFlags,
+        vars: &V,
+        long_count: u8,
+    ) -> Result<Self, OptionsError> {
         let time_format = TimeFormat::deduce(matches, vars)?;
         let size_format = SizeFormat::deduce(matches);
         let columns = deduce_columns(matches, long_count)?;
         let total_size = matches.has(flags::TOTAL) && !matches.has(flags::NO_TOTAL);
         let decimal_point = matches.get("decimal-point").map(String::from);
         let thousands_separator = matches.get("thousands-separator").map(String::from);
-        Ok(Self { size_format, time_format, columns, total_size, decimal_point, thousands_separator })
+        Ok(Self {
+            size_format,
+            time_format,
+            columns,
+            total_size,
+            decimal_point,
+            thousands_separator,
+        })
     }
 }
-
 
 /// Look up a format by name: config-defined first, then compiled-in.
 fn format_columns(name: &str) -> Option<Vec<Column>> {
     // Check config-defined formats first.
     if let Some(cfg) = crate::config::config()
-        && let Some(columns) = cfg.format.get(name) {
-            let cols: Vec<Column> = columns.iter()
-                .filter_map(|s| Column::from_name(s))
-                .collect();
-            if !cols.is_empty() {
-                return Some(cols);
-            }
+        && let Some(columns) = cfg.format.get(name)
+    {
+        let cols: Vec<Column> = columns
+            .iter()
+            .filter_map(|s| Column::from_name(s))
+            .collect();
+        if !cols.is_empty() {
+            return Some(cols);
         }
+    }
 
     // Compiled-in formats.
     let cols = match name {
@@ -225,9 +247,7 @@ fn format_columns(name: &str) -> Option<Vec<Column>> {
 
 /// All available format names: config-defined + compiled-in.
 pub fn format_names() -> Vec<String> {
-    let mut names: Vec<String> = vec![
-        "long".into(), "long2".into(), "long3".into(),
-    ];
+    let mut names: Vec<String> = vec!["long".into(), "long2".into(), "long3".into()];
 
     if let Some(cfg) = crate::config::config() {
         for name in cfg.format.keys() {
@@ -239,7 +259,6 @@ pub fn format_names() -> Vec<String> {
 
     names
 }
-
 
 /// Build the column list from --columns, --format, the -l tier,
 /// individual flags, and positive/negative overrides.
@@ -254,9 +273,10 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Result<Vec<Column>,
         for name in cols_str.split(',') {
             let name = name.trim();
             if let Some(col) = Column::from_name(name)
-                && !columns.contains(&col) {
-                    columns.push(col);
-                }
+                && !columns.contains(&col)
+            {
+                columns.push(col);
+            }
         }
         // Individual adds, `-t` tier, and suppression flags still apply.
         apply_bulk_time_clear(matches, &mut columns);
@@ -268,23 +288,23 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Result<Vec<Column>,
 
     // --format: named column set.
     if let Some(fmt_name) = matches.get(flags::FORMAT)
-        && let Some(cols) = format_columns(fmt_name) {
-            let mut columns = cols;
-            apply_bulk_time_clear(matches, &mut columns);
-            apply_individual_adds(matches, &mut columns);
-            apply_time_tier(matches, &mut columns);
-            apply_suppressions(matches, &mut columns);
-            return Ok(columns);
-        }
+        && let Some(cols) = format_columns(fmt_name)
+    {
+        let mut columns = cols;
+        apply_bulk_time_clear(matches, &mut columns);
+        apply_individual_adds(matches, &mut columns);
+        apply_time_tier(matches, &mut columns);
+        apply_suppressions(matches, &mut columns);
+        return Ok(columns);
+    }
 
     // -l tier: compiled-in format.
     let tier_name = match long_count {
         0 | 1 => "long",
-        2     => "long2",
-        _     => "long3",
+        2 => "long2",
+        _ => "long3",
     };
-    let mut columns = format_columns(tier_name)
-        .expect("compiled-in format always exists");
+    let mut columns = format_columns(tier_name).expect("compiled-in format always exists");
 
     apply_bulk_time_clear(matches, &mut columns);
     apply_individual_adds(matches, &mut columns);
@@ -293,7 +313,6 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Result<Vec<Column>,
 
     Ok(columns)
 }
-
 
 /// Add columns requested by individual flags (-i, -g, -H, -S, etc.)
 /// if not already present.
@@ -324,13 +343,14 @@ fn apply_individual_adds(matches: &MatchedFlags, columns: &mut Vec<Column>) {
 
     for def in COLUMN_REGISTRY {
         if let Some(flag) = def.add_flag
-            && matches.has(flag) && !columns.contains(&def.column) {
-                let pos = canonical_insert_pos(columns, def.column);
-                columns.insert(pos, def.column);
-            }
+            && matches.has(flag)
+            && !columns.contains(&def.column)
+        {
+            let pos = canonical_insert_pos(columns, def.column);
+            columns.insert(pos, def.column);
+        }
     }
 }
-
 
 /// `--no-time` clears all timestamp columns the base format brought
 /// in.  It runs *before* individual adds and `-t` tiers so that
@@ -373,7 +393,6 @@ fn apply_time_tier(matches: &MatchedFlags, columns: &mut Vec<Column>) {
     }
 }
 
-
 /// Apply --no-* suppression flags and --show-* re-enable flags.
 /// Driven by the column registry — columns with suppress/show flags
 /// are checked automatically.
@@ -398,15 +417,16 @@ fn apply_suppressions(matches: &MatchedFlags, columns: &mut Vec<Column>) {
     // Registry-driven re-enables.
     for def in COLUMN_REGISTRY {
         if let Some(flag) = def.show_flag
-            && matches.has(flag) && !columns.contains(&def.column) {
-                let pos = canonical_insert_pos(columns, def.column);
-                columns.insert(pos, def.column);
-            }
+            && matches.has(flag)
+            && !columns.contains(&def.column)
+        {
+            let pos = canonical_insert_pos(columns, def.column);
+            columns.insert(pos, def.column);
+        }
     }
 }
 
 impl SizeFormat {
-
     /// Determine which file size to use in the file size column based on
     /// the user's options.
     ///
@@ -430,28 +450,24 @@ impl SizeFormat {
 
         if matches.has(flags::BINARY) {
             Self::BinaryBytes
-        }
-        else if matches.has(flags::BYTES) {
+        } else if matches.has(flags::BYTES) {
             Self::JustBytes
-        }
-        else {
+        } else {
             Self::DecimalBytes
         }
     }
 
     fn from_str(word: &str) -> Self {
         match word {
-            "binary"  => Self::BinaryBytes,
-            "bytes"   => Self::JustBytes,
+            "binary" => Self::BinaryBytes,
+            "bytes" => Self::JustBytes,
             "decimal" => Self::DecimalBytes,
-            _         => Self::DecimalBytes,
+            _ => Self::DecimalBytes,
         }
     }
 }
 
-
 impl TimeFormat {
-
     /// Determine how time should be formatted in timestamp columns.
     fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
         use crate::options::vars;
@@ -464,7 +480,7 @@ impl TimeFormat {
         }
 
         match vars.get(vars::TIME_STYLE) {
-            Some(ref t) if ! t.is_empty()  => {
+            Some(ref t) if !t.is_empty() => {
                 // Environment variable — not validated; silently fall
                 // back to default for unknown values so a stale
                 // TIME_STYLE can't fail to start lx.
@@ -476,21 +492,19 @@ impl TimeFormat {
 
     fn from_str(word: &str) -> Self {
         match word {
-            "default"  => Self::DefaultFormat,
-            "iso"      => Self::ISOFormat,
+            "default" => Self::DefaultFormat,
+            "iso" => Self::ISOFormat,
             "long-iso" => Self::LongISO,
             "full-iso" => Self::FullISO,
             "relative" => Self::Relative,
             s if s.starts_with('+') => Self::Custom(s[1..].to_string()),
-            _          => Self::DefaultFormat,
+            _ => Self::DefaultFormat,
         }
     }
 }
 
-
 // TimeTypes::deduce() has been replaced by deduce_columns() above,
 // which builds timestamps directly into the Vec<Column>.
-
 
 #[cfg(test)]
 mod test {
@@ -499,7 +513,6 @@ mod test {
     use crate::options::test::parse_for_test;
 
     macro_rules! test {
-
         ($name:ident: $type:ident <- $inputs:expr; $result:expr) => {
             #[test]
             fn $name() {
@@ -516,13 +529,12 @@ mod test {
                     println!("Testing {:?}", result);
                     match result {
                         $pat => assert!(true),
-                        _    => assert!(false),
+                        _ => assert!(false),
                     }
                 }
             }
         };
     }
-
 
     mod size_formats {
         use super::*;
@@ -564,7 +576,6 @@ mod test {
         test!(bytes_beats_style:  SizeFormat <- ["--size-style=binary", "--bytes"];   SizeFormat::JustBytes);
     }
 
-
     mod time_formats {
         use super::*;
 
@@ -601,16 +612,17 @@ mod test {
         test!(override_env:     TimeFormat <- ["--time-style=full-iso"], Some("long-iso".into());  like Ok(TimeFormat::FullISO));
     }
 
-
     mod columns {
+        use super::deduce_columns;
         use crate::options::test::parse_for_test;
         use crate::output::table::{Column, TimeType};
-        use super::deduce_columns;
 
         /// Helper: parse flags and return the timestamp columns present.
         fn timestamps(inputs: &[&str], long_count: u8) -> Vec<Column> {
             parse_for_test(inputs, |mf| deduce_columns(mf, long_count))
-                .into_iter().next().unwrap()
+                .into_iter()
+                .next()
+                .unwrap()
                 .expect("test inputs must not error")
                 .into_iter()
                 .filter(|c| matches!(c, Column::Timestamp(_)))
@@ -634,19 +646,25 @@ mod test {
             // `-l --accessed` now adds accessed on top of the base
             // `long` format's modified, rather than replacing.
             let ts = timestamps(&["--accessed"], 1);
-            assert_eq!(ts, vec![
-                Column::Timestamp(TimeType::Modified),
-                Column::Timestamp(TimeType::Accessed),
-            ]);
+            assert_eq!(
+                ts,
+                vec![
+                    Column::Timestamp(TimeType::Modified),
+                    Column::Timestamp(TimeType::Accessed),
+                ]
+            );
         }
 
         #[test]
         fn explicit_created_composes() {
             let ts = timestamps(&["--created"], 1);
-            assert_eq!(ts, vec![
-                Column::Timestamp(TimeType::Modified),
-                Column::Timestamp(TimeType::Created),
-            ]);
+            assert_eq!(
+                ts,
+                vec![
+                    Column::Timestamp(TimeType::Modified),
+                    Column::Timestamp(TimeType::Created),
+                ]
+            );
         }
 
         #[test]
@@ -719,7 +737,10 @@ mod test {
         #[test]
         fn tier2_has_vcs_and_group() {
             let cols: Vec<Column> = parse_for_test(&[], |mf| deduce_columns(mf, 2))
-                .into_iter().next().unwrap().expect("test inputs must not error");
+                .into_iter()
+                .next()
+                .unwrap()
+                .expect("test inputs must not error");
             assert!(cols.contains(&Column::VcsStatus));
             assert!(cols.contains(&Column::Group));
         }
@@ -727,7 +748,10 @@ mod test {
         #[test]
         fn tier3_has_links_and_blocks() {
             let cols: Vec<Column> = parse_for_test(&[], |mf| deduce_columns(mf, 3))
-                .into_iter().next().unwrap().expect("test inputs must not error");
+                .into_iter()
+                .next()
+                .unwrap()
+                .expect("test inputs must not error");
             assert!(cols.contains(&Column::HardLinks));
             assert!(cols.contains(&Column::Blocks));
         }
@@ -735,7 +759,10 @@ mod test {
         #[test]
         fn no_group_suppresses() {
             let cols: Vec<Column> = parse_for_test(&["--no-group"], |mf| deduce_columns(mf, 2))
-                .into_iter().next().unwrap().expect("test inputs must not error");
+                .into_iter()
+                .next()
+                .unwrap()
+                .expect("test inputs must not error");
             assert!(!cols.contains(&Column::Group));
         }
 
@@ -751,7 +778,8 @@ mod test {
         #[test]
         fn short_u_is_user() {
             let cmd = crate::options::parser::build_command();
-            let m = cmd.try_get_matches_from(["lx", "-l", "-u"])
+            let m = cmd
+                .try_get_matches_from(["lx", "-l", "-u"])
                 .expect("-u should parse as --user");
             assert!(m.get_count(crate::options::flags::SHOW_USER) > 0);
         }
@@ -806,14 +834,20 @@ mod test {
         #[test]
         fn no_z_suppresses_filesize() {
             let cols: Vec<Column> = parse_for_test(&["--no-z"], |mf| deduce_columns(mf, 1))
-                .into_iter().next().unwrap().expect("test inputs must not error");
+                .into_iter()
+                .next()
+                .unwrap()
+                .expect("test inputs must not error");
             assert!(!cols.contains(&Column::FileSize));
         }
 
         #[test]
         fn no_upper_m_suppresses_permissions() {
             let cols: Vec<Column> = parse_for_test(&["--no-M"], |mf| deduce_columns(mf, 1))
-                .into_iter().next().unwrap().expect("test inputs must not error");
+                .into_iter()
+                .next()
+                .unwrap()
+                .expect("test inputs must not error");
             assert!(!cols.contains(&Column::Permissions));
         }
 
@@ -821,7 +855,10 @@ mod test {
         #[test]
         fn no_u_suppresses_user() {
             let cols: Vec<Column> = parse_for_test(&["--no-u"], |mf| deduce_columns(mf, 1))
-                .into_iter().next().unwrap().expect("test inputs must not error");
+                .into_iter()
+                .next()
+                .unwrap()
+                .expect("test inputs must not error");
             assert!(!cols.contains(&Column::User));
         }
 
@@ -831,7 +868,10 @@ mod test {
         #[test]
         fn uid_adds_column_after_user() {
             let cols: Vec<Column> = parse_for_test(&["--uid"], |mf| deduce_columns(mf, 1))
-                .into_iter().next().unwrap().expect("test inputs must not error");
+                .into_iter()
+                .next()
+                .unwrap()
+                .expect("test inputs must not error");
             assert!(cols.contains(&Column::Uid));
             // Canonical position: uid sits immediately after user.
             let user_idx = cols.iter().position(|c| *c == Column::User);
@@ -844,7 +884,10 @@ mod test {
         #[test]
         fn gid_adds_column_after_group() {
             let cols: Vec<Column> = parse_for_test(&["-ll", "--gid"], |mf| deduce_columns(mf, 2))
-                .into_iter().next().unwrap().expect("test inputs must not error");
+                .into_iter()
+                .next()
+                .unwrap()
+                .expect("test inputs must not error");
             assert!(cols.contains(&Column::Gid));
             let group_idx = cols.iter().position(|c| *c == Column::Group);
             let gid_idx = cols.iter().position(|c| *c == Column::Gid);
@@ -857,24 +900,31 @@ mod test {
         fn uid_and_gid_compose() {
             // Adding both alongside user/group gives all four columns,
             // in canonical order: user, uid, group, gid.
-            let cols: Vec<Column> = parse_for_test(
-                &["-ll", "--uid", "--gid"],
-                |mf| deduce_columns(mf, 2),
-            ).into_iter().next().unwrap().expect("test inputs must not error");
+            let cols: Vec<Column> =
+                parse_for_test(&["-ll", "--uid", "--gid"], |mf| deduce_columns(mf, 2))
+                    .into_iter()
+                    .next()
+                    .unwrap()
+                    .expect("test inputs must not error");
             let positions: Vec<usize> = [Column::User, Column::Uid, Column::Group, Column::Gid]
                 .iter()
                 .map(|c| cols.iter().position(|x| x == c).expect("column present"))
                 .collect();
-            assert_eq!(positions, (0..4).map(|i| positions[0] + i).collect::<Vec<_>>());
+            assert_eq!(
+                positions,
+                (0..4).map(|i| positions[0] + i).collect::<Vec<_>>()
+            );
         }
 
         #[cfg(unix)]
         #[test]
         fn no_uid_suppresses() {
-            let cols: Vec<Column> = parse_for_test(
-                &["--uid", "--no-uid"],
-                |mf| deduce_columns(mf, 1),
-            ).into_iter().next().unwrap().expect("test inputs must not error");
+            let cols: Vec<Column> =
+                parse_for_test(&["--uid", "--no-uid"], |mf| deduce_columns(mf, 1))
+                    .into_iter()
+                    .next()
+                    .unwrap()
+                    .expect("test inputs must not error");
             assert!(!cols.contains(&Column::Uid));
         }
 
@@ -895,12 +945,10 @@ mod test {
         }
     }
 
-
     mod views {
         use super::*;
 
         use crate::output::grid::Options as GridOptions;
-
 
         // Default
         test!(empty:         Mode <- [], None;            like Ok(Mode::Grid(_)));

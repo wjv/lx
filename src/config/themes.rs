@@ -8,7 +8,6 @@
 use super::error::ConfigError;
 use super::store::config;
 
-
 /// Names of the compiled-in themes that don't live in any config
 /// file.  These are always resolvable by `--theme=NAME` and appear
 /// in the `--dump-theme` listing.
@@ -18,7 +17,6 @@ pub const BUILTIN_THEMES: &[&str] = &["exa", "lx-256", "lx-24bit"];
 pub fn is_builtin_theme(name: &str) -> bool {
     BUILTIN_THEMES.contains(&name)
 }
-
 
 // ── --dump-theme output ─────────────────────────────────────────
 
@@ -70,11 +68,15 @@ fn format_theme_toml(name: &str) -> Option<String> {
     // pull the date keys out, sort them by (bulk vs per-column, then
     // tier index), and re-insert them as a contiguous block at the
     // alphabetical position where plain `date` would fall.
-    let (mut date_keys, mut other_keys): (Vec<_>, Vec<_>) = theme.ui.keys()
+    let (mut date_keys, mut other_keys): (Vec<_>, Vec<_>) = theme
+        .ui
+        .keys()
         .partition(|k| k.as_str() == "date" || k.starts_with("date-"));
     other_keys.sort();
     date_keys.sort_by(|a, b| {
-        date_sort_key(a).cmp(&date_sort_key(b)).then_with(|| a.cmp(b))
+        date_sort_key(a)
+            .cmp(&date_sort_key(b))
+            .then_with(|| a.cmp(b))
     });
 
     // Build the date block with blank-line separators between
@@ -134,9 +136,7 @@ fn format_theme_toml(name: &str) -> Option<String> {
 /// Non-date keys return `(u8::MAX, 0)`; the caller is expected not
 /// to pass them.
 fn date_sort_key(key: &str) -> (u8, u8) {
-    const TIERS: [&str; 8] = [
-        "", "now", "today", "week", "month", "year", "old", "flat",
-    ];
+    const TIERS: [&str; 8] = ["", "now", "today", "week", "month", "year", "old", "flat"];
     const COLS: [&str; 4] = ["modified", "accessed", "changed", "created"];
 
     if key == "date" {
@@ -195,7 +195,9 @@ pub fn dump_theme_all() {
     let mut first = true;
     for name in &names {
         if let Some(toml) = format_theme_toml(name) {
-            if !first { println!(); }
+            if !first {
+                println!();
+            }
             println!("{toml}");
             first = false;
         }

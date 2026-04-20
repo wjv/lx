@@ -17,11 +17,10 @@ use log::*;
 use crate::fs::fields as f;
 
 use jj_lib::config::StackedConfig;
+use jj_lib::matchers::EverythingMatcher;
 use jj_lib::repo::Repo;
 use jj_lib::settings::UserSettings;
 use jj_lib::workspace::{self, Workspace};
-use jj_lib::matchers::EverythingMatcher;
-
 
 /// A cache of per-file jj status, built using the jj-lib crate.
 pub struct JjCache {
@@ -58,7 +57,11 @@ impl JjCache {
         } else {
             let p = probe.parent().unwrap_or(Path::new("."));
             // An empty parent (from a bare filename like "foo.txt") means cwd.
-            let p = if p.as_os_str().is_empty() { Path::new(".") } else { p };
+            let p = if p.as_os_str().is_empty() {
+                Path::new(".")
+            } else {
+                p
+            };
             p.canonicalize().unwrap_or_else(|_| p.to_path_buf())
         };
 
@@ -82,7 +85,9 @@ impl JjCache {
                 Ok(ws) => break ws,
                 Err(e) => {
                     debug!("jj: Workspace::load({}) failed: {e}", search_dir.display());
-                    if let Some(parent) = search_dir.parent() { search_dir = parent } else {
+                    if let Some(parent) = search_dir.parent() {
+                        search_dir = parent
+                    } else {
                         debug!("jj: no jj workspace found");
                         return None;
                     }
@@ -108,7 +113,9 @@ impl JjCache {
             }
         };
 
-        let wc_commit_id = if let Some(id) = repo.view().get_wc_commit_id(ws.workspace_name()) { id.clone() } else {
+        let wc_commit_id = if let Some(id) = repo.view().get_wc_commit_id(ws.workspace_name()) {
+            id.clone()
+        } else {
             warn!("jj: no working copy commit");
             return Some(Self::empty(workdir));
         };
@@ -189,9 +196,17 @@ impl JjCache {
         // (works for both colocated and non-colocated repos).
         let git_repo = Self::open_git_repo(&workdir).map(Mutex::new);
 
-        debug!("jj cache: {} file statuses, {} tracked files",
-               statuses.len(), tracked.len());
-        Some(Self { statuses, tracked, git_repo, workdir })
+        debug!(
+            "jj cache: {} file statuses, {} tracked files",
+            statuses.len(),
+            tracked.len()
+        );
+        Some(Self {
+            statuses,
+            tracked,
+            git_repo,
+            workdir,
+        })
     }
 
     /// Create an empty cache (used for error fallback paths).
@@ -242,7 +257,6 @@ impl JjCache {
     }
 }
 
-
 impl super::VcsCache for JjCache {
     fn has_anything_for(&self, path: &Path) -> bool {
         let abs = if path.is_absolute() {
@@ -275,7 +289,10 @@ impl super::VcsCache for JjCache {
                     worst_change = worse_status(worst_change, status);
                 }
             }
-            f::VcsFileStatus { staged: worst_change, unstaged: worst_change }
+            f::VcsFileStatus {
+                staged: worst_change,
+                unstaged: worst_change,
+            }
         } else {
             // Single file: change status + tracking/ignore status.
 
@@ -289,7 +306,9 @@ impl super::VcsCache for JjCache {
                 };
             }
 
-            let change = self.statuses.get(&abs)
+            let change = self
+                .statuses
+                .get(&abs)
                 .copied()
                 .unwrap_or(f::VcsStatus::NotModified);
 
@@ -300,26 +319,30 @@ impl super::VcsCache for JjCache {
                 f::VcsStatus::Untracked
             };
 
-            f::VcsFileStatus { staged: change, unstaged: tracking }
+            f::VcsFileStatus {
+                staged: change,
+                unstaged: tracking,
+            }
         }
     }
 
-    fn header_name(&self) -> &'static str { "JJ" }
+    fn header_name(&self) -> &'static str {
+        "JJ"
+    }
 }
-
 
 fn worse_status(a: f::VcsStatus, b: f::VcsStatus) -> f::VcsStatus {
     fn rank(s: f::VcsStatus) -> u8 {
         match s {
             f::VcsStatus::NotModified => 0,
-            f::VcsStatus::Ignored    => 1,
-            f::VcsStatus::Untracked  => 2,
-            f::VcsStatus::Copied     => 3,
-            f::VcsStatus::Renamed    => 4,
+            f::VcsStatus::Ignored => 1,
+            f::VcsStatus::Untracked => 2,
+            f::VcsStatus::Copied => 3,
+            f::VcsStatus::Renamed => 4,
             f::VcsStatus::TypeChange => 5,
-            f::VcsStatus::Modified   => 6,
-            f::VcsStatus::New        => 7,
-            f::VcsStatus::Deleted    => 8,
+            f::VcsStatus::Modified => 6,
+            f::VcsStatus::New => 7,
+            f::VcsStatus::Deleted => 8,
             f::VcsStatus::Conflicted => 9,
         }
     }

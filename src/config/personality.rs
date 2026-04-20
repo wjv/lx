@@ -12,7 +12,6 @@ use super::load::{find_config_path, find_drop_in_dir};
 use super::schema::{ConditionalOverride, PersonalityDef};
 use super::store::config;
 
-
 /// Look up a personality by name, resolving inheritance.
 ///
 /// Config-defined personalities take priority over compiled-in ones.
@@ -40,7 +39,7 @@ pub fn resolve_personality(name: &str) -> Result<Option<PersonalityDef>, ConfigE
         // Look up: config first, then compiled-in.
         let Some(def) = lookup_personality(pname) else {
             if chain.is_empty() {
-                return Ok(None);  // top-level personality not found
+                return Ok(None); // top-level personality not found
             }
             return Err(ConfigError::MissingParent {
                 child: visited[visited.len() - 2].clone(),
@@ -85,9 +84,10 @@ pub fn resolve_personality(name: &str) -> Result<Option<PersonalityDef>, ConfigE
 /// Look up a single personality definition by name (no inheritance).
 fn lookup_personality(name: &str) -> Option<PersonalityDef> {
     if let Some(cfg) = config()
-        && let Some(p) = cfg.personality.get(name) {
-            return Some(p.clone());
-        }
+        && let Some(p) = cfg.personality.get(name)
+    {
+        return Some(p.clone());
+    }
     compiled_personality(name)
 }
 
@@ -117,23 +117,24 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
             ]),
             when: vec![
                 ConditionalOverride {
-                    env: HashMap::from([
-                        ("TERM".into(), toml::Value::String("*-256color".into())),
-                    ]),
-                    settings: HashMap::from([
-                        ("theme".into(), toml::Value::String("lx-256".into())),
-                    ]),
+                    env: HashMap::from([("TERM".into(), toml::Value::String("*-256color".into()))]),
+                    settings: HashMap::from([(
+                        "theme".into(),
+                        toml::Value::String("lx-256".into()),
+                    )]),
                 },
                 ConditionalOverride {
-                    env: HashMap::from([
-                        ("COLORTERM".into(), toml::Value::Array(vec![
+                    env: HashMap::from([(
+                        "COLORTERM".into(),
+                        toml::Value::Array(vec![
                             toml::Value::String("truecolor".into()),
                             toml::Value::String("24bit".into()),
-                        ])),
-                    ]),
-                    settings: HashMap::from([
-                        ("theme".into(), toml::Value::String("lx-24bit".into())),
-                    ]),
+                        ]),
+                    )]),
+                    settings: HashMap::from([(
+                        "theme".into(),
+                        toml::Value::String("lx-24bit".into()),
+                    )]),
                 },
             ],
             ..Default::default()
@@ -145,9 +146,7 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
         "ll" => Some(PersonalityDef {
             inherits: Some("lx".into()),
             format: Some("long2".into()),
-            settings: HashMap::from([
-                ("group-dirs".into(), Str("first".into())),
-            ]),
+            settings: HashMap::from([("group-dirs".into(), Str("first".into()))]),
             ..Default::default()
         }),
         "lll" => Some(PersonalityDef {
@@ -162,9 +161,7 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
         }),
         "la" => Some(PersonalityDef {
             inherits: Some("ll".into()),
-            settings: HashMap::from([
-                ("all".into(), Boolean(true)),
-            ]),
+            settings: HashMap::from([("all".into(), Boolean(true))]),
             ..Default::default()
         }),
         "tree" => Some(PersonalityDef {
@@ -187,19 +184,14 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
     }
 }
 
-
 // ── --dump-personality output ───────────────────────────────────
 
 /// Names of all compiled-in personalities.
-const COMPILED_PERSONALITIES: &[&str] = &[
-    "default", "lx", "ll", "lll", "la", "tree", "ls",
-];
+const COMPILED_PERSONALITIES: &[&str] = &["default", "lx", "ll", "lll", "la", "tree", "ls"];
 
 /// Return the names of all known personalities (compiled-in + config).
 pub fn all_personality_names() -> Vec<String> {
-    let mut names: Vec<String> = COMPILED_PERSONALITIES.iter()
-        .map(|s| (*s).into())
-        .collect();
+    let mut names: Vec<String> = COMPILED_PERSONALITIES.iter().map(|s| (*s).into()).collect();
     if let Some(cfg) = config() {
         for name in cfg.personality.keys() {
             if !names.iter().any(|n| n == name) {
@@ -225,7 +217,8 @@ fn format_personality_toml(name: &str) -> Option<String> {
         lines.push(format!("format = \"{format}\""));
     }
     if let Some(ref columns) = def.columns {
-        let entries: Vec<String> = columns.to_csv()
+        let entries: Vec<String> = columns
+            .to_csv()
             .split(',')
             .map(|s| format!("\"{}\"", s.trim()))
             .collect();
@@ -275,13 +268,14 @@ pub fn dump_personality_all() {
     let mut first = true;
     for name in &names {
         if let Some(toml) = format_personality_toml(name) {
-            if !first { println!(); }
+            if !first {
+                println!();
+            }
             println!("{toml}");
             first = false;
         }
     }
 }
-
 
 // ── --save-as=NAME ──────────────────────────────────────────────
 
@@ -306,7 +300,10 @@ pub fn save_personality_as(
 
     // Build TOML lines.
     let mut lines = vec![
-        format!("# Generated by lx --save-as on {}", Local::now().format("%Y-%m-%d")),
+        format!(
+            "# Generated by lx --save-as on {}",
+            Local::now().format("%Y-%m-%d")
+        ),
         String::new(),
         format!("[personality.{name}]"),
     ];
@@ -333,17 +330,16 @@ pub fn save_personality_as(
     let toml_content = lines.join("\n");
 
     // Find or create the conf.d/ directory.
-    let conf_dir = find_drop_in_dir(find_config_path().as_deref())
-        .unwrap_or_else(|| {
-            // No config file exists; use the XDG default location.
-            let xdg = std::env::var("XDG_CONFIG_HOME")
-                .map(PathBuf::from)
-                .unwrap_or_else(|_| {
-                    let home = std::env::var("HOME").expect("HOME not set");
-                    PathBuf::from(home).join(".config")
-                });
-            xdg.join("lx").join("conf.d")
-        });
+    let conf_dir = find_drop_in_dir(find_config_path().as_deref()).unwrap_or_else(|| {
+        // No config file exists; use the XDG default location.
+        let xdg = std::env::var("XDG_CONFIG_HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| {
+                let home = std::env::var("HOME").expect("HOME not set");
+                PathBuf::from(home).join(".config")
+            });
+        xdg.join("lx").join("conf.d")
+    });
 
     std::fs::create_dir_all(&conf_dir).with_path(&conf_dir)?;
 
@@ -353,7 +349,11 @@ pub fn save_personality_as(
     if file_path.exists() {
         let backup = file_path.with_extension("toml.bak");
         std::fs::rename(&file_path, &backup).with_path(&file_path)?;
-        eprintln!("lx: backed up {} → {}", file_path.display(), backup.display());
+        eprintln!(
+            "lx: backed up {} → {}",
+            file_path.display(),
+            backup.display()
+        );
     }
 
     std::fs::write(&file_path, &toml_content).with_path(&file_path)?;

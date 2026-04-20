@@ -5,7 +5,6 @@ mod support;
 use predicates::prelude::*;
 use support::lx_no_colour;
 
-
 // ── Tier 1: -l (base long view) ──────────────────────────────────
 
 #[test]
@@ -36,7 +35,6 @@ fn tier1_no_header() {
         .stdout(predicate::str::contains("Permissions").not());
 }
 
-
 // ── Tier 2: -ll (+ group, VCS status) ────────────────────────────
 
 #[test]
@@ -57,7 +55,6 @@ fn tier2_no_header() {
         .success()
         .stdout(predicate::str::contains("Permissions").not());
 }
-
 
 // ── Tier 3: -lll (+ header, all timestamps, links, blocks) ──────
 
@@ -99,7 +96,6 @@ fn tier3_has_all_timestamp_headers() {
         .stdout(predicate::str::contains("Date Accessed"))
         .stdout(predicate::str::contains("Date Created"));
 }
-
 
 // ── Overrides on top of tiers ────────────────────────────────────
 

@@ -6,7 +6,6 @@ use crate::output::cell::TextCell;
 use crate::output::time::TimeFormat;
 use crate::theme::{DateAge, age_to_position};
 
-
 pub trait Render {
     /// Render a timestamp into a `TextCell`.
     ///

@@ -8,12 +8,11 @@
 use crate::fs::File;
 use crate::fs::feature::VcsCache;
 use crate::options::flags;
-use locale;
 use crate::output::cell::TextCell;
 use crate::output::table::{Alignment, Column, Environment, SizeFormat, TimeType};
 use crate::output::time::TimeFormat;
 use crate::theme::Theme;
-
+use locale;
 
 // ── RenderContext ────────────────────────────────────────────────
 
@@ -30,12 +29,10 @@ pub struct RenderContext<'a> {
     pub total_size: bool,
 }
 
-
 // ── Render function type ────────────────────────────────────────
 
 /// Signature for column render functions.
 pub type RenderFn = fn(&RenderContext<'_>, &File<'_>, bool) -> TextCell;
-
 
 // ── ColumnDef ───────────────────────────────────────────────────
 
@@ -73,7 +70,6 @@ pub struct ColumnDef {
     pub render: RenderFn,
 }
 
-
 // ── Render wrapper functions ────────────────────────────────────
 //
 // Thin wrappers that bridge the uniform RenderFn signature to the
@@ -95,7 +91,8 @@ fn render_permissions(ctx: &RenderContext<'_>, file: &File<'_>, xattrs: bool) ->
 
 fn render_size(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
     if ctx.total_size {
-        file.total_size().render(ctx.theme, ctx.size_format, ctx.numeric)
+        file.total_size()
+            .render(ctx.theme, ctx.size_format, ctx.numeric)
     } else {
         file.size().render(ctx.theme, ctx.size_format, ctx.numeric)
     }
@@ -137,12 +134,11 @@ fn render_gid(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCe
 }
 
 fn render_vcs_status(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> TextCell {
-    let status = ctx.vcs
+    let status = ctx
+        .vcs
         .map(|g| g.get(&file.path, file.is_directory()))
         .unwrap_or_default();
-    let backend = ctx.vcs
-        .map(VcsCache::header_name)
-        .unwrap_or("VCS");
+    let backend = ctx.vcs.map(VcsCache::header_name).unwrap_or("VCS");
     status.render(ctx.theme, backend)
 }
 
@@ -198,7 +194,6 @@ fn render_created(ctx: &RenderContext<'_>, file: &File<'_>, _xattrs: bool) -> Te
         ctx.time_format,
     )
 }
-
 
 // ── The registry ────────────────────────────────────────────────
 
@@ -427,13 +422,13 @@ pub static COLUMN_REGISTRY: &[ColumnDef] = &[
     },
 ];
 
-
 // ── Lookup functions ────────────────────────────────────────────
 
 impl ColumnDef {
     /// Look up a column definition by its `Column` enum variant.
     pub fn for_column(col: Column) -> &'static ColumnDef {
-        COLUMN_REGISTRY.iter()
+        COLUMN_REGISTRY
+            .iter()
             .find(|d| d.column == col)
             .expect("every Column variant must have a ColumnDef entry")
     }
@@ -441,7 +436,8 @@ impl ColumnDef {
     /// Parse a column name (from `--columns` or config).  Returns the
     /// `Column` variant, or `None` for unrecognised names.
     pub fn column_from_name(s: &str) -> Option<Column> {
-        COLUMN_REGISTRY.iter()
+        COLUMN_REGISTRY
+            .iter()
             .find(|d| d.name == s || d.aliases.contains(&s))
             .map(|d| d.column)
     }
@@ -450,7 +446,8 @@ impl ColumnDef {
     /// registry order.  Used for "[possible values: ...]" hints in
     /// error messages from `--columns=` parsing.
     pub fn all_names_csv() -> String {
-        COLUMN_REGISTRY.iter()
+        COLUMN_REGISTRY
+            .iter()
             .map(|d| d.name)
             .collect::<Vec<_>>()
             .join(", ")

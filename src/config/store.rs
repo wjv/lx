@@ -10,7 +10,6 @@ use super::error::ConfigError;
 use super::load::try_load_config;
 use super::schema::Config;
 
-
 /// Storage for the user's configuration.
 ///
 /// Populated once by `init_config()` early in `try_main()`, then read

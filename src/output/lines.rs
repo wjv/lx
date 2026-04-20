@@ -5,9 +5,8 @@ use nu_ansi_term::AnsiStrings;
 use crate::fs::File;
 use crate::fs::filter::FileFilter;
 use crate::output::cell::TextCellContents;
-use crate::output::file_name::{Options as FileStyle};
+use crate::output::file_name::Options as FileStyle;
 use crate::theme::Theme;
-
 
 /// The lines view literally just displays each file, line-by-line.
 pub struct Render<'a> {

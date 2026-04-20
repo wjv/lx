@@ -1,5 +1,6 @@
 pub use self::escape::escape;
 
+pub mod column_registry;
 pub mod details;
 pub mod file_name;
 pub mod grid;
@@ -9,12 +10,10 @@ pub mod lines;
 pub mod render;
 pub mod table;
 pub mod time;
-pub mod column_registry;
 
 mod cell;
 mod escape;
 mod tree;
-
 
 /// The **view** contains all information about how to format output.
 #[derive(Debug)]
@@ -53,7 +52,6 @@ impl View {
     }
 }
 
-
 /// The **mode** is the “type” of output.
 #[derive(PartialEq, Eq, Debug)]
 #[allow(clippy::large_enum_variant)]
@@ -64,11 +62,9 @@ pub enum Mode {
     Lines,
 }
 
-
 /// The width of the terminal requested by the user.
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub enum TerminalWidth {
-
     /// The user requested this specific number of columns.
     Set(usize),
 
@@ -83,8 +79,8 @@ impl TerminalWidth {
         // where the output goes.
 
         match self {
-            Self::Set(width)  => Some(width),
-            Self::Automatic   => terminal_size::terminal_size().map(|(w, _)| w.0.into()),
+            Self::Set(width) => Some(width),
+            Self::Automatic => terminal_size::terminal_size().map(|(w, _)| w.0.into()),
         }
     }
 }

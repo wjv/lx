@@ -59,7 +59,6 @@
 //! means that we must wait until every row has been added to the table before it
 //! can be displayed, in order to make sure that every column is wide enough.
 
-
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::vec::IntoIter as VecIntoIter;
@@ -67,17 +66,16 @@ use std::vec::IntoIter as VecIntoIter;
 use log::error;
 use nu_ansi_term::Style;
 
-use crate::fs::{Dir, File};
 use crate::fs::dir_action::RecurseOptions;
 use crate::fs::feature::VcsCache;
 use crate::fs::feature::xattr::{Attribute, FileAttributes};
 use crate::fs::filter::FileFilter;
+use crate::fs::{Dir, File};
 use crate::output::cell::TextCell;
 use crate::output::file_name::Options as FileStyle;
-use crate::output::table::{Table, Options as TableOptions, Row as TableRow};
-use crate::output::tree::{TreeTrunk, TreeParams, TreeDepth};
+use crate::output::table::{Options as TableOptions, Row as TableRow, Table};
+use crate::output::tree::{TreeDepth, TreeParams, TreeTrunk};
 use crate::theme::Theme;
-
 
 /// With the **Details** view, the output gets formatted into columns, with
 /// each `Column` object showing some piece of information about the file,
@@ -92,7 +90,6 @@ use crate::theme::Theme;
 /// columns for each row.
 #[derive(PartialEq, Eq, Debug)]
 pub struct Options {
-
     /// Options specific to drawing a table.
     ///
     /// Directories themselves can pick which columns are *added* to this
@@ -105,7 +102,6 @@ pub struct Options {
     /// Whether to show each file’s extended attributes.
     pub xattr: bool,
 }
-
 
 pub struct Render<'a> {
     pub dir: Option<&'a Dir>,
@@ -128,13 +124,12 @@ pub struct Render<'a> {
     pub vcs: Option<&'a dyn VcsCache>,
 }
 
-
 struct Egg<'a> {
     table_row: Option<TableRow>,
-    xattrs:    Vec<Attribute>,
-    errors:    Vec<(io::Error, Option<PathBuf>)>,
-    dir:       Option<Dir>,
-    file:      &'a File<'a>,
+    xattrs: Vec<Attribute>,
+    errors: Vec<(io::Error, Option<PathBuf>)>,
+    dir: Option<Dir>,
+    file: &'a File<'a>,
 }
 
 impl<'a> AsRef<File<'a>> for Egg<'a> {
@@ -142,7 +137,6 @@ impl<'a> AsRef<File<'a>> for Egg<'a> {
         self.file
     }
 }
-
 
 impl<'a> Render<'a> {
     /// Render the file listing.  Returns `(item_count, size_total)`:
@@ -155,9 +149,17 @@ impl<'a> Render<'a> {
 
         if let Some(ref table) = self.opts.table {
             match (self.vcs, self.dir) {
-                (Some(g), Some(d))  => if ! g.has_anything_for(&d.path) { self.vcs = None },
-                (Some(g), None)     => if ! self.files.iter().any(|f| g.has_anything_for(&f.path)) { self.vcs = None },
-                (None,    _)        => {/* Keep Git how it is */},
+                (Some(g), Some(d)) => {
+                    if !g.has_anything_for(&d.path) {
+                        self.vcs = None
+                    }
+                }
+                (Some(g), None) => {
+                    if !self.files.iter().any(|f| g.has_anything_for(&f.path)) {
+                        self.vcs = None
+                    }
+                }
+                (None, _) => { /* Keep Git how it is */ }
             }
 
             let mut table = Table::new(table, self.vcs, self.theme);
@@ -173,17 +175,28 @@ impl<'a> Render<'a> {
             let mut table = Some(table);
             let rows_before = rows.len();
             let mut size_total = 0u64;
-            self.add_files_to_table(&mut table, &mut rows, &self.files, TreeDepth::root(), &mut size_total);
+            self.add_files_to_table(
+                &mut table,
+                &mut rows,
+                &self.files,
+                TreeDepth::root(),
+                &mut size_total,
+            );
             let file_count = rows.len() - rows_before;
 
             for row in self.iterate_with_table(table.unwrap(), rows) {
                 writeln!(w, "{}", row.strings())?;
             }
             Ok((file_count, size_total))
-        }
-        else {
+        } else {
             let mut size_total = 0u64;
-            self.add_files_to_table(&mut None, &mut rows, &self.files, TreeDepth::root(), &mut size_total);
+            self.add_files_to_table(
+                &mut None,
+                &mut rows,
+                &self.files,
+                TreeDepth::root(),
+                &mut size_total,
+            );
 
             let file_count = rows.len();
             for row in self.iterate(rows) {
@@ -195,13 +208,21 @@ impl<'a> Render<'a> {
 
     /// Adds files to the table, possibly recursively. This is easily
     /// parallelisable, and uses a pool of threads.
-    fn add_files_to_table<'dir>(&self, table: &mut Option<Table<'a>>, rows: &mut Vec<Row>, src: &[File<'dir>], depth: TreeDepth, size_total: &mut u64) {
+    fn add_files_to_table<'dir>(
+        &self,
+        table: &mut Option<Table<'a>>,
+        rows: &mut Vec<Row>,
+        src: &[File<'dir>],
+        depth: TreeDepth,
+        size_total: &mut u64,
+    ) {
         use crate::fs::feature::xattr;
 
         // When --total-size is active in tree mode, eagerly pre-compute
         // directory sizes in parallel.  This populates each File's
         // OnceLock so that render_size() reads cached values.
-        let total_size_active = table.as_ref()
+        let total_size_active = table
+            .as_ref()
             .is_some_and(super::table::Table::total_size_active);
         if total_size_active && self.recurse.is_some() {
             use rayon::prelude::*;
@@ -219,40 +240,49 @@ impl<'a> Render<'a> {
         use super::table::Column;
         let needs_xattr_full = self.opts.xattr;
         let needs_xattr_probe = !needs_xattr_full
-            && self.opts.table.as_ref()
+            && self
+                .opts
+                .table
+                .as_ref()
                 .is_some_and(|t| t.columns.contains(&Column::Permissions));
 
-        let mut file_eggs = src.iter().map(|file| {
-            let mut errors = Vec::new();
-            let mut xattrs = Vec::new();
-            let mut has_xattrs = false;
+        let mut file_eggs = src
+            .iter()
+            .map(|file| {
+                let mut errors = Vec::new();
+                let mut xattrs = Vec::new();
+                let mut has_xattrs = false;
 
-            if xattr::ENABLED && needs_xattr_full {
-                match file.path.attributes() {
-                    Ok(xs) => {
-                        has_xattrs = ! xs.is_empty();
-                        xattrs = xs;
+                if xattr::ENABLED && needs_xattr_full {
+                    match file.path.attributes() {
+                        Ok(xs) => {
+                            has_xattrs = !xs.is_empty();
+                            xattrs = xs;
+                        }
+                        Err(e) => {
+                            errors.push((e, None));
+                        }
                     }
-                    Err(e) => {
-                        errors.push((e, None));
+                } else if xattr::ENABLED && needs_xattr_probe {
+                    match file.path.has_attributes() {
+                        Ok(h) => {
+                            has_xattrs = h;
+                        }
+                        Err(e) => {
+                            error!("Error probing xattr for {}: {e}", file.path.display());
+                        }
                     }
                 }
-            } else if xattr::ENABLED && needs_xattr_probe {
-                match file.path.has_attributes() {
-                    Ok(h) => { has_xattrs = h; }
-                    Err(e) => {
-                        error!("Error probing xattr for {}: {e}", file.path.display());
-                    }
-                }
-            }
 
-            let table_row = table.as_ref()
-                                 .map(|t| t.row_for_file(file, has_xattrs));
+                let table_row = table.as_ref().map(|t| t.row_for_file(file, has_xattrs));
 
-            let mut dir = None;
-            if let Some(r) = self.recurse
-                && file.is_directory() && r.tree && ! r.is_too_deep(depth.0)
-                && ! self.filter.is_pruned(file) {
+                let mut dir = None;
+                if let Some(r) = self.recurse
+                    && file.is_directory()
+                    && r.tree
+                    && !r.is_too_deep(depth.0)
+                    && !self.filter.is_pruned(file)
+                {
                     match file.to_dir() {
                         Ok(d) => {
                             dir = Some(d);
@@ -263,8 +293,15 @@ impl<'a> Render<'a> {
                     }
                 }
 
-            Egg { table_row, xattrs, errors, dir, file }
-        }).collect::<Vec<_>>();
+                Egg {
+                    table_row,
+                    xattrs,
+                    errors,
+                    dir,
+                    file,
+                }
+            })
+            .collect::<Vec<_>>();
 
         self.filter.sort_files(&mut file_eggs, self.vcs);
 
@@ -276,15 +313,17 @@ impl<'a> Render<'a> {
                 t.add_widths(row);
             }
 
-            let file_name = self.file_style.for_file(egg.file, self.theme)
-                                .with_link_paths()
-                                .paint()
-                                .promote();
+            let file_name = self
+                .file_style
+                .for_file(egg.file, self.theme)
+                .with_link_paths()
+                .paint()
+                .promote();
 
             let row = Row {
-                tree:   tree_params,
-                cells:  egg.table_row,
-                name:   file_name,
+                tree: tree_params,
+                cells: egg.table_row,
+                name: file_name,
             };
 
             rows.push(row);
@@ -294,7 +333,8 @@ impl<'a> Render<'a> {
                 if egg.dir.is_none() {
                     // Not expanded (pruned or depth-limited): use total
                     // size if available, otherwise skip.
-                    let total_size_active = table.as_ref()
+                    let total_size_active = table
+                        .as_ref()
                         .is_some_and(super::table::Table::total_size_active);
                     if total_size_active
                         && let crate::fs::fields::Size::Some(s) = egg.file.total_size()
@@ -321,13 +361,19 @@ impl<'a> Render<'a> {
 
                 self.filter.filter_child_files(&mut files);
 
-                if ! files.is_empty() {
+                if !files.is_empty() {
                     for xattr in egg.xattrs {
-                        rows.push(self.render_xattr(&xattr, TreeParams::new(depth.deeper(), false)));
+                        rows.push(
+                            self.render_xattr(&xattr, TreeParams::new(depth.deeper(), false)),
+                        );
                     }
 
                     for (error, path) in errors {
-                        rows.push(self.render_error(&error, TreeParams::new(depth.deeper(), false), path));
+                        rows.push(self.render_error(
+                            &error,
+                            TreeParams::new(depth.deeper(), false),
+                            path,
+                        ));
                     }
 
                     self.add_files_to_table(table, rows, &files, depth.deeper(), size_total);
@@ -337,7 +383,8 @@ impl<'a> Render<'a> {
 
             let count = egg.xattrs.len();
             for (index, xattr) in egg.xattrs.into_iter().enumerate() {
-                let params = TreeParams::new(depth.deeper(), errors.is_empty() && index == count - 1);
+                let params =
+                    TreeParams::new(depth.deeper(), errors.is_empty() && index == count - 1);
                 let r = self.render_xattr(&xattr, params);
                 rows.push(r);
             }
@@ -353,9 +400,9 @@ impl<'a> Render<'a> {
 
     pub fn render_header(&self, header: TableRow) -> Row {
         Row {
-            tree:     TreeParams::new(TreeDepth::root(), false),
-            cells:    Some(header),
-            name:     TextCell::paint_str(self.theme.ui.header, "Name"),
+            tree: TreeParams::new(TreeDepth::root(), false),
+            cells: Some(header),
+            name: TextCell::paint_str(self.theme.ui.header, "Name"),
         }
     }
 
@@ -371,16 +418,31 @@ impl<'a> Render<'a> {
         // TODO: broken_symlink() doesn’t quite seem like the right name for
         // the style that’s being used here. Maybe split it in two?
         let name = TextCell::paint(self.theme.broken_symlink(), error_message);
-        Row { cells: None, name, tree }
+        Row {
+            cells: None,
+            name,
+            tree,
+        }
     }
 
     fn render_xattr(&self, xattr: &Attribute, tree: TreeParams) -> Row {
-        let name = TextCell::paint(self.theme.ui.perms.attribute, format!("{} (len {})", xattr.name, xattr.size));
-        Row { cells: None, name, tree }
+        let name = TextCell::paint(
+            self.theme.ui.perms.attribute,
+            format!("{} (len {})", xattr.name, xattr.size),
+        );
+        Row {
+            cells: None,
+            name,
+            tree,
+        }
     }
 
     pub fn render_file(&self, cells: TableRow, name: TextCell, tree: TreeParams) -> Row {
-        Row { cells: Some(cells), name, tree }
+        Row {
+            cells: Some(cells),
+            name,
+            tree,
+        }
     }
 
     pub fn iterate_with_table(&'a self, table: Table<'a>, rows: Vec<Row>) -> TableIter<'a> {
@@ -402,9 +464,7 @@ impl<'a> Render<'a> {
     }
 }
 
-
 pub struct Row {
-
     /// Vector of cells to display.
     ///
     /// Most of the rows will be used to display files’ metadata, so this will
@@ -421,14 +481,13 @@ pub struct Row {
     pub tree: TreeParams,
 }
 
-
 pub struct TableIter<'a> {
     inner: VecIntoIter<Row>,
     table: Table<'a>,
 
     total_width: usize,
-    tree_style:  Style,
-    tree_trunk:  TreeTrunk,
+    tree_style: Style,
+    tree_trunk: TreeTrunk,
 }
 
 impl Iterator for TableIter<'_> {
@@ -436,15 +495,13 @@ impl Iterator for TableIter<'_> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next().map(|row| {
-            let mut cell =
-                if let Some(cells) = row.cells {
-                    self.table.render(cells)
-                }
-                else {
-                    let mut cell = TextCell::default();
-                    cell.add_spaces(self.total_width);
-                    cell
-                };
+            let mut cell = if let Some(cells) = row.cells {
+                self.table.render(cells)
+            } else {
+                let mut cell = TextCell::default();
+                cell.add_spaces(self.total_width);
+                cell
+            };
 
             for tree_part in self.tree_trunk.new_row(row.tree) {
                 cell.push(self.tree_style.paint(tree_part.ascii_art()), 4);
@@ -452,7 +509,7 @@ impl Iterator for TableIter<'_> {
 
             // If any tree characters have been printed, then add an extra
             // space, which makes the output look much better.
-            if ! row.tree.is_at_root() {
+            if !row.tree.is_at_root() {
                 cell.add_spaces(1);
             }
 
@@ -461,7 +518,6 @@ impl Iterator for TableIter<'_> {
         })
     }
 }
-
 
 pub struct Iter {
     tree_trunk: TreeTrunk,
@@ -482,7 +538,7 @@ impl Iterator for Iter {
 
             // If any tree characters have been printed, then add an extra
             // space, which makes the output look much better.
-            if ! row.tree.is_at_root() {
+            if !row.tree.is_at_root() {
                 cell.add_spaces(1);
             }
 

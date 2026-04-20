@@ -15,7 +15,6 @@ use crate::fs::File;
 use crate::fs::fields::Blocks;
 use crate::fs::filter::SortField;
 
-
 // ── SortFieldDef ────────────────────────────────────────────────
 
 /// Metadata for a single `--sort` field.
@@ -57,7 +56,6 @@ pub struct SortFieldDef {
     pub hidden: bool,
 }
 
-
 // ── Comparator functions ────────────────────────────────────────
 //
 // Each `--sort` value has a dedicated top-level function here.
@@ -91,14 +89,14 @@ fn strip_dot(n: &str) -> &str {
 fn cmp_extension_ci(a: &File<'_>, b: &File<'_>) -> Ordering {
     match a.ext.cmp(&b.ext) {
         Ordering::Equal => natord::compare_ignore_case(&a.name, &b.name),
-        order           => order,
+        order => order,
     }
 }
 
 fn cmp_extension_cs(a: &File<'_>, b: &File<'_>) -> Ordering {
     match a.ext.cmp(&b.ext) {
         Ordering::Equal => natord::compare(&a.name, &b.name),
-        order           => order,
+        order => order,
     }
 }
 
@@ -130,7 +128,7 @@ fn cmp_created(a: &File<'_>, b: &File<'_>) -> Ordering {
 fn cmp_type(a: &File<'_>, b: &File<'_>) -> Ordering {
     match a.type_char().cmp(&b.type_char()) {
         Ordering::Equal => natord::compare(&a.name, &b.name),
-        order           => order,
+        order => order,
     }
 }
 
@@ -142,13 +140,15 @@ fn cmp_inode(a: &File<'_>, b: &File<'_>) -> Ordering {
 
 #[cfg(unix)]
 fn cmp_permissions(a: &File<'_>, b: &File<'_>) -> Ordering {
-    a.permissions_octal().cmp(&b.permissions_octal())
+    a.permissions_octal()
+        .cmp(&b.permissions_octal())
         .then_with(|| natord::compare(&a.name, &b.name))
 }
 
 #[cfg(unix)]
 fn cmp_blocks(a: &File<'_>, b: &File<'_>) -> Ordering {
-    blocks_value(a).cmp(&blocks_value(b))
+    blocks_value(a)
+        .cmp(&blocks_value(b))
         .then_with(|| natord::compare(&a.name, &b.name))
 }
 
@@ -156,18 +156,22 @@ fn cmp_blocks(a: &File<'_>, b: &File<'_>) -> Ordering {
 fn blocks_value(f: &File<'_>) -> u64 {
     match f.blocks() {
         Blocks::Some(n) => n,
-        Blocks::None    => 0,
+        Blocks::None => 0,
     }
 }
 
 #[cfg(unix)]
 fn cmp_hard_links(a: &File<'_>, b: &File<'_>) -> Ordering {
-    a.links().count.cmp(&b.links().count)
+    a.links()
+        .count
+        .cmp(&b.links().count)
         .then_with(|| natord::compare(&a.name, &b.name))
 }
 
 fn cmp_flags(a: &File<'_>, b: &File<'_>) -> Ordering {
-    a.flags().0.cmp(&b.flags().0)
+    a.flags()
+        .0
+        .cmp(&b.flags().0)
         .then_with(|| natord::compare(&a.name, &b.name))
 }
 
@@ -193,13 +197,17 @@ fn cmp_group_cs(a: &File<'_>, b: &File<'_>) -> Ordering {
 
 #[cfg(unix)]
 fn cmp_uid(a: &File<'_>, b: &File<'_>) -> Ordering {
-    a.user().0.cmp(&b.user().0)
+    a.user()
+        .0
+        .cmp(&b.user().0)
         .then_with(|| natord::compare(&a.name, &b.name))
 }
 
 #[cfg(unix)]
 fn cmp_gid(a: &File<'_>, b: &File<'_>) -> Ordering {
-    a.group().0.cmp(&b.group().0)
+    a.group()
+        .0
+        .cmp(&b.group().0)
         .then_with(|| natord::compare(&a.name, &b.name))
 }
 
@@ -210,12 +218,14 @@ fn cmp_vcs_fallback(a: &File<'_>, b: &File<'_>) -> Ordering {
     natord::compare(&a.name, &b.name)
 }
 
-
 // ── User / group name resolution ────────────────────────────────
 
 #[cfg(unix)]
 #[derive(Copy, Clone)]
-enum CaseMode { Sensitive, Insensitive }
+enum CaseMode {
+    Sensitive,
+    Insensitive,
+}
 
 #[cfg(unix)]
 fn compare_user_names(a: &File<'_>, b: &File<'_>, case: CaseMode) -> Ordering {
@@ -223,17 +233,19 @@ fn compare_user_names(a: &File<'_>, b: &File<'_>, case: CaseMode) -> Ordering {
 
     let env = crate::output::table::environment();
     let users = env.lock_users();
-    let name_a = users.get_user_by_uid(a.user().0)
+    let name_a = users
+        .get_user_by_uid(a.user().0)
         .map(|u| u.name().to_string_lossy().into_owned());
-    let name_b = users.get_user_by_uid(b.user().0)
+    let name_b = users
+        .get_user_by_uid(b.user().0)
         .map(|u| u.name().to_string_lossy().into_owned());
     drop(users);
 
     match (name_a, name_b) {
         (Some(na), Some(nb)) => case_compare(&na, &nb, case),
-        (Some(_), None)      => Ordering::Less,
-        (None, Some(_))      => Ordering::Greater,
-        (None, None)         => a.user().0.cmp(&b.user().0),
+        (Some(_), None) => Ordering::Less,
+        (None, Some(_)) => Ordering::Greater,
+        (None, None) => a.user().0.cmp(&b.user().0),
     }
     .then_with(|| natord::compare(&a.name, &b.name))
 }
@@ -244,17 +256,19 @@ fn compare_group_names(a: &File<'_>, b: &File<'_>, case: CaseMode) -> Ordering {
 
     let env = crate::output::table::environment();
     let users = env.lock_users();
-    let name_a = users.get_group_by_gid(a.group().0)
+    let name_a = users
+        .get_group_by_gid(a.group().0)
         .map(|g| g.name().to_string_lossy().into_owned());
-    let name_b = users.get_group_by_gid(b.group().0)
+    let name_b = users
+        .get_group_by_gid(b.group().0)
         .map(|g| g.name().to_string_lossy().into_owned());
     drop(users);
 
     match (name_a, name_b) {
         (Some(na), Some(nb)) => case_compare(&na, &nb, case),
-        (Some(_), None)      => Ordering::Less,
-        (None, Some(_))      => Ordering::Greater,
-        (None, None)         => a.group().0.cmp(&b.group().0),
+        (Some(_), None) => Ordering::Less,
+        (None, Some(_)) => Ordering::Greater,
+        (None, None) => a.group().0.cmp(&b.group().0),
     }
     .then_with(|| natord::compare(&a.name, &b.name))
 }
@@ -262,11 +276,10 @@ fn compare_group_names(a: &File<'_>, b: &File<'_>, case: CaseMode) -> Ordering {
 #[cfg(unix)]
 fn case_compare(a: &str, b: &str, case: CaseMode) -> Ordering {
     match case {
-        CaseMode::Sensitive   => natord::compare(a, b),
+        CaseMode::Sensitive => natord::compare(a, b),
         CaseMode::Insensitive => natord::compare_ignore_case(a, b),
     }
 }
-
 
 // ── The registry ────────────────────────────────────────────────
 
@@ -285,7 +298,6 @@ use crate::fs::filter::SortCase;
 /// and "Name" to different comparators.
 pub static SORT_REGISTRY: &[SortFieldDef] = &[
     // ── Name and extension ───────────────────────────────────
-
     SortFieldDef {
         field: SortField::Name(SortCase::AaBbCc),
         name: "name",
@@ -340,9 +352,7 @@ pub static SORT_REGISTRY: &[SortFieldDef] = &[
         needs_vcs: false,
         hidden: false,
     },
-
     // ── Size and allocation ──────────────────────────────────
-
     SortFieldDef {
         field: SortField::Size,
         name: "size",
@@ -372,9 +382,7 @@ pub static SORT_REGISTRY: &[SortFieldDef] = &[
         needs_vcs: false,
         hidden: false,
     },
-
     // ── Ownership and mode ───────────────────────────────────
-
     #[cfg(unix)]
     SortFieldDef {
         field: SortField::Permissions,
@@ -454,9 +462,7 @@ pub static SORT_REGISTRY: &[SortFieldDef] = &[
         needs_vcs: false,
         hidden: false,
     },
-
     // ── Time ─────────────────────────────────────────────────
-
     SortFieldDef {
         field: SortField::ModifiedDate,
         name: "modified",
@@ -502,9 +508,7 @@ pub static SORT_REGISTRY: &[SortFieldDef] = &[
         needs_vcs: false,
         hidden: false,
     },
-
     // ── VCS ──────────────────────────────────────────────────
-
     SortFieldDef {
         field: SortField::VcsStatusSort,
         name: "vcs",
@@ -514,9 +518,7 @@ pub static SORT_REGISTRY: &[SortFieldDef] = &[
         needs_vcs: true,
         hidden: false,
     },
-
     // ── Miscellaneous ────────────────────────────────────────
-
     #[cfg(unix)]
     SortFieldDef {
         field: SortField::FileInode,
@@ -545,7 +547,6 @@ pub static SORT_REGISTRY: &[SortFieldDef] = &[
         needs_vcs: false,
         hidden: false,
     },
-
     // Hidden alias entries for values accepted by `--sort` but that
     // map to the same SortField as a canonical entry above.  These
     // are lookup-only: they're present so `SortField::from_name`
@@ -554,7 +555,6 @@ pub static SORT_REGISTRY: &[SortFieldDef] = &[
     // the visible `--help` list by checking for an empty `name`;
     // here we use a distinct name-alias convention below instead.
 ];
-
 
 // ── Lookup functions ────────────────────────────────────────────
 
@@ -567,7 +567,8 @@ impl SortFieldDef {
     /// enum outer); this returns the first match, which is always
     /// the authoritative entry for `compare_files` dispatch.
     pub fn for_field(field: SortField) -> &'static SortFieldDef {
-        SORT_REGISTRY.iter()
+        SORT_REGISTRY
+            .iter()
             .find(|d| d.field == field)
             .expect("every SortField variant must have a registry entry")
     }
@@ -577,7 +578,8 @@ impl SortFieldDef {
     ///
     /// Matches both canonical names and aliases.
     pub fn field_from_name(s: &str) -> Option<SortField> {
-        SORT_REGISTRY.iter()
+        SORT_REGISTRY
+            .iter()
             .find(|d| d.name == s || d.aliases.contains(&s))
             .map(|d| d.field)
     }
@@ -595,11 +597,8 @@ impl SortFieldDef {
     ///    (e.g. `.name`, `.Name`), and
     /// 2. all alias names from every entry.
     pub fn all_hidden_names() -> impl Iterator<Item = &'static str> {
-        let hidden_canonicals = SORT_REGISTRY.iter()
-            .filter(|d| d.hidden)
-            .map(|d| d.name);
-        let all_aliases = SORT_REGISTRY.iter()
-            .flat_map(|d| d.aliases.iter().copied());
+        let hidden_canonicals = SORT_REGISTRY.iter().filter(|d| d.hidden).map(|d| d.name);
+        let all_aliases = SORT_REGISTRY.iter().flat_map(|d| d.aliases.iter().copied());
         hidden_canonicals.chain(all_aliases)
     }
 }

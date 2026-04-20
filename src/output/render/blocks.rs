@@ -3,40 +3,39 @@ use nu_ansi_term::Style;
 use crate::fs::fields as f;
 use crate::output::cell::TextCell;
 
-
 impl f::Blocks {
     pub fn render<C: Colours>(&self, colours: &C) -> TextCell {
         match self {
-            Self::Some(blk)  => TextCell::paint(colours.block_count(), blk.to_string()),
-            Self::None       => TextCell::blank(colours.no_blocks()),
+            Self::Some(blk) => TextCell::paint(colours.block_count(), blk.to_string()),
+            Self::None => TextCell::blank(colours.no_blocks()),
         }
     }
 }
-
 
 pub trait Colours {
     fn block_count(&self) -> Style;
     fn no_blocks(&self) -> Style;
 }
 
-
 #[cfg(test)]
 pub mod test {
-    use nu_ansi_term::Style;
     use nu_ansi_term::Color::*;
+    use nu_ansi_term::Style;
 
     use super::Colours;
-    use crate::output::cell::TextCell;
     use crate::fs::fields as f;
-
+    use crate::output::cell::TextCell;
 
     struct TestColours;
 
     impl Colours for TestColours {
-        fn block_count(&self) -> Style { Red.blink() }
-        fn no_blocks(&self)   -> Style { Green.italic() }
+        fn block_count(&self) -> Style {
+            Red.blink()
+        }
+        fn no_blocks(&self) -> Style {
+            Green.italic()
+        }
     }
-
 
     #[test]
     fn blocklessness() {
@@ -45,7 +44,6 @@ pub mod test {
 
         assert_eq!(expected, blox.render(&TestColours));
     }
-
 
     #[test]
     fn blockfulity() {

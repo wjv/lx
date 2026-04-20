@@ -16,9 +16,10 @@ pub trait VcsCache: Sync {
     fn get(&self, path: &Path, prefix_lookup: bool) -> f::VcsFileStatus;
 
     /// The name to display in the column header (e.g. "Git", "JJ").
-    fn header_name(&self) -> &'static str { "VCS" }
+    fn header_name(&self) -> &'static str {
+        "VCS"
+    }
 }
-
 
 #[cfg(feature = "git")]
 pub mod git;
@@ -28,14 +29,15 @@ pub mod git {
     use std::iter::FromIterator;
     use std::path::{Path, PathBuf};
 
-    use crate::fs::fields as f;
     use super::VcsCache;
+    use crate::fs::fields as f;
 
     pub struct GitCache;
 
     impl FromIterator<PathBuf> for GitCache {
         fn from_iter<I>(_iter: I) -> Self
-        where I: IntoIterator<Item=PathBuf>
+        where
+            I: IntoIterator<Item = PathBuf>,
         {
             Self
         }
@@ -52,7 +54,6 @@ pub mod git {
     }
 }
 
-
 #[cfg(feature = "jj")]
 pub mod jj;
 
@@ -60,8 +61,8 @@ pub mod jj;
 pub mod jj {
     use std::path::{Path, PathBuf};
 
-    use crate::fs::fields as f;
     use super::VcsCache;
+    use crate::fs::fields as f;
 
     pub struct JjCache;
 

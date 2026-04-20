@@ -6,22 +6,45 @@ use std::collections::HashMap;
 use super::error::ConfigError;
 use super::store::config;
 
-
 /// The compiled-in format definitions as column name strings.
 fn compiled_formats() -> HashMap<String, Vec<String>> {
     HashMap::from([
-        ("long".into(), vec![
-            "permissions".into(), "size".into(), "user".into(), "modified".into(),
-        ]),
-        ("long2".into(), vec![
-            "permissions".into(), "size".into(), "user".into(), "group".into(),
-            "modified".into(), "vcs".into(),
-        ]),
-        ("long3".into(), vec![
-            "permissions".into(), "links".into(), "size".into(), "blocks".into(),
-            "user".into(), "group".into(), "modified".into(), "changed".into(),
-            "created".into(), "accessed".into(), "vcs".into(),
-        ]),
+        (
+            "long".into(),
+            vec![
+                "permissions".into(),
+                "size".into(),
+                "user".into(),
+                "modified".into(),
+            ],
+        ),
+        (
+            "long2".into(),
+            vec![
+                "permissions".into(),
+                "size".into(),
+                "user".into(),
+                "group".into(),
+                "modified".into(),
+                "vcs".into(),
+            ],
+        ),
+        (
+            "long3".into(),
+            vec![
+                "permissions".into(),
+                "links".into(),
+                "size".into(),
+                "blocks".into(),
+                "user".into(),
+                "group".into(),
+                "modified".into(),
+                "changed".into(),
+                "created".into(),
+                "accessed".into(),
+                "vcs".into(),
+            ],
+        ),
     ])
 }
 
@@ -40,7 +63,6 @@ pub fn resolve_formats() -> HashMap<String, Vec<String>> {
     formats
 }
 
-
 // ── --show-format output ────────────────────────────────────────
 
 /// Print a single format definition as copy-pasteable TOML.
@@ -58,7 +80,11 @@ pub fn show_format(name: &str) -> Result<(), ConfigError> {
     } else {
         let mut names: Vec<_> = formats.keys().collect();
         names.sort();
-        let candidates = names.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ");
+        let candidates = names
+            .iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
         Err(ConfigError::NotFound {
             kind: "format",
             kind_plural: "formats",

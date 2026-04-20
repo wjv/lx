@@ -6,7 +6,6 @@ use thiserror::Error;
 
 use super::schema::CONFIG_VERSION;
 
-
 /// Errors that can occur when loading or resolving configuration.
 #[derive(Debug, Error)]
 pub enum ConfigError {
@@ -27,8 +26,10 @@ pub enum ConfigError {
     },
 
     /// The config file uses an older format and needs upgrading.
-    #[error("config file {path} uses version {version} format.\n\
-             Run `lx --upgrade-config` to migrate it to version {CONFIG_VERSION}.")]
+    #[error(
+        "config file {path} uses version {version} format.\n\
+             Run `lx --upgrade-config` to migrate it to version {CONFIG_VERSION}."
+    )]
     NeedsUpgrade { path: PathBuf, version: String },
 
     /// Personality inheritance forms a cycle.
@@ -74,6 +75,9 @@ pub(super) trait IoResultExt<T> {
 
 impl<T> IoResultExt<T> for std::io::Result<T> {
     fn with_path(self, path: impl Into<PathBuf>) -> Result<T, ConfigError> {
-        self.map_err(|source| ConfigError::Io { path: path.into(), source })
+        self.map_err(|source| ConfigError::Io {
+            path: path.into(),
+            source,
+        })
     }
 }
