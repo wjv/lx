@@ -212,38 +212,42 @@ impl<'a> Render<'a> {
             });
         }
 
-        let has_table = table.is_some();
+        // Decide how much xattr work is needed per file:
+        //  - full:  --extended is active → enumerate all xattrs (listxattr + getxattr per attr)
+        //  - probe: permissions column needs the `@` indicator → single listxattr probe
+        //  - none:  no permissions column, no --extended → skip entirely
+        use super::table::Column;
+        let needs_xattr_full = self.opts.xattr;
+        let needs_xattr_probe = !needs_xattr_full
+            && self.opts.table.as_ref()
+                .is_some_and(|t| t.columns.contains(&Column::Permissions));
+
         let mut file_eggs = src.iter().map(|file| {
             let mut errors = Vec::new();
             let mut xattrs = Vec::new();
+            let mut has_xattrs = false;
 
-            // Only check xattrs when we have a table (long view) — the
-            // results feed the permissions `@` indicator and --extended
-            // display, neither of which exists without a table.  Skipping
-            // this avoids listxattr + getxattr syscalls per file in tree
-            // view without -l.
-            if xattr::ENABLED && (has_table || self.opts.xattr) {
+            if xattr::ENABLED && needs_xattr_full {
                 match file.path.attributes() {
                     Ok(xs) => {
-                        xattrs.extend(xs);
+                        has_xattrs = ! xs.is_empty();
+                        xattrs = xs;
                     }
                     Err(e) => {
-                        if self.opts.xattr {
-                            errors.push((e, None));
-                        }
-                        else {
-                            error!("Error looking up xattr for {}: {e}", file.path.display());
-                        }
+                        errors.push((e, None));
+                    }
+                }
+            } else if xattr::ENABLED && needs_xattr_probe {
+                match file.path.has_attributes() {
+                    Ok(h) => { has_xattrs = h; }
+                    Err(e) => {
+                        error!("Error probing xattr for {}: {e}", file.path.display());
                     }
                 }
             }
 
             let table_row = table.as_ref()
-                                 .map(|t| t.row_for_file(file, ! xattrs.is_empty()));
-
-            if ! self.opts.xattr {
-                xattrs.clear();
-            }
+                                 .map(|t| t.row_for_file(file, has_xattrs));
 
             let mut dir = None;
             if let Some(r) = self.recurse

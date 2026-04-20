@@ -11,6 +11,11 @@ pub const ENABLED: bool = cfg!(any(target_os = "macos", target_os = "linux"));
 
 pub trait FileAttributes {
     fn attributes(&self) -> io::Result<Vec<Attribute>>;
+
+    /// Cheaply check whether the file has any extended attributes,
+    /// without enumerating them.  Uses a single `listxattr` syscall
+    /// with a zero-length buffer.
+    fn has_attributes(&self) -> io::Result<bool>;
 }
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -18,12 +23,20 @@ impl FileAttributes for Path {
     fn attributes(&self) -> io::Result<Vec<Attribute>> {
         list_attrs(&lister::Lister::new(FollowSymlinks::Yes), self)
     }
+
+    fn has_attributes(&self) -> io::Result<bool> {
+        has_attrs(&lister::Lister::new(FollowSymlinks::Yes), self)
+    }
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "linux")))]
 impl FileAttributes for Path {
     fn attributes(&self) -> io::Result<Vec<Attribute>> {
         Ok(Vec::new())
+    }
+
+    fn has_attributes(&self) -> io::Result<bool> {
+        Ok(false)
     }
 }
 
@@ -51,6 +64,23 @@ pub struct Attribute {
     pub size: usize,
 }
 
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+pub fn has_attrs(lister: &lister::Lister, path: &Path) -> io::Result<bool> {
+    use std::cmp::Ordering;
+    use std::ffi::CString;
+
+    let Some(c_path) = path.to_str().and_then(|s| CString::new(s).ok()) else {
+        return Err(io::Error::other("Error: path somehow contained a NUL?"));
+    };
+
+    let bufsize = lister.listxattr_first(&c_path);
+    match bufsize.cmp(&0) {
+        Ordering::Less     => Err(io::Error::last_os_error()),
+        Ordering::Equal    => Ok(false),
+        Ordering::Greater  => Ok(true),
+    }
+}
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub fn list_attrs(lister: &lister::Lister, path: &Path) -> io::Result<Vec<Attribute>> {
