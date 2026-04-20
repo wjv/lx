@@ -61,12 +61,11 @@
 
 
 use std::io::{self, Write};
-use std::mem::MaybeUninit;
 use std::path::PathBuf;
 use std::vec::IntoIter as VecIntoIter;
 
+use log::error;
 use nu_ansi_term::Style;
-use rayon;
 
 use crate::fs::{Dir, File};
 use crate::fs::dir_action::RecurseOptions;
@@ -197,15 +196,11 @@ impl<'a> Render<'a> {
     /// Adds files to the table, possibly recursively. This is easily
     /// parallelisable, and uses a pool of threads.
     fn add_files_to_table<'dir>(&self, table: &mut Option<Table<'a>>, rows: &mut Vec<Row>, src: &[File<'dir>], depth: TreeDepth, size_total: &mut u64) {
-        use std::sync::{Arc, Mutex};
-        use log::*;
         use crate::fs::feature::xattr;
 
         // When --total-size is active in tree mode, eagerly pre-compute
-        // directory sizes in parallel BEFORE the rayon rendering scope.
-        // This populates each File's OnceLock so that render_size() in the
-        // rayon scope reads cached values — no dir_total_size() triggered
-        // during rendering, no deferral or row-patching needed.
+        // directory sizes in parallel.  This populates each File's
+        // OnceLock so that render_size() reads cached values.
         let total_size_active = table.as_ref()
             .is_some_and(super::table::Table::total_size_active);
         if total_size_active && self.recurse.is_some() {
@@ -217,86 +212,49 @@ impl<'a> Render<'a> {
             });
         }
 
-        let mut file_eggs = (0..src.len()).map(|_| MaybeUninit::uninit()).collect::<Vec<_>>();
+        let mut file_eggs = src.iter().map(|file| {
+            let mut errors = Vec::new();
+            let mut xattrs = Vec::new();
 
-        rayon::scope(|s| {
-            let file_eggs = Arc::new(Mutex::new(&mut file_eggs));
-            let table = table.as_ref();
-
-            for (idx, file) in src.iter().enumerate() {
-                let file_eggs = Arc::clone(&file_eggs);
-
-                s.spawn(move |_| {
-                    let mut errors = Vec::new();
-                    let mut xattrs = Vec::new();
-
-                    // There are three “levels” of extended attribute support:
-                    //
-                    // 1. If we’re compiling without that feature, then
-                    //    lx pretends all files have no attributes.
-                    // 2. If the feature is enabled and the --extended flag
-                    //    has been specified, then display an @ in the
-                    //    permissions column for files with attributes, the
-                    //    names of all attributes and their lengths, and any
-                    //    errors encountered when getting them.
-                    // 3. If the --extended flag *hasn’t* been specified, then
-                    //    display the @, but don’t display anything else.
-                    //
-                    // Historically, exa took a stricter approach to (3):
-                    // if an error occurred while checking a file’s xattrs to
-                    // see if it should display the @, it would display that
-                    // error even though the attributes weren’t actually being
-                    // shown! This was confusing, as users were being shown
-                    // errors for something they didn’t explicitly ask for,
-                    // and just cluttered up the output. So now errors aren’t
-                    // printed unless the user passes --extended to signify
-                    // that they want to see them.
-
-                    if xattr::ENABLED {
-                        match file.path.attributes() {
-                            Ok(xs) => {
-                                xattrs.extend(xs);
-                            }
-                            Err(e) => {
-                                if self.opts.xattr {
-                                    errors.push((e, None));
-                                }
-                                else {
-                                    error!("Error looking up xattr for {}: {e}", file.path.display());
-                                }
-                            }
+            if xattr::ENABLED {
+                match file.path.attributes() {
+                    Ok(xs) => {
+                        xattrs.extend(xs);
+                    }
+                    Err(e) => {
+                        if self.opts.xattr {
+                            errors.push((e, None));
+                        }
+                        else {
+                            error!("Error looking up xattr for {}: {e}", file.path.display());
                         }
                     }
-
-                    let table_row = table.as_ref()
-                                         .map(|t| t.row_for_file(file, ! xattrs.is_empty()));
-
-                    if ! self.opts.xattr {
-                        xattrs.clear();
-                    }
-
-                    let mut dir = None;
-                    if let Some(r) = self.recurse
-                        && file.is_directory() && r.tree && ! r.is_too_deep(depth.0)
-                        && ! self.filter.is_pruned(file) {
-                            match file.to_dir() {
-                                Ok(d) => {
-                                    dir = Some(d);
-                                }
-                                Err(e) => {
-                                    errors.push((e, None));
-                                }
-                            }
-                        }
-
-                    let egg = Egg { table_row, xattrs, errors, dir, file };
-                    unsafe { std::ptr::write(file_eggs.lock().unwrap()[idx].as_mut_ptr(), egg) }
-                });
+                }
             }
-        });
 
-        // this is safe because all entries have been initialized above
-        let mut file_eggs = unsafe { std::mem::transmute::<Vec<MaybeUninit<Egg<'_>>>, Vec<Egg<'_>>>(file_eggs) };
+            let table_row = table.as_ref()
+                                 .map(|t| t.row_for_file(file, ! xattrs.is_empty()));
+
+            if ! self.opts.xattr {
+                xattrs.clear();
+            }
+
+            let mut dir = None;
+            if let Some(r) = self.recurse
+                && file.is_directory() && r.tree && ! r.is_too_deep(depth.0)
+                && ! self.filter.is_pruned(file) {
+                    match file.to_dir() {
+                        Ok(d) => {
+                            dir = Some(d);
+                        }
+                        Err(e) => {
+                            errors.push((e, None));
+                        }
+                    }
+                }
+
+            Egg { table_row, xattrs, errors, dir, file }
+        }).collect::<Vec<_>>();
 
         self.filter.sort_files(&mut file_eggs, self.vcs);
 
