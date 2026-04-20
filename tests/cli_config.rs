@@ -853,6 +853,76 @@ fn no_key_true_equivalent_to_key_false() {
     );
 }
 
+// ── TOML array syntax for string settings ──────────────────────
+
+/// `ignore = ["*.tmp", "*.bak"]` should work the same as
+/// `ignore = "*.tmp|*.bak"`.
+#[test]
+fn config_ignore_toml_array() {
+    let work = tempdir().expect("failed to create workdir");
+    fs::write(work.path().join("keep.txt"), "").unwrap();
+    fs::write(work.path().join("notes.tmp"), "").unwrap();
+    fs::write(work.path().join("old.bak"), "").unwrap();
+
+    let (_dir, mut cmd) = lx_with_config(r#"
+        [personality.lx]
+        ignore = ["*.tmp", "*.bak"]
+    "#);
+    cmd.args(["-1"])
+        .arg(work.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("keep.txt"))
+        .stdout(predicate::str::contains("notes.tmp").not())
+        .stdout(predicate::str::contains("old.bak").not());
+}
+
+/// Pipe-separated string form still works alongside the array form.
+#[test]
+fn config_ignore_pipe_string_still_works() {
+    let work = tempdir().expect("failed to create workdir");
+    fs::write(work.path().join("keep.txt"), "").unwrap();
+    fs::write(work.path().join("notes.tmp"), "").unwrap();
+    fs::write(work.path().join("old.bak"), "").unwrap();
+
+    let (_dir, mut cmd) = lx_with_config(r#"
+        [personality.lx]
+        ignore = "*.tmp|*.bak"
+    "#);
+    cmd.args(["-1"])
+        .arg(work.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("keep.txt"))
+        .stdout(predicate::str::contains("notes.tmp").not())
+        .stdout(predicate::str::contains("old.bak").not());
+}
+
+/// `prune = ["target", "node_modules"]` should work as a TOML array.
+#[test]
+fn config_prune_toml_array() {
+    let work = tempdir().expect("failed to create workdir");
+    fs::create_dir_all(work.path().join("src")).unwrap();
+    fs::create_dir_all(work.path().join("target/debug")).unwrap();
+    fs::create_dir_all(work.path().join("node_modules/foo")).unwrap();
+    fs::write(work.path().join("src/main.rs"), "").unwrap();
+    fs::write(work.path().join("target/debug/binary"), "").unwrap();
+    fs::write(work.path().join("node_modules/foo/index.js"), "").unwrap();
+
+    let (_dir, mut cmd) = lx_with_config(r#"
+        [personality.lx]
+        prune = ["target", "node_modules"]
+    "#);
+    cmd.args(["-T"])
+        .arg(work.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("main.rs"))
+        .stdout(predicate::str::contains("debug").not())
+        .stdout(predicate::str::contains("index.js").not());
+}
+
+
 /// `tree = false` has no negation counterpart (`--no-tree` doesn't
 /// exist), so `false` should be a silent no-op rather than an error.
 #[test]
