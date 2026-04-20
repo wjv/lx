@@ -103,7 +103,7 @@ fn cmp_extension_cs(a: &File<'_>, b: &File<'_>) -> Ordering {
 }
 
 fn cmp_size(a: &File<'_>, b: &File<'_>) -> Ordering {
-    a.metadata.len().cmp(&b.metadata.len())
+    a.metadata().len().cmp(&b.metadata().len())
 }
 
 fn cmp_modified(a: &File<'_>, b: &File<'_>) -> Ordering {
@@ -137,7 +137,7 @@ fn cmp_type(a: &File<'_>, b: &File<'_>) -> Ordering {
 #[cfg(unix)]
 fn cmp_inode(a: &File<'_>, b: &File<'_>) -> Ordering {
     use std::os::unix::fs::MetadataExt;
-    a.metadata.ino().cmp(&b.metadata.ino())
+    a.metadata().ino().cmp(&b.metadata().ino())
 }
 
 #[cfg(unix)]

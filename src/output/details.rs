@@ -212,11 +212,17 @@ impl<'a> Render<'a> {
             });
         }
 
+        let has_table = table.is_some();
         let mut file_eggs = src.iter().map(|file| {
             let mut errors = Vec::new();
             let mut xattrs = Vec::new();
 
-            if xattr::ENABLED {
+            // Only check xattrs when we have a table (long view) — the
+            // results feed the permissions `@` indicator and --extended
+            // display, neither of which exists without a table.  Skipping
+            // this avoids listxattr + getxattr syscalls per file in tree
+            // view without -l.
+            if xattr::ENABLED && (has_table || self.opts.xattr) {
                 match file.path.attributes() {
                     Ok(xs) => {
                         xattrs.extend(xs);
@@ -294,7 +300,7 @@ impl<'a> Render<'a> {
                 }
                 // Expanded directories: children account for themselves.
             } else if egg.file.is_file() {
-                *size_total += egg.file.metadata.len();
+                *size_total += egg.file.metadata().len();
             }
 
             if let Some(ref dir) = egg.dir {

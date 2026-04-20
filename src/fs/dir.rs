@@ -10,6 +10,12 @@ use log::*;
 use crate::fs::File;
 
 
+/// A directory entry: path plus the file type obtained cheaply from `readdir`.
+pub struct DirEntry {
+    pub path: PathBuf,
+    pub file_type: Option<std::fs::FileType>,
+}
+
 /// A **Dir** provides a cached list of the file paths in a directory that’s
 /// being listed.
 ///
@@ -19,7 +25,7 @@ use crate::fs::File;
 pub struct Dir {
 
     /// A vector of the files that have been read from this directory.
-    contents: Vec<PathBuf>,
+    contents: Vec<DirEntry>,
 
     /// The path that was read.
     pub path: PathBuf,
@@ -39,7 +45,10 @@ impl Dir {
         info!("Reading directory {}", path.display());
 
         let contents = fs::read_dir(&path)?
-                          .map(|result| result.map(|entry| entry.path()))
+                          .map(|result| result.map(|entry| {
+                              let file_type = entry.file_type().ok();
+                              DirEntry { path: entry.path(), file_type }
+                          }))
                           .collect::<Result<_, _>>()?;
 
         Ok(Self { contents, path })
@@ -60,7 +69,7 @@ impl Dir {
 
     /// Whether this directory contains a file with the given path.
     pub fn contains(&self, path: &Path) -> bool {
-        self.contents.iter().any(|p| p.as_path() == path)
+        self.contents.iter().any(|e| e.path.as_path() == path)
     }
 
     /// Append a path onto the path specified by this directory.
@@ -73,8 +82,8 @@ impl Dir {
 /// Iterator over reading the contents of a directory as `File` objects.
 pub struct Files<'dir, 'ig> {
 
-    /// The internal iterator over the paths that have been read already.
-    inner: SliceIter<'dir, PathBuf>,
+    /// The internal iterator over the entries that have been read already.
+    inner: SliceIter<'dir, DirEntry>,
 
     /// The directory that begat those paths.
     dir: &'dir Dir,
@@ -105,7 +114,8 @@ impl<'dir> Files<'dir, '_> {
     /// varies depending on the dotfile visibility flag)
     fn next_visible_file(&mut self) -> Option<Result<File<'dir>, (PathBuf, io::Error)>> {
         loop {
-            if let Some(path) = self.inner.next() {
+            if let Some(entry) = self.inner.next() {
+                let path = &entry.path;
                 let filename = File::filename(path);
                 if ! self.dotfiles && filename.starts_with('.') {
                     continue;
@@ -125,12 +135,15 @@ impl<'dir> Files<'dir, '_> {
                     }
 
                     // Hide VCS metadata directories for compiled-in backends.
-                    if path.is_dir() && is_vcs_dir(&filename) {
+                    // Use the cached file type from readdir if available.
+                    let is_dir = entry.file_type
+                        .map_or_else(|| path.is_dir(), |ft| ft.is_dir());
+                    if is_dir && is_vcs_dir(&filename) {
                         continue;
                     }
                 }
 
-                return Some(File::from_args(path.clone(), self.dir, filename)
+                return Some(File::from_args(path.clone(), self.dir, filename, entry.file_type)
                                  .map_err(|e| (path.clone(), e)))
             }
 

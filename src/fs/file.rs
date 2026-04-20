@@ -53,12 +53,19 @@ pub struct File<'dir> {
     /// path (following a symlink).
     pub path: PathBuf,
 
-    /// A cached `metadata` (`stat`) call for this file.
+    /// The file type, obtained cheaply from `readdir` (via `d_type`) or
+    /// from a stat call for top-level arguments.  Always available without
+    /// a stat call when the file was discovered via directory iteration.
+    file_type: std::fs::FileType,
+
+    /// A lazily-cached `metadata` (`stat`) call for this file.
     ///
-    /// This too is queried multiple times, and is *not* cached by the OS, as
+    /// This is queried multiple times, and is *not* cached by the OS, as
     /// it could easily change between invocations — but lx is so short-lived
-    /// it’s better to just cache it.
-    pub metadata: std::fs::Metadata,
+    /// it’s better to just cache it.  Using `OnceLock` avoids the cost of
+    /// a stat call when only the file type is needed (e.g. tree view
+    /// without `-l`).
+    metadata: std::sync::OnceLock<std::fs::Metadata>,
 
     /// A reference to the directory that contains this file, if any.
     ///
@@ -84,19 +91,28 @@ pub struct File<'dir> {
 }
 
 impl<'dir> File<'dir> {
-    pub fn from_args<PD, FN>(path: PathBuf, parent_dir: PD, filename: FN) -> io::Result<File<'dir>>
+    pub fn from_args<PD, FN>(path: PathBuf, parent_dir: PD, filename: FN, known_file_type: Option<std::fs::FileType>) -> io::Result<File<'dir>>
     where PD: Into<Option<&'dir Dir>>,
           FN: Into<Option<String>>
     {
         let parent_dir = parent_dir.into();
         let name       = filename.into().unwrap_or_else(|| File::filename(&path));
         let ext        = File::ext(&path);
-
-        debug!("Statting file {}", path.display());
-        let metadata   = std::fs::symlink_metadata(&path)?;
         let is_all_all = false;
 
-        Ok(File { name, ext, path, metadata, parent_dir, is_all_all, cached_total_size: std::sync::OnceLock::new() })
+        // If the caller provides a file type (from readdir's d_type), use
+        // it directly and defer the full stat call.  Otherwise stat now to
+        // obtain both file type and metadata eagerly.
+        let (file_type, metadata) = if let Some(ft) = known_file_type {
+            (ft, std::sync::OnceLock::new())
+        } else {
+            debug!("Statting file {}", path.display());
+            let md = std::fs::symlink_metadata(&path)?;
+            let ft = md.file_type();
+            (ft, std::sync::OnceLock::from(md))
+        };
+
+        Ok(File { name, ext, path, file_type, metadata, parent_dir, is_all_all, cached_total_size: std::sync::OnceLock::new() })
     }
 
     pub fn new_aa_current(parent_dir: &'dir Dir) -> io::Result<File<'dir>> {
@@ -104,22 +120,24 @@ impl<'dir> File<'dir> {
         let ext        = File::ext(&path);
 
         debug!("Statting file {}", path.display());
-        let metadata   = std::fs::symlink_metadata(&path)?;
+        let md         = std::fs::symlink_metadata(&path)?;
+        let file_type  = md.file_type();
         let is_all_all = true;
         let parent_dir = Some(parent_dir);
 
-        Ok(File { path, parent_dir, metadata, ext, name: ".".into(), is_all_all, cached_total_size: std::sync::OnceLock::new() })
+        Ok(File { path, parent_dir, file_type, metadata: std::sync::OnceLock::from(md), ext, name: ".".into(), is_all_all, cached_total_size: std::sync::OnceLock::new() })
     }
 
     pub fn new_aa_parent(path: PathBuf, parent_dir: &'dir Dir) -> io::Result<File<'dir>> {
         let ext        = File::ext(&path);
 
         debug!("Statting file {}", path.display());
-        let metadata   = std::fs::symlink_metadata(&path)?;
+        let md         = std::fs::symlink_metadata(&path)?;
+        let file_type  = md.file_type();
         let is_all_all = true;
         let parent_dir = Some(parent_dir);
 
-        Ok(File { path, parent_dir, metadata, ext, name: "..".into(), is_all_all, cached_total_size: std::sync::OnceLock::new() })
+        Ok(File { path, parent_dir, file_type, metadata: std::sync::OnceLock::from(md), ext, name: "..".into(), is_all_all, cached_total_size: std::sync::OnceLock::new() })
     }
 
     /// A file’s name is derived from its string. This needs to handle directories
@@ -152,9 +170,22 @@ impl<'dir> File<'dir> {
             .to_ascii_lowercase())
     }
 
+    /// Lazily obtain the file's full metadata, performing a stat call only
+    /// on the first access.  Panics if the stat call fails — callers that
+    /// construct `File` from a directory iterator provide the file type
+    /// cheaply, and metadata is only needed for column rendering where
+    /// the file is known to exist.
+    pub fn metadata(&self) -> &std::fs::Metadata {
+        self.metadata.get_or_init(|| {
+            debug!("Lazy-statting file {}", self.path.display());
+            std::fs::symlink_metadata(&self.path)
+                .expect("metadata for known-existing file")
+        })
+    }
+
     /// Whether this file is a directory on the filesystem.
     pub fn is_directory(&self) -> bool {
-        self.metadata.is_dir()
+        self.file_type.is_dir()
     }
 
     /// Detect whether this directory is a VCS repository root.
@@ -232,7 +263,7 @@ impl<'dir> File<'dir> {
     /// Whether this file is a regular file on the filesystem — that is, not a
     /// directory, a link, or anything else treated specially.
     pub fn is_file(&self) -> bool {
-        self.metadata.is_file()
+        self.file_type.is_file()
     }
 
     /// Whether this file is both a regular file *and* executable for the
@@ -241,47 +272,48 @@ impl<'dir> File<'dir> {
     #[cfg(unix)]
     pub fn is_executable_file(&self) -> bool {
         let bit = modes::USER_EXECUTE;
-        self.is_file() && (self.metadata.permissions().mode() & bit) == bit
+        self.is_file() && (self.metadata().permissions().mode() & bit) == bit
     }
 
     /// Whether this file is a symlink on the filesystem.
     pub fn is_link(&self) -> bool {
-        self.metadata.file_type().is_symlink()
+        self.file_type.is_symlink()
     }
 
-    /// Dereference this file if it is a symlink: replace its metadata with
-    /// the target's metadata (using `std::fs::metadata` which follows
+    /// Dereference this file if it is a symlink: replace its file type and
+    /// metadata with the target's (using `std::fs::metadata` which follows
     /// symlinks).  No-op if the file is not a symlink or the target cannot
     /// be stat'd.
     pub fn deref_link(&mut self) {
         if self.is_link()
             && let Ok(target_meta) = std::fs::metadata(&self.path) {
-                self.metadata = target_meta;
+                self.file_type = target_meta.file_type();
+                self.metadata = std::sync::OnceLock::from(target_meta);
             }
     }
 
     /// Whether this file is a named pipe on the filesystem.
     #[cfg(unix)]
     pub fn is_pipe(&self) -> bool {
-        self.metadata.file_type().is_fifo()
+        self.file_type.is_fifo()
     }
 
     /// Whether this file is a char device on the filesystem.
     #[cfg(unix)]
     pub fn is_char_device(&self) -> bool {
-        self.metadata.file_type().is_char_device()
+        self.file_type.is_char_device()
     }
 
     /// Whether this file is a block device on the filesystem.
     #[cfg(unix)]
     pub fn is_block_device(&self) -> bool {
-        self.metadata.file_type().is_block_device()
+        self.file_type.is_block_device()
     }
 
     /// Whether this file is a socket on the filesystem.
     #[cfg(unix)]
     pub fn is_socket(&self) -> bool {
-        self.metadata.file_type().is_socket()
+        self.file_type.is_socket()
     }
 
 
@@ -333,7 +365,8 @@ impl<'dir> File<'dir> {
             Ok(metadata) => {
                 let ext  = File::ext(&path);
                 let name = File::filename(&path);
-                let file = File { parent_dir: None, path, ext, metadata, name, is_all_all: false, cached_total_size: std::sync::OnceLock::new() };
+                let file_type = metadata.file_type();
+                let file = File { parent_dir: None, path, ext, file_type, metadata: std::sync::OnceLock::from(metadata), name, is_all_all: false, cached_total_size: std::sync::OnceLock::new() };
                 FileTarget::Ok(Box::new(file))
             }
             Err(e) => {
@@ -352,7 +385,7 @@ impl<'dir> File<'dir> {
     /// more attentively.
     #[cfg(unix)]
     pub fn links(&self) -> f::Links {
-        let count = self.metadata.nlink();
+        let count = self.metadata().nlink();
 
         f::Links {
             count,
@@ -363,7 +396,7 @@ impl<'dir> File<'dir> {
     /// This file’s inode.
     #[cfg(unix)]
     pub fn inode(&self) -> f::Inode {
-        f::Inode(self.metadata.ino())
+        f::Inode(self.metadata().ino())
     }
 
     /// This file’s number of filesystem blocks.
@@ -372,7 +405,7 @@ impl<'dir> File<'dir> {
     #[cfg(unix)]
     pub fn blocks(&self) -> f::Blocks {
         if self.is_file() || self.is_link() {
-            f::Blocks::Some(self.metadata.blocks())
+            f::Blocks::Some(self.metadata().blocks())
         }
         else {
             f::Blocks::None
@@ -383,14 +416,14 @@ impl<'dir> File<'dir> {
     #[cfg(target_os = "macos")]
     pub fn flags(&self) -> f::FileFlags {
         use std::os::darwin::fs::MetadataExt;
-        f::FileFlags(self.metadata.st_flags())
+        f::FileFlags(self.metadata().st_flags())
     }
 
     /// BSD/FreeBSD file flags (from `st_flags`).
     #[cfg(target_os = "freebsd")]
     pub fn flags(&self) -> f::FileFlags {
         use std::os::freebsd::fs::MetadataExt;
-        f::FileFlags(self.metadata.st_flags())
+        f::FileFlags(self.metadata().st_flags())
     }
 
     /// Linux file attributes via `ioctl(FS_IOC_GETFLAGS)`.
@@ -425,13 +458,13 @@ impl<'dir> File<'dir> {
     /// The ID of the user that own this file.
     #[cfg(unix)]
     pub fn user(&self) -> f::User {
-        f::User(self.metadata.uid())
+        f::User(self.metadata().uid())
     }
 
     /// The ID of the group that owns this file.
     #[cfg(unix)]
     pub fn group(&self) -> f::Group {
-        f::Group(self.metadata.gid())
+        f::Group(self.metadata().gid())
     }
 
     /// This file’s size, if it’s a regular file.
@@ -448,7 +481,7 @@ impl<'dir> File<'dir> {
             f::Size::None
         }
         else if self.is_char_device() || self.is_block_device() {
-            let device_ids = self.metadata.rdev().to_be_bytes();
+            let device_ids = self.metadata().rdev().to_be_bytes();
 
             // In C-land, getting the major and minor device IDs is done with
             // preprocessor macros called `major` and `minor` that depend on
@@ -460,7 +493,7 @@ impl<'dir> File<'dir> {
             })
         }
         else {
-            f::Size::Some(self.metadata.len())
+            f::Size::Some(self.metadata().len())
         }
     }
 
@@ -470,7 +503,7 @@ impl<'dir> File<'dir> {
             f::Size::None
         }
         else {
-            f::Size::Some(self.metadata.len())
+            f::Size::Some(self.metadata().len())
         }
     }
 
@@ -481,7 +514,7 @@ impl<'dir> File<'dir> {
         if self.is_directory() {
             let size = *self.cached_total_size.get_or_init(|| {
                 #[cfg(unix)]
-                let key = Some((self.metadata.dev(), self.metadata.ino()));
+                let key = Some((self.metadata().dev(), self.metadata().ino()));
                 #[cfg(not(unix))]
                 let key = None;
                 Self::dir_total_size(&self.path, key)
@@ -549,13 +582,13 @@ impl<'dir> File<'dir> {
 
     /// This file’s last modified timestamp, if available on this platform.
     pub fn modified_time(&self) -> Option<SystemTime> {
-        self.metadata.modified().ok()
+        self.metadata().modified().ok()
     }
 
     /// This file’s last changed timestamp, if available on this platform.
     #[cfg(unix)]
     pub fn changed_time(&self) -> Option<SystemTime> {
-        let (mut sec, mut nanosec) = (self.metadata.ctime(), self.metadata.ctime_nsec());
+        let (mut sec, mut nanosec) = (self.metadata().ctime(), self.metadata().ctime_nsec());
 
         if sec < 0 {
             if nanosec > 0 {
@@ -579,12 +612,12 @@ impl<'dir> File<'dir> {
 
     /// This file’s last accessed timestamp, if available on this platform.
     pub fn accessed_time(&self) -> Option<SystemTime> {
-        self.metadata.accessed().ok()
+        self.metadata().accessed().ok()
     }
 
     /// This file’s created timestamp, if available on this platform.
     pub fn created_time(&self) -> Option<SystemTime> {
-        self.metadata.created().ok()
+        self.metadata().created().ok()
     }
 
     /// This file’s ‘type’.
@@ -639,13 +672,13 @@ impl<'dir> File<'dir> {
     /// the symbolic and octal views sort numerically on this value.
     #[cfg(unix)]
     pub fn permissions_octal(&self) -> u32 {
-        self.metadata.mode() & 0o7777
+        self.metadata().mode() & 0o7777
     }
 
     /// This file’s permissions, with flags for each bit.
     #[cfg(unix)]
     pub fn permissions(&self) -> f::Permissions {
-        let bits = self.metadata.mode();
+        let bits = self.metadata().mode();
         let has_bit = |bit| bits & bit == bit;
 
         f::Permissions {
@@ -669,7 +702,7 @@ impl<'dir> File<'dir> {
 
     #[cfg(windows)]
     pub fn attributes(&self) -> f::Attributes {
-        let bits = self.metadata.file_attributes();
+        let bits = self.metadata().file_attributes();
         let has_bit = |bit| bits & bit == bit;
 
         // https://docs.microsoft.com/en-us/windows/win32/fileio/file-attribute-constants

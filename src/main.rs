@@ -558,7 +558,7 @@ impl Lx {
         let mut exit_status = 0;
 
         for file_path in &self.input_paths {
-            match File::from_args(PathBuf::from(file_path), None, None) {
+            match File::from_args(PathBuf::from(file_path), None, None, None) {
                 Err(e) => {
                     exit_status = 2;
                     writeln!(io::stderr(), "{}: {e}", file_path.to_string_lossy())?;
@@ -684,7 +684,7 @@ impl Lx {
         let sum_file_sizes = |files: &[File<'_>]| -> u64 {
             files.iter()
                 .filter(|f| f.is_file())
-                .map(|f| f.metadata.len())
+                .map(|f| f.metadata().len())
                 .sum()
         };
 
