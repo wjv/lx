@@ -5,6 +5,22 @@ All notable changes to lx are documented here. lx is forked from
 
 ## [Unreleased] — 0.10.0
 
+### Changed
+
+- **Tree traversal performance overhaul.**  Deep trees are 2–7×
+  faster than before and 2–4× faster than eza at every depth.
+  - Replaced per-file rayon thread spawning with sequential
+    traversal.  Eliminates thread-pool thrashing on deep trees.
+    The `--total-size` parallel pre-computation is retained.
+  - File metadata is now lazy: stat calls are deferred until a
+    column renderer actually needs them.  File type comes from
+    `readdir` for free.  Tree view without `-l` makes zero stat
+    calls.
+  - Three-tier xattr strategy: *skip* when no permissions column
+    is active, *probe* (single syscall for the `@` indicator),
+    or *full* (only with `--extended`).
+- TOML array syntax for pipe-separated config values
+  (e.g. `ignore = ["*.tmp", "*.bak"]`).  Fixes wjv/lx#6.
 
 ## [0.9.0] — 2026-04-19
 
