@@ -1,7 +1,6 @@
-use crate::options::{flags, vars, Vars, OptionsError};
 use crate::options::parser::MatchedFlags;
-use crate::theme::{Options, UseColours, GradientFlags, Definitions};
-
+use crate::options::{OptionsError, Vars, flags, vars};
+use crate::theme::{Definitions, GradientFlags, Options, UseColours};
 
 impl Options {
     pub fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
@@ -9,18 +8,21 @@ impl Options {
         let gradient = GradientFlags::deduce(matches);
 
         let definitions = if use_colours == UseColours::Never {
-                Definitions::default()
-            }
-            else {
-                Definitions::deduce(vars)
-            };
+            Definitions::default()
+        } else {
+            Definitions::deduce(vars)
+        };
 
         let theme_override = matches.get(flags::THEME).map(String::from);
 
-        Ok(Self { use_colours, gradient, definitions, theme_override })
+        Ok(Self {
+            use_colours,
+            gradient,
+            definitions,
+            theme_override,
+        })
     }
 }
-
 
 impl UseColours {
     fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
@@ -35,14 +37,13 @@ impl UseColours {
 
         // Clap validates the value, so this match is exhaustive over accepted inputs.
         Ok(match word {
-            "always"                => Self::Always,
-            "auto" | "automatic"    => Self::Automatic,
-            "never"                 => Self::Never,
-            _                       => unreachable!("Clap rejects invalid --colour values"),
+            "always" => Self::Always,
+            "auto" | "automatic" => Self::Automatic,
+            "never" => Self::Never,
+            _ => unreachable!("Clap rejects invalid --colour values"),
         })
     }
 }
-
 
 impl GradientFlags {
     /// Deduce per-column gradient on/off from the CLI flags.
@@ -93,13 +94,13 @@ fn parse_gradient_value(s: &str) -> GradientFlags {
             "date" | "timestamp" => {
                 flags.modified = true;
                 flags.accessed = true;
-                flags.changed  = true;
-                flags.created  = true;
+                flags.changed = true;
+                flags.created = true;
             }
             "modified" => flags.modified = true,
             "accessed" => flags.accessed = true,
-            "changed"  => flags.changed  = true,
-            "created"  => flags.created  = true,
+            "changed" => flags.changed = true,
+            "created" => flags.created = true,
             // GradientParser already rejected anything else; this is
             // unreachable in practice.
             _ => {}
@@ -108,14 +109,14 @@ fn parse_gradient_value(s: &str) -> GradientFlags {
     flags
 }
 
-
 impl Definitions {
     fn deduce<V: Vars>(vars: &V) -> Self {
-        let ls = vars.get(vars::LS_COLORS).map(|e| e.to_string_lossy().to_string());
+        let ls = vars
+            .get(vars::LS_COLORS)
+            .map(|e| e.to_string_lossy().to_string());
         Self { ls }
     }
 }
-
 
 #[cfg(test)]
 mod terminal_test {
@@ -168,19 +169,15 @@ mod terminal_test {
     // Test impl that just returns the value it has.
     impl Vars for MockVars {
         fn get(&self, name: &'static str) -> Option<OsString> {
-            if name == vars::LS_COLORS && ! self.ls.is_empty() {
+            if name == vars::LS_COLORS && !self.ls.is_empty() {
                 Some(OsString::from(self.ls))
-            }
-            else if name == vars::NO_COLOR && ! self.no_color.is_empty() {
+            } else if name == vars::NO_COLOR && !self.no_color.is_empty() {
                 Some(OsString::from(self.no_color))
-            }
-            else {
+            } else {
                 None
             }
         }
     }
-
-
 
     // Default
     test!(empty:         UseColours <- [], MockVars::empty();                     Ok(UseColours::Automatic));
@@ -200,7 +197,10 @@ mod terminal_test {
     #[test]
     fn no_u_error() {
         let cmd = crate::options::parser::build_command();
-        assert!(cmd.try_get_matches_from(["lx", "--color=upstream"]).is_err());
+        assert!(
+            cmd.try_get_matches_from(["lx", "--color=upstream"])
+                .is_err()
+        );
     }
     #[test]
     fn u_error() {
@@ -218,7 +218,6 @@ mod terminal_test {
     // parse time with a deprecation pointer to --gradient.  See
     // tests/cli_basics.rs::colour_scale_deprecated for the
     // user-facing assertion.
-
 
     // --gradient and --smooth
     test!(gf_default:     GradientFlags <- [];                          GradientFlags::ALL);

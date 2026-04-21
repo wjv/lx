@@ -5,7 +5,7 @@ use crate::output::file_name::Colours as FileNameColours;
 use crate::output::render;
 
 mod ui_styles;
-pub use self::ui_styles::{UiStyles, DateAge};
+pub use self::ui_styles::{DateAge, UiStyles};
 
 mod lsc;
 pub use self::lsc::LSColors;
@@ -19,10 +19,8 @@ mod oklab;
 mod smooth;
 pub use self::smooth::age_to_position;
 
-
 #[derive(PartialEq, Eq, Debug)]
 pub struct Options {
-
     pub use_colours: UseColours,
 
     pub gradient: GradientFlags,
@@ -51,11 +49,11 @@ pub struct Options {
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 #[allow(clippy::struct_excessive_bools)] // one bool per gradient column is the natural shape
 pub struct GradientFlags {
-    pub size:     bool,
+    pub size: bool,
     pub modified: bool,
     pub accessed: bool,
-    pub changed:  bool,
-    pub created:  bool,
+    pub changed: bool,
+    pub created: bool,
 
     /// Whether to smooth the gradients into a 256-stop
     /// perceptually-uniform interpolation between the theme's
@@ -69,24 +67,24 @@ impl GradientFlags {
     /// All gradients on.  This is the default — themes that ship
     /// gradient values are designed to show them.
     pub const ALL: Self = Self {
-        size:     true,
+        size: true,
         modified: true,
         accessed: true,
-        changed:  true,
-        created:  true,
-        smooth:   false,
+        changed: true,
+        created: true,
+        smooth: false,
     };
 
     /// All gradients off.  Each column collapses to its theme's
     /// flat colour (`size.major`/`size.minor` for size, the
     /// per-column `date_*.flat` for each timestamp).
     pub const NONE: Self = Self {
-        size:     false,
+        size: false,
         modified: false,
         accessed: false,
-        changed:  false,
-        created:  false,
-        smooth:   false,
+        changed: false,
+        created: false,
+        smooth: false,
     };
 }
 
@@ -105,7 +103,6 @@ impl Default for GradientFlags {
 /// this check and only displays colours when they can be truly appreciated.
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub enum UseColours {
-
     /// Display them even when output isn’t going to a terminal.
     Always,
 
@@ -121,15 +118,13 @@ pub struct Definitions {
     pub ls: Option<String>,
 }
 
-
 pub struct Theme {
     pub ui: UiStyles,
     pub exts: Box<dyn FileColours>,
 }
 
 impl Options {
-
-    #[allow(trivial_casts)]   // the `as Box<_>` stuff below warns about this for some reason
+    #[allow(trivial_casts)] // the `as Box<_>` stuff below warns about this for some reason
     pub fn to_theme(&self, isatty: bool) -> Result<Theme, ThemeError> {
         // Validate the theme name early — even when colours are off,
         // the user should know if they've misspelled a theme name.
@@ -139,7 +134,9 @@ impl Options {
             Self::validate_theme_name(name, cfg)?;
         }
 
-        if self.use_colours == UseColours::Never || (self.use_colours == UseColours::Automatic && ! isatty) {
+        if self.use_colours == UseColours::Never
+            || (self.use_colours == UseColours::Automatic && !isatty)
+        {
             let ui = UiStyles::plain();
             let exts = Box::new(NoFileColours);
             return Ok(Theme { ui, exts });
@@ -210,7 +207,9 @@ impl Options {
             } else if let Some(theme) = cfg.theme.get(tname) {
                 current = theme.inherits.clone();
             } else {
-                return Err(ThemeError::Unknown { name: tname.clone() });
+                return Err(ThemeError::Unknown {
+                    name: tname.clone(),
+                });
             }
         }
 
@@ -231,7 +230,7 @@ impl Options {
         exts: &mut ExtensionMappings,
     ) -> Result<(), ThemeError> {
         let Some(ref name) = self.theme_override else {
-            return Ok(());  // no theme selected
+            return Ok(()); // no theme selected
         };
 
         // Build the inheritance chain: [leaf, ..., root].
@@ -275,7 +274,9 @@ impl Options {
                 // Should not reach here — validate_theme_name catches
                 // unknown names early — but be defensive in case the
                 // chain reaches an inherits target that isn't defined.
-                return Err(ThemeError::Unknown { name: tname.clone() });
+                return Err(ThemeError::Unknown {
+                    name: tname.clone(),
+                });
             }
         }
 
@@ -361,7 +362,6 @@ impl Options {
     }
 }
 
-
 /// Specificity bucket for a theme key.  [`Self::apply_theme_def`]
 /// sorts theme entries by this value before applying them, so
 /// more generic setters run before more specific ones and the
@@ -401,7 +401,11 @@ fn theme_key_precedence(key: &str) -> u8 {
 
     // `date-<col>-<tier>` → most specific.
     for col in COLUMNS {
-        if rest.strip_prefix(col).and_then(|r| r.strip_prefix('-')).is_some() {
+        if rest
+            .strip_prefix(col)
+            .and_then(|r| r.strip_prefix('-'))
+            .is_some()
+        {
             return 3;
         }
     }
@@ -453,13 +457,9 @@ mod theme_key_precedence_test {
         // must put generic first, specific last.
         assert!(theme_key_precedence("date") < theme_key_precedence("date-now"));
         assert!(theme_key_precedence("date-now") < theme_key_precedence("date-modified"));
-        assert!(
-            theme_key_precedence("date-modified")
-                < theme_key_precedence("date-modified-now")
-        );
+        assert!(theme_key_precedence("date-modified") < theme_key_precedence("date-modified-now"));
     }
 }
-
 
 #[cfg(test)]
 mod apply_theme_def_test {
@@ -493,7 +493,11 @@ mod apply_theme_def_test {
         for (k, v) in entries {
             ui.insert(k.into(), v.into());
         }
-        ThemeDef { inherits: None, use_style: None, ui }
+        ThemeDef {
+            inherits: None,
+            use_style: None,
+            ui,
+        }
     }
 
     fn apply(theme: &ThemeDef) -> UiStyles {
@@ -511,19 +515,16 @@ mod apply_theme_def_test {
         // just one cell.  Before the precedence-sort fix this was
         // nondeterministic — the bulk setter would sometimes run
         // last and clobber the per-column override.
-        let theme = theme_def_with([
-            ("date", "blue"),
-            ("date-modified-now", "bright green"),
-        ]);
+        let theme = theme_def_with([("date", "blue"), ("date-modified-now", "bright green")]);
         let ui = apply(&theme);
 
         assert_eq!(ui.date_modified.now, parse_style("bright green"));
         // Every other slot on every column falls through to the
         // bulk setter.
         assert_eq!(ui.date_modified.today, parse_style("blue"));
-        assert_eq!(ui.date_accessed.now,   parse_style("blue"));
-        assert_eq!(ui.date_changed.now,    parse_style("blue"));
-        assert_eq!(ui.date_created.now,    parse_style("blue"));
+        assert_eq!(ui.date_accessed.now, parse_style("blue"));
+        assert_eq!(ui.date_changed.now, parse_style("blue"));
+        assert_eq!(ui.date_created.now, parse_style("blue"));
     }
 
     #[test]
@@ -544,19 +545,19 @@ mod apply_theme_def_test {
         // modified column:
         //   - `now` tier overridden at bucket 3 → bright green
         //   - every other tier overridden at bucket 2 → white
-        assert_eq!(ui.date_modified.now,   parse_style("bright green"));
+        assert_eq!(ui.date_modified.now, parse_style("bright green"));
         assert_eq!(ui.date_modified.today, parse_style("white"));
-        assert_eq!(ui.date_modified.flat,  parse_style("white"));
+        assert_eq!(ui.date_modified.flat, parse_style("white"));
 
         // accessed/changed/created columns:
         //   - `now` tier overridden at bucket 1 → bright cyan
         //   - every other tier set at bucket 0 → blue
-        assert_eq!(ui.date_accessed.now,   parse_style("bright cyan"));
+        assert_eq!(ui.date_accessed.now, parse_style("bright cyan"));
         assert_eq!(ui.date_accessed.today, parse_style("blue"));
-        assert_eq!(ui.date_changed.now,    parse_style("bright cyan"));
-        assert_eq!(ui.date_changed.today,  parse_style("blue"));
-        assert_eq!(ui.date_created.now,    parse_style("bright cyan"));
-        assert_eq!(ui.date_created.today,  parse_style("blue"));
+        assert_eq!(ui.date_changed.now, parse_style("bright cyan"));
+        assert_eq!(ui.date_changed.today, parse_style("blue"));
+        assert_eq!(ui.date_created.now, parse_style("bright cyan"));
+        assert_eq!(ui.date_created.today, parse_style("blue"));
     }
 
     #[test]
@@ -567,15 +568,15 @@ mod apply_theme_def_test {
         let theme = theme_def_with([
             ("date-modified-now", "cyan"),
             ("date-accessed-now", "green"),
-            ("date-changed-now",  "magenta"),
-            ("date-created-now",  "red"),
+            ("date-changed-now", "magenta"),
+            ("date-created-now", "red"),
         ]);
         let ui = apply(&theme);
 
         assert_eq!(ui.date_modified.now, parse_style("cyan"));
         assert_eq!(ui.date_accessed.now, parse_style("green"));
-        assert_eq!(ui.date_changed.now,  parse_style("magenta"));
-        assert_eq!(ui.date_created.now,  parse_style("red"));
+        assert_eq!(ui.date_changed.now, parse_style("magenta"));
+        assert_eq!(ui.date_created.now, parse_style("red"));
     }
 
     #[test]
@@ -583,24 +584,22 @@ mod apply_theme_def_test {
         // `date-modified = "red"` should set every tier (now,
         // today, week, month, year, old, flat) on the modified
         // column, leaving the other three untouched.
-        let theme = theme_def_with([
-            ("date-modified", "red"),
-        ]);
+        let theme = theme_def_with([("date-modified", "red")]);
         let ui = apply(&theme);
 
         let red = parse_style("red");
-        assert_eq!(ui.date_modified.now,   red);
+        assert_eq!(ui.date_modified.now, red);
         assert_eq!(ui.date_modified.today, red);
-        assert_eq!(ui.date_modified.week,  red);
+        assert_eq!(ui.date_modified.week, red);
         assert_eq!(ui.date_modified.month, red);
-        assert_eq!(ui.date_modified.year,  red);
-        assert_eq!(ui.date_modified.old,   red);
-        assert_eq!(ui.date_modified.flat,  red);
+        assert_eq!(ui.date_modified.year, red);
+        assert_eq!(ui.date_modified.old, red);
+        assert_eq!(ui.date_modified.flat, red);
 
         // Untouched columns keep the default (empty) style.
         assert_eq!(ui.date_accessed.now, Style::default());
-        assert_eq!(ui.date_changed.now,  Style::default());
-        assert_eq!(ui.date_created.now,  Style::default());
+        assert_eq!(ui.date_changed.now, Style::default());
+        assert_eq!(ui.date_created.now, Style::default());
     }
 
     #[test]
@@ -619,34 +618,34 @@ mod apply_theme_def_test {
 
                 let red = parse_style("red");
                 let actual = match (col, tier) {
-                    ("modified", "now")   => ui.date_modified.now,
+                    ("modified", "now") => ui.date_modified.now,
                     ("modified", "today") => ui.date_modified.today,
-                    ("modified", "week")  => ui.date_modified.week,
+                    ("modified", "week") => ui.date_modified.week,
                     ("modified", "month") => ui.date_modified.month,
-                    ("modified", "year")  => ui.date_modified.year,
-                    ("modified", "old")   => ui.date_modified.old,
-                    ("modified", "flat")  => ui.date_modified.flat,
-                    ("accessed", "now")   => ui.date_accessed.now,
+                    ("modified", "year") => ui.date_modified.year,
+                    ("modified", "old") => ui.date_modified.old,
+                    ("modified", "flat") => ui.date_modified.flat,
+                    ("accessed", "now") => ui.date_accessed.now,
                     ("accessed", "today") => ui.date_accessed.today,
-                    ("accessed", "week")  => ui.date_accessed.week,
+                    ("accessed", "week") => ui.date_accessed.week,
                     ("accessed", "month") => ui.date_accessed.month,
-                    ("accessed", "year")  => ui.date_accessed.year,
-                    ("accessed", "old")   => ui.date_accessed.old,
-                    ("accessed", "flat")  => ui.date_accessed.flat,
-                    ("changed",  "now")   => ui.date_changed.now,
-                    ("changed",  "today") => ui.date_changed.today,
-                    ("changed",  "week")  => ui.date_changed.week,
-                    ("changed",  "month") => ui.date_changed.month,
-                    ("changed",  "year")  => ui.date_changed.year,
-                    ("changed",  "old")   => ui.date_changed.old,
-                    ("changed",  "flat")  => ui.date_changed.flat,
-                    ("created",  "now")   => ui.date_created.now,
-                    ("created",  "today") => ui.date_created.today,
-                    ("created",  "week")  => ui.date_created.week,
-                    ("created",  "month") => ui.date_created.month,
-                    ("created",  "year")  => ui.date_created.year,
-                    ("created",  "old")   => ui.date_created.old,
-                    ("created",  "flat")  => ui.date_created.flat,
+                    ("accessed", "year") => ui.date_accessed.year,
+                    ("accessed", "old") => ui.date_accessed.old,
+                    ("accessed", "flat") => ui.date_accessed.flat,
+                    ("changed", "now") => ui.date_changed.now,
+                    ("changed", "today") => ui.date_changed.today,
+                    ("changed", "week") => ui.date_changed.week,
+                    ("changed", "month") => ui.date_changed.month,
+                    ("changed", "year") => ui.date_changed.year,
+                    ("changed", "old") => ui.date_changed.old,
+                    ("changed", "flat") => ui.date_changed.flat,
+                    ("created", "now") => ui.date_created.now,
+                    ("created", "today") => ui.date_created.today,
+                    ("created", "week") => ui.date_created.week,
+                    ("created", "month") => ui.date_created.month,
+                    ("created", "year") => ui.date_created.year,
+                    ("created", "old") => ui.date_created.old,
+                    ("created", "flat") => ui.date_created.flat,
                     _ => unreachable!(),
                 };
                 assert_eq!(
@@ -659,7 +658,6 @@ mod apply_theme_def_test {
 }
 
 impl Definitions {
-
     /// Parse `LS_COLORS` into a pair of outputs: recognised two-letter
     /// file-kind codes modify the mutable `UiStyles`, and any
     /// glob-style entries (e.g. `*.txt=31`) populate the returned
@@ -671,7 +669,7 @@ impl Definitions {
 
         if let Some(lsc) = &self.ls {
             LSColors(lsc).each_pair(|pair| {
-                if ! colours.set_ls(&pair) {
+                if !colours.set_ls(&pair) {
                     match glob::Pattern::new(pair.key) {
                         Ok(pat) => {
                             exts.add(pat, pair.to_style());
@@ -687,7 +685,6 @@ impl Definitions {
         exts
     }
 }
-
 
 pub trait FileColours: std::marker::Sync {
     fn colour_file(&self, file: &File<'_>) -> Option<Style>;
@@ -706,15 +703,16 @@ impl FileColours for NoFileColours {
 // file type associations, while falling back to the default set if not set
 // explicitly.
 impl<A, B> FileColours for (A, B)
-where A: FileColours,
-      B: FileColours,
+where
+    A: FileColours,
+    B: FileColours,
 {
     fn colour_file(&self, file: &File<'_>) -> Option<Style> {
-        self.0.colour_file(file)
+        self.0
+            .colour_file(file)
             .or_else(|| self.1.colour_file(file))
     }
 }
-
 
 #[derive(PartialEq, Debug, Default)]
 struct ExtensionMappings {
@@ -726,15 +724,17 @@ struct ExtensionMappings {
 
 impl FileColours for ExtensionMappings {
     fn colour_file(&self, file: &File<'_>) -> Option<Style> {
-        self.mappings.iter().rev()
+        self.mappings
+            .iter()
+            .rev()
             .find(|t| t.0.matches(&file.name))
-            .map (|t| t.1)
+            .map(|t| t.1)
     }
 }
 
 impl ExtensionMappings {
     fn is_non_empty(&self) -> bool {
-        ! self.mappings.is_empty()
+        !self.mappings.is_empty()
     }
 
     fn add(&mut self, pattern: glob::Pattern, style: Style) {
@@ -742,75 +742,160 @@ impl ExtensionMappings {
     }
 }
 
-
-
-
 impl render::BlocksColours for Theme {
-    fn block_count(&self)  -> Style { self.ui.blocks }
-    fn no_blocks(&self)    -> Style { self.ui.punctuation }
+    fn block_count(&self) -> Style {
+        self.ui.blocks
+    }
+    fn no_blocks(&self) -> Style {
+        self.ui.punctuation
+    }
 }
 
 impl render::FiletypeColours for Theme {
-    fn normal(&self)       -> Style { self.ui.filekinds.normal }
-    fn directory(&self)    -> Style { self.ui.filekinds.directory }
-    fn pipe(&self)         -> Style { self.ui.filekinds.pipe }
-    fn symlink(&self)      -> Style { self.ui.filekinds.symlink }
-    fn block_device(&self) -> Style { self.ui.filekinds.block_device }
-    fn char_device(&self)  -> Style { self.ui.filekinds.char_device }
-    fn socket(&self)       -> Style { self.ui.filekinds.socket }
-    fn special(&self)      -> Style { self.ui.filekinds.special }
+    fn normal(&self) -> Style {
+        self.ui.filekinds.normal
+    }
+    fn directory(&self) -> Style {
+        self.ui.filekinds.directory
+    }
+    fn pipe(&self) -> Style {
+        self.ui.filekinds.pipe
+    }
+    fn symlink(&self) -> Style {
+        self.ui.filekinds.symlink
+    }
+    fn block_device(&self) -> Style {
+        self.ui.filekinds.block_device
+    }
+    fn char_device(&self) -> Style {
+        self.ui.filekinds.char_device
+    }
+    fn socket(&self) -> Style {
+        self.ui.filekinds.socket
+    }
+    fn special(&self) -> Style {
+        self.ui.filekinds.special
+    }
 }
 
 impl render::VcsColours for Theme {
-    fn not_modified(&self)  -> Style { self.ui.punctuation }
+    fn not_modified(&self) -> Style {
+        self.ui.punctuation
+    }
     #[allow(clippy::new_ret_no_self)]
-    fn new(&self)           -> Style { self.ui.vcs.new }
-    fn modified(&self)      -> Style { self.ui.vcs.modified }
-    fn deleted(&self)       -> Style { self.ui.vcs.deleted }
-    fn renamed(&self)       -> Style { self.ui.vcs.renamed }
-    fn type_change(&self)   -> Style { self.ui.vcs.typechange }
-    fn ignored(&self)       -> Style { self.ui.vcs.ignored }
-    fn conflicted(&self)    -> Style { self.ui.vcs.conflicted }
+    fn new(&self) -> Style {
+        self.ui.vcs.new
+    }
+    fn modified(&self) -> Style {
+        self.ui.vcs.modified
+    }
+    fn deleted(&self) -> Style {
+        self.ui.vcs.deleted
+    }
+    fn renamed(&self) -> Style {
+        self.ui.vcs.renamed
+    }
+    fn type_change(&self) -> Style {
+        self.ui.vcs.typechange
+    }
+    fn ignored(&self) -> Style {
+        self.ui.vcs.ignored
+    }
+    fn conflicted(&self) -> Style {
+        self.ui.vcs.conflicted
+    }
 }
 
 impl render::VcsReposColours for Theme {
-    fn not_a_repo(&self)   -> Style { self.ui.punctuation }
-    fn clean_repo(&self)   -> Style { self.ui.vcs.new }       // green-ish
-    fn dirty_repo(&self)   -> Style { self.ui.vcs.modified }  // yellow-ish
-    fn jj_repo(&self)      -> Style { self.ui.vcs.new }       // green-ish (neutral)
+    fn not_a_repo(&self) -> Style {
+        self.ui.punctuation
+    }
+    fn clean_repo(&self) -> Style {
+        self.ui.vcs.new
+    } // green-ish
+    fn dirty_repo(&self) -> Style {
+        self.ui.vcs.modified
+    } // yellow-ish
+    fn jj_repo(&self) -> Style {
+        self.ui.vcs.new
+    } // green-ish (neutral)
 }
 
 #[cfg(unix)]
 impl render::GroupColours for Theme {
-    fn yours(&self)      -> Style { self.ui.users.group_yours }
-    fn member(&self)     -> Style { self.ui.users.group_member }
-    fn not_yours(&self)  -> Style { self.ui.users.group_not_yours }
+    fn yours(&self) -> Style {
+        self.ui.users.group_yours
+    }
+    fn member(&self) -> Style {
+        self.ui.users.group_member
+    }
+    fn not_yours(&self) -> Style {
+        self.ui.users.group_not_yours
+    }
 
-    fn gid_yours(&self)     -> Style { self.ui.users.gid_yours }
-    fn gid_member(&self)    -> Style { self.ui.users.gid_member }
-    fn gid_not_yours(&self) -> Style { self.ui.users.gid_not_yours }
+    fn gid_yours(&self) -> Style {
+        self.ui.users.gid_yours
+    }
+    fn gid_member(&self) -> Style {
+        self.ui.users.gid_member
+    }
+    fn gid_not_yours(&self) -> Style {
+        self.ui.users.gid_not_yours
+    }
 }
 
 impl render::LinksColours for Theme {
-    fn normal(&self)           -> Style { self.ui.links.normal }
-    fn multi_link_file(&self)  -> Style { self.ui.links.multi_link_file }
+    fn normal(&self) -> Style {
+        self.ui.links.normal
+    }
+    fn multi_link_file(&self) -> Style {
+        self.ui.links.multi_link_file
+    }
 }
 
 impl render::PermissionsColours for Theme {
-    fn dash(&self)               -> Style { self.ui.punctuation }
-    fn user_read(&self)          -> Style { self.ui.perms.user_read }
-    fn user_write(&self)         -> Style { self.ui.perms.user_write }
-    fn user_execute_file(&self)  -> Style { self.ui.perms.user_execute_file }
-    fn user_execute_other(&self) -> Style { self.ui.perms.user_execute_other }
-    fn group_read(&self)         -> Style { self.ui.perms.group_read }
-    fn group_write(&self)        -> Style { self.ui.perms.group_write }
-    fn group_execute(&self)      -> Style { self.ui.perms.group_execute }
-    fn other_read(&self)         -> Style { self.ui.perms.other_read }
-    fn other_write(&self)        -> Style { self.ui.perms.other_write }
-    fn other_execute(&self)      -> Style { self.ui.perms.other_execute }
-    fn special_user_file(&self)  -> Style { self.ui.perms.special_user_file }
-    fn special_other(&self)      -> Style { self.ui.perms.special_other }
-    fn attribute(&self)          -> Style { self.ui.perms.attribute }
+    fn dash(&self) -> Style {
+        self.ui.punctuation
+    }
+    fn user_read(&self) -> Style {
+        self.ui.perms.user_read
+    }
+    fn user_write(&self) -> Style {
+        self.ui.perms.user_write
+    }
+    fn user_execute_file(&self) -> Style {
+        self.ui.perms.user_execute_file
+    }
+    fn user_execute_other(&self) -> Style {
+        self.ui.perms.user_execute_other
+    }
+    fn group_read(&self) -> Style {
+        self.ui.perms.group_read
+    }
+    fn group_write(&self) -> Style {
+        self.ui.perms.group_write
+    }
+    fn group_execute(&self) -> Style {
+        self.ui.perms.group_execute
+    }
+    fn other_read(&self) -> Style {
+        self.ui.perms.other_read
+    }
+    fn other_write(&self) -> Style {
+        self.ui.perms.other_write
+    }
+    fn other_execute(&self) -> Style {
+        self.ui.perms.other_execute
+    }
+    fn special_user_file(&self) -> Style {
+        self.ui.perms.special_user_file
+    }
+    fn special_other(&self) -> Style {
+        self.ui.perms.special_other
+    }
+    fn attribute(&self) -> Style {
+        self.ui.perms.attribute
+    }
 }
 
 impl render::SizeColours for Theme {
@@ -830,8 +915,8 @@ impl render::SizeColours for Theme {
             Some(Kilo | Kibi) => self.ui.size.number_kilo,
             Some(Mega | Mebi) => self.ui.size.number_mega,
             Some(Giga | Gibi) => self.ui.size.number_giga,
-            Some(_)           => self.ui.size.number_huge,
-            None              => self.ui.size.number_byte,
+            Some(_) => self.ui.size.number_huge,
+            None => self.ui.size.number_byte,
         }
     }
 
@@ -842,40 +927,71 @@ impl render::SizeColours for Theme {
             Some(Kilo | Kibi) => self.ui.size.unit_kilo,
             Some(Mega | Mebi) => self.ui.size.unit_mega,
             Some(Giga | Gibi) => self.ui.size.unit_giga,
-            Some(_)           => self.ui.size.unit_huge,
-            None              => self.ui.size.unit_byte,
+            Some(_) => self.ui.size.unit_huge,
+            None => self.ui.size.unit_byte,
         }
     }
 
-    fn no_size(&self) -> Style { self.ui.punctuation }
-    fn major(&self)   -> Style { self.ui.size.major }
-    fn comma(&self)   -> Style { self.ui.punctuation }
-    fn minor(&self)   -> Style { self.ui.size.minor }
+    fn no_size(&self) -> Style {
+        self.ui.punctuation
+    }
+    fn major(&self) -> Style {
+        self.ui.size.major
+    }
+    fn comma(&self) -> Style {
+        self.ui.punctuation
+    }
+    fn minor(&self) -> Style {
+        self.ui.size.minor
+    }
 }
 
 #[cfg(unix)]
 impl render::UserColours for Theme {
-    fn you(&self)           -> Style { self.ui.users.user_you }
-    fn someone_else(&self)  -> Style { self.ui.users.user_someone_else }
+    fn you(&self) -> Style {
+        self.ui.users.user_you
+    }
+    fn someone_else(&self) -> Style {
+        self.ui.users.user_someone_else
+    }
 
-    fn uid_you(&self)           -> Style { self.ui.users.uid_you }
-    fn uid_someone_else(&self)  -> Style { self.ui.users.uid_someone_else }
-}
-
-impl FileNameColours for Theme {
-    fn normal_arrow(&self)        -> Style { self.ui.punctuation }
-    fn broken_symlink(&self)      -> Style { self.ui.broken_symlink }
-    fn broken_filename(&self)     -> Style { apply_overlay(self.ui.broken_symlink, self.ui.broken_path_overlay) }
-    fn broken_control_char(&self) -> Style { apply_overlay(self.ui.control_char,   self.ui.broken_path_overlay) }
-    fn control_char(&self)        -> Style { self.ui.control_char }
-    fn symlink_path(&self)        -> Style { self.ui.symlink_path }
-    fn executable_file(&self)     -> Style { self.ui.filekinds.executable }
-
-    fn colour_file(&self, file: &File<'_>) -> Style {
-        self.exts.colour_file(file).unwrap_or(self.ui.filekinds.normal)
+    fn uid_you(&self) -> Style {
+        self.ui.users.uid_you
+    }
+    fn uid_someone_else(&self) -> Style {
+        self.ui.users.uid_someone_else
     }
 }
 
+impl FileNameColours for Theme {
+    fn normal_arrow(&self) -> Style {
+        self.ui.punctuation
+    }
+    fn broken_symlink(&self) -> Style {
+        self.ui.broken_symlink
+    }
+    fn broken_filename(&self) -> Style {
+        apply_overlay(self.ui.broken_symlink, self.ui.broken_path_overlay)
+    }
+    fn broken_control_char(&self) -> Style {
+        apply_overlay(self.ui.control_char, self.ui.broken_path_overlay)
+    }
+    fn control_char(&self) -> Style {
+        self.ui.control_char
+    }
+    fn symlink_path(&self) -> Style {
+        self.ui.symlink_path
+    }
+    fn executable_file(&self) -> Style {
+        self.ui.filekinds.executable
+    }
+
+    fn colour_file(&self, file: &File<'_>) -> Style {
+        self.exts
+            .colour_file(file)
+            .unwrap_or(self.ui.filekinds.normal)
+    }
+}
 
 /// Some of the styles are **overlays**: although they have the same attribute
 /// set as regular styles (foreground and background colours, bold, underline,
@@ -890,22 +1006,41 @@ impl FileNameColours for Theme {
 /// “broken link overlay”, the latter of which is just set to override the
 /// underline attribute on the other two.
 fn apply_overlay(mut base: Style, overlay: Style) -> Style {
-    if let Some(fg) = overlay.foreground { base.foreground = Some(fg); }
-    if let Some(bg) = overlay.background { base.background = Some(bg); }
+    if let Some(fg) = overlay.foreground {
+        base.foreground = Some(fg);
+    }
+    if let Some(bg) = overlay.background {
+        base.background = Some(bg);
+    }
 
-    if overlay.is_bold          { base.is_bold          = true; }
-    if overlay.is_dimmed        { base.is_dimmed        = true; }
-    if overlay.is_italic        { base.is_italic        = true; }
-    if overlay.is_underline     { base.is_underline     = true; }
-    if overlay.is_blink         { base.is_blink         = true; }
-    if overlay.is_reverse       { base.is_reverse       = true; }
-    if overlay.is_hidden        { base.is_hidden        = true; }
-    if overlay.is_strikethrough { base.is_strikethrough = true; }
+    if overlay.is_bold {
+        base.is_bold = true;
+    }
+    if overlay.is_dimmed {
+        base.is_dimmed = true;
+    }
+    if overlay.is_italic {
+        base.is_italic = true;
+    }
+    if overlay.is_underline {
+        base.is_underline = true;
+    }
+    if overlay.is_blink {
+        base.is_blink = true;
+    }
+    if overlay.is_reverse {
+        base.is_reverse = true;
+    }
+    if overlay.is_hidden {
+        base.is_hidden = true;
+    }
+    if overlay.is_strikethrough {
+        base.is_strikethrough = true;
+    }
 
     base
 }
 // TODO: move this function to the nu_ansi_term crate
-
 
 #[cfg(test)]
 mod customs_test {
@@ -932,10 +1067,10 @@ mod customs_test {
         ($name:ident: ls $ls:expr => exts $mappings:expr) => {
             #[test]
             fn $name() {
-                let mappings: Vec<(glob::Pattern, Style)>
-                    = $mappings.iter()
-                               .map(|t| (glob::Pattern::new(t.0).unwrap(), t.1))
-                               .collect();
+                let mappings: Vec<(glob::Pattern, Style)> = $mappings
+                    .iter()
+                    .map(|t| (glob::Pattern::new(t.0).unwrap(), t.1))
+                    .collect();
 
                 let definitions = Definitions {
                     ls: Some($ls.into()),
@@ -946,7 +1081,6 @@ mod customs_test {
             }
         };
     }
-
 
     // LS_COLORS can affect all of these colours:
     test!(ls_di: ls "di=31" => colours c -> { c.filekinds.directory    = Red.normal();    });
@@ -987,7 +1121,6 @@ mod customs_test {
     });
 }
 
-
 #[cfg(test)]
 #[cfg(unix)]
 mod uid_gid_theme_test {
@@ -997,7 +1130,10 @@ mod uid_gid_theme_test {
     use nu_ansi_term::Color::*;
 
     fn theme_with(ui: UiStyles) -> Theme {
-        Theme { ui, exts: Box::new(NoFileColours) }
+        Theme {
+            ui,
+            exts: Box::new(NoFileColours),
+        }
     }
 
     #[test]
@@ -1008,6 +1144,9 @@ mod uid_gid_theme_test {
 
         let theme = theme_with(ui);
         assert_eq!(<Theme as UserColours>::uid_you(&theme), Red.normal());
-        assert_eq!(<Theme as UserColours>::uid_someone_else(&theme), Green.normal());
+        assert_eq!(
+            <Theme as UserColours>::uid_someone_else(&theme),
+            Green.normal()
+        );
     }
 }

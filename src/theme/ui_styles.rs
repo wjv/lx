@@ -3,7 +3,6 @@ use nu_ansi_term::{Color, Style};
 use crate::theme::lsc::Pair;
 use crate::theme::smooth::{self, SmoothLuts};
 
-
 /// Returns `true` iff `style`'s foreground is a 24-bit
 /// `Color::Rgb(...)` — i.e. exactly the case where Oklab
 /// interpolation toward another RGB anchor would produce a
@@ -16,8 +15,8 @@ fn is_rgb_foreground(style: Style) -> bool {
     matches!(style.foreground, Some(Color::Rgb(_, _, _)))
 }
 
-
 #[derive(Debug, Default, PartialEq)]
+#[rustfmt::skip]
 pub struct UiStyles {
     pub colourful: bool,
 
@@ -74,6 +73,7 @@ pub struct FileKinds {
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[rustfmt::skip]
 pub struct Permissions {
     pub user_read:          Style,
     pub user_write:         Style,
@@ -137,6 +137,7 @@ impl Size {
 /// plus a single `flat` colour used when the date column's gradient
 /// is disabled.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[rustfmt::skip]
 pub struct DateAge {
     pub now:   Style,   // < 1 hour
     pub today: Style,   // < 24 hours
@@ -183,6 +184,7 @@ impl DateAge {
     }
 
     /// Pick the style for a given age in seconds.
+    #[rustfmt::skip]
     pub fn for_age(&self, age_secs: u64) -> Style {
         const HOUR: u64 = 3600;
         const DAY: u64 = 86400;
@@ -283,20 +285,24 @@ impl UiStyles {
                     Some(smooth::build_smooth_lut(&smooth::size_anchors(&self.size)));
             }
             if gradient.modified && self.date_modified.is_smoothable() {
-                self.smooth_luts.modified =
-                    Some(smooth::build_smooth_lut(&smooth::date_anchors(&self.date_modified)));
+                self.smooth_luts.modified = Some(smooth::build_smooth_lut(&smooth::date_anchors(
+                    &self.date_modified,
+                )));
             }
             if gradient.accessed && self.date_accessed.is_smoothable() {
-                self.smooth_luts.accessed =
-                    Some(smooth::build_smooth_lut(&smooth::date_anchors(&self.date_accessed)));
+                self.smooth_luts.accessed = Some(smooth::build_smooth_lut(&smooth::date_anchors(
+                    &self.date_accessed,
+                )));
             }
             if gradient.changed && self.date_changed.is_smoothable() {
-                self.smooth_luts.changed =
-                    Some(smooth::build_smooth_lut(&smooth::date_anchors(&self.date_changed)));
+                self.smooth_luts.changed = Some(smooth::build_smooth_lut(&smooth::date_anchors(
+                    &self.date_changed,
+                )));
             }
             if gradient.created && self.date_created.is_smoothable() {
-                self.smooth_luts.created =
-                    Some(smooth::build_smooth_lut(&smooth::date_anchors(&self.date_created)));
+                self.smooth_luts.created = Some(smooth::build_smooth_lut(&smooth::date_anchors(
+                    &self.date_created,
+                )));
             }
         }
 
@@ -307,16 +313,24 @@ impl UiStyles {
             self.size.number_mega = self.size.major;
             self.size.number_giga = self.size.major;
             self.size.number_huge = self.size.major;
-            self.size.unit_byte   = self.size.minor;
-            self.size.unit_kilo   = self.size.minor;
-            self.size.unit_mega   = self.size.minor;
-            self.size.unit_giga   = self.size.minor;
-            self.size.unit_huge   = self.size.minor;
+            self.size.unit_byte = self.size.minor;
+            self.size.unit_kilo = self.size.minor;
+            self.size.unit_mega = self.size.minor;
+            self.size.unit_giga = self.size.minor;
+            self.size.unit_huge = self.size.minor;
         }
-        if !gradient.modified { flatten_date_age(&mut self.date_modified); }
-        if !gradient.accessed { flatten_date_age(&mut self.date_accessed); }
-        if !gradient.changed  { flatten_date_age(&mut self.date_changed);  }
-        if !gradient.created  { flatten_date_age(&mut self.date_created);  }
+        if !gradient.modified {
+            flatten_date_age(&mut self.date_modified);
+        }
+        if !gradient.accessed {
+            flatten_date_age(&mut self.date_accessed);
+        }
+        if !gradient.changed {
+            flatten_date_age(&mut self.date_changed);
+        }
+        if !gradient.created {
+            flatten_date_age(&mut self.date_created);
+        }
     }
 }
 
@@ -325,35 +339,33 @@ impl UiStyles {
 /// [`UiStyles::apply_gradient_flags`] when a per-timestamp gradient
 /// flag is off.
 fn flatten_date_age(d: &mut DateAge) {
-    d.now   = d.flat;
+    d.now = d.flat;
     d.today = d.flat;
-    d.week  = d.flat;
+    d.week = d.flat;
     d.month = d.flat;
-    d.year  = d.flat;
-    d.old   = d.flat;
+    d.year = d.flat;
+    d.old = d.flat;
 }
 
-
 impl UiStyles {
-
     /// Sets a value on this set of colours using one of the keys understood
     /// by the `LS_COLORS` environment variable. Invalid keys set nothing, but
     /// return false.
     pub fn set_ls(&mut self, pair: &Pair<'_>) -> bool {
         match pair.key {
-            "di" => self.filekinds.directory    = pair.to_style(),  // DIR
-            "ex" => self.filekinds.executable   = pair.to_style(),  // EXEC
-            "fi" => self.filekinds.normal       = pair.to_style(),  // FILE
-            "pi" => self.filekinds.pipe         = pair.to_style(),  // FIFO
-            "so" => self.filekinds.socket       = pair.to_style(),  // SOCK
-            "bd" => self.filekinds.block_device = pair.to_style(),  // BLK
-            "cd" => self.filekinds.char_device  = pair.to_style(),  // CHR
-            "ln" => self.filekinds.symlink      = pair.to_style(),  // LINK
-            "or" => self.broken_symlink         = pair.to_style(),  // ORPHAN
-             _   => return false,
-             // Codes we don’t do anything with:
-             // MULTIHARDLINK, DOOR, SETUID, SETGID, CAPABILITY,
-             // STICKY_OTHER_WRITABLE, OTHER_WRITABLE, STICKY, MISSING
+            "di" => self.filekinds.directory = pair.to_style(), // DIR
+            "ex" => self.filekinds.executable = pair.to_style(), // EXEC
+            "fi" => self.filekinds.normal = pair.to_style(),    // FILE
+            "pi" => self.filekinds.pipe = pair.to_style(),      // FIFO
+            "so" => self.filekinds.socket = pair.to_style(),    // SOCK
+            "bd" => self.filekinds.block_device = pair.to_style(), // BLK
+            "cd" => self.filekinds.char_device = pair.to_style(), // CHR
+            "ln" => self.filekinds.symlink = pair.to_style(),   // LINK
+            "or" => self.broken_symlink = pair.to_style(),      // ORPHAN
+            _ => return false,
+            // Codes we don’t do anything with:
+            // MULTIHARDLINK, DOOR, SETUID, SETGID, CAPABILITY,
+            // STICKY_OTHER_WRITABLE, OTHER_WRITABLE, STICKY, MISSING
         }
         true
     }
@@ -369,7 +381,7 @@ impl UiStyles {
         self.size.number_mega = style;
         self.size.number_giga = style;
         self.size.number_huge = style;
-        self.size.major       = style;
+        self.size.major = style;
     }
 
     pub fn set_unit_style(&mut self, style: Style) {
@@ -381,7 +393,7 @@ impl UiStyles {
         self.size.unit_mega = style;
         self.size.unit_giga = style;
         self.size.unit_huge = style;
-        self.size.minor     = style;
+        self.size.minor = style;
     }
 
     /// Set a UI style from a human-readable config key and value.
@@ -395,15 +407,15 @@ impl UiStyles {
 
         match key {
             // File kinds
-            "normal"           => self.filekinds.normal       = style,
-            "directory"        => self.filekinds.directory     = style,
-            "symlink"          => self.filekinds.symlink       = style,
-            "pipe"             => self.filekinds.pipe          = style,
-            "block-device"     => self.filekinds.block_device  = style,
-            "char-device"      => self.filekinds.char_device   = style,
-            "socket"           => self.filekinds.socket        = style,
-            "special"          => self.filekinds.special       = style,
-            "executable"       => self.filekinds.executable    = style,
+            "normal" => self.filekinds.normal = style,
+            "directory" => self.filekinds.directory = style,
+            "symlink" => self.filekinds.symlink = style,
+            "pipe" => self.filekinds.pipe = style,
+            "block-device" => self.filekinds.block_device = style,
+            "char-device" => self.filekinds.char_device = style,
+            "socket" => self.filekinds.socket = style,
+            "special" => self.filekinds.special = style,
+            "executable" => self.filekinds.executable = style,
 
             // Permissions.  Three accepted prefixes: `permissions-*`
             // (canonical, matches the column name), `perm-*` (legacy
@@ -411,19 +423,45 @@ impl UiStyles {
             // `mode-*` (matches the `--mode` flag alias and the `mode`
             // sort field, so the same vocabulary works on every
             // surface).
-            "permissions-user-read"          | "perm-user-read"        | "mode-user-read"        => self.perms.user_read          = style,
-            "permissions-user-write"         | "perm-user-write"       | "mode-user-write"       => self.perms.user_write         = style,
-            "permissions-user-execute"       | "perm-user-exec"        | "mode-user-exec"        => self.perms.user_execute_file  = style,
-            "permissions-user-execute-other" | "perm-user-exec-other"  | "mode-user-exec-other"  => self.perms.user_execute_other = style,
-            "permissions-group-read"         | "perm-group-read"       | "mode-group-read"       => self.perms.group_read         = style,
-            "permissions-group-write"        | "perm-group-write"      | "mode-group-write"      => self.perms.group_write        = style,
-            "permissions-group-execute"      | "perm-group-exec"       | "mode-group-exec"       => self.perms.group_execute      = style,
-            "permissions-other-read"         | "perm-other-read"       | "mode-other-read"       => self.perms.other_read         = style,
-            "permissions-other-write"        | "perm-other-write"      | "mode-other-write"      => self.perms.other_write        = style,
-            "permissions-other-execute"      | "perm-other-exec"       | "mode-other-exec"       => self.perms.other_execute      = style,
-            "permissions-special-user"       | "perm-special-user"     | "mode-special-user"     => self.perms.special_user_file  = style,
-            "permissions-special-other"      | "perm-special-other"    | "mode-special-other"    => self.perms.special_other      = style,
-            "permissions-attribute"          | "perm-attribute"        | "mode-attribute"        => self.perms.attribute          = style,
+            "permissions-user-read" | "perm-user-read" | "mode-user-read" => {
+                self.perms.user_read = style
+            }
+            "permissions-user-write" | "perm-user-write" | "mode-user-write" => {
+                self.perms.user_write = style
+            }
+            "permissions-user-execute" | "perm-user-exec" | "mode-user-exec" => {
+                self.perms.user_execute_file = style
+            }
+            "permissions-user-execute-other" | "perm-user-exec-other" | "mode-user-exec-other" => {
+                self.perms.user_execute_other = style
+            }
+            "permissions-group-read" | "perm-group-read" | "mode-group-read" => {
+                self.perms.group_read = style
+            }
+            "permissions-group-write" | "perm-group-write" | "mode-group-write" => {
+                self.perms.group_write = style
+            }
+            "permissions-group-execute" | "perm-group-exec" | "mode-group-exec" => {
+                self.perms.group_execute = style
+            }
+            "permissions-other-read" | "perm-other-read" | "mode-other-read" => {
+                self.perms.other_read = style
+            }
+            "permissions-other-write" | "perm-other-write" | "mode-other-write" => {
+                self.perms.other_write = style
+            }
+            "permissions-other-execute" | "perm-other-exec" | "mode-other-exec" => {
+                self.perms.other_execute = style
+            }
+            "permissions-special-user" | "perm-special-user" | "mode-special-user" => {
+                self.perms.special_user_file = style
+            }
+            "permissions-special-other" | "perm-special-other" | "mode-special-other" => {
+                self.perms.special_other = style
+            }
+            "permissions-attribute" | "perm-attribute" | "mode-attribute" => {
+                self.perms.attribute = style
+            }
 
             // Size (individual magnitudes)
             "size-number-byte" => self.size.number_byte = style,
@@ -431,53 +469,53 @@ impl UiStyles {
             "size-number-mega" => self.size.number_mega = style,
             "size-number-giga" => self.size.number_giga = style,
             "size-number-huge" => self.size.number_huge = style,
-            "size-unit-byte"   => self.size.unit_byte   = style,
-            "size-unit-kilo"   => self.size.unit_kilo   = style,
-            "size-unit-mega"   => self.size.unit_mega    = style,
-            "size-unit-giga"   => self.size.unit_giga    = style,
-            "size-unit-huge"   => self.size.unit_huge    = style,
+            "size-unit-byte" => self.size.unit_byte = style,
+            "size-unit-kilo" => self.size.unit_kilo = style,
+            "size-unit-mega" => self.size.unit_mega = style,
+            "size-unit-giga" => self.size.unit_giga = style,
+            "size-unit-huge" => self.size.unit_huge = style,
             // Size (bulk setters)
-            "size-number"      => self.set_number_style(style),
-            "size-unit"        => self.set_unit_style(style),
-            "size-major"       => self.size.major = style,
-            "size-minor"       => self.size.minor = style,
+            "size-number" => self.set_number_style(style),
+            "size-unit" => self.set_unit_style(style),
+            "size-major" => self.size.major = style,
+            "size-minor" => self.size.minor = style,
 
             // Users
-            "user-you"         => self.users.user_you          = style,
-            "user-other"       => self.users.user_someone_else = style,
-            "group-yours"      => self.users.group_yours       = style,
-            "group-member"     => self.users.group_member      = style,
-            "group-other"      => self.users.group_not_yours   = style,
-            "uid-you"          => self.users.uid_you           = style,
-            "uid-other"        => self.users.uid_someone_else  = style,
-            "gid-yours"        => self.users.gid_yours         = style,
-            "gid-member"       => self.users.gid_member        = style,
-            "gid-other"        => self.users.gid_not_yours     = style,
+            "user-you" => self.users.user_you = style,
+            "user-other" => self.users.user_someone_else = style,
+            "group-yours" => self.users.group_yours = style,
+            "group-member" => self.users.group_member = style,
+            "group-other" => self.users.group_not_yours = style,
+            "uid-you" => self.users.uid_you = style,
+            "uid-other" => self.users.uid_someone_else = style,
+            "gid-yours" => self.users.gid_yours = style,
+            "gid-member" => self.users.gid_member = style,
+            "gid-other" => self.users.gid_not_yours = style,
 
             // Links
-            "links"            => self.links.normal            = style,
-            "links-multi"      => self.links.multi_link_file   = style,
+            "links" => self.links.normal = style,
+            "links-multi" => self.links.multi_link_file = style,
 
             // VCS
-            "vcs-new"          => self.vcs.new         = style,
-            "vcs-modified"     => self.vcs.modified     = style,
-            "vcs-deleted"      => self.vcs.deleted      = style,
-            "vcs-renamed"      => self.vcs.renamed      = style,
-            "vcs-typechange"   => self.vcs.typechange    = style,
-            "vcs-ignored"      => self.vcs.ignored       = style,
-            "vcs-conflicted"   => self.vcs.conflicted    = style,
+            "vcs-new" => self.vcs.new = style,
+            "vcs-modified" => self.vcs.modified = style,
+            "vcs-deleted" => self.vcs.deleted = style,
+            "vcs-renamed" => self.vcs.renamed = style,
+            "vcs-typechange" => self.vcs.typechange = style,
+            "vcs-ignored" => self.vcs.ignored = style,
+            "vcs-conflicted" => self.vcs.conflicted = style,
 
             // UI elements
-            "punctuation"      => self.punctuation      = style,
+            "punctuation" => self.punctuation = style,
             // Bulk date setters fan out to all four timestamp columns.
-            "date"             => self.date_for_each(|d| d.set_all(style)),
-            "date-now"         => self.date_for_each(|d| d.now   = style),
-            "date-today"       => self.date_for_each(|d| d.today = style),
-            "date-week"        => self.date_for_each(|d| d.week  = style),
-            "date-month"       => self.date_for_each(|d| d.month = style),
-            "date-year"        => self.date_for_each(|d| d.year  = style),
-            "date-old"         => self.date_for_each(|d| d.old   = style),
-            "date-flat"        => self.date_for_each(|d| d.flat  = style),
+            "date" => self.date_for_each(|d| d.set_all(style)),
+            "date-now" => self.date_for_each(|d| d.now = style),
+            "date-today" => self.date_for_each(|d| d.today = style),
+            "date-week" => self.date_for_each(|d| d.week = style),
+            "date-month" => self.date_for_each(|d| d.month = style),
+            "date-year" => self.date_for_each(|d| d.year = style),
+            "date-old" => self.date_for_each(|d| d.old = style),
+            "date-flat" => self.date_for_each(|d| d.flat = style),
 
             // Per-timestamp-column overrides.  These write directly
             // to the named field, so theme authors can give each
@@ -487,50 +525,50 @@ impl UiStyles {
             // bulk `date*` setters are guaranteed to run before
             // any `date-<col>*` override regardless of the order
             // the keys appear in the theme block.
-            "date-modified"        => self.date_modified.set_all(style),
-            "date-modified-now"    => self.date_modified.now   = style,
-            "date-modified-today"  => self.date_modified.today = style,
-            "date-modified-week"   => self.date_modified.week  = style,
-            "date-modified-month"  => self.date_modified.month = style,
-            "date-modified-year"   => self.date_modified.year  = style,
-            "date-modified-old"    => self.date_modified.old   = style,
-            "date-modified-flat"   => self.date_modified.flat  = style,
+            "date-modified" => self.date_modified.set_all(style),
+            "date-modified-now" => self.date_modified.now = style,
+            "date-modified-today" => self.date_modified.today = style,
+            "date-modified-week" => self.date_modified.week = style,
+            "date-modified-month" => self.date_modified.month = style,
+            "date-modified-year" => self.date_modified.year = style,
+            "date-modified-old" => self.date_modified.old = style,
+            "date-modified-flat" => self.date_modified.flat = style,
 
-            "date-accessed"        => self.date_accessed.set_all(style),
-            "date-accessed-now"    => self.date_accessed.now   = style,
-            "date-accessed-today"  => self.date_accessed.today = style,
-            "date-accessed-week"   => self.date_accessed.week  = style,
-            "date-accessed-month"  => self.date_accessed.month = style,
-            "date-accessed-year"   => self.date_accessed.year  = style,
-            "date-accessed-old"    => self.date_accessed.old   = style,
-            "date-accessed-flat"   => self.date_accessed.flat  = style,
+            "date-accessed" => self.date_accessed.set_all(style),
+            "date-accessed-now" => self.date_accessed.now = style,
+            "date-accessed-today" => self.date_accessed.today = style,
+            "date-accessed-week" => self.date_accessed.week = style,
+            "date-accessed-month" => self.date_accessed.month = style,
+            "date-accessed-year" => self.date_accessed.year = style,
+            "date-accessed-old" => self.date_accessed.old = style,
+            "date-accessed-flat" => self.date_accessed.flat = style,
 
-            "date-changed"         => self.date_changed.set_all(style),
-            "date-changed-now"     => self.date_changed.now   = style,
-            "date-changed-today"   => self.date_changed.today = style,
-            "date-changed-week"    => self.date_changed.week  = style,
-            "date-changed-month"   => self.date_changed.month = style,
-            "date-changed-year"    => self.date_changed.year  = style,
-            "date-changed-old"     => self.date_changed.old   = style,
-            "date-changed-flat"    => self.date_changed.flat  = style,
+            "date-changed" => self.date_changed.set_all(style),
+            "date-changed-now" => self.date_changed.now = style,
+            "date-changed-today" => self.date_changed.today = style,
+            "date-changed-week" => self.date_changed.week = style,
+            "date-changed-month" => self.date_changed.month = style,
+            "date-changed-year" => self.date_changed.year = style,
+            "date-changed-old" => self.date_changed.old = style,
+            "date-changed-flat" => self.date_changed.flat = style,
 
-            "date-created"         => self.date_created.set_all(style),
-            "date-created-now"     => self.date_created.now   = style,
-            "date-created-today"   => self.date_created.today = style,
-            "date-created-week"    => self.date_created.week  = style,
-            "date-created-month"   => self.date_created.month = style,
-            "date-created-year"    => self.date_created.year  = style,
-            "date-created-old"     => self.date_created.old   = style,
-            "date-created-flat"    => self.date_created.flat  = style,
-            "inode"            => self.inode             = style,
-            "blocks"           => self.blocks            = style,
-            "header"           => self.header            = style,
-            "octal"            => self.octal             = style,
-            "flags"            => self.flags             = style,
-            "symlink-path"     => self.symlink_path      = style,
-            "control-char"     => self.control_char      = style,
-            "broken-symlink"   => self.broken_symlink    = style,
-            "broken-overlay"   => self.broken_path_overlay = style,
+            "date-created" => self.date_created.set_all(style),
+            "date-created-now" => self.date_created.now = style,
+            "date-created-today" => self.date_created.today = style,
+            "date-created-week" => self.date_created.week = style,
+            "date-created-month" => self.date_created.month = style,
+            "date-created-year" => self.date_created.year = style,
+            "date-created-old" => self.date_created.old = style,
+            "date-created-flat" => self.date_created.flat = style,
+            "inode" => self.inode = style,
+            "blocks" => self.blocks = style,
+            "header" => self.header = style,
+            "octal" => self.octal = style,
+            "flags" => self.flags = style,
+            "symlink-path" => self.symlink_path = style,
+            "control-char" => self.control_char = style,
+            "broken-symlink" => self.broken_symlink = style,
+            "broken-overlay" => self.broken_path_overlay = style,
 
             _ => return false,
         }
@@ -538,7 +576,6 @@ impl UiStyles {
         true
     }
 }
-
 
 #[cfg(test)]
 mod is_smoothable_test {
@@ -620,13 +657,13 @@ mod is_smoothable_test {
     #[test]
     fn date_all_rgb_is_smoothable() {
         let date = DateAge {
-            now:   rgb(0x3D, 0xD7, 0xD7),
+            now: rgb(0x3D, 0xD7, 0xD7),
             today: rgb(0x3D, 0xD7, 0xD7),
-            week:  rgb(0x3A, 0xAB, 0xAE),
+            week: rgb(0x3A, 0xAB, 0xAE),
             month: rgb(0x3B, 0x8E, 0xD8),
-            year:  rgb(0x88, 0x88, 0x88),
-            old:   rgb(0x5C, 0x5C, 0x5C),
-            flat:  Style::default(),
+            year: rgb(0x88, 0x88, 0x88),
+            old: rgb(0x5C, 0x5C, 0x5C),
+            flat: Style::default(),
         };
         assert!(date.is_smoothable());
     }
@@ -639,13 +676,13 @@ mod is_smoothable_test {
     #[test]
     fn date_one_palette_tier_disqualifies_the_column() {
         let date = DateAge {
-            now:   rgb(0x3D, 0xD7, 0xD7),
+            now: rgb(0x3D, 0xD7, 0xD7),
             today: rgb(0x3D, 0xD7, 0xD7),
-            week:  fixed(30),   // palette
+            week: fixed(30), // palette
             month: rgb(0x3B, 0x8E, 0xD8),
-            year:  rgb(0x88, 0x88, 0x88),
-            old:   rgb(0x5C, 0x5C, 0x5C),
-            flat:  Style::default(),
+            year: rgb(0x88, 0x88, 0x88),
+            old: rgb(0x5C, 0x5C, 0x5C),
+            flat: Style::default(),
         };
         assert!(!date.is_smoothable());
     }
@@ -653,13 +690,13 @@ mod is_smoothable_test {
     #[test]
     fn date_one_unset_tier_disqualifies_the_column() {
         let date = DateAge {
-            now:   rgb(0x3D, 0xD7, 0xD7),
+            now: rgb(0x3D, 0xD7, 0xD7),
             today: Style::default(),
-            week:  rgb(0x3A, 0xAB, 0xAE),
+            week: rgb(0x3A, 0xAB, 0xAE),
             month: rgb(0x3B, 0x8E, 0xD8),
-            year:  rgb(0x88, 0x88, 0x88),
-            old:   rgb(0x5C, 0x5C, 0x5C),
-            flat:  Style::default(),
+            year: rgb(0x88, 0x88, 0x88),
+            old: rgb(0x5C, 0x5C, 0x5C),
+            flat: Style::default(),
         };
         assert!(!date.is_smoothable());
     }
@@ -669,13 +706,13 @@ mod is_smoothable_test {
         // `flat` is the no-gradient fallback; its value must not
         // affect whether the tier chain is smoothable.
         let date = DateAge {
-            now:   rgb(0x3D, 0xD7, 0xD7),
+            now: rgb(0x3D, 0xD7, 0xD7),
             today: rgb(0x3D, 0xD7, 0xD7),
-            week:  rgb(0x3A, 0xAB, 0xAE),
+            week: rgb(0x3A, 0xAB, 0xAE),
             month: rgb(0x3B, 0x8E, 0xD8),
-            year:  rgb(0x88, 0x88, 0x88),
-            old:   rgb(0x5C, 0x5C, 0x5C),
-            flat:  fixed(244), // palette, but doesn't matter
+            year: rgb(0x88, 0x88, 0x88),
+            old: rgb(0x5C, 0x5C, 0x5C),
+            flat: fixed(244), // palette, but doesn't matter
         };
         assert!(date.is_smoothable());
     }

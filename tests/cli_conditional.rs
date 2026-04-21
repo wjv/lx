@@ -1,9 +1,8 @@
 //! Tests for conditional config: [[personality.NAME.when]] blocks.
 
-use std::fs;
 use predicates::prelude::*;
+use std::fs;
 use tempfile::tempdir;
-
 
 /// Create a config with conditional overrides and return a command.
 fn lx_with_conditional_config(config_content: &str) -> (tempfile::TempDir, assert_cmd::Command) {
@@ -18,24 +17,25 @@ fn lx_with_conditional_config(config_content: &str) -> (tempfile::TempDir, asser
 
     let mut cmd = assert_cmd::Command::cargo_bin("lx").expect("binary lx not found");
     cmd.env("LX_CONFIG", config_path)
-       .env("HOME", "/nonexistent")
-       .arg("--colour=never");
+        .env("HOME", "/nonexistent")
+        .arg("--colour=never");
     (dir, cmd)
 }
-
 
 // ── Basic conditional override ───────────────────────────────────
 
 #[test]
 fn when_env_matches_overrides_setting() {
-    let (_dir, mut cmd) = lx_with_conditional_config(r#"
+    let (_dir, mut cmd) = lx_with_conditional_config(
+        r#"
         [personality.lx]
         sort = "name"
 
         [[personality.lx.when]]
         env.LX_TEST_COND = "yes"
         sort = "size"
-    "#);
+    "#,
+    );
 
     cmd.env("LX_TEST_COND", "yes")
         .args(["--show-config"])
@@ -46,14 +46,16 @@ fn when_env_matches_overrides_setting() {
 
 #[test]
 fn when_env_not_set_uses_base() {
-    let (_dir, mut cmd) = lx_with_conditional_config(r#"
+    let (_dir, mut cmd) = lx_with_conditional_config(
+        r#"
         [personality.lx]
         sort = "name"
 
         [[personality.lx.when]]
         env.LX_TEST_COND = "yes"
         sort = "size"
-    "#);
+    "#,
+    );
 
     // LX_TEST_COND not set — should use base sort = "name"
     cmd.env_remove("LX_TEST_COND")
@@ -65,14 +67,16 @@ fn when_env_not_set_uses_base() {
 
 #[test]
 fn when_env_wrong_value_uses_base() {
-    let (_dir, mut cmd) = lx_with_conditional_config(r#"
+    let (_dir, mut cmd) = lx_with_conditional_config(
+        r#"
         [personality.lx]
         sort = "name"
 
         [[personality.lx.when]]
         env.LX_TEST_COND = "yes"
         sort = "size"
-    "#);
+    "#,
+    );
 
     cmd.env("LX_TEST_COND", "no")
         .args(["--show-config"])
@@ -81,12 +85,12 @@ fn when_env_wrong_value_uses_base() {
         .stdout(predicate::str::contains("sort").and(predicate::str::contains("name")));
 }
 
-
 // ── Multiple conditions (AND) ────────────────────────────────────
 
 #[test]
 fn when_multiple_env_all_must_match() {
-    let (_dir, mut cmd) = lx_with_conditional_config(r#"
+    let (_dir, mut cmd) = lx_with_conditional_config(
+        r#"
         [personality.lx]
         sort = "name"
 
@@ -94,7 +98,8 @@ fn when_multiple_env_all_must_match() {
         env.LX_TEST_A = "one"
         env.LX_TEST_B = "two"
         sort = "size"
-    "#);
+    "#,
+    );
 
     // Only one matches — should NOT override.
     cmd.env("LX_TEST_A", "one")
@@ -107,7 +112,8 @@ fn when_multiple_env_all_must_match() {
 
 #[test]
 fn when_multiple_env_both_match() {
-    let (_dir, mut cmd) = lx_with_conditional_config(r#"
+    let (_dir, mut cmd) = lx_with_conditional_config(
+        r#"
         [personality.lx]
         sort = "name"
 
@@ -115,7 +121,8 @@ fn when_multiple_env_both_match() {
         env.LX_TEST_A = "one"
         env.LX_TEST_B = "two"
         sort = "size"
-    "#);
+    "#,
+    );
 
     cmd.env("LX_TEST_A", "one")
         .env("LX_TEST_B", "two")
@@ -125,12 +132,12 @@ fn when_multiple_env_both_match() {
         .stdout(predicate::str::contains("sort").and(predicate::str::contains("size")));
 }
 
-
 // ── Multiple when blocks (OR, later wins) ────────────────────────
 
 #[test]
 fn when_later_block_overrides_earlier() {
-    let (_dir, mut cmd) = lx_with_conditional_config(r#"
+    let (_dir, mut cmd) = lx_with_conditional_config(
+        r#"
         [personality.lx]
         sort = "name"
 
@@ -141,7 +148,8 @@ fn when_later_block_overrides_earlier() {
         [[personality.lx.when]]
         env.LX_TEST_SECOND = "yes"
         sort = "extension"
-    "#);
+    "#,
+    );
 
     // Both match — second block's sort = "extension" should win.
     cmd.env("LX_TEST_FIRST", "yes")
@@ -152,19 +160,20 @@ fn when_later_block_overrides_earlier() {
         .stdout(predicate::str::contains("sort").and(predicate::str::contains("extension")));
 }
 
-
 // ── env.VAR = true/false (set/unset) ─────────────────────────────
 
 #[test]
 fn when_env_true_matches_when_present() {
-    let (_dir, mut cmd) = lx_with_conditional_config(r#"
+    let (_dir, mut cmd) = lx_with_conditional_config(
+        r#"
         [personality.lx]
         sort = "name"
 
         [[personality.lx.when]]
         env.LX_TEST_SET = true
         sort = "size"
-    "#);
+    "#,
+    );
 
     cmd.env("LX_TEST_SET", "anything")
         .args(["--show-config"])
@@ -175,14 +184,16 @@ fn when_env_true_matches_when_present() {
 
 #[test]
 fn when_env_true_fails_when_absent() {
-    let (_dir, mut cmd) = lx_with_conditional_config(r#"
+    let (_dir, mut cmd) = lx_with_conditional_config(
+        r#"
         [personality.lx]
         sort = "name"
 
         [[personality.lx.when]]
         env.LX_TEST_SET = true
         sort = "size"
-    "#);
+    "#,
+    );
 
     cmd.env_remove("LX_TEST_SET")
         .args(["--show-config"])
@@ -193,14 +204,16 @@ fn when_env_true_fails_when_absent() {
 
 #[test]
 fn when_env_false_matches_when_absent() {
-    let (_dir, mut cmd) = lx_with_conditional_config(r#"
+    let (_dir, mut cmd) = lx_with_conditional_config(
+        r#"
         [personality.lx]
         sort = "name"
 
         [[personality.lx.when]]
         env.LX_TEST_UNSET = false
         sort = "size"
-    "#);
+    "#,
+    );
 
     cmd.env_remove("LX_TEST_UNSET")
         .args(["--show-config"])
@@ -211,14 +224,16 @@ fn when_env_false_matches_when_absent() {
 
 #[test]
 fn when_env_false_fails_when_present() {
-    let (_dir, mut cmd) = lx_with_conditional_config(r#"
+    let (_dir, mut cmd) = lx_with_conditional_config(
+        r#"
         [personality.lx]
         sort = "name"
 
         [[personality.lx.when]]
         env.LX_TEST_UNSET = false
         sort = "size"
-    "#);
+    "#,
+    );
 
     cmd.env("LX_TEST_UNSET", "something")
         .args(["--show-config"])
@@ -229,7 +244,8 @@ fn when_env_false_fails_when_present() {
 
 #[test]
 fn when_env_true_and_exact_combined() {
-    let (_dir, mut cmd) = lx_with_conditional_config(r#"
+    let (_dir, mut cmd) = lx_with_conditional_config(
+        r#"
         [personality.lx]
         sort = "name"
 
@@ -237,7 +253,8 @@ fn when_env_true_and_exact_combined() {
         env.LX_TEST_SSH = true
         env.LX_TEST_TERM = "ghostty"
         sort = "size"
-    "#);
+    "#,
+    );
 
     // Both conditions met.
     cmd.env("LX_TEST_SSH", "1")
@@ -250,7 +267,8 @@ fn when_env_true_and_exact_combined() {
 
 #[test]
 fn when_env_true_and_exact_partial_fail() {
-    let (_dir, mut cmd) = lx_with_conditional_config(r#"
+    let (_dir, mut cmd) = lx_with_conditional_config(
+        r#"
         [personality.lx]
         sort = "name"
 
@@ -258,7 +276,8 @@ fn when_env_true_and_exact_partial_fail() {
         env.LX_TEST_SSH = true
         env.LX_TEST_TERM = "ghostty"
         sort = "size"
-    "#);
+    "#,
+    );
 
     // env-set met but env exact match fails.
     cmd.env("LX_TEST_SSH", "1")
@@ -269,12 +288,12 @@ fn when_env_true_and_exact_partial_fail() {
         .stdout(predicate::str::contains("sort").and(predicate::str::contains("name")));
 }
 
-
 // ── Version warning ──────────────────────────────────────────────
 
 #[test]
 fn when_blocks_in_v03_config_warns() {
-    let (_dir, mut cmd) = lx_with_conditional_config(r#"
+    let (_dir, mut cmd) = lx_with_conditional_config(
+        r#"
         version = "0.3"
 
         [personality.lx]
@@ -283,7 +302,8 @@ fn when_blocks_in_v03_config_warns() {
         [[personality.lx.when]]
         env.LX_TEST_COND = "yes"
         sort = "size"
-    "#);
+    "#,
+    );
 
     cmd.args(["-1", "."])
         .assert()
@@ -293,12 +313,14 @@ fn when_blocks_in_v03_config_warns() {
 
 #[test]
 fn v03_config_without_when_no_warning() {
-    let (_dir, mut cmd) = lx_with_conditional_config(r#"
+    let (_dir, mut cmd) = lx_with_conditional_config(
+        r#"
         version = "0.3"
 
         [personality.lx]
         sort = "name"
-    "#);
+    "#,
+    );
 
     cmd.args(["-1", "."])
         .assert()

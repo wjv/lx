@@ -5,7 +5,6 @@ mod support;
 use predicates::prelude::*;
 use support::lx_no_colour;
 
-
 // ── --columns flag ───────────────────────────────────────────────
 
 #[test]
@@ -42,7 +41,12 @@ fn columns_overrides_tier() {
 fn columns_suppression_still_works() {
     // --no-permissions should remove perms even from explicit --columns
     lx_no_colour()
-        .args(["-l", "--columns=perms,size,modified", "--no-permissions", "Cargo.toml"])
+        .args([
+            "-l",
+            "--columns=perms,size,modified",
+            "--no-permissions",
+            "Cargo.toml",
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains("Cargo.toml"));
@@ -60,10 +64,11 @@ fn columns_unknown_names_error() {
         .assert()
         .failure()
         .code(2)
-        .stderr(predicate::str::contains("invalid value 'bogus' for '--columns"))
+        .stderr(predicate::str::contains(
+            "invalid value 'bogus' for '--columns",
+        ))
         .stderr(predicate::str::contains("[possible values:"));
 }
-
 
 // ── --format flag ────────────────────────────────────────────────
 
@@ -136,7 +141,6 @@ fn format_with_suppression() {
         .stdout(predicate::str::contains("staff").not());
 }
 
-
 // ── Canonical column insertion order ─────────────────────────────
 
 #[test]
@@ -204,7 +208,6 @@ fn no_duplicate_when_already_present() {
     let count = stdout.matches("Group").count();
     assert_eq!(count, 1, "Group should appear once, got {count}: {stdout}");
 }
-
 
 // ── --columns overrides --format ─────────────────────────────────
 

@@ -5,7 +5,6 @@
 #![warn(rust_2018_idioms)]
 #![warn(trivial_casts, trivial_numeric_casts)]
 #![warn(unused)]
-
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::cast_precision_loss)]
 #![allow(clippy::cast_possible_truncation)]
@@ -24,7 +23,7 @@
 
 use std::env;
 use std::ffi::OsString;
-use std::io::{self, Write, ErrorKind};
+use std::io::{self, ErrorKind, Write};
 use std::path::{Component, PathBuf};
 
 use nu_ansi_term::{AnsiStrings, Style};
@@ -32,13 +31,13 @@ use nu_ansi_term::{AnsiStrings, Style};
 use log::*;
 
 use crate::config::ConfigError;
-use crate::fs::{Dir, File};
+use crate::fs::feature::VcsCache;
 use crate::fs::feature::git::GitCache;
 use crate::fs::feature::jj::JjCache;
-use crate::fs::feature::VcsCache;
 use crate::fs::filter::VcsIgnore;
-use crate::options::{Options, OptionsError, VcsBackend, Vars, vars, OptionsResult};
-use crate::output::{escape, lines, grid, grid_details, details, View, Mode};
+use crate::fs::{Dir, File};
+use crate::options::{Options, OptionsError, OptionsResult, Vars, VcsBackend, vars};
+use crate::output::{Mode, View, details, escape, grid, grid_details, lines};
 use crate::theme::{Theme, ThemeError};
 
 mod config;
@@ -47,7 +46,6 @@ mod logger;
 pub(crate) mod options;
 mod output;
 mod theme;
-
 
 /// Top-level error type for the `lx` binary.
 ///
@@ -75,14 +73,15 @@ impl LxError {
         match self {
             Self::Options(_)
             | Self::Theme(_)
-            | Self::Config(ConfigError::InheritanceCycle { .. }
-                          | ConfigError::MissingParent { .. }
-                          | ConfigError::NotFound { .. }) => exits::OPTIONS_ERROR,
+            | Self::Config(
+                ConfigError::InheritanceCycle { .. }
+                | ConfigError::MissingParent { .. }
+                | ConfigError::NotFound { .. },
+            ) => exits::OPTIONS_ERROR,
             _ => exits::RUNTIME_ERROR,
         }
     }
 }
-
 
 fn main() {
     #[cfg(unix)]
@@ -106,7 +105,6 @@ fn main() {
     }
 }
 
-
 /// Format the "error:" label the way clap does: bold red when stderr is
 /// a terminal and `NO_COLOR` is unset, plain otherwise.  Keeps our
 /// non-clap fatal errors visually consistent with clap's own output.
@@ -119,7 +117,6 @@ fn error_label() -> &'static str {
         "error:"
     }
 }
-
 
 /// Discover personality names for shell-completion alias registration
 /// by scanning `$PATH` for symlinks that resolve to the same binary
@@ -142,15 +139,25 @@ fn personality_completion_names() -> Vec<String> {
 
     let mut names = Vec::new();
     for dir in std::env::split_paths(&path_var) {
-        let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
             // Only check symlinks — skip regular files and dirs.
-            let Ok(meta) = path.symlink_metadata() else { continue };
-            if !meta.is_symlink() { continue }
+            let Ok(meta) = path.symlink_metadata() else {
+                continue;
+            };
+            if !meta.is_symlink() {
+                continue;
+            }
             // Does this symlink resolve to our binary?
-            let Ok(target) = path.canonicalize() else { continue };
-            if target != our_exe { continue }
+            let Ok(target) = path.canonicalize() else {
+                continue;
+            };
+            if target != our_exe {
+                continue;
+            }
             if let Some(name) = path.file_name().and_then(|n| n.to_str())
                 && name != "lx"
                 && !names.iter().any(|n| n == name)
@@ -163,7 +170,6 @@ fn personality_completion_names() -> Vec<String> {
     names.sort();
     names
 }
-
 
 /// Fallible body of `main()`.  Returns the desired process exit code on
 /// success or a top-level `LxError` to be reported by the wrapper.
@@ -245,7 +251,7 @@ fn try_main() -> Result<i32, LxError> {
                     candidates: config::all_personality_names().join(", "),
                 }));
             }
-            None => {}  // -p (clap will catch it) or argv[0] (silent default)
+            None => {} // -p (clap will catch it) or argv[0] (silent default)
         }
         // `explicit` is now only consulted via personality_source above.
         let _ = explicit;
@@ -254,14 +260,12 @@ fn try_main() -> Result<i32, LxError> {
     // Layer 3: actual CLI args (override everything above).
     args.extend(cli_args.iter().cloned());
 
-
     match Options::parse(&args, &LiveVars) {
         OptionsResult::Ok(options, mut input_paths) => {
-
             // List the current directory by default.
             // (This has to be done here, otherwise git_options won't see it.)
             if input_paths.is_empty() {
-                input_paths = vec![ OsString::from(".") ];
+                input_paths = vec![OsString::from(".")];
             }
 
             let vcs = vcs_cache(&options, &input_paths);
@@ -271,16 +275,34 @@ fn try_main() -> Result<i32, LxError> {
             let theme = options.theme.to_theme(console_width.is_some())?;
 
             // Build a locale::Numeric with personality overrides applied.
-            let mut numeric = locale::Numeric::load_user_locale()
-                .unwrap_or_else(|_| locale::Numeric::english());
-            if let Some(ref dp) = options.view.table_options().and_then(|t| t.decimal_point.clone()) {
+            let mut numeric =
+                locale::Numeric::load_user_locale().unwrap_or_else(|_| locale::Numeric::english());
+            if let Some(ref dp) = options
+                .view
+                .table_options()
+                .and_then(|t| t.decimal_point.clone())
+            {
                 numeric.decimal_sep.clone_from(dp);
             }
-            if let Some(ref ts) = options.view.table_options().and_then(|t| t.thousands_separator.clone()) {
+            if let Some(ref ts) = options
+                .view
+                .table_options()
+                .and_then(|t| t.thousands_separator.clone())
+            {
                 numeric.thousands_sep.clone_from(ts);
             }
 
-            let lx = Lx { options, writer, input_paths, theme, console_width, vcs, item_count: 0, size_total: 0, numeric };
+            let lx = Lx {
+                options,
+                writer,
+                input_paths,
+                theme,
+                console_width,
+                vcs,
+                item_count: 0,
+                size_total: 0,
+                numeric,
+            };
 
             match lx.run() {
                 Ok(exit_status) => return Ok(exit_status),
@@ -321,14 +343,17 @@ fn try_main() -> Result<i32, LxError> {
                 let joined = names.join(" ");
                 match shell {
                     clap_complete::Shell::Bash => {
-                        let _ = write!(out, "\n\
+                        let _ = write!(
+                            out,
+                            "\n\
                             if [[ \"${{BASH_VERSINFO[0]}}\" -eq 4 && \
                             \"${{BASH_VERSINFO[1]}}\" -ge 4 || \
                             \"${{BASH_VERSINFO[0]}}\" -gt 4 ]]; then\n    \
                             complete -F _lx -o nosort -o bashdefault -o default {joined}\n\
                             else\n    \
                             complete -F _lx -o bashdefault -o default {joined}\n\
-                            fi\n");
+                            fi\n"
+                        );
                     }
                     clap_complete::Shell::Zsh => {
                         let _ = writeln!(out, "\ncompdef _lx {joined}");
@@ -408,8 +433,7 @@ fn try_main() -> Result<i32, LxError> {
         }
 
         OptionsResult::UpgradeConfig => {
-            let path = config::find_config_path()
-                .ok_or(config::ConfigError::NothingToUpgrade)?;
+            let path = config::find_config_path().ok_or(config::ConfigError::NothingToUpgrade)?;
             config::upgrade_config(&path)?;
         }
 
@@ -419,11 +443,9 @@ fn try_main() -> Result<i32, LxError> {
     Ok(exits::SUCCESS)
 }
 
-
 /// The main program wrapper.  Holds parsed options, the theme, and any
 /// pre-populated caches (e.g. Git status).
 pub struct Lx {
-
     /// List of command-line options, having been successfully parsed.
     pub options: Options,
 
@@ -461,9 +483,13 @@ pub struct Lx {
 /// Format a byte count as a human-readable string for the `-CZ` summary.
 /// Respects the active size format (`-B` for binary, `-b` for bytes)
 /// and the personality's numeric formatting overrides.
-fn format_size(bytes: u64, fmt: crate::output::table::SizeFormat, numeric: &locale::Numeric) -> String {
-    use unit_prefix::NumberPrefix;
+fn format_size(
+    bytes: u64,
+    fmt: crate::output::table::SizeFormat,
+    numeric: &locale::Numeric,
+) -> String {
     use crate::output::table::SizeFormat;
+    use unit_prefix::NumberPrefix;
 
     match fmt {
         SizeFormat::JustBytes => {
@@ -475,7 +501,9 @@ fn format_size(bytes: u64, fmt: crate::output::table::SizeFormat, numeric: &loca
             } else {
                 let mut out = String::new();
                 for (i, c) in s.chars().rev().enumerate() {
-                    if i > 0 && i % 3 == 0 { out.insert_str(0, sep); }
+                    if i > 0 && i % 3 == 0 {
+                        out.insert_str(0, sep);
+                    }
                     out.insert(0, c);
                 }
                 out
@@ -530,9 +558,7 @@ fn vcs_cache(options: &Options, args: &[OsString]) -> Option<Box<dyn VcsCache>> 
             Some(Box::new(cache))
         }
 
-        VcsBackend::Jj => {
-            discover_jj(&paths)
-        }
+        VcsBackend::Jj => discover_jj(&paths),
 
         VcsBackend::Auto => {
             // Prefer jj if a workspace is detected, fall back to git.
@@ -565,13 +591,14 @@ impl Lx {
                 }
 
                 Ok(f) => {
-                    if f.points_to_directory() && ! self.options.dir_action.treat_dirs_as_files() {
+                    if f.points_to_directory() && !self.options.dir_action.treat_dirs_as_files() {
                         match f.to_dir() {
-                            Ok(d)   => dirs.push(d),
-                            Err(e)  => writeln!(io::stderr(), "{}: {e}", file_path.to_string_lossy())?,
+                            Ok(d) => dirs.push(d),
+                            Err(e) => {
+                                writeln!(io::stderr(), "{}: {e}", file_path.to_string_lossy())?
+                            }
                         }
-                    }
-                    else {
+                    } else {
                         files.push(f);
                     }
                 }
@@ -600,7 +627,10 @@ impl Lx {
             let count_p = number_style.paint(&count);
             let label_p = chrome_style.paint(" items shown");
             if self.options.view.has_total_size() {
-                let fmt = self.options.view.size_format()
+                let fmt = self
+                    .options
+                    .view
+                    .size_format()
                     .unwrap_or(crate::output::table::SizeFormat::DecimalBytes);
                 let size_str = format_size(self.size_total, fmt, &self.numeric);
                 let comma_p = chrome_style.paint(", ");
@@ -614,52 +644,75 @@ impl Lx {
         result
     }
 
-    fn print_dirs(&mut self, dir_files: Vec<Dir>, mut first: bool, is_only_dir: bool, exit_status: i32) -> io::Result<i32> {
+    fn print_dirs(
+        &mut self,
+        dir_files: Vec<Dir>,
+        mut first: bool,
+        is_only_dir: bool,
+        exit_status: i32,
+    ) -> io::Result<i32> {
         for dir in dir_files {
-
             // Put a gap between directories, or between the list of files and
             // the first directory.
             if first {
                 first = false;
-            }
-            else {
+            } else {
                 writeln!(&mut self.writer)?;
             }
 
-            if ! is_only_dir {
+            if !is_only_dir {
                 let mut bits = Vec::new();
-                escape(dir.path.display().to_string(), &mut bits, Style::default(), Style::default());
+                escape(
+                    dir.path.display().to_string(),
+                    &mut bits,
+                    Style::default(),
+                    Style::default(),
+                );
                 writeln!(&mut self.writer, "{}:", AnsiStrings(&bits))?;
             }
 
             let mut children = Vec::new();
             let vcs_ignore = self.options.filter.vcs_ignore == VcsIgnore::CheckAndIgnore;
-            for file in dir.files(self.options.filter.dot_filter, self.vcs.as_deref(), vcs_ignore) {
+            for file in dir.files(
+                self.options.filter.dot_filter,
+                self.vcs.as_deref(),
+                vcs_ignore,
+            ) {
                 match file {
-                    Ok(file)        => children.push(file),
-                    Err((path, e))  => writeln!(io::stderr(), "[{}: {}]", path.display(), e)?,
+                    Ok(file) => children.push(file),
+                    Err((path, e)) => writeln!(io::stderr(), "[{}: {}]", path.display(), e)?,
                 }
-            };
+            }
 
             self.options.filter.filter_child_files(&mut children);
-            self.options.filter.sort_files(&mut children, self.vcs.as_deref());
+            self.options
+                .filter
+                .sort_files(&mut children, self.vcs.as_deref());
 
             if let Some(recurse_opts) = self.options.dir_action.recurse_options() {
-                let depth = dir.path.components().filter(|&c| c != Component::CurDir).count() + 1;
-                if ! recurse_opts.tree && ! recurse_opts.is_too_deep(depth) {
-
+                let depth = dir
+                    .path
+                    .components()
+                    .filter(|&c| c != Component::CurDir)
+                    .count()
+                    + 1;
+                if !recurse_opts.tree && !recurse_opts.is_too_deep(depth) {
                     let mut child_dirs = Vec::new();
-                    for child_dir in children.iter().filter(|f| f.is_directory() && ! f.is_all_all && ! self.options.filter.is_pruned(f)) {
+                    for child_dir in children.iter().filter(|f| {
+                        f.is_directory() && !f.is_all_all && !self.options.filter.is_pruned(f)
+                    }) {
                         match child_dir.to_dir() {
-                            Ok(d)   => child_dirs.push(d),
-                            Err(e)  => writeln!(io::stderr(), "{}: {}", child_dir.path.display(), e)?,
+                            Ok(d) => child_dirs.push(d),
+                            Err(e) => {
+                                writeln!(io::stderr(), "{}: {}", child_dir.path.display(), e)?
+                            }
                         }
                     }
 
                     self.print_files(Some(&dir), children)?;
                     match self.print_dirs(child_dirs, false, false, exit_status) {
-                        Ok(_)   => (),
-                        Err(e)  => return Err(e),
+                        Ok(_) => (),
+                        Err(e) => return Err(e),
                     }
                     continue;
                 }
@@ -678,11 +731,14 @@ impl Lx {
         }
 
         let theme = &self.theme;
-        let View { mode, file_style, .. } = &self.options.view;
+        let View {
+            mode, file_style, ..
+        } = &self.options.view;
 
         // Sum file sizes for non-details modes (flat listing).
         let sum_file_sizes = |files: &[File<'_>]| -> u64 {
-            files.iter()
+            files
+                .iter()
                 .filter(|f| f.is_file())
                 .map(|f| f.metadata().len())
                 .sum()
@@ -693,16 +749,27 @@ impl Lx {
                 self.item_count += files.len();
                 self.size_total += sum_file_sizes(&files);
                 let filter = &self.options.filter;
-                let r = grid::Render { files, theme, file_style, opts, console_width, filter };
+                let r = grid::Render {
+                    files,
+                    theme,
+                    file_style,
+                    opts,
+                    console_width,
+                    filter,
+                };
                 r.render(&mut self.writer)
             }
 
-            (Mode::Grid(_), None) |
-            (Mode::Lines,   _)    => {
+            (Mode::Grid(_), None) | (Mode::Lines, _) => {
                 self.item_count += files.len();
                 self.size_total += sum_file_sizes(&files);
                 let filter = &self.options.filter;
-                let r = lines::Render { files, theme, file_style, filter };
+                let r = lines::Render {
+                    files,
+                    theme,
+                    file_style,
+                    filter,
+                };
                 r.render(&mut self.writer)
             }
 
@@ -712,7 +779,17 @@ impl Lx {
 
                 let vcs_ignoring = self.options.filter.vcs_ignore == VcsIgnore::CheckAndIgnore;
                 let vcs = self.vcs.as_deref();
-                let r = details::Render { dir, files, theme, file_style, opts, recurse, filter, vcs_ignoring, vcs };
+                let r = details::Render {
+                    dir,
+                    files,
+                    theme,
+                    file_style,
+                    opts,
+                    recurse,
+                    filter,
+                    vcs_ignoring,
+                    vcs,
+                };
                 let (count, bytes) = r.render(&mut self.writer)?;
                 self.item_count += count;
                 self.size_total += bytes;
@@ -730,7 +807,19 @@ impl Lx {
                 let vcs_ignoring = self.options.filter.vcs_ignore == VcsIgnore::CheckAndIgnore;
                 let vcs = self.vcs.as_deref();
 
-                let r = grid_details::Render { dir, files, theme, file_style, grid, details, filter, row_threshold, vcs_ignoring, vcs, console_width };
+                let r = grid_details::Render {
+                    dir,
+                    files,
+                    theme,
+                    file_style,
+                    grid,
+                    details,
+                    filter,
+                    row_threshold,
+                    vcs_ignoring,
+                    vcs,
+                    console_width,
+                };
                 r.render(&mut self.writer)
             }
 
@@ -741,7 +830,17 @@ impl Lx {
                 let vcs_ignoring = self.options.filter.vcs_ignore == VcsIgnore::CheckAndIgnore;
 
                 let vcs = self.vcs.as_deref();
-                let r = details::Render { dir, files, theme, file_style, opts, recurse, filter, vcs_ignoring, vcs };
+                let r = details::Render {
+                    dir,
+                    files,
+                    theme,
+                    file_style,
+                    opts,
+                    recurse,
+                    filter,
+                    vcs_ignoring,
+                    vcs,
+                };
                 let (count, bytes) = r.render(&mut self.writer)?;
                 self.item_count += count;
                 self.size_total += bytes;
@@ -750,7 +849,6 @@ impl Lx {
         }
     }
 }
-
 
 /// Scan raw args for --personality=NAME or -p NAME before Clap parsing.
 fn find_personality_arg(args: &[OsString]) -> Option<String> {
@@ -761,14 +859,17 @@ fn find_personality_arg(args: &[OsString]) -> Option<String> {
             return Some(name.to_string());
         }
         if (s == "--personality" || s == "-p")
-            && let Some(next) = iter.next() {
-                return Some(next.to_string_lossy().to_string());
-            }
+            && let Some(next) = iter.next()
+        {
+            return Some(next.to_string_lossy().to_string());
+        }
         // Handle -pNAME (short flag with attached value)
         if let Some(name) = s.strip_prefix("-p")
-            && !name.is_empty() && !name.starts_with('-') {
-                return Some(name.to_string());
-            }
+            && !name.is_empty()
+            && !name.starts_with('-')
+        {
+            return Some(name.to_string());
+        }
     }
     None
 }
@@ -783,13 +884,13 @@ fn find_theme_arg(args: &[OsString]) -> Option<String> {
             return Some(name.to_string());
         }
         if s == "--theme"
-            && let Some(next) = iter.next() {
-                return Some(next.to_string_lossy().to_string());
-            }
+            && let Some(next) = iter.next()
+        {
+            return Some(next.to_string_lossy().to_string());
+        }
     }
     None
 }
-
 
 mod exits {
 

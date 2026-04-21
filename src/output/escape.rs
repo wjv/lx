@@ -1,8 +1,10 @@
 use nu_ansi_term::{AnsiString, Style};
 
-
 pub fn escape(string: String, bits: &mut Vec<AnsiString<'_>>, good: Style, bad: Style) {
-    if string.chars().all(|c| c >= 0x20 as char && c != 0x7f as char) {
+    if string
+        .chars()
+        .all(|c| c >= 0x20 as char && c != 0x7f as char)
+    {
         bits.push(good.paint(string));
         return;
     }
@@ -17,8 +19,7 @@ pub fn escape(string: String, bits: &mut Vec<AnsiString<'_>>, good: Style, bad: 
             let mut s = String::new();
             s.push(c);
             bits.push(good.paint(s));
-        }
-        else {
+        } else {
             let s = c.escape_default().collect::<String>();
             bits.push(bad.paint(s));
         }

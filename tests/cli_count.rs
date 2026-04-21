@@ -2,11 +2,10 @@
 
 mod support;
 
-use std::fs;
 use predicates::prelude::*;
+use std::fs;
 use support::lx_no_colour;
 use tempfile::tempdir;
-
 
 fn count_fixture() -> tempfile::TempDir {
     let dir = tempdir().expect("failed to create tempdir");
@@ -20,7 +19,6 @@ fn count_fixture() -> tempfile::TempDir {
 
     dir
 }
-
 
 #[test]
 fn count_flat_listing() {

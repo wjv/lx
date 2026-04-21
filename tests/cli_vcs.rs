@@ -6,12 +6,11 @@
 
 mod support;
 
+use predicates::prelude::*;
 use std::fs;
 use std::process::Command as StdCommand;
-use predicates::prelude::*;
 use support::{lx, lx_no_colour};
 use tempfile::tempdir;
-
 
 /// Create a temporary git repo with a tracked file and an untracked file.
 fn git_fixture() -> tempfile::TempDir {
@@ -79,13 +78,11 @@ fn jj_feature_enabled() -> bool {
     !stderr.contains("disabled")
 }
 
-
 // ── --vcs flag validation ─────────────────────────────────────────
 
 #[test]
 fn vcs_invalid_value() {
-    lx()
-        .arg("--vcs=svn")
+    lx().arg("--vcs=svn")
         .assert()
         .failure()
         .stderr(predicate::str::contains("invalid value"));
@@ -105,7 +102,6 @@ fn vcs_none_disables_status() {
         .stdout(predicate::str::contains(" M ").not())
         .stdout(predicate::str::contains(" N ").not());
 }
-
 
 // ── Git backend ───────────────────────────────────────────────────
 
@@ -169,9 +165,6 @@ fn git_vcs_ignore_hides_ignored_files() {
         .stdout(predicate::str::contains("tracked.txt"));
 }
 
-
-
-
 // ── --vcs-status without --long (silently ignored) ────────────────
 
 #[test]
@@ -181,7 +174,6 @@ fn vcs_status_without_long_is_fine() {
         .assert()
         .success();
 }
-
 
 // ── jj backend (only runs if jj is installed) ─────────────────────
 
@@ -234,7 +226,6 @@ fn jj_auto_detection() {
         .success()
         .stdout(predicate::str::contains("MM").not());
 }
-
 
 // ── --vcs=auto fallback to git ────────────────────────────────────
 

@@ -14,7 +14,6 @@ use serde::Deserialize;
 
 use super::settings::settings_to_args;
 
-
 // ── Config schema versioning ────────────────────────────────────
 
 /// The current config schema version.
@@ -27,7 +26,6 @@ pub const CONFIG_VERSION: &str = "0.6";
 /// setting is `time = "..."` (gone in 0.5), which triggers a warning
 /// and is ignored if found in 0.3/0.4 files.
 pub(super) const ACCEPTED_VERSIONS: &[&str] = &["0.3", "0.4", "0.5", "0.6"];
-
 
 // ── Top-level config ────────────────────────────────────────────
 
@@ -66,14 +64,23 @@ impl Config {
     /// Merge a drop-in fragment into this config.  Each named entry
     /// in the fragment overrides the same-named entry in `self`.
     pub(super) fn merge(&mut self, other: Config) {
-        for (k, v) in other.format    { self.format.insert(k, v); }
-        for (k, v) in other.personality { self.personality.insert(k, v); }
-        for (k, v) in other.theme     { self.theme.insert(k, v); }
-        for (k, v) in other.style     { self.style.insert(k, v); }
-        for (k, v) in other.class     { self.class.insert(k, v); }
+        for (k, v) in other.format {
+            self.format.insert(k, v);
+        }
+        for (k, v) in other.personality {
+            self.personality.insert(k, v);
+        }
+        for (k, v) in other.theme {
+            self.theme.insert(k, v);
+        }
+        for (k, v) in other.style {
+            self.style.insert(k, v);
+        }
+        for (k, v) in other.class {
+            self.class.insert(k, v);
+        }
     }
 }
-
 
 // ── ThemeDef ────────────────────────────────────────────────────
 
@@ -105,7 +112,6 @@ pub struct ThemeDef {
     pub ui: HashMap<String, String>,
 }
 
-
 // ── StyleDef ────────────────────────────────────────────────────
 
 /// A named file colour style set under `[style.NAME]`.
@@ -127,7 +133,6 @@ pub struct StyleDef {
     #[serde(flatten)]
     pub patterns: HashMap<String, String>,
 }
-
 
 // ── ConditionalOverride ─────────────────────────────────────────
 
@@ -186,7 +191,6 @@ impl ConditionalOverride {
     }
 }
 
-
 // ── PersonalityDef ──────────────────────────────────────────────
 
 /// A personality bundles format, columns, and settings.
@@ -242,7 +246,6 @@ impl PersonalityDef {
     }
 }
 
-
 // ── StringOrList ────────────────────────────────────────────────
 
 /// A value that can be either a TOML string (comma-separated) or a
@@ -265,7 +268,8 @@ impl StringOrList {
 
 impl<'de> Deserialize<'de> for StringOrList {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where D: serde::Deserializer<'de>,
+    where
+        D: serde::Deserializer<'de>,
     {
         use serde::de;
 
@@ -282,7 +286,10 @@ impl<'de> Deserialize<'de> for StringOrList {
                 Ok(StringOrList::Str(v.to_string()))
             }
 
-            fn visit_seq<A: de::SeqAccess<'de>>(self, mut seq: A) -> Result<StringOrList, A::Error> {
+            fn visit_seq<A: de::SeqAccess<'de>>(
+                self,
+                mut seq: A,
+            ) -> Result<StringOrList, A::Error> {
                 let mut v = Vec::new();
                 while let Some(s) = seq.next_element::<String>()? {
                     v.push(s);

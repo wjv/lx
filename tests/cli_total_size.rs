@@ -2,19 +2,18 @@
 
 mod support;
 
-use std::fs;
 use predicates::prelude::*;
+use std::fs;
 use support::lx_no_colour;
 use tempfile::tempdir;
-
 
 #[test]
 fn total_size_shows_for_directories() {
     let dir = tempdir().expect("failed to create tempdir");
     let sub = dir.path().join("subdir");
     fs::create_dir(&sub).unwrap();
-    fs::write(sub.join("file1.txt"), "hello").unwrap();      // 5 bytes
-    fs::write(sub.join("file2.txt"), "world!!!").unwrap();    // 8 bytes
+    fs::write(sub.join("file1.txt"), "hello").unwrap(); // 5 bytes
+    fs::write(sub.join("file2.txt"), "world!!!").unwrap(); // 8 bytes
 
     lx_no_colour()
         .args(["-l", "--total-size"])
@@ -106,8 +105,7 @@ fn stree_style() {
     fs::write(b.join("small.txt"), "hi").unwrap();
 
     lx_no_colour()
-        .args(["-DT", "-L1", "--columns=size",
-               "-rs", "size", "-Z"])
+        .args(["-DT", "-L1", "--columns=size", "-rs", "size", "-Z"])
         .arg(dir.path())
         .assert()
         .success()

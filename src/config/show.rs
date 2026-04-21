@@ -14,7 +14,6 @@ use super::store::config;
 use super::styles::resolve_style;
 use super::themes::is_builtin_theme;
 
-
 /// Display the active configuration to stdout.
 ///
 /// Shows the resolved personality, format, theme, style, and classes,
@@ -23,10 +22,10 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
     // Styling consistent with --help: yellow bold headers, cyan bold
     // literals/names, green values/paths, dimmed for source annotations.
     let heading = Style::new().bold().fg(Color::Yellow);
-    let label   = Style::new().bold();
-    let name    = Style::new().bold().fg(Color::Cyan);
-    let value   = Style::new().fg(Color::Green);
-    let dimmed  = Style::new().dimmed();
+    let label = Style::new().bold();
+    let name = Style::new().bold().fg(Color::Cyan);
+    let value = Style::new().fg(Color::Green);
+    let dimmed = Style::new().dimmed();
 
     let config_path = find_config_path();
     let cfg = config();
@@ -36,13 +35,26 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
 
     // Config file.
     match &config_path {
-        Some(p) => println!("{} {}", label.paint("Config file:"), value.paint(p.display().to_string())),
-        None    => println!("{} {}", label.paint("Config file:"), dimmed.paint("(none)")),
+        Some(p) => println!(
+            "{} {}",
+            label.paint("Config file:"),
+            value.paint(p.display().to_string())
+        ),
+        None => println!("{} {}", label.paint("Config file:"), dimmed.paint("(none)")),
     }
-    println!("{} {}", label.paint("Config version:"), value.paint(CONFIG_VERSION));
+    println!(
+        "{} {}",
+        label.paint("Config version:"),
+        value.paint(CONFIG_VERSION)
+    );
     if let Some(cfg) = cfg
-        && !cfg.drop_in_paths.is_empty() {
-        println!("{} {} file(s) from conf.d/", label.paint("Drop-ins:"), value.paint(cfg.drop_in_paths.len().to_string()));
+        && !cfg.drop_in_paths.is_empty()
+    {
+        println!(
+            "{} {} file(s) from conf.d/",
+            label.paint("Drop-ins:"),
+            value.paint(cfg.drop_in_paths.len().to_string())
+        );
         for p in &cfg.drop_in_paths {
             println!("  {}", dimmed.paint(p.display().to_string()));
         }
@@ -50,14 +62,22 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
     println!();
 
     // Personality.
-    println!("{} {}", label.paint("Personality:"), name.paint(personality_name));
+    println!(
+        "{} {}",
+        label.paint("Personality:"),
+        name.paint(personality_name)
+    );
     let source = if cfg.is_some_and(|c| c.personality.contains_key(personality_name)) {
         "config"
     } else {
         "builtin"
     };
     println!("  {} {}", label.paint("source:"), dimmed.paint(source));
-    println!("  {} {}", label.paint("activated by:"), dimmed.paint(activated_by));
+    println!(
+        "  {} {}",
+        label.paint("activated by:"),
+        dimmed.paint(activated_by)
+    );
 
     if let Ok(Some(p)) = resolve_personality(personality_name) {
         if let Some(ref inherits) = p.inherits {
@@ -67,14 +87,22 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
             println!("  {} {}", label.paint("format:"), name.paint(fmt));
         }
         if let Some(ref cols) = p.columns {
-            println!("  {} {}", label.paint("columns:"), value.paint(cols.to_csv()));
+            println!(
+                "  {} {}",
+                label.paint("columns:"),
+                value.paint(cols.to_csv())
+            );
         }
         if !p.settings.is_empty() {
-            println!("  {}",label.paint("settings:"));
+            println!("  {}", label.paint("settings:"));
             let mut keys: Vec<_> = p.settings.keys().collect();
             keys.sort();
             for key in keys {
-                println!("    {} = {}", name.paint(key), value.paint(p.settings[key].to_string()));
+                println!(
+                    "    {} = {}",
+                    name.paint(key),
+                    value.paint(p.settings[key].to_string())
+                );
             }
         }
     }
@@ -86,9 +114,15 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
         resolve_personality(personality_name)
             .ok()
             .flatten()
-            .and_then(|p| p.settings.get("theme").and_then(|v| {
-                if let toml::Value::String(s) = v { Some(s.clone()) } else { None }
-            }))
+            .and_then(|p| {
+                p.settings.get("theme").and_then(|v| {
+                    if let toml::Value::String(s) = v {
+                        Some(s.clone())
+                    } else {
+                        None
+                    }
+                })
+            })
     });
 
     if let Some(ref tname) = theme_name {
@@ -103,16 +137,22 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
         println!("  {} {}", label.paint("source:"), dimmed.paint(source));
 
         if is_builtin_theme(tname) {
-            println!("  {} {} {}", label.paint("use-style:"), name.paint("exa"), dimmed.paint("(implicit)"));
+            println!(
+                "  {} {} {}",
+                label.paint("use-style:"),
+                name.paint("exa"),
+                dimmed.paint("(implicit)")
+            );
         } else if let Some(cfg) = cfg
-            && let Some(theme) = cfg.theme.get(tname) {
-                if let Some(ref inherits) = theme.inherits {
-                    println!("  {} {}", label.paint("inherits:"), name.paint(inherits));
-                }
-                if let Some(ref style) = theme.use_style {
-                    println!("  {} {}", label.paint("use-style:"), name.paint(style));
-                }
+            && let Some(theme) = cfg.theme.get(tname)
+        {
+            if let Some(ref inherits) = theme.inherits {
+                println!("  {} {}", label.paint("inherits:"), name.paint(inherits));
             }
+            if let Some(ref style) = theme.use_style {
+                println!("  {} {}", label.paint("use-style:"), name.paint(style));
+            }
+        }
     } else {
         println!("{} {}", label.paint("Theme:"), dimmed.paint("(none)"));
     }
@@ -146,7 +186,11 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
                 let mut keys: Vec<_> = style.classes.keys().collect();
                 keys.sort();
                 for key in keys {
-                    println!("    {} = {}", name.paint(key), value.paint(format!("\"{}\"", style.classes[key])));
+                    println!(
+                        "    {} = {}",
+                        name.paint(key),
+                        value.paint(format!("\"{}\"", style.classes[key]))
+                    );
                 }
             }
             if !style.patterns.is_empty() {
@@ -154,7 +198,11 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
                 let mut keys: Vec<_> = style.patterns.keys().collect();
                 keys.sort();
                 for key in keys {
-                    println!("    {} = {}", name.paint(format!("\"{key}\"")), value.paint(format!("\"{}\"", style.patterns[key])));
+                    println!(
+                        "    {} = {}",
+                        name.paint(format!("\"{key}\"")),
+                        value.paint(format!("\"{}\"", style.patterns[key]))
+                    );
                 }
             }
         }
@@ -165,7 +213,11 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
 
     // Classes.
     let classes = resolve_classes();
-    println!("{} {} defined", label.paint("Classes:"), value.paint(classes.len().to_string()));
+    println!(
+        "{} {} defined",
+        label.paint("Classes:"),
+        value.paint(classes.len().to_string())
+    );
     let mut names: Vec<_> = classes.keys().collect();
     names.sort();
     for cname in names {
@@ -175,9 +227,12 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
             "builtin"
         };
         let patterns = &classes[cname];
-        println!("  {} {}: {} patterns",
-            name.paint(cname), dimmed.paint(format!("({source})")),
-            value.paint(patterns.len().to_string()));
+        println!(
+            "  {} {}: {} patterns",
+            name.paint(cname),
+            dimmed.paint(format!("({source})")),
+            value.paint(patterns.len().to_string())
+        );
     }
     println!();
 

@@ -3,21 +3,18 @@ use nu_ansi_term::Style;
 use crate::fs::fields as f;
 use crate::output::cell::TextCell;
 
-
 impl f::Inode {
     pub fn render(self, style: Style) -> TextCell {
         TextCell::paint(style, self.0.to_string())
     }
 }
 
-
 #[cfg(test)]
 pub mod test {
-    use crate::output::cell::TextCell;
     use crate::fs::fields as f;
+    use crate::output::cell::TextCell;
 
     use nu_ansi_term::Color::*;
-
 
     #[test]
     fn blocklessness() {

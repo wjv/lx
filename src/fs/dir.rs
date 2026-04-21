@@ -1,14 +1,13 @@
 use crate::fs::feature::VcsCache;
 use crate::fs::fields::VcsStatus;
-use std::io;
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::slice::Iter as SliceIter;
 
 use log::*;
 
 use crate::fs::File;
-
 
 /// A directory entry: path plus the file type obtained cheaply from `readdir`.
 pub struct DirEntry {
@@ -23,7 +22,6 @@ pub struct DirEntry {
 /// check the existence of surrounding files, then highlight themselves
 /// accordingly. (See `File#get_source_files`)
 pub struct Dir {
-
     /// A vector of the files that have been read from this directory.
     contents: Vec<DirEntry>,
 
@@ -32,7 +30,6 @@ pub struct Dir {
 }
 
 impl Dir {
-
     /// Create a new Dir object filled with all the files in the directory
     /// pointed to by the given path. Fails if the directory can’t be read, or
     /// isn’t actually a directory, or if there’s an IO error that occurs at
@@ -45,23 +42,33 @@ impl Dir {
         info!("Reading directory {}", path.display());
 
         let contents = fs::read_dir(&path)?
-                          .map(|result| result.map(|entry| {
-                              let file_type = entry.file_type().ok();
-                              DirEntry { path: entry.path(), file_type }
-                          }))
-                          .collect::<Result<_, _>>()?;
+            .map(|result| {
+                result.map(|entry| {
+                    let file_type = entry.file_type().ok();
+                    DirEntry {
+                        path: entry.path(),
+                        file_type,
+                    }
+                })
+            })
+            .collect::<Result<_, _>>()?;
 
         Ok(Self { contents, path })
     }
 
     /// Produce an iterator of IO results of trying to read all the files in
     /// this directory.
-    pub fn files<'dir, 'ig>(&'dir self, dots: DotFilter, git: Option<&'ig dyn VcsCache>, git_ignoring: bool) -> Files<'dir, 'ig> {
+    pub fn files<'dir, 'ig>(
+        &'dir self,
+        dots: DotFilter,
+        git: Option<&'ig dyn VcsCache>,
+        git_ignoring: bool,
+    ) -> Files<'dir, 'ig> {
         Files {
-            inner:     self.contents.iter(),
-            dir:       self,
-            dotfiles:  dots.shows_dotfiles(),
-            dots:      dots.dots(),
+            inner: self.contents.iter(),
+            dir: self,
+            dotfiles: dots.shows_dotfiles(),
+            dots: dots.dots(),
             git,
             git_ignoring,
         }
@@ -78,10 +85,8 @@ impl Dir {
     }
 }
 
-
 /// Iterator over reading the contents of a directory as `File` objects.
 pub struct Files<'dir, 'ig> {
-
     /// The internal iterator over the entries that have been read already.
     inner: SliceIter<'dir, DirEntry>,
 
@@ -117,37 +122,40 @@ impl<'dir> Files<'dir, '_> {
             if let Some(entry) = self.inner.next() {
                 let path = &entry.path;
                 let filename = File::filename(path);
-                if ! self.dotfiles && filename.starts_with('.') {
+                if !self.dotfiles && filename.starts_with('.') {
                     continue;
                 }
 
                 // Also hide _prefix files on Windows because it's used by old applications
                 // as an alternative to dot-prefix files.
                 #[cfg(windows)]
-                if ! self.dotfiles && filename.starts_with('_') {
+                if !self.dotfiles && filename.starts_with('_') {
                     continue;
                 }
 
                 if self.git_ignoring {
                     let git_status = self.git.map(|g| g.get(path, false)).unwrap_or_default();
                     if git_status.unstaged == VcsStatus::Ignored {
-                         continue;
+                        continue;
                     }
 
                     // Hide VCS metadata directories for compiled-in backends.
                     // Use the cached file type from readdir if available.
-                    let is_dir = entry.file_type
+                    let is_dir = entry
+                        .file_type
                         .map_or_else(|| path.is_dir(), |ft| ft.is_dir());
                     if is_dir && is_vcs_dir(&filename) {
                         continue;
                     }
                 }
 
-                return Some(File::from_args(path.clone(), self.dir, filename, entry.file_type)
-                                 .map_err(|e| (path.clone(), e)))
+                return Some(
+                    File::from_args(path.clone(), self.dir, filename, entry.file_type)
+                        .map_err(|e| (path.clone(), e)),
+                );
             }
 
-            return None
+            return None;
         }
     }
 }
@@ -155,7 +163,6 @@ impl<'dir> Files<'dir, '_> {
 /// The dot directories that need to be listed before actual files, if any.
 /// If these aren’t being printed, then `FilesNext` is used to skip them.
 enum DotsNext {
-
     /// List the `.` directory next.
     Dot,
 
@@ -173,31 +180,24 @@ impl<'dir> Iterator for Files<'dir, '_> {
         match self.dots {
             DotsNext::Dot => {
                 self.dots = DotsNext::DotDot;
-                Some(File::new_aa_current(self.dir)
-                          .map_err(|e| (Path::new(".").to_path_buf(), e)))
+                Some(File::new_aa_current(self.dir).map_err(|e| (Path::new(".").to_path_buf(), e)))
             }
 
             DotsNext::DotDot => {
                 self.dots = DotsNext::Files;
-                Some(File::new_aa_parent(self.parent(), self.dir)
-                          .map_err(|e| (self.parent(), e)))
+                Some(File::new_aa_parent(self.parent(), self.dir).map_err(|e| (self.parent(), e)))
             }
 
-            DotsNext::Files => {
-                self.next_visible_file()
-            }
+            DotsNext::Files => self.next_visible_file(),
         }
     }
 }
 
-
 /// Usually files in Unix use a leading dot to be hidden or visible, but two
 /// entries in particular are “extra-hidden”: `.` and `..`, which only become
 /// visible after an extra `-a` option.
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
-#[derive(Default)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Default)]
 pub enum DotFilter {
-
     /// Shows files, dotfiles, and `.` and `..`.
     DotfilesAndDots,
 
@@ -209,30 +209,31 @@ pub enum DotFilter {
     JustFiles,
 }
 
-
 /// Whether a directory name is a VCS metadata directory that should be
 /// hidden by `--vcs-ignore`.  Only includes directories for VCS backends
 /// that are compiled in.
 fn is_vcs_dir(name: &str) -> bool {
     #[cfg(feature = "git")]
-    if name == ".git" { return true; }
+    if name == ".git" {
+        return true;
+    }
 
     #[cfg(feature = "jj")]
-    if name == ".jj" { return true; }
+    if name == ".jj" {
+        return true;
+    }
 
     // Suppress unused-variable warning when no VCS features are enabled.
     let _ = name;
     false
 }
 
-
 impl DotFilter {
-
     /// Whether this filter should show dotfiles in a listing.
     fn shows_dotfiles(self) -> bool {
         match self {
-            Self::JustFiles       => false,
-            Self::Dotfiles        => true,
+            Self::JustFiles => false,
+            Self::Dotfiles => true,
             Self::DotfilesAndDots => true,
         }
     }
@@ -240,9 +241,9 @@ impl DotFilter {
     /// Whether this filter should add dot directories to a listing.
     fn dots(self) -> DotsNext {
         match self {
-            Self::JustFiles        => DotsNext::Files,
-            Self::Dotfiles         => DotsNext::Files,
-            Self::DotfilesAndDots  => DotsNext::Dot,
+            Self::JustFiles => DotsNext::Files,
+            Self::Dotfiles => DotsNext::Files,
+            Self::DotfilesAndDots => DotsNext::Dot,
         }
     }
 }

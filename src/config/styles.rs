@@ -7,7 +7,6 @@ use super::error::ConfigError;
 use super::schema::StyleDef;
 use super::store::config;
 
-
 /// Return the compiled-in "exa" style definition.
 ///
 /// This maps the built-in file-type classes to their default colours,
@@ -15,16 +14,16 @@ use super::store::config;
 pub fn compiled_exa_style() -> StyleDef {
     StyleDef {
         classes: HashMap::from([
-            ("temp".into(),       "38;5;244".into()),
-            ("immediate".into(),  "bold underline yellow".into()),
-            ("image".into(),      "38;5;133".into()),
-            ("video".into(),      "38;5;135".into()),
-            ("music".into(),      "38;5;92".into()),
-            ("lossless".into(),   "38;5;93".into()),
-            ("crypto".into(),     "38;5;109".into()),
-            ("document".into(),   "38;5;105".into()),
+            ("temp".into(), "38;5;244".into()),
+            ("immediate".into(), "bold underline yellow".into()),
+            ("image".into(), "38;5;133".into()),
+            ("video".into(), "38;5;135".into()),
+            ("music".into(), "38;5;92".into()),
+            ("lossless".into(), "38;5;93".into()),
+            ("crypto".into(), "38;5;109".into()),
+            ("document".into(), "38;5;105".into()),
             ("compressed".into(), "red".into()),
-            ("compiled".into(),   "38;5;137".into()),
+            ("compiled".into(), "38;5;137".into()),
         ]),
         patterns: HashMap::new(),
     }
@@ -33,15 +32,15 @@ pub fn compiled_exa_style() -> StyleDef {
 /// Look up a style by name: config first, then compiled-in "exa".
 pub fn resolve_style(name: &str) -> Option<StyleDef> {
     if let Some(cfg) = config()
-        && let Some(s) = cfg.style.get(name) {
-            return Some(s.clone());
-        }
+        && let Some(s) = cfg.style.get(name)
+    {
+        return Some(s.clone());
+    }
     match name {
         "exa" => Some(compiled_exa_style()),
         _ => None,
     }
 }
-
 
 // ── --dump-style output ─────────────────────────────────────────
 
@@ -107,7 +106,9 @@ pub fn dump_style_all() {
     let mut first = true;
     for name in &names {
         if let Some(toml) = format_style_toml(name) {
-            if !first { println!(); }
+            if !first {
+                println!();
+            }
             println!("{toml}");
             first = false;
         }

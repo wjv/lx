@@ -2,11 +2,10 @@
 
 mod support;
 
-use std::fs;
 use predicates::prelude::*;
+use std::fs;
 use support::lx_no_colour;
 use tempfile::tempdir;
-
 
 #[test]
 fn time_style_default() {
@@ -65,7 +64,6 @@ fn time_style_flag_overrides_env() {
         .success()
         .stdout(predicate::str::contains("Cargo.toml"));
 }
-
 
 // ── Timestamp field selection ─────────────────────────────────────
 
@@ -139,7 +137,11 @@ fn no_time_suppresses_date() {
         .arg(dir.path().join("file.txt"))
         .assert()
         .success()
-        .stdout(predicate::str::is_match(r"\d{4}-\d{2}-\d{2}").unwrap().not());
+        .stdout(
+            predicate::str::is_match(r"\d{4}-\d{2}-\d{2}")
+                .unwrap()
+                .not(),
+        );
 }
 
 #[test]

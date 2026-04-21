@@ -1,14 +1,17 @@
 use nu_ansi_term::Style;
 
-use crate::output::cell::TextCell;
 use crate::fs::fields as f;
-
+use crate::output::cell::TextCell;
 
 impl f::VcsRepoStatus {
     pub fn render(&self, colours: &dyn Colours) -> TextCell {
         match self {
             Self::None => TextCell::paint(colours.not_a_repo(), "-".to_string()),
-            Self::Repo { backend, clean, branch } => {
+            Self::Repo {
+                backend,
+                clean,
+                branch,
+            } => {
                 let indicator = match *backend {
                     "jj" => "J",
                     "git" => "G",
@@ -31,7 +34,6 @@ impl f::VcsRepoStatus {
         }
     }
 }
-
 
 pub trait Colours {
     fn not_a_repo(&self) -> Style;

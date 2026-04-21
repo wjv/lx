@@ -20,7 +20,6 @@ use super::error::{ConfigError, IoResultExt};
 use super::load::{detect_config_version, inject_auto_select_blocks};
 use super::schema::CONFIG_VERSION;
 
-
 /// Upgrade an older config file to the current format.
 pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
     let contents = fs::read_to_string(path).with_path(path)?;
@@ -39,10 +38,7 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
             if !trimmed.contains('=') {
                 continue;
             }
-            if !warned_time
-                && trimmed.starts_with("time")
-                && !trimmed.starts_with("time-style")
-            {
+            if !warned_time && trimmed.starts_with("time") && !trimmed.starts_with("time-style") {
                 eprintln!(
                     "lx: warning: `time = \"...\"` is removed in config \
                      version 0.5; use `modified`, `changed`, `accessed`, \
@@ -91,10 +87,7 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
                 || l.starts_with("env.COLORTERM ")
                 || l.starts_with("env.COLORTERM=")
         });
-        if version == "0.5"
-            && updated.contains("[personality.default]")
-            && !has_term_detection
-        {
+        if version == "0.5" && updated.contains("[personality.default]") && !has_term_detection {
             updated = inject_auto_select_blocks(&updated);
             eprintln!(
                 "Note: added auto-selection [[when]] blocks to \
@@ -121,13 +114,18 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
         fs::write(path, &updated).with_path(path)?;
 
         eprintln!("Original config saved to {}", backup.display());
-        eprintln!("Upgraded {} from version {version} to {CONFIG_VERSION}", path.display());
+        eprintln!(
+            "Upgraded {} from version {version} to {CONFIG_VERSION}",
+            path.display()
+        );
         return Ok(());
     }
 
     // Parse with the permissive legacy struct (handles all old formats).
-    let legacy: LegacyConfig = toml::from_str(&contents)
-        .map_err(|source| ConfigError::Parse { path: path.clone(), source })?;
+    let legacy: LegacyConfig = toml::from_str(&contents).map_err(|source| ConfigError::Parse {
+        path: path.clone(),
+        source,
+    })?;
 
     let mut out = String::new();
     writeln!(out, "version = \"{CONFIG_VERSION}\"").unwrap();
@@ -136,7 +134,8 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
     if !legacy.format.is_empty() {
         out.push_str("\n[format]\n");
         for (name, columns) in &legacy.format {
-            let cols = columns.iter()
+            let cols = columns
+                .iter()
                 .map(|c| format!("\"{c}\""))
                 .collect::<Vec<_>>()
                 .join(", ");
@@ -171,7 +170,7 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
     // Personalities (preserved as-is, except lx handled above for 0.1).
     for (name, settings) in &legacy.personality {
         if version == "0.1" && name == "lx" {
-            continue;  // already handled above
+            continue; // already handled above
         }
         writeln!(out, "\n[personality.{name}]").unwrap();
         for (key, value) in settings {
@@ -187,7 +186,10 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
     fs::write(path, &out).with_path(path)?;
 
     eprintln!("Original config saved to {}", backup.display());
-    eprintln!("Upgraded {} from version {version} to {CONFIG_VERSION}", path.display());
+    eprintln!(
+        "Upgraded {} from version {version} to {CONFIG_VERSION}",
+        path.display()
+    );
     eprintln!("Note: comments were not preserved. You may want to review the result.");
 
     Ok(())
@@ -214,13 +216,14 @@ fn rewrite_colour_scale_to_gradient(contents: &str) -> (String, usize) {
         // Strip the trailing newline for matching, then add it back.
         let (body, newline) = match line.strip_suffix('\n') {
             Some(b) => (b, "\n"),
-            None    => (line, ""),
+            None => (line, ""),
         };
         let trimmed = body.trim_start();
         let indent_len = body.len() - trimmed.len();
         let indent = &body[..indent_len];
 
-        let key_match = trimmed.strip_prefix("colour-scale")
+        let key_match = trimmed
+            .strip_prefix("colour-scale")
             .or_else(|| trimmed.strip_prefix("color-scale"));
 
         if let Some(rest) = key_match {
@@ -233,7 +236,7 @@ fn rewrite_colour_scale_to_gradient(contents: &str) -> (String, usize) {
                 // Strip an optional trailing comment.
                 let (val_with_quotes, comment) = match value_part.find('#') {
                     Some(i) => (value_part[..i].trim_end(), &value_part[i..]),
-                    None    => (value_part.trim_end(), ""),
+                    None => (value_part.trim_end(), ""),
                 };
                 let stripped = val_with_quotes
                     .trim_start_matches(['"', '\''])
@@ -263,7 +266,6 @@ fn rewrite_colour_scale_to_gradient(contents: &str) -> (String, usize) {
     (out, count)
 }
 
-
 /// Legacy config structure for migration.  Uses raw TOML tables
 /// so we can round-trip key-value pairs without losing data.
 #[derive(Debug, Default, Deserialize)]
@@ -279,16 +281,14 @@ struct LegacyConfig {
     personality: HashMap<String, HashMap<String, toml::Value>>,
 }
 
-
 #[cfg(test)]
 mod rewrite_test {
     use super::rewrite_colour_scale_to_gradient;
 
     #[test]
     fn rewrites_none() {
-        let (out, n) = rewrite_colour_scale_to_gradient(
-            "[personality.default]\ncolour-scale = \"none\"\n"
-        );
+        let (out, n) =
+            rewrite_colour_scale_to_gradient("[personality.default]\ncolour-scale = \"none\"\n");
         assert_eq!(n, 1);
         assert!(out.contains("gradient = \"none\""));
         assert!(!out.contains("colour-scale"));
@@ -296,45 +296,39 @@ mod rewrite_test {
 
     #[test]
     fn rewrites_16_to_all() {
-        let (out, n) = rewrite_colour_scale_to_gradient(
-            "[personality.default]\ncolour-scale = \"16\"\n"
-        );
+        let (out, n) =
+            rewrite_colour_scale_to_gradient("[personality.default]\ncolour-scale = \"16\"\n");
         assert_eq!(n, 1);
         assert!(out.contains("gradient = \"all\""));
     }
 
     #[test]
     fn rewrites_256_to_all() {
-        let (out, n) = rewrite_colour_scale_to_gradient(
-            "[personality.default]\ncolour-scale = \"256\"\n"
-        );
+        let (out, n) =
+            rewrite_colour_scale_to_gradient("[personality.default]\ncolour-scale = \"256\"\n");
         assert_eq!(n, 1);
         assert!(out.contains("gradient = \"all\""));
     }
 
     #[test]
     fn rewrites_color_scale_alias() {
-        let (out, n) = rewrite_colour_scale_to_gradient(
-            "[personality.default]\ncolor-scale = \"none\"\n"
-        );
+        let (out, n) =
+            rewrite_colour_scale_to_gradient("[personality.default]\ncolor-scale = \"none\"\n");
         assert_eq!(n, 1);
         assert!(out.contains("gradient = \"none\""));
     }
 
     #[test]
     fn preserves_indent_and_trailing_comment() {
-        let (out, n) = rewrite_colour_scale_to_gradient(
-            "  colour-scale = \"16\"   # nice gradient\n"
-        );
+        let (out, n) =
+            rewrite_colour_scale_to_gradient("  colour-scale = \"16\"   # nice gradient\n");
         assert_eq!(n, 1);
         assert!(out.contains("  gradient = \"all\" # nice gradient"));
     }
 
     #[test]
     fn does_not_rewrite_unknown_value() {
-        let (out, n) = rewrite_colour_scale_to_gradient(
-            "colour-scale = \"surprise\"\n"
-        );
+        let (out, n) = rewrite_colour_scale_to_gradient("colour-scale = \"surprise\"\n");
         assert_eq!(n, 0);
         assert!(out.contains("colour-scale"));
     }

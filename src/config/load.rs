@@ -19,7 +19,6 @@ use log::*;
 use super::error::{ConfigError, IoResultExt};
 use super::schema::{ACCEPTED_VERSIONS, Config};
 
-
 /// Search for a config file and return its path, or `None`.
 pub fn find_config_path() -> Option<PathBuf> {
     // 1. Explicit env var.
@@ -49,11 +48,7 @@ pub fn find_config_path() -> Option<PathBuf> {
     // 3. XDG_CONFIG_HOME/lx/config.toml
     let xdg = env::var("XDG_CONFIG_HOME")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            home_dir()
-                .map(|h| h.join(".config"))
-                .unwrap_or_default()
-        });
+        .unwrap_or_else(|_| home_dir().map(|h| h.join(".config")).unwrap_or_default());
     let p = xdg.join("lx").join("config.toml");
     if p.is_file() {
         debug!("Config from XDG: {}", p.display());
@@ -72,7 +67,6 @@ pub fn find_config_path() -> Option<PathBuf> {
 
     None
 }
-
 
 /// Find the drop-in config directory.
 ///
@@ -98,11 +92,7 @@ pub(super) fn find_drop_in_dir(main_config: Option<&Path>) -> Option<PathBuf> {
     // Also check the XDG location (covers ~/.lxconfig.toml users).
     let xdg = env::var("XDG_CONFIG_HOME")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            home_dir()
-                .map(|h| h.join(".config"))
-                .unwrap_or_default()
-        });
+        .unwrap_or_else(|_| home_dir().map(|h| h.join(".config")).unwrap_or_default());
     let d = xdg.join("lx").join("conf.d");
     if d.is_dir() {
         return Some(d);
@@ -137,17 +127,15 @@ fn load_drop_ins(dir: &Path) -> Vec<(PathBuf, Config)> {
     let mut fragments = Vec::new();
     for path in entries {
         match fs::read_to_string(&path) {
-            Ok(contents) => {
-                match toml::from_str::<Config>(&contents) {
-                    Ok(cfg) => {
-                        debug!("conf.d: loaded {}", path.display());
-                        fragments.push((path, cfg));
-                    }
-                    Err(e) => {
-                        warn!("conf.d: parse error in {}: {e}", path.display());
-                    }
+            Ok(contents) => match toml::from_str::<Config>(&contents) {
+                Ok(cfg) => {
+                    debug!("conf.d: loaded {}", path.display());
+                    fragments.push((path, cfg));
                 }
-            }
+                Err(e) => {
+                    warn!("conf.d: parse error in {}: {e}", path.display());
+                }
+            },
             Err(e) => {
                 warn!("conf.d: failed to read {}: {e}", path.display());
             }
@@ -175,8 +163,10 @@ pub(super) fn try_load_config() -> Result<Option<Config>, ConfigError> {
             });
         }
 
-        let cfg: Config = toml::from_str(&contents)
-            .map_err(|source| ConfigError::Parse { path: path.clone(), source })?;
+        let cfg: Config = toml::from_str(&contents).map_err(|source| ConfigError::Parse {
+            path: path.clone(),
+            source,
+        })?;
 
         // Warn if when blocks are used but version is still 0.3.
         if version == "0.3" {
@@ -223,20 +213,18 @@ pub(super) fn detect_config_version(contents: &str) -> &str {
                     "0.2" => "0.2",
                     "0.3" => "0.3",
                     "0.4" => "0.4",
-                    _ => val,  // unknown version — will fail the check
+                    _ => val, // unknown version — will fail the check
                 };
             }
         }
     }
-    "0.1"  // no version field → legacy
+    "0.1" // no version field → legacy
 }
-
 
 /// The default config as a commented TOML string, for `--init-config`.
 pub fn default_config_toml() -> &'static str {
     include_str!("../../lxconfig.default.toml")
 }
-
 
 // ── [[when]] block support ──────────────────────────────────────
 
@@ -286,7 +274,7 @@ theme = \"lx-24bit\"\n\
     let insert_at = match insert_after {
         Some(i) => i,
         None if in_default => lines.len(),
-        None => return contents.to_string(),  // no [personality.default]
+        None => return contents.to_string(), // no [personality.default]
     };
 
     let mut result = String::new();
@@ -312,13 +300,11 @@ theme = \"lx-24bit\"\n\
 /// expected string as a glob pattern if it contains glob metacharacters.
 pub(super) fn match_string(actual: &str, expected: &str) -> bool {
     if expected.contains(['*', '?', '[']) {
-        glob::Pattern::new(expected)
-            .is_ok_and(|pat| pat.matches(actual))
+        glob::Pattern::new(expected).is_ok_and(|pat| pat.matches(actual))
     } else {
         actual == expected
     }
 }
-
 
 // ── home_dir helper ─────────────────────────────────────────────
 
@@ -326,7 +312,6 @@ pub(super) fn match_string(actual: &str, expected: &str) -> bool {
 pub(super) fn home_dir() -> Option<PathBuf> {
     env::var_os("HOME").map(PathBuf::from)
 }
-
 
 #[cfg(test)]
 mod when_match_test {

@@ -6,7 +6,7 @@ use assert_cmd::Command;
 pub fn lx() -> Command {
     let mut cmd = Command::cargo_bin("lx").expect("binary lx not found");
     cmd.env("LX_CONFIG", "/nonexistent")
-       .env("HOME", "/nonexistent");
+        .env("HOME", "/nonexistent");
     cmd
 }
 

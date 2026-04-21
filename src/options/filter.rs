@@ -1,28 +1,28 @@
 //! Parsing the options for `FileFilter`.
 
 use crate::fs::DotFilter;
-use crate::fs::filter::{FileFilter, SortField, SortCase, GroupDirs, IgnorePatterns, SymlinkMode, VcsIgnore};
+use crate::fs::filter::{
+    FileFilter, GroupDirs, IgnorePatterns, SortCase, SortField, SymlinkMode, VcsIgnore,
+};
 
-use crate::options::{flags, OptionsError};
 use crate::options::parser::MatchedFlags;
-
+use crate::options::{OptionsError, flags};
 
 impl FileFilter {
-
     /// Determines which of all the file filter options to use.
     pub fn deduce(matches: &MatchedFlags) -> Result<Self, OptionsError> {
         Ok(Self {
-            group_dirs:       GroupDirs::deduce(matches),
-            reverse:          matches.has(flags::REVERSE),
-            only_dirs:        matches.has(flags::ONLY_DIRS),
-            only_files:       matches.has(flags::ONLY_FILES),
-            sort_field:       SortField::deduce(matches)?,
+            group_dirs: GroupDirs::deduce(matches),
+            reverse: matches.has(flags::REVERSE),
+            only_dirs: matches.has(flags::ONLY_DIRS),
+            only_files: matches.has(flags::ONLY_FILES),
+            sort_field: SortField::deduce(matches)?,
             sort_by_total_size: matches.has(flags::TOTAL),
-            dot_filter:       DotFilter::deduce(matches)?,
-            ignore_patterns:  IgnorePatterns::deduce(matches)?,
-            prune_patterns:   IgnorePatterns::deduce_from(matches, flags::PRUNE)?,
-            vcs_ignore:       VcsIgnore::deduce(matches),
-            symlink_mode:     SymlinkMode::deduce(matches),
+            dot_filter: DotFilter::deduce(matches)?,
+            ignore_patterns: IgnorePatterns::deduce(matches)?,
+            prune_patterns: IgnorePatterns::deduce_from(matches, flags::PRUNE)?,
+            vcs_ignore: VcsIgnore::deduce(matches),
+            symlink_mode: SymlinkMode::deduce(matches),
         })
     }
 }
@@ -41,9 +41,9 @@ impl GroupDirs {
         if let Some(word) = matches.get(flags::GROUP_DIRS) {
             return match word {
                 "first" => Self::First,
-                "last"  => Self::Last,
-                "none"  => Self::None,
-                _       => unreachable!("Clap rejects invalid --group-dirs values"),
+                "last" => Self::Last,
+                "none" => Self::None,
+                _ => unreachable!("Clap rejects invalid --group-dirs values"),
             };
         }
 
@@ -60,7 +60,6 @@ impl GroupDirs {
 }
 
 impl SortField {
-
     /// Determines which sort field to use based on the `--sort`
     /// argument.  Delegates the name → variant mapping to the sort
     /// registry (`src/fs/sort_registry.rs`) so this function stays
@@ -82,12 +81,11 @@ impl SortField {
             return Ok(Self::Name(SortCase::AaBbCc));
         }
 
-        let field = SortFieldDef::field_from_name(word)
-            .expect("Clap rejects invalid --sort values");
+        let field =
+            SortFieldDef::field_from_name(word).expect("Clap rejects invalid --sort values");
         Ok(field)
     }
 }
-
 
 // I've gone back and forth between whether to sort case-sensitively or
 // insensitively by default. The default string sort in most programming
@@ -125,9 +123,7 @@ impl Default for SortField {
     }
 }
 
-
 impl DotFilter {
-
     /// Determines the dot filter based on how many `--all` options were
     /// given: one will show dotfiles, but two will show `.` and `..` too.
     ///
@@ -139,22 +135,17 @@ impl DotFilter {
 
         if count == 0 {
             Ok(Self::JustFiles)
-        }
-        else if count == 1 {
+        } else if count == 1 {
             Ok(Self::Dotfiles)
-        }
-        else if matches.has(flags::TREE) {
+        } else if matches.has(flags::TREE) {
             Err(OptionsError::TreeAllAll)
-        }
-        else {
+        } else {
             Ok(Self::DotfilesAndDots)
         }
     }
 }
 
-
 impl IgnorePatterns {
-
     /// Determines the set of glob patterns to use based on the
     /// `--ignore-glob` argument's value. This is a list of strings
     /// separated by pipe (`|`) characters, given in any order.
@@ -172,19 +163,17 @@ impl IgnorePatterns {
         let (patterns, mut errors) = Self::parse_from_iter(inputs.split('|'));
 
         match errors.pop() {
-            Some(e)  => Err(e.into()),
-            None     => Ok(patterns),
+            Some(e) => Err(e.into()),
+            None => Ok(patterns),
         }
     }
 }
-
 
 impl VcsIgnore {
     pub fn deduce(matches: &MatchedFlags) -> Self {
         if matches.has(flags::VCS_IGNORE) {
             Self::CheckAndIgnore
-        }
-        else {
+        } else {
             Self::Off
         }
     }
@@ -193,13 +182,12 @@ impl VcsIgnore {
 impl SymlinkMode {
     pub fn deduce(matches: &MatchedFlags) -> Self {
         match matches.get(flags::SYMLINKS) {
-            Some("hide")   => Self::Hide,
+            Some("hide") => Self::Hide,
             Some("follow") => Self::Follow,
-            _              => Self::Show,
+            _ => Self::Show,
         }
     }
 }
-
 
 #[cfg(test)]
 mod test {
@@ -285,7 +273,6 @@ mod test {
         }
     }
 
-
     mod dot_filters {
         use super::*;
 
@@ -305,7 +292,6 @@ mod test {
         test!(tree_aaa:   DotFilter <- ["-Taaa"];        Err(OptionsError::TreeAllAll));
     }
 
-
     mod ignore_patterns {
         use super::*;
         use std::iter::FromIterator;
@@ -324,7 +310,6 @@ mod test {
         test!(overridden:   IgnorePatterns <- ["-I=*.ogg",    "-I", "*.mp3"];     Ok(IgnorePatterns::from_iter(vec![ pat("*.mp3") ])));
         test!(overridden_2: IgnorePatterns <- ["-I", "*.OGG", "-I*.MP3"];         Ok(IgnorePatterns::from_iter(vec![ pat("*.MP3") ])));
     }
-
 
     mod vcs_ignores {
         use super::*;

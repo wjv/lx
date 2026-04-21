@@ -2,11 +2,10 @@
 
 mod support;
 
-use std::fs;
 use predicates::prelude::*;
+use std::fs;
 use support::lx_no_colour;
 use tempfile::tempdir;
-
 
 /// Create a config directory with a main config and optional drop-ins.
 fn config_with_dropins(
@@ -34,12 +33,11 @@ fn config_with_dropins(
 
     let mut cmd = assert_cmd::Command::cargo_bin("lx").expect("binary lx not found");
     cmd.env("HOME", "/nonexistent")
-       .env_remove("LX_CONFIG")
-       .env("XDG_CONFIG_HOME", dir.path())
-       .arg("--colour=never");
+        .env_remove("LX_CONFIG")
+        .env("XDG_CONFIG_HOME", dir.path())
+        .arg("--colour=never");
     (dir, cmd)
 }
-
 
 #[test]
 fn dropin_theme_is_loaded() {
@@ -48,11 +46,14 @@ fn dropin_theme_is_loaded() {
         [personality.lx]
         theme = "test-theme"
         "#,
-        &[("theme.toml", r#"
+        &[(
+            "theme.toml",
+            r#"
             [theme.test-theme]
             inherits = "exa"
             directory = "bold red"
-        "#)],
+        "#,
+        )],
     );
 
     cmd.args(["--show-config"])
@@ -68,14 +69,20 @@ fn dropin_files_loaded_alphabetically() {
     let (_dir, mut cmd) = config_with_dropins(
         "",
         &[
-            ("a-first.toml", r#"
+            (
+                "a-first.toml",
+                r#"
                 [class]
                 testclass = ["*.aaa"]
-            "#),
-            ("b-second.toml", r#"
+            "#,
+            ),
+            (
+                "b-second.toml",
+                r#"
                 [class]
                 testclass = ["*.bbb"]
-            "#),
+            "#,
+            ),
         ],
     );
 
@@ -90,11 +97,14 @@ fn dropin_files_loaded_alphabetically() {
 fn dropin_personality_available() {
     let (_dir, mut cmd) = config_with_dropins(
         "",
-        &[("pers.toml", r#"
+        &[(
+            "pers.toml",
+            r#"
             [personality.custom]
             long = true
             header = true
-        "#)],
+        "#,
+        )],
     );
 
     cmd.args(["--dump-personality=custom"])
@@ -110,16 +120,20 @@ fn dropin_without_main_config() {
     let dir = tempdir().expect("failed to create tempdir");
     let conf_d = dir.path().join("lx").join("conf.d");
     fs::create_dir_all(&conf_d).unwrap();
-    fs::write(conf_d.join("classes.toml"), r#"
+    fs::write(
+        conf_d.join("classes.toml"),
+        r#"
         [class]
         myclass = ["*.xyz"]
-    "#).unwrap();
+    "#,
+    )
+    .unwrap();
 
     let mut cmd = assert_cmd::Command::cargo_bin("lx").expect("binary lx not found");
     cmd.env("HOME", "/nonexistent")
-       .env_remove("LX_CONFIG")
-       .env("XDG_CONFIG_HOME", dir.path())
-       .arg("--colour=never");
+        .env_remove("LX_CONFIG")
+        .env("XDG_CONFIG_HOME", dir.path())
+        .arg("--colour=never");
 
     cmd.args(["--dump-class=myclass"])
         .assert()
@@ -131,10 +145,13 @@ fn dropin_without_main_config() {
 fn show_config_lists_dropins() {
     let (_dir, mut cmd) = config_with_dropins(
         "",
-        &[("my-theme.toml", r#"
+        &[(
+            "my-theme.toml",
+            r#"
             [theme.ocean]
             inherits = "exa"
-        "#)],
+        "#,
+        )],
     );
 
     cmd.args(["--show-config"])

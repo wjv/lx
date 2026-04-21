@@ -2,13 +2,12 @@
 
 mod support;
 
+use predicates::prelude::*;
 use std::fs;
 use std::os::unix::fs as unix_fs;
 use std::process::Command as StdCommand;
-use predicates::prelude::*;
 use support::{lx, lx_no_colour};
 use tempfile::tempdir;
-
 
 /// Helper: run lx with a given config file via LX_CONFIG env var.
 /// Automatically prepends the current config version if not present.
@@ -27,15 +26,16 @@ fn lx_with_config(config_content: &str) -> (tempfile::TempDir, assert_cmd::Comma
     (dir, cmd)
 }
 
-
 // ── The lx personality (global defaults) ─────────────────────────
 
 #[test]
 fn config_lx_personality_group_dirs() {
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.lx]
         group-dirs = "first"
-    "#);
+    "#,
+    );
 
     // Create a tempdir with a file and a directory
     let work = tempdir().expect("failed to create workdir");
@@ -55,10 +55,12 @@ fn config_lx_personality_group_dirs() {
 
 #[test]
 fn config_lx_overridden_by_cli() {
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.lx]
         group-dirs = "first"
-    "#);
+    "#,
+    );
 
     let work = tempdir().expect("failed to create workdir");
     fs::write(work.path().join("aaa_file.txt"), "").unwrap();
@@ -78,10 +80,12 @@ fn config_lx_overridden_by_cli() {
 
 #[test]
 fn config_lx_personality_time_style() {
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.lx]
         time-style = "long-iso"
-    "#);
+    "#,
+    );
 
     cmd.args(["-l", "Cargo.toml"])
         .assert()
@@ -90,15 +94,16 @@ fn config_lx_personality_time_style() {
         .stdout(predicate::str::is_match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}").unwrap());
 }
 
-
 // ── Config-defined formats ───────────────────────────────────────
 
 #[test]
 fn config_custom_format() {
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [format]
         tiny = ["size", "modified"]
-    "#);
+    "#,
+    );
 
     cmd.args(["--format=tiny", "Cargo.toml"])
         .assert()
@@ -110,10 +115,12 @@ fn config_custom_format() {
 
 #[test]
 fn config_format_overrides_compiled_in() {
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [format]
         long = ["size", "modified"]
-    "#);
+    "#,
+    );
 
     // -l uses "long" format, which is now overridden in config
     cmd.args(["-l", "Cargo.toml"])
@@ -123,16 +130,17 @@ fn config_format_overrides_compiled_in() {
         .stdout(predicate::str::contains(".rw").not());
 }
 
-
 // ── Config-defined personalities ─────────────────────────────────
 
 #[test]
 fn config_custom_personality() {
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.myview]
         columns = ["perms", "size"]
         group-dirs = "first"
-    "#);
+    "#,
+    );
 
     let work = tempdir().expect("failed to create workdir");
     fs::write(work.path().join("file.txt"), "").unwrap();
@@ -150,19 +158,20 @@ fn config_custom_personality() {
         }));
 }
 
-
 // ── Personality inheritance ───────────────────────────────────────
 
 #[test]
 fn inherit_single_level() {
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.base]
         group-dirs = "first"
 
         [personality.child]
         inherits = "base"
         format = "long"
-    "#);
+    "#,
+    );
 
     let work = tempdir().expect("failed to create workdir");
     fs::write(work.path().join("aaa_file.txt"), "").unwrap();
@@ -182,7 +191,8 @@ fn inherit_single_level() {
 
 #[test]
 fn inherit_multi_level() {
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.root]
         group-dirs = "first"
 
@@ -193,7 +203,8 @@ fn inherit_multi_level() {
         [personality.leaf]
         inherits = "mid"
         header = true
-    "#);
+    "#,
+    );
 
     cmd.args(["-pleaf", "Cargo.toml"])
         .assert()
@@ -204,7 +215,8 @@ fn inherit_multi_level() {
 
 #[test]
 fn inherit_child_overrides_parent_setting() {
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.parent]
         format = "long"
         sort = "name"
@@ -212,24 +224,25 @@ fn inherit_child_overrides_parent_setting() {
         [personality.child]
         inherits = "parent"
         sort = "size"
-    "#);
+    "#,
+    );
 
     // Just check it runs without error; sort=size from child wins
-    cmd.args(["-pchild", "Cargo.toml"])
-        .assert()
-        .success();
+    cmd.args(["-pchild", "Cargo.toml"]).assert().success();
 }
 
 #[test]
 fn inherit_child_overrides_format() {
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.parent]
         format = "long2"
 
         [personality.child]
         inherits = "parent"
         format = "long"
-    "#);
+    "#,
+    );
 
     cmd.args(["-pchild", "Cargo.toml"])
         .assert()
@@ -240,13 +253,15 @@ fn inherit_child_overrides_format() {
 
 #[test]
 fn inherit_cycle_detected() {
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.a]
         inherits = "b"
 
         [personality.b]
         inherits = "a"
-    "#);
+    "#,
+    );
 
     cmd.args(["-pa", "Cargo.toml"])
         .assert()
@@ -257,11 +272,13 @@ fn inherit_cycle_detected() {
 #[test]
 fn inherit_from_compiled_in() {
     // Config personality inherits from compiled-in "ll"
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.myll]
         inherits = "ll"
         header = true
-    "#);
+    "#,
+    );
 
     cmd.args(["-pmyll", "Cargo.toml"])
         .assert()
@@ -274,14 +291,16 @@ fn inherit_from_compiled_in() {
 #[test]
 fn standalone_no_inherits() {
     // No inherits = standalone, no inherited settings
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.base]
         group-dirs = "first"
         header = true
 
         [personality.standalone]
         format = "long"
-    "#);
+    "#,
+    );
 
     cmd.args(["-pstandalone", "Cargo.toml"])
         .assert()
@@ -290,16 +309,17 @@ fn standalone_no_inherits() {
         .stdout(predicate::str::contains("Permissions").not());
 }
 
-
 // ── Named settings ──────────────────────────────────────────────
 
 #[test]
 fn config_personality_bool_setting() {
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.hdr]
         format = "long"
         header = true
-    "#);
+    "#,
+    );
 
     cmd.args(["-phdr", "Cargo.toml"])
         .assert()
@@ -309,10 +329,12 @@ fn config_personality_bool_setting() {
 
 #[test]
 fn config_personality_columns_as_string() {
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.tiny]
         columns = "size,modified"
-    "#);
+    "#,
+    );
 
     cmd.args(["-ptiny", "Cargo.toml"])
         .assert()
@@ -323,18 +345,19 @@ fn config_personality_columns_as_string() {
 
 #[test]
 fn config_unknown_setting_warns() {
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.bad]
         format = "long"
         frobnicate = true
-    "#);
+    "#,
+    );
 
     cmd.args(["-pbad", "Cargo.toml"])
         .assert()
         .success()
         .stderr(predicate::str::contains("unknown setting 'frobnicate'"));
 }
-
 
 // ── Compiled-in personalities ────────────────────────────────────
 
@@ -396,7 +419,6 @@ fn personality_long_flag() {
         .stdout(predicate::str::contains(support::current_group()));
 }
 
-
 // ── argv[0] dispatch ─────────────────────────────────────────────
 
 #[test]
@@ -439,7 +461,6 @@ fn argv0_unknown_falls_back() {
     assert!(stdout.contains("Cargo.toml"));
 }
 
-
 // ── --init-config ────────────────────────────────────────────────
 
 #[test]
@@ -447,8 +468,7 @@ fn init_config_creates_file() {
     let dir = tempdir().expect("failed to create tempdir");
     let config_path = dir.path().join(".lxconfig.toml");
 
-    lx()
-        .args(["--init-config"])
+    lx().args(["--init-config"])
         .env("HOME", dir.path())
         .assert()
         .success()
@@ -471,14 +491,12 @@ fn init_config_refuses_overwrite() {
     let config_path = dir.path().join(".lxconfig.toml");
     fs::write(&config_path, "existing").unwrap();
 
-    lx()
-        .args(["--init-config"])
+    lx().args(["--init-config"])
         .env("HOME", dir.path())
         .assert()
         .failure()
         .stderr(predicate::str::contains("already exists"));
 }
-
 
 // ── Config file discovery ────────────────────────────────────────
 
@@ -486,11 +504,15 @@ fn init_config_refuses_overwrite() {
 fn lx_config_env_takes_priority() {
     let dir = tempdir().expect("failed to create tempdir");
     let config_path = dir.path().join("custom.toml");
-    fs::write(&config_path, r#"
+    fs::write(
+        &config_path,
+        r#"
         version = "0.3"
         [personality.lx]
         group-dirs = "first"
-    "#).unwrap();
+    "#,
+    )
+    .unwrap();
 
     let work = tempdir().expect("failed to create workdir");
     fs::write(work.path().join("aaa.txt"), "").unwrap();
@@ -525,7 +547,6 @@ fn no_config_file_is_fine() {
         .stdout(predicate::str::contains("Cargo.toml"));
 }
 
-
 // ── --dump-class ─────────────────────────────────────────────────
 
 #[test]
@@ -557,7 +578,9 @@ fn dump_class_unknown() {
         .assert()
         .failure()
         .code(2)
-        .stderr(predicate::str::contains("invalid value 'bogus' for '--dump-class"))
+        .stderr(predicate::str::contains(
+            "invalid value 'bogus' for '--dump-class",
+        ))
         .stderr(predicate::str::contains("[possible values:"));
 }
 
@@ -592,7 +615,9 @@ fn dump_format_unknown() {
         .assert()
         .failure()
         .code(2)
-        .stderr(predicate::str::contains("invalid value 'bogus' for '--dump-format"))
+        .stderr(predicate::str::contains(
+            "invalid value 'bogus' for '--dump-format",
+        ))
         .stderr(predicate::str::contains("[possible values:"));
 }
 
@@ -626,7 +651,9 @@ fn dump_personality_unknown() {
         .assert()
         .failure()
         .code(2)
-        .stderr(predicate::str::contains("invalid value 'bogus' for '--dump-personality"))
+        .stderr(predicate::str::contains(
+            "invalid value 'bogus' for '--dump-personality",
+        ))
         .stderr(predicate::str::contains("[possible values:"));
 }
 
@@ -649,7 +676,9 @@ fn dump_theme_unknown() {
         .assert()
         .failure()
         .code(2)
-        .stderr(predicate::str::contains("invalid value 'bogus' for '--dump-theme"))
+        .stderr(predicate::str::contains(
+            "invalid value 'bogus' for '--dump-theme",
+        ))
         .stderr(predicate::str::contains("[possible values:"));
 }
 
@@ -673,7 +702,9 @@ fn dump_style_unknown() {
         .assert()
         .failure()
         .code(2)
-        .stderr(predicate::str::contains("invalid value 'bogus' for '--dump-style"))
+        .stderr(predicate::str::contains(
+            "invalid value 'bogus' for '--dump-style",
+        ))
         .stderr(predicate::str::contains("[possible values:"));
 }
 
@@ -681,10 +712,12 @@ fn dump_style_unknown() {
 
 #[test]
 fn dump_class_shows_config_override() {
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
 [class]
 temp = ["*.tmp", "*.bak"]
-"#);
+"#,
+    );
 
     cmd.arg("--dump-class=temp")
         .assert()
@@ -693,7 +726,6 @@ temp = ["*.tmp", "*.bak"]
         // Should NOT contain the compiled-in patterns that were overridden
         .stdout(predicate::str::contains("*.swp").not());
 }
-
 
 // ── --init-config invariant ──────────────────────────────────────
 //
@@ -706,8 +738,7 @@ fn init_config_does_not_change_defaults() {
     let config_path = dir.path().join(".lxconfig.toml");
 
     // Generate the default config file.
-    lx()
-        .arg("--init-config")
+    lx().arg("--init-config")
         .env("HOME", dir.path())
         .env_remove("LX_CONFIG")
         .assert()
@@ -749,7 +780,6 @@ fn init_config_does_not_change_defaults() {
     }
 }
 
-
 // ── Three-state Bool config semantics ───────────────────────────
 
 /// `key = false` in a child personality suppresses a column that
@@ -758,11 +788,13 @@ fn init_config_does_not_change_defaults() {
 /// could suppress.
 #[test]
 fn bool_false_suppresses_inherited_column() {
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.nosize]
         inherits = "ll"
         size = false
-    "#);
+    "#,
+    );
 
     let work = tempdir().expect("failed to create workdir");
     fs::write(work.path().join("hello.txt"), "hi").unwrap();
@@ -777,13 +809,18 @@ fn bool_false_suppresses_inherited_column() {
         .expect("failed to run lx");
     let with_size_out = String::from_utf8_lossy(&with_size.stdout);
     // ll shows sizes — verify baseline
-    assert!(with_size_out.contains("hello.txt"), "baseline: file should appear");
+    assert!(
+        with_size_out.contains("hello.txt"),
+        "baseline: file should appear"
+    );
 
-    let (_dir2, mut cmd2) = lx_with_config(r#"
+    let (_dir2, mut cmd2) = lx_with_config(
+        r#"
         [personality.nosize]
         inherits = "ll"
         size = false
-    "#);
+    "#,
+    );
     let without_size = cmd2
         .args(["-p", "nosize", "--colour=never"])
         .arg(work.path())
@@ -793,8 +830,14 @@ fn bool_false_suppresses_inherited_column() {
 
     // The size column in ll shows "2" for a 2-byte file.
     // With size suppressed, the number should be absent.
-    assert!(with_size_out.contains(" 2 "), "baseline: ll should show file size");
-    assert!(!without_size_out.contains(" 2 "), "size = false should suppress the size column");
+    assert!(
+        with_size_out.contains(" 2 "),
+        "baseline: ll should show file size"
+    );
+    assert!(
+        !without_size_out.contains(" 2 "),
+        "size = false should suppress the size column"
+    );
 }
 
 /// `permissions = false` suppresses the permissions column from an
@@ -805,11 +848,13 @@ fn bool_false_suppresses_permissions() {
     let work = tempdir().expect("failed to create workdir");
     fs::write(work.path().join("test.txt"), "").unwrap();
 
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.noperm]
         inherits = "ll"
         permissions = false
-    "#);
+    "#,
+    );
     cmd.args(["-p", "noperm", "--colour=never"])
         .arg(work.path())
         .assert()
@@ -826,25 +871,31 @@ fn no_key_true_equivalent_to_key_false() {
     let work = tempdir().expect("failed to create workdir");
     fs::write(work.path().join("hello.txt"), "hi").unwrap();
 
-    let (_dir1, mut cmd1) = lx_with_config(r#"
+    let (_dir1, mut cmd1) = lx_with_config(
+        r#"
         [personality.via-false]
         inherits = "ll"
         size = false
-    "#);
+    "#,
+    );
     let out_false = cmd1
         .args(["-p", "via-false", "--colour=never"])
         .arg(work.path())
-        .output().expect("failed to run lx");
+        .output()
+        .expect("failed to run lx");
 
-    let (_dir2, mut cmd2) = lx_with_config(r#"
+    let (_dir2, mut cmd2) = lx_with_config(
+        r#"
         [personality.via-no]
         inherits = "ll"
         no-size = true
-    "#);
+    "#,
+    );
     let out_no = cmd2
         .args(["-p", "via-no", "--colour=never"])
         .arg(work.path())
-        .output().expect("failed to run lx");
+        .output()
+        .expect("failed to run lx");
 
     assert_eq!(
         String::from_utf8_lossy(&out_false.stdout),
@@ -864,10 +915,12 @@ fn config_ignore_toml_array() {
     fs::write(work.path().join("notes.tmp"), "").unwrap();
     fs::write(work.path().join("old.bak"), "").unwrap();
 
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.lx]
         ignore = ["*.tmp", "*.bak"]
-    "#);
+    "#,
+    );
     cmd.args(["-1"])
         .arg(work.path())
         .assert()
@@ -885,10 +938,12 @@ fn config_ignore_pipe_string_still_works() {
     fs::write(work.path().join("notes.tmp"), "").unwrap();
     fs::write(work.path().join("old.bak"), "").unwrap();
 
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.lx]
         ignore = "*.tmp|*.bak"
-    "#);
+    "#,
+    );
     cmd.args(["-1"])
         .arg(work.path())
         .assert()
@@ -909,10 +964,12 @@ fn config_prune_toml_array() {
     fs::write(work.path().join("target/debug/binary"), "").unwrap();
     fs::write(work.path().join("node_modules/foo/index.js"), "").unwrap();
 
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.lx]
         prune = ["target", "node_modules"]
-    "#);
+    "#,
+    );
     cmd.args(["-T"])
         .arg(work.path())
         .assert()
@@ -922,7 +979,6 @@ fn config_prune_toml_array() {
         .stdout(predicate::str::contains("index.js").not());
 }
 
-
 /// `tree = false` has no negation counterpart (`--no-tree` doesn't
 /// exist), so `false` should be a silent no-op rather than an error.
 #[test]
@@ -930,11 +986,13 @@ fn bool_false_without_negation_is_noop() {
     let work = tempdir().expect("failed to create workdir");
     fs::write(work.path().join("test.txt"), "").unwrap();
 
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.notree]
         inherits = "lx"
         tree = false
-    "#);
+    "#,
+    );
     cmd.args(["-p", "notree", "--colour=never"])
         .arg(work.path())
         .assert()
@@ -951,16 +1009,19 @@ fn no_time_still_works_as_bulk_clear() {
 
     // lll includes all four timestamps.  no-time should clear them all,
     // then accessed = true adds just the accessed column back.
-    let (_dir, mut cmd) = lx_with_config(r#"
+    let (_dir, mut cmd) = lx_with_config(
+        r#"
         [personality.justaccessed]
         inherits = "lll"
         no-time = true
         accessed = true
-    "#);
+    "#,
+    );
     let out = cmd
         .args(["-p", "justaccessed", "--colour=never"])
         .arg(work.path())
-        .output().expect("failed to run lx");
+        .output()
+        .expect("failed to run lx");
     let stdout = String::from_utf8_lossy(&out.stdout);
 
     // lll normally shows modified, changed, created, accessed.

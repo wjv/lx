@@ -5,18 +5,19 @@ use std::io::{self, Write};
 use nu_ansi_term::AnsiStrings;
 use term_grid as tg;
 
-use crate::fs::{Dir, File};
 use crate::fs::feature::VcsCache;
 use crate::fs::feature::xattr::FileAttributes;
 use crate::fs::filter::FileFilter;
+use crate::fs::{Dir, File};
 use crate::output::cell::TextCell;
-use crate::output::details::{Options as DetailsOptions, Row as DetailsRow, Render as DetailsRender};
+use crate::output::details::{
+    Options as DetailsOptions, Render as DetailsRender, Row as DetailsRow,
+};
 use crate::output::file_name::Options as FileStyle;
 use crate::output::grid::Options as GridOptions;
-use crate::output::table::{Table, Row as TableRow, Options as TableOptions};
-use crate::output::tree::{TreeParams, TreeDepth};
+use crate::output::table::{Options as TableOptions, Row as TableRow, Table};
+use crate::output::tree::{TreeDepth, TreeParams};
 use crate::theme::Theme;
-
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct Options {
@@ -31,7 +32,6 @@ impl Options {
     }
 }
 
-
 /// The grid-details view can be configured to revert to just a details view
 /// (with one column) if it wouldn't produce enough rows of output.
 ///
@@ -41,7 +41,6 @@ impl Options {
 /// larger directory listings.
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub enum RowThreshold {
-
     /// Only use grid-details view if it would result in at least this many
     /// rows of output.
     MinimumRows(usize),
@@ -50,9 +49,7 @@ pub enum RowThreshold {
     AlwaysGrid,
 }
 
-
 pub struct Render<'a> {
-
     /// The directory that's being rendered here.
     /// We need this to know which columns to put in the output.
     pub dir: Option<&'a Dir>,
@@ -99,7 +96,6 @@ struct RenderedGrid {
 }
 
 impl<'a> Render<'a> {
-
     /// Create a temporary Details render that gets used for the columns of
     /// the grid-details render that's being generated.
     ///
@@ -108,15 +104,15 @@ impl<'a> Render<'a> {
     /// *n* files into each column's table, not all of them.
     fn details_for_column(&self) -> DetailsRender<'a> {
         DetailsRender {
-            dir:           self.dir,
-            files:         Vec::new(),
-            theme:         self.theme,
-            file_style:    self.file_style,
-            opts:          self.details,
-            recurse:       None,
-            filter:        self.filter,
-            vcs_ignoring:  self.vcs_ignoring,
-            vcs:           self.vcs,
+            dir: self.dir,
+            files: Vec::new(),
+            theme: self.theme,
+            file_style: self.file_style,
+            opts: self.details,
+            recurse: None,
+            filter: self.filter,
+            vcs_ignoring: self.vcs_ignoring,
+            vcs: self.vcs,
         }
     }
 
@@ -126,15 +122,15 @@ impl<'a> Render<'a> {
     /// not available, so we downgrade.
     pub fn give_up(self) -> DetailsRender<'a> {
         DetailsRender {
-            dir:           self.dir,
-            files:         self.files,
-            theme:         self.theme,
-            file_style:    self.file_style,
-            opts:          self.details,
-            recurse:       None,
-            filter:        self.filter,
-            vcs_ignoring:  self.vcs_ignoring,
-            vcs:           self.vcs,
+            dir: self.dir,
+            files: self.files,
+            theme: self.theme,
+            file_style: self.file_style,
+            opts: self.details,
+            recurse: None,
+            filter: self.filter,
+            vcs_ignoring: self.vcs_ignoring,
+            vcs: self.vcs,
         }
     }
 
@@ -143,38 +139,52 @@ impl<'a> Render<'a> {
 
     pub fn render<W: Write>(mut self, w: &mut W) -> io::Result<()> {
         if let Some(rendered) = self.find_fitting_grid() {
-            let direction = if self.grid.across { tg::Direction::LeftToRight }
-                                           else { tg::Direction::TopToBottom };
+            let direction = if self.grid.across {
+                tg::Direction::LeftToRight
+            } else {
+                tg::Direction::TopToBottom
+            };
 
-            let grid = tg::Grid::new(rendered.cells, tg::GridOptions {
-                direction,
-                filling: tg::Filling::Spaces(4),
-                width:   self.console_width,
-            });
+            let grid = tg::Grid::new(
+                rendered.cells,
+                tg::GridOptions {
+                    direction,
+                    filling: tg::Filling::Spaces(4),
+                    width: self.console_width,
+                },
+            );
 
             write!(w, "{grid}")
-        }
-        else {
+        } else {
             self.give_up().render(w).map(|_| ())
         }
     }
 
     fn find_fitting_grid(&mut self) -> Option<RenderedGrid> {
-        let options = self.details.table.as_ref().expect("Details table options not given!");
+        let options = self
+            .details
+            .table
+            .as_ref()
+            .expect("Details table options not given!");
 
         let drender = self.details_for_column();
 
         let (first_table, _) = self.make_table(options, &drender);
 
-        let rows = self.files.iter()
-                       .map(|file| first_table.row_for_file(file, file_has_xattrs(file)))
-                       .collect::<Vec<_>>();
+        let rows = self
+            .files
+            .iter()
+            .map(|file| first_table.row_for_file(file, file_has_xattrs(file)))
+            .collect::<Vec<_>>();
 
-        let file_names = self.files.iter()
-                             .map(|file| self.file_style.for_file(file, self.theme).paint().promote())
-                             .collect::<Vec<_>>();
+        let file_names = self
+            .files
+            .iter()
+            .map(|file| self.file_style.for_file(file, self.theme).paint().promote())
+            .collect::<Vec<_>>();
 
-        let mut last_working = self.make_rendered_grid(1, options, &file_names, rows.clone(), &drender);
+        let mut last_working =
+            self.make_rendered_grid(1, options, &file_names, rows.clone(), &drender);
 
         if file_names.len() == 1 {
             return Some(last_working);
@@ -183,7 +193,8 @@ impl<'a> Render<'a> {
         // If we can't fit everything in a grid 100 columns wide, then
         // something has gone seriously awry
         for column_count in 2..100 {
-            let rendered = self.make_rendered_grid(column_count, options, &file_names, rows.clone(), &drender);
+            let rendered =
+                self.make_rendered_grid(column_count, options, &file_names, rows.clone(), &drender);
 
             let the_grid_fits = rendered_grid_fits(&rendered, self.console_width);
 
@@ -197,9 +208,10 @@ impl<'a> Render<'a> {
                 // it worthwhile (according to LX_GRID_ROWS), then just resort
                 // to the lines view.
                 if let RowThreshold::MinimumRows(thresh) = self.row_threshold
-                    && last_working.row_count < thresh {
-                        return None;
-                    }
+                    && last_working.row_count < thresh
+                {
+                    return None;
+                }
 
                 return Some(last_working);
             }
@@ -208,11 +220,23 @@ impl<'a> Render<'a> {
         None
     }
 
-    fn make_table(&mut self, options: &'a TableOptions, drender: &DetailsRender<'_>) -> (Table<'a>, Vec<DetailsRow>) {
+    fn make_table(
+        &mut self,
+        options: &'a TableOptions,
+        drender: &DetailsRender<'_>,
+    ) -> (Table<'a>, Vec<DetailsRow>) {
         match (self.vcs, self.dir) {
-            (Some(g), Some(d))  => if ! g.has_anything_for(&d.path) { self.vcs = None },
-            (Some(g), None)     => if ! self.files.iter().any(|f| g.has_anything_for(&f.path)) { self.vcs = None },
-            (None,    _)        => {/* Keep Git how it is */},
+            (Some(g), Some(d)) => {
+                if !g.has_anything_for(&d.path) {
+                    self.vcs = None
+                }
+            }
+            (Some(g), None) => {
+                if !self.files.iter().any(|f| g.has_anything_for(&f.path)) {
+                    self.vcs = None
+                }
+            }
+            (None, _) => { /* Keep Git how it is */ }
         }
 
         let mut table = Table::new(options, self.vcs, self.theme);
@@ -227,9 +251,16 @@ impl<'a> Render<'a> {
         (table, rows)
     }
 
-    fn make_rendered_grid(&mut self, column_count: usize, options: &'a TableOptions, file_names: &[TextCell], rows: Vec<TableRow>, drender: &DetailsRender<'_>) -> RenderedGrid {
+    fn make_rendered_grid(
+        &mut self,
+        column_count: usize,
+        options: &'a TableOptions,
+        file_names: &[TextCell],
+        rows: Vec<TableRow>,
+        drender: &DetailsRender<'_>,
+    ) -> RenderedGrid {
         let mut tables = Vec::new();
-        for _ in 0 .. column_count {
+        for _ in 0..column_count {
             tables.push(self.make_table(options, drender));
         }
 
@@ -243,24 +274,28 @@ impl<'a> Render<'a> {
 
         for (i, (file_name, row)) in file_names.iter().zip(rows.into_iter()).enumerate() {
             let index = if self.grid.across {
-                    i % column_count
-                }
-                else {
-                    i / original_height
-                };
+                i % column_count
+            } else {
+                i / original_height
+            };
 
             let (ref mut table, ref mut rows) = tables[index];
             table.add_widths(&row);
-            let details_row = drender.render_file(row, file_name.clone(), TreeParams::new(TreeDepth::root(), false));
+            let details_row = drender.render_file(
+                row,
+                file_name.clone(),
+                TreeParams::new(TreeDepth::root(), false),
+            );
             rows.push(details_row);
         }
 
         let columns = tables
             .into_iter()
             .map(|(table, details_rows)| {
-                drender.iterate_with_table(table, details_rows)
-                       .collect::<Vec<_>>()
-                })
+                drender
+                    .iterate_with_table(table, details_rows)
+                    .collect::<Vec<_>>()
+            })
             .collect::<Vec<_>>();
 
         // Build the cell strings in the order expected by the grid.
@@ -269,15 +304,14 @@ impl<'a> Render<'a> {
         let mut cells = Vec::new();
 
         if self.grid.across {
-            for row in 0 .. height {
+            for row in 0..height {
                 for column in &columns {
                     if row < column.len() {
                         cells.push(AnsiStrings(&column[row].contents).to_string());
                     }
                 }
             }
-        }
-        else {
+        } else {
             for column in &columns {
                 for cell in column {
                     cells.push(AnsiStrings(&cell.contents).to_string());
@@ -292,7 +326,6 @@ impl<'a> Render<'a> {
         }
     }
 }
-
 
 /// Check whether a rendered grid fits within the given console width by
 /// computing the maximum visual width per column and summing with spacing.
@@ -311,12 +344,15 @@ fn rendered_grid_fits(rendered: &RenderedGrid, console_width: usize) -> bool {
     }
 
     // Total width = sum of column widths + 4 spaces between each pair
-    let spacing = if rendered.column_count > 1 { 4 * (rendered.column_count - 1) } else { 0 };
+    let spacing = if rendered.column_count > 1 {
+        4 * (rendered.column_count - 1)
+    } else {
+        0
+    };
     let total: usize = col_widths.iter().sum::<usize>() + spacing;
 
     total <= console_width
 }
-
 
 /// Compute the visual width of a string, stripping ANSI escape sequences.
 fn visual_width(s: &str) -> usize {
@@ -342,7 +378,6 @@ fn visual_width(s: &str) -> usize {
     width
 }
 
-
 fn divide_rounding_up(a: usize, b: usize) -> usize {
     let mut result = a / b;
 
@@ -353,10 +388,9 @@ fn divide_rounding_up(a: usize, b: usize) -> usize {
     result
 }
 
-
 fn file_has_xattrs(file: &File<'_>) -> bool {
     match file.path.attributes() {
-        Ok(attrs)  => ! attrs.is_empty(),
-        Err(_)     => false,
+        Ok(attrs) => !attrs.is_empty(),
+        Err(_) => false,
     }
 }

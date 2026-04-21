@@ -3,18 +3,18 @@ use std::num::ParseIntError;
 
 use thiserror::Error;
 
-
 /// Something wrong with the combination of options the user has picked.
 #[derive(PartialEq, Eq, Debug, Error)]
 pub enum OptionsError {
-
     /// The user supplied a set of options that are unsupported.
     #[error("{0}")]
     Unsupported(String),
 
     /// A very specific edge case where --tree can't be used with --all twice.
-    #[error("the argument '--tree' cannot be used with '--all --all' \
-             (listing '.' and '..' in tree mode would recurse forever)")]
+    #[error(
+        "the argument '--tree' cannot be used with '--all --all' \
+             (listing '.' and '..' in tree mode would recurse forever)"
+    )]
     TreeAllAll,
 
     /// A numeric option was given that failed to be parsed as a number.
@@ -33,7 +33,6 @@ pub enum OptionsError {
 /// The source of a string that failed to be parsed as a number.
 #[derive(PartialEq, Eq, Debug)]
 pub enum NumberSource {
-
     /// It came from an environment variable.
     Env(&'static str),
 

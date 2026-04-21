@@ -13,7 +13,6 @@ use crate::output::cell::TextCell;
 use crate::output::time::TimeFormat;
 use crate::theme::Theme;
 
-
 /// Options for displaying a table.
 #[derive(PartialEq, Eq, Debug)]
 pub struct Options {
@@ -27,7 +26,6 @@ pub struct Options {
     /// Override the locale's thousands separator (e.g. ",").  Empty = no grouping.
     pub thousands_separator: Option<String>,
 }
-
 
 /// A table contains these.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -83,7 +81,6 @@ pub enum Alignment {
 }
 
 impl Column {
-
     /// Get the alignment this column should use.
     pub fn alignment(self) -> Alignment {
         super::column_registry::ColumnDef::for_column(self).alignment
@@ -96,13 +93,10 @@ impl Column {
     }
 }
 
-
 /// Formatting options for file sizes.
 #[allow(clippy::enum_variant_names)]
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
-#[derive(Default)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Default)]
 pub enum SizeFormat {
-
     /// Format the file size using **decimal** prefixes, such as “kilo”,
     /// “mega”, or “giga”.
     #[default]
@@ -120,7 +114,6 @@ pub enum SizeFormat {
 /// across most (all?) operating systems.
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub enum TimeType {
-
     /// The file’s modified time (`st_mtime`).
     Modified,
 
@@ -135,27 +128,22 @@ pub enum TimeType {
 }
 
 impl TimeType {
-
     /// Returns the text to use for a column’s heading in the columns output.
     pub fn header(self) -> &'static str {
         match self {
-            Self::Modified  => "Date Modified",
-            Self::Changed   => "Date Changed",
-            Self::Accessed  => "Date Accessed",
-            Self::Created   => "Date Created",
+            Self::Modified => "Date Modified",
+            Self::Changed => "Date Changed",
+            Self::Accessed => "Date Accessed",
+            Self::Created => "Date Created",
         }
     }
 }
-
-
-
 
 /// The **environment** struct contains any data that could change between
 /// running instances of lx, depending on the user’s computer’s configuration.
 ///
 /// Any environment field should be able to be mocked up for test runs.
 pub struct Environment {
-
     /// Localisation rules for formatting numbers.
     pub numeric: locale::Numeric,
 
@@ -171,13 +159,17 @@ impl Environment {
     }
 
     fn load_all() -> Self {
-        let numeric = locale::Numeric::load_user_locale()
-                             .unwrap_or_else(|_| locale::Numeric::english());
+        let numeric =
+            locale::Numeric::load_user_locale().unwrap_or_else(|_| locale::Numeric::english());
 
         #[cfg(unix)]
         let users = Mutex::new(UsersCache::new());
 
-        Self { numeric, #[cfg(unix)] users }
+        Self {
+            numeric,
+            #[cfg(unix)]
+            users,
+        }
     }
 }
 
@@ -189,7 +181,6 @@ static ENVIRONMENT: LazyLock<Environment> = LazyLock::new(Environment::load_all)
 pub fn environment() -> &'static Environment {
     &ENVIRONMENT
 }
-
 
 pub struct Table<'a> {
     columns: Vec<Column>,
@@ -215,7 +206,9 @@ impl<'a> Table<'a> {
 
     pub fn new(options: &'a Options, vcs: Option<&'a dyn VcsCache>, theme: &'a Theme) -> Table<'a> {
         // Filter out VcsStatus column if no VCS cache is available.
-        let columns: Vec<Column> = options.columns.iter()
+        let columns: Vec<Column> = options
+            .columns
+            .iter()
             .copied()
             .filter(|c| !matches!(c, Column::VcsStatus) || vcs.is_some())
             .collect();
@@ -249,24 +242,30 @@ impl<'a> Table<'a> {
     }
 
     pub fn header_row(&self) -> Row {
-        let cells = self.columns.iter()
-                        .map(|c| {
-                            let name = if *c == Column::VcsStatus {
-                                self.vcs.map(super::super::fs::feature::VcsCache::header_name).unwrap_or("VCS")
-                            } else {
-                                c.header()
-                            };
-                            TextCell::paint_str(self.theme.ui.header, name)
-                        })
-                        .collect();
+        let cells = self
+            .columns
+            .iter()
+            .map(|c| {
+                let name = if *c == Column::VcsStatus {
+                    self.vcs
+                        .map(super::super::fs::feature::VcsCache::header_name)
+                        .unwrap_or("VCS")
+                } else {
+                    c.header()
+                };
+                TextCell::paint_str(self.theme.ui.header, name)
+            })
+            .collect();
 
         Row { cells }
     }
 
     pub fn row_for_file(&self, file: &File<'_>, xattrs: bool) -> Row {
-        let cells = self.columns.iter()
-                        .map(|c| self.display(file, *c, xattrs))
-                        .collect();
+        let cells = self
+            .columns
+            .iter()
+            .map(|c| self.display(file, *c, xattrs))
+            .collect();
 
         Row { cells }
     }
@@ -293,9 +292,7 @@ impl<'a> Table<'a> {
     pub fn render(&self, row: Row) -> TextCell {
         let mut cell = TextCell::default();
 
-        let iter = row.cells.into_iter()
-                      .zip(self.widths.iter())
-                      .enumerate();
+        let iter = row.cells.into_iter().zip(self.widths.iter()).enumerate();
 
         for (n, (this_cell, width)) in iter {
             let padding = width - *this_cell.width;
@@ -317,7 +314,6 @@ impl<'a> Table<'a> {
         cell
     }
 }
-
 
 pub struct TableWidths(Vec<usize>);
 

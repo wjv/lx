@@ -34,18 +34,18 @@
 //! - [`show`] — `--show-config`: human-readable overview.
 //! - [`upgrade`] — `--upgrade-config`: schema version migration.
 
-mod error;
-mod store;
-mod settings;
-mod schema;
-mod load;
-mod personality;
-mod themes;
-mod styles;
 mod classes;
+mod error;
 mod formats;
 mod init;
+mod load;
+mod personality;
+mod schema;
+mod settings;
 mod show;
+mod store;
+mod styles;
+mod themes;
 mod upgrade;
 
 // ── Public re-exports ───────────────────────────────────────────
@@ -67,16 +67,15 @@ pub use self::schema::{Config, StyleDef, ThemeDef};
 pub use self::load::find_config_path;
 
 pub use self::personality::{
-    all_personality_names,
-    dump_personality,
-    dump_personality_all,
-    resolve_personality,
+    all_personality_names, dump_personality, dump_personality_all, resolve_personality,
     save_personality_as,
 };
 
 pub use self::themes::{all_theme_names, dump_theme, dump_theme_all, is_builtin_theme};
 
-pub use self::styles::{all_style_names, compiled_exa_style, dump_style, dump_style_all, resolve_style};
+pub use self::styles::{
+    all_style_names, compiled_exa_style, dump_style, dump_style_all, resolve_style,
+};
 
 pub use self::classes::{all_class_names, resolve_classes, show_class, show_class_all};
 

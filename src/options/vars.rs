@@ -1,6 +1,5 @@
 use std::ffi::OsString;
 
-
 // General variables
 
 /// Environment variable used to colour files, both by their filesystem type
@@ -36,12 +35,10 @@ pub static LX_GRID_ROWS: &str = "LX_GRID_ROWS";
 /// far apart, so this may be necessary depending on how they are shown.
 pub static LX_ICON_SPACING: &str = "LX_ICON_SPACING";
 
-
 /// Mockable wrapper for `std::env::var_os`.
 pub trait Vars {
     fn get(&self, name: &'static str) -> Option<OsString>;
 }
-
 
 // Test impl that just returns the value it has.
 #[cfg(test)]

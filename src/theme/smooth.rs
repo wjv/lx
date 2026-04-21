@@ -46,11 +46,11 @@ pub type SmoothLut = Box<[Style; LUT_SIZE]>;
 /// per-tier fields on `Size`/`DateAge`.
 #[derive(Debug, Default, PartialEq)]
 pub struct SmoothLuts {
-    pub size:     Option<SmoothLut>,
+    pub size: Option<SmoothLut>,
     pub modified: Option<SmoothLut>,
     pub accessed: Option<SmoothLut>,
-    pub changed:  Option<SmoothLut>,
-    pub created:  Option<SmoothLut>,
+    pub changed: Option<SmoothLut>,
+    pub created: Option<SmoothLut>,
 }
 
 /// Build a 256-stop LUT by interpolating between a sequence of
@@ -212,11 +212,11 @@ pub fn size_to_position(bytes: u64) -> f32 {
 /// upper bound of the `now` tier range), and so on.
 pub fn age_to_position(age_secs: u64) -> f32 {
     const ANCHORS: [u64; 6] = [
-        1,         // `now`   — scale origin (anything ≤ 1 sec clamps here)
-        3_600,     // `today` — 1 hour
-        86_400,    // `week`  — 1 day
-        604_800,   // `month` — 1 week
-        2_592_000, // `year`  — 30 days
+        1,          // `now`   — scale origin (anything ≤ 1 sec clamps here)
+        3_600,      // `today` — 1 hour
+        86_400,     // `week`  — 1 day
+        604_800,    // `month` — 1 week
+        2_592_000,  // `year`  — 30 days
         31_536_000, // `old`  — 1 year
     ];
     const POSITIONS: [f32; 6] = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
@@ -270,7 +270,6 @@ pub(crate) fn date_anchors(date: &DateAge) -> [(f32, Style); 6] {
     ]
 }
 
-
 #[cfg(test)]
 #[allow(clippy::float_cmp)] // test assertions use exact f32 literals we control
 mod test {
@@ -290,12 +289,12 @@ mod test {
     /// tolerances on interpolated midpoints.
     fn synthetic_date() -> [(f32, Style); 6] {
         [
-            (0.0, rgb_bold(255, 0, 0)),       // red, bold
-            (0.2, rgb(255, 128, 0)),          // orange
-            (0.4, rgb(255, 255, 0)),          // yellow
-            (0.6, rgb(0, 255, 0)),            // green
-            (0.8, rgb(0, 0, 255)),            // blue
-            (1.0, rgb(128, 0, 128)),          // purple
+            (0.0, rgb_bold(255, 0, 0)), // red, bold
+            (0.2, rgb(255, 128, 0)),    // orange
+            (0.4, rgb(255, 255, 0)),    // yellow
+            (0.6, rgb(0, 255, 0)),      // green
+            (0.8, rgb(0, 0, 255)),      // blue
+            (1.0, rgb(128, 0, 128)),    // purple
         ]
     }
 
@@ -320,7 +319,10 @@ mod test {
         // Same foreground...
         assert_eq!(fg(lut[0]), fg(anchors[0].1));
         // ...and same bold attribute.
-        assert!(lut[0].is_bold, "first stop should inherit bold from anchor[0]");
+        assert!(
+            lut[0].is_bold,
+            "first stop should inherit bold from anchor[0]"
+        );
     }
 
     #[test]
@@ -342,8 +344,8 @@ mod test {
         let lut = build_smooth_lut(&anchors);
 
         let expected_buckets = [
-            (0,   anchors[0].1),
-            (51,  anchors[1].1),
+            (0, anchors[0].1),
+            (51, anchors[1].1),
             (102, anchors[2].1),
             (153, anchors[3].1),
             (204, anchors[4].1),
@@ -441,13 +443,13 @@ mod test {
     #[test]
     fn date_anchors_layout_matches_six_tiers() {
         let date = DateAge {
-            now:   rgb(0x10, 0x10, 0x10),
+            now: rgb(0x10, 0x10, 0x10),
             today: rgb(0x20, 0x20, 0x20),
-            week:  rgb(0x30, 0x30, 0x30),
+            week: rgb(0x30, 0x30, 0x30),
             month: rgb(0x40, 0x40, 0x40),
-            year:  rgb(0x50, 0x50, 0x50),
-            old:   rgb(0x60, 0x60, 0x60),
-            flat:  Style::default(),
+            year: rgb(0x50, 0x50, 0x50),
+            old: rgb(0x60, 0x60, 0x60),
+            flat: Style::default(),
         };
 
         let anchors = date_anchors(&date);
@@ -491,9 +493,7 @@ mod test {
 
         #[test]
         fn size_is_monotonic() {
-            let samples: Vec<f32> = (0..=40)
-                .map(|i| size_to_position(1_u64 << i))
-                .collect();
+            let samples: Vec<f32> = (0..=40).map(|i| size_to_position(1_u64 << i)).collect();
             for window in samples.windows(2) {
                 assert!(
                     window[0] <= window[1],
@@ -534,9 +534,7 @@ mod test {
         #[test]
         fn age_is_monotonic() {
             // Log-ish sweep: powers of 2 from 1 sec to ~1 year.
-            let samples: Vec<f32> = (0..=25)
-                .map(|i| age_to_position(1_u64 << i))
-                .collect();
+            let samples: Vec<f32> = (0..=25).map(|i| age_to_position(1_u64 << i)).collect();
             for window in samples.windows(2) {
                 assert!(
                     window[0] <= window[1],
@@ -586,18 +584,18 @@ mod test {
         fn ui_with_24bit_date_gradient() -> UiStyles {
             let mut ui = UiStyles::default();
             let date = DateAge {
-                now:   rgb_bold(0x3D, 0xD7, 0xD7),
+                now: rgb_bold(0x3D, 0xD7, 0xD7),
                 today: rgb(0x3D, 0xD7, 0xD7),
-                week:  rgb(0x3A, 0xAB, 0xAE),
+                week: rgb(0x3A, 0xAB, 0xAE),
                 month: rgb(0x3B, 0x8E, 0xD8),
-                year:  rgb(0x88, 0x88, 0x88),
-                old:   rgb(0x5C, 0x5C, 0x5C),
-                flat:  rgb(0x55, 0x55, 0x55),
+                year: rgb(0x88, 0x88, 0x88),
+                old: rgb(0x5C, 0x5C, 0x5C),
+                flat: rgb(0x55, 0x55, 0x55),
             };
             ui.date_modified = date;
             ui.date_accessed = date;
-            ui.date_changed  = date;
-            ui.date_created  = date;
+            ui.date_changed = date;
+            ui.date_created = date;
             ui.size = Size {
                 major: rgb(0xAA, 0xAA, 0xAA),
                 minor: rgb(0x55, 0x55, 0x55),
@@ -635,10 +633,22 @@ mod test {
             ui.apply_gradient_flags(gradient);
 
             assert!(ui.smooth_luts.size.is_some(), "size LUT should be built");
-            assert!(ui.smooth_luts.modified.is_some(), "modified LUT should be built");
-            assert!(ui.smooth_luts.accessed.is_some(), "accessed LUT should be built");
-            assert!(ui.smooth_luts.changed.is_some(), "changed LUT should be built");
-            assert!(ui.smooth_luts.created.is_some(), "created LUT should be built");
+            assert!(
+                ui.smooth_luts.modified.is_some(),
+                "modified LUT should be built"
+            );
+            assert!(
+                ui.smooth_luts.accessed.is_some(),
+                "accessed LUT should be built"
+            );
+            assert!(
+                ui.smooth_luts.changed.is_some(),
+                "changed LUT should be built"
+            );
+            assert!(
+                ui.smooth_luts.created.is_some(),
+                "created LUT should be built"
+            );
         }
 
         #[test]
@@ -650,7 +660,10 @@ mod test {
             ui.apply_gradient_flags(gradient);
 
             assert!(ui.smooth_luts.size.is_some());
-            assert!(ui.smooth_luts.modified.is_none(), "modified LUT should be skipped");
+            assert!(
+                ui.smooth_luts.modified.is_none(),
+                "modified LUT should be skipped"
+            );
             assert!(ui.smooth_luts.accessed.is_some());
             assert!(ui.smooth_luts.changed.is_some());
             assert!(ui.smooth_luts.created.is_some());
@@ -667,7 +680,10 @@ mod test {
             gradient.smooth = true;
             ui.apply_gradient_flags(gradient);
 
-            assert!(ui.smooth_luts.size.is_none(), "size LUT skipped: non-RGB anchor");
+            assert!(
+                ui.smooth_luts.size.is_none(),
+                "size LUT skipped: non-RGB anchor"
+            );
             // Timestamp columns were untouched and should still build.
             assert!(ui.smooth_luts.modified.is_some());
         }
@@ -720,10 +736,10 @@ mod test {
         // 0, 63.75, 127.5, 191.25, 255.
         // Due to rounding we accept the closest integer bucket.
         let samples = [
-            (0,   size.number_byte),
-            (64,  size.number_kilo),   // round(63.75) = 64
-            (128, size.number_mega),   // round(127.5) = 128
-            (191, size.number_giga),   // round(191.25) = 191
+            (0, size.number_byte),
+            (64, size.number_kilo),  // round(63.75) = 64
+            (128, size.number_mega), // round(127.5) = 128
+            (191, size.number_giga), // round(191.25) = 191
             (255, size.number_huge),
         ];
 

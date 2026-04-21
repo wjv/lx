@@ -5,13 +5,11 @@ mod support;
 use predicates::prelude::*;
 use support::{lx, lx_no_colour};
 
-
 // ── Help and version ──────────────────────────────────────────────
 
 #[test]
 fn help_flag() {
-    lx()
-        .arg("--help")
+    lx().arg("--help")
         .assert()
         .success()
         .stdout(predicate::str::contains("personality"));
@@ -19,8 +17,7 @@ fn help_flag() {
 
 #[test]
 fn help_short_flag() {
-    lx()
-        .arg("-?")
+    lx().arg("-?")
         .assert()
         .success()
         .stdout(predicate::str::contains("--oneline"));
@@ -28,8 +25,7 @@ fn help_short_flag() {
 
 #[test]
 fn version_flag() {
-    lx()
-        .arg("--version")
+    lx().arg("--version")
         .assert()
         .success()
         .stdout(predicate::str::contains(env!("CARGO_PKG_VERSION")));
@@ -37,20 +33,17 @@ fn version_flag() {
 
 #[test]
 fn version_short_flag() {
-    lx()
-        .arg("-v")
+    lx().arg("-v")
         .assert()
         .success()
         .stdout(predicate::str::contains("lx"));
 }
 
-
 // ── Invalid options ───────────────────────────────────────────────
 
 #[test]
 fn unknown_short_flag() {
-    lx()
-        .arg("-Y")
+    lx().arg("-Y")
         .assert()
         .failure()
         .stderr(predicate::str::contains("error"));
@@ -59,16 +52,12 @@ fn unknown_short_flag() {
 #[test]
 fn uppercase_f_groups_dirs_first() {
     // -F is now short for --group-dirs=first (was --classify in exa)
-    lx()
-        .arg("-F")
-        .assert()
-        .success();
+    lx().arg("-F").assert().success();
 }
 
 #[test]
 fn unknown_long_flag() {
-    lx()
-        .arg("--ternary")
+    lx().arg("--ternary")
         .assert()
         .failure()
         .stderr(predicate::str::contains("error"));
@@ -76,8 +65,7 @@ fn unknown_long_flag() {
 
 #[test]
 fn invalid_sort_value() {
-    lx()
-        .arg("--sort=colour")
+    lx().arg("--sort=colour")
         .assert()
         .failure()
         .stderr(predicate::str::contains("invalid value"));
@@ -86,18 +74,15 @@ fn invalid_sort_value() {
 #[test]
 fn removed_time_flag_is_rejected() {
     // --time=X was removed in 0.8; it is no longer a valid flag.
-    lx()
-        .arg("--time=modified")
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("unexpected argument")
-            .or(predicate::str::contains("unrecognized")));
+    lx().arg("--time=modified").assert().failure().stderr(
+        predicate::str::contains("unexpected argument")
+            .or(predicate::str::contains("unrecognized")),
+    );
 }
 
 #[test]
 fn invalid_colour_value() {
-    lx()
-        .arg("--colour=upstream")
+    lx().arg("--colour=upstream")
         .assert()
         .failure()
         .stderr(predicate::str::contains("invalid value"));
@@ -114,14 +99,17 @@ fn unknown_time_style_errors() {
         .assert()
         .failure()
         .code(2)
-        .stderr(predicate::str::contains("invalid value '24-hour' for '--time-style"))
-        .stderr(predicate::str::contains("[possible values: default, iso, long-iso, full-iso, relative, +FORMAT]"));
+        .stderr(predicate::str::contains(
+            "invalid value '24-hour' for '--time-style",
+        ))
+        .stderr(predicate::str::contains(
+            "[possible values: default, iso, long-iso, full-iso, relative, +FORMAT]",
+        ));
 }
 
 #[test]
 fn invalid_level_not_a_number() {
-    lx()
-        .arg("--level=abc")
+    lx().arg("--level=abc")
         .assert()
         .failure()
         .stderr(predicate::str::contains("invalid value"));
@@ -139,41 +127,31 @@ fn time_tier_compounds() {
 
 #[test]
 fn tree_all_all_error() {
-    lx()
-        .args(["-Taa"])
+    lx().args(["-Taa"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("--tree"));
 }
 
-
 // ── Exit codes ────────────────────────────────────────────────────
 
 #[test]
 fn exit_code_success() {
-    lx()
-        .arg(".")
-        .assert()
-        .success();
+    lx().arg(".").assert().success();
 }
 
 #[test]
 fn exit_code_options_error() {
-    lx()
-        .arg("--sort=nope")
-        .assert()
-        .code(2);  // Clap uses exit code 2 for usage errors
+    lx().arg("--sort=nope").assert().code(2); // Clap uses exit code 2 for usage errors
 }
 
 #[test]
 fn nonexistent_path_still_exits() {
     // lx should print an error and exit non-zero for missing paths
-    lx()
-        .arg("/nonexistent/path/that/does/not/exist")
+    lx().arg("/nonexistent/path/that/does/not/exist")
         .assert()
         .failure();
 }
-
 
 // ── Basic listing ─────────────────────────────────────────────────
 
@@ -235,7 +213,6 @@ fn grid_view() {
         .stdout(predicate::str::is_empty().not());
 }
 
-
 // ── View mode combinations ────────────────────────────────────────
 
 #[test]
@@ -265,7 +242,6 @@ fn long_grid_view() {
         .success()
         .stdout(predicate::str::is_empty().not());
 }
-
 
 // ── Filtering ─────────────────────────────────────────────────────
 
@@ -314,7 +290,6 @@ fn only_dirs() {
         .stdout(predicate::str::contains("src"))
         .stdout(predicate::str::contains("Cargo.toml").not());
 }
-
 
 // ── Long-view columns ─────────────────────────────────────────────
 
@@ -365,7 +340,6 @@ fn inode_column() {
         .stdout(predicate::str::contains("Cargo.toml"));
 }
 
-
 // ── Suppressed columns ───────────────────────────────────────────
 
 #[test]
@@ -404,49 +378,42 @@ fn no_time() {
         .stdout(predicate::str::contains("Cargo.toml"));
 }
 
-
 // ── Colour control ────────────────────────────────────────────────
 
 #[test]
 fn colour_always() {
-    lx()
-        .args(["--colour=always", "-1", "Cargo.toml"])
+    lx().args(["--colour=always", "-1", "Cargo.toml"])
         .assert()
         .success();
 }
 
 #[test]
 fn colour_never() {
-    lx()
-        .args(["--colour=never", "-1", "Cargo.toml"])
+    lx().args(["--colour=never", "-1", "Cargo.toml"])
         .assert()
         .success();
 }
 
 #[test]
 fn colour_auto() {
-    lx()
-        .args(["--colour=auto", "-1", "Cargo.toml"])
+    lx().args(["--colour=auto", "-1", "Cargo.toml"])
         .assert()
         .success();
 }
 
 #[test]
 fn no_color_env() {
-    lx()
-        .args(["-1", "Cargo.toml"])
+    lx().args(["-1", "Cargo.toml"])
         .env("NO_COLOR", "1")
         .assert()
         .success();
 }
 
-
 // ── Shell completions ─────────────────────────────────────────────
 
 #[test]
 fn completions_bash() {
-    lx()
-        .arg("--completions=bash")
+    lx().arg("--completions=bash")
         .assert()
         .success()
         .stdout(predicate::str::contains("_lx"));
@@ -454,8 +421,7 @@ fn completions_bash() {
 
 #[test]
 fn completions_zsh() {
-    lx()
-        .arg("--completions=zsh")
+    lx().arg("--completions=zsh")
         .assert()
         .success()
         .stdout(predicate::str::contains("#compdef lx"));
@@ -463,13 +429,11 @@ fn completions_zsh() {
 
 #[test]
 fn completions_fish() {
-    lx()
-        .arg("--completions=fish")
+    lx().arg("--completions=fish")
         .assert()
         .success()
         .stdout(predicate::str::contains("complete -c lx"));
 }
-
 
 // ── Environment variables ─────────────────────────────────────────
 
@@ -503,29 +467,19 @@ fn invalid_lx_grid_rows_env() {
         .stderr(predicate::str::contains("LX_GRID_ROWS"));
 }
 
-
 // ── Long-view flags without --long (silently ignored) ─────────────
 
 #[test]
 fn binary_without_long_is_fine() {
-    lx_no_colour()
-        .args(["--binary", "."])
-        .assert()
-        .success();
+    lx_no_colour().args(["--binary", "."]).assert().success();
 }
 
 #[test]
 fn header_without_long_is_fine() {
-    lx_no_colour()
-        .args(["--header", "."])
-        .assert()
-        .success();
+    lx_no_colour().args(["--header", "."]).assert().success();
 }
 
 #[test]
 fn level_without_recurse_is_fine() {
-    lx_no_colour()
-        .args(["--level=3", "."])
-        .assert()
-        .success();
+    lx_no_colour().args(["--level=3", "."]).assert().success();
 }

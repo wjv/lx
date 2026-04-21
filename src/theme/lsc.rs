@@ -1,9 +1,8 @@
 use std::iter::Peekable;
 use std::ops::FnMut;
 
-use nu_ansi_term::{Color, Style};
 use nu_ansi_term::Color::*;
-
+use nu_ansi_term::{Color, Style};
 
 // Parsing the LS_COLORS environment variable into a map of names to Style values.
 //
@@ -18,31 +17,34 @@ pub struct LSColors<'var>(pub &'var str);
 
 impl<'var> LSColors<'var> {
     pub fn each_pair<C>(&mut self, mut callback: C)
-    where C: FnMut(Pair<'var>)
+    where
+        C: FnMut(Pair<'var>),
     {
         for next in self.0.split(':') {
-            let bits = next.split('=')
-                           .take(3)
-                           .collect::<Vec<_>>();
+            let bits = next.split('=').take(3).collect::<Vec<_>>();
 
-            if bits.len() == 2 && ! bits[0].is_empty() && ! bits[1].is_empty() {
-                callback(Pair { key: bits[0], value: bits[1] });
+            if bits.len() == 2 && !bits[0].is_empty() && !bits[1].is_empty() {
+                callback(Pair {
+                    key: bits[0],
+                    value: bits[1],
+                });
             }
         }
     }
 }
 
-
 fn parse_into_high_colour<'a, I>(iter: &mut Peekable<I>) -> Option<Color>
-where I: Iterator<Item = &'a str>
+where
+    I: Iterator<Item = &'a str>,
 {
     match iter.peek() {
         Some(&"5") => {
             let _ = iter.next();
             if let Some(byte) = iter.next()
-                && let Ok(num) = byte.parse() {
-                    return Some(Fixed(num));
-                }
+                && let Ok(num) = byte.parse()
+            {
+                return Some(Fixed(num));
+            }
         }
 
         Some(&"2") => {
@@ -60,21 +62,21 @@ where I: Iterator<Item = &'a str>
                     }
                 }*/
 
-                if let (Some(r), Some(g), Some(b)) = (hexes.parse().ok(),
-                                                      iter.next().and_then(|s| s.parse().ok()),
-                                                      iter.next().and_then(|s| s.parse().ok()))
-                {
+                if let (Some(r), Some(g), Some(b)) = (
+                    hexes.parse().ok(),
+                    iter.next().and_then(|s| s.parse().ok()),
+                    iter.next().and_then(|s| s.parse().ok()),
+                ) {
                     return Some(Rgb(r, g, b));
                 }
             }
         }
 
-        _ => {},
+        _ => {}
     }
 
     None
 }
-
 
 pub struct Pair<'var> {
     pub key: &'var str,
@@ -88,7 +90,6 @@ impl Pair<'_> {
 
         while let Some(num) = iter.next() {
             match num.trim_start_matches('0') {
-
                 // Bold and italic
                 "1" => style = style.bold(),
                 "2" => style = style.dimmed(),
@@ -109,7 +110,11 @@ impl Pair<'_> {
                 "35" => style = style.fg(Purple),
                 "36" => style = style.fg(Cyan),
                 "37" => style = style.fg(White),
-                "38" => if let Some(c) = parse_into_high_colour(&mut iter) { style = style.fg(c) },
+                "38" => {
+                    if let Some(c) = parse_into_high_colour(&mut iter) {
+                        style = style.fg(c)
+                    }
+                }
 
                 // Background colours
                 "40" => style = style.on(Black),
@@ -120,16 +125,19 @@ impl Pair<'_> {
                 "45" => style = style.on(Purple),
                 "46" => style = style.on(Cyan),
                 "47" => style = style.on(White),
-                "48" => if let Some(c) = parse_into_high_colour(&mut iter) { style = style.on(c) },
+                "48" => {
+                    if let Some(c) = parse_into_high_colour(&mut iter) {
+                        style = style.on(c)
+                    }
+                }
 
-                 _   => {/* ignore the error and do nothing */},
+                _ => { /* ignore the error and do nothing */ }
             }
         }
 
         style
     }
 }
-
 
 // ── Human-readable colour parser ────────────────────────────────
 //
@@ -168,14 +176,38 @@ pub fn parse_style(value: &str) -> Style {
 
         // Check modifiers first.
         match lower.as_str() {
-            "bold" => { style = style.bold(); continue; }
-            "dimmed" | "dim" => { style = style.dimmed(); continue; }
-            "italic" => { style = style.italic(); continue; }
-            "underline" => { style = style.underline(); continue; }
-            "strikethrough" => { style = style.strikethrough(); continue; }
-            "blink" => { style = style.blink(); continue; }
-            "reverse" => { style = style.reverse(); continue; }
-            "hidden" => { style = style.hidden(); continue; }
+            "bold" => {
+                style = style.bold();
+                continue;
+            }
+            "dimmed" | "dim" => {
+                style = style.dimmed();
+                continue;
+            }
+            "italic" => {
+                style = style.italic();
+                continue;
+            }
+            "underline" => {
+                style = style.underline();
+                continue;
+            }
+            "strikethrough" => {
+                style = style.strikethrough();
+                continue;
+            }
+            "blink" => {
+                style = style.blink();
+                continue;
+            }
+            "reverse" => {
+                style = style.reverse();
+                continue;
+            }
+            "hidden" => {
+                style = style.hidden();
+                continue;
+            }
             _ => {}
         }
 
@@ -203,7 +235,11 @@ pub fn parse_style(value: &str) -> Style {
         // If it looks like ANSI codes embedded in the string (e.g.
         // "bold 38;5;208"), parse just this token as ANSI.
         if token.contains(';') || token.chars().all(|c| c.is_ascii_digit()) {
-            let sub = Pair { key: "", value: token }.to_style();
+            let sub = Pair {
+                key: "",
+                value: token,
+            }
+            .to_style();
             if sub.foreground.is_some() && !has_fg {
                 style.foreground = sub.foreground;
                 has_fg = true;
@@ -212,14 +248,30 @@ pub fn parse_style(value: &str) -> Style {
                 style.background = sub.background;
             }
             // Merge attributes.
-            if sub.is_bold      { style = style.bold(); }
-            if sub.is_dimmed    { style = style.dimmed(); }
-            if sub.is_italic    { style = style.italic(); }
-            if sub.is_underline { style = style.underline(); }
-            if sub.is_blink     { style = style.blink(); }
-            if sub.is_reverse   { style = style.reverse(); }
-            if sub.is_hidden    { style = style.hidden(); }
-            if sub.is_strikethrough { style = style.strikethrough(); }
+            if sub.is_bold {
+                style = style.bold();
+            }
+            if sub.is_dimmed {
+                style = style.dimmed();
+            }
+            if sub.is_italic {
+                style = style.italic();
+            }
+            if sub.is_underline {
+                style = style.underline();
+            }
+            if sub.is_blink {
+                style = style.blink();
+            }
+            if sub.is_reverse {
+                style = style.reverse();
+            }
+            if sub.is_hidden {
+                style = style.hidden();
+            }
+            if sub.is_strikethrough {
+                style = style.strikethrough();
+            }
             continue;
         }
 
@@ -239,14 +291,14 @@ fn looks_like_ansi(s: &str) -> bool {
 /// Map basic ANSI colour names to `Color` values.
 fn basic_colour(name: &str) -> Option<Color> {
     match name {
-        "black"   => Some(Black),
-        "red"     => Some(Red),
-        "green"   => Some(Green),
-        "yellow"  => Some(Yellow),
-        "blue"    => Some(Blue),
+        "black" => Some(Black),
+        "red" => Some(Red),
+        "green" => Some(Green),
+        "yellow" => Some(Yellow),
+        "blue" => Some(Blue),
         "purple" | "magenta" => Some(Purple),
-        "cyan"    => Some(Cyan),
-        "white"   => Some(White),
+        "cyan" => Some(Cyan),
+        "white" => Some(White),
         _ => None,
     }
 }
@@ -270,7 +322,6 @@ fn parse_hex(s: &str) -> Option<Color> {
         _ => None,
     }
 }
-
 
 /// X11/CSS colour names → RGB values.
 ///
@@ -418,7 +469,6 @@ static X11_COLOURS: phf::Map<&'static str, (u8, u8, u8)> = phf::phf_map! {
     "yellowgreen" => (154, 205, 50),
 };
 
-
 #[cfg(test)]
 mod ansi_test {
     use super::*;
@@ -428,7 +478,14 @@ mod ansi_test {
         ($name:ident: $input:expr => $result:expr) => {
             #[test]
             fn $name() {
-                assert_eq!(Pair { key: "", value: $input }.to_style(), $result);
+                assert_eq!(
+                    Pair {
+                        key: "",
+                        value: $input
+                    }
+                    .to_style(),
+                    $result
+                );
             }
         };
     }
@@ -469,7 +526,6 @@ mod ansi_test {
     test!(toohi: "48;5;999"           => Style::default());
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -479,7 +535,7 @@ mod test {
             #[test]
             fn $name() {
                 let mut lscs = Vec::new();
-                LSColors($input).each_pair(|p| lscs.push( (p.key.clone(), p.to_style()) ));
+                LSColors($input).each_pair(|p| lscs.push((p.key.clone(), p.to_style())));
                 assert_eq!(lscs, $result.to_vec());
             }
         };
@@ -512,7 +568,6 @@ mod test {
     test!(more:  "me=43;21;55;34:yu=1;4;1"  => [ ("me", Blue.on(Yellow)), ("yu", Style::default().bold().underline()) ]);
     test!(many:  "red=31:green=32:blue=34"  => [ ("red", Red.normal()), ("green", Green.normal()), ("blue", Blue.normal()) ]);
 }
-
 
 #[cfg(test)]
 mod parse_style_test {
@@ -548,7 +603,10 @@ mod parse_style_test {
 
     #[test]
     fn multiple_modifiers() {
-        assert_eq!(parse_style("bold underline"), Style::default().bold().underline());
+        assert_eq!(
+            parse_style("bold underline"),
+            Style::default().bold().underline()
+        );
     }
 
     #[test]
@@ -563,7 +621,10 @@ mod parse_style_test {
 
     #[test]
     fn hex_colour_6() {
-        assert_eq!(parse_style("#ff8700"), Style::default().fg(Rgb(255, 135, 0)));
+        assert_eq!(
+            parse_style("#ff8700"),
+            Style::default().fg(Rgb(255, 135, 0))
+        );
     }
 
     #[test]
@@ -574,7 +635,10 @@ mod parse_style_test {
 
     #[test]
     fn bold_hex() {
-        assert_eq!(parse_style("bold #ff8700"), Style::default().fg(Rgb(255, 135, 0)).bold());
+        assert_eq!(
+            parse_style("bold #ff8700"),
+            Style::default().fg(Rgb(255, 135, 0)).bold()
+        );
     }
 
     #[test]
@@ -584,12 +648,18 @@ mod parse_style_test {
 
     #[test]
     fn bold_x11() {
-        assert_eq!(parse_style("bold tomato"), Style::default().fg(Rgb(255, 99, 71)).bold());
+        assert_eq!(
+            parse_style("bold tomato"),
+            Style::default().fg(Rgb(255, 99, 71)).bold()
+        );
     }
 
     #[test]
     fn x11_cornflowerblue() {
-        assert_eq!(parse_style("cornflowerblue"), Style::default().fg(Rgb(100, 149, 237)));
+        assert_eq!(
+            parse_style("cornflowerblue"),
+            Style::default().fg(Rgb(100, 149, 237))
+        );
     }
 
     #[test]
