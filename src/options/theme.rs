@@ -1,10 +1,10 @@
 use crate::options::parser::MatchedFlags;
-use crate::options::{OptionsError, Vars, flags, vars};
+use crate::options::{Vars, flags, vars};
 use crate::theme::{Definitions, GradientFlags, Options, UseColours};
 
 impl Options {
-    pub fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
-        let use_colours = UseColours::deduce(matches, vars)?;
+    pub fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Self {
+        let use_colours = UseColours::deduce(matches, vars);
         let gradient = GradientFlags::deduce(matches);
 
         let definitions = if use_colours == UseColours::Never {
@@ -15,33 +15,33 @@ impl Options {
 
         let theme_override = matches.get(flags::THEME).map(String::from);
 
-        Ok(Self {
+        Self {
             use_colours,
             gradient,
             definitions,
             theme_override,
-        })
+        }
     }
 }
 
 impl UseColours {
-    fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Result<Self, OptionsError> {
+    fn deduce<V: Vars>(matches: &MatchedFlags, vars: &V) -> Self {
         let default_value = match vars.get(vars::NO_COLOR) {
             Some(_) => Self::Never,
             None => Self::Automatic,
         };
 
         let Some(word) = matches.get(flags::COLOR) else {
-            return Ok(default_value);
+            return default_value;
         };
 
         // Clap validates the value, so this match is exhaustive over accepted inputs.
-        Ok(match word {
+        match word {
             "always" => Self::Always,
             "auto" | "automatic" => Self::Automatic,
             "never" => Self::Never,
             _ => unreachable!("Clap rejects invalid --colour values"),
-        })
+        }
     }
 }
 
@@ -180,18 +180,18 @@ mod terminal_test {
     }
 
     // Default
-    test!(empty:         UseColours <- [], MockVars::empty();                     Ok(UseColours::Automatic));
-    test!(empty_with_no_color: UseColours <- [], MockVars::with_no_color();       Ok(UseColours::Never));
+    test!(empty:         UseColours <- [], MockVars::empty();                     UseColours::Automatic);
+    test!(empty_with_no_color: UseColours <- [], MockVars::with_no_color();       UseColours::Never);
 
     // --colour
-    test!(u_always:      UseColours <- ["--colour=always"], MockVars::empty();    Ok(UseColours::Always));
-    test!(u_auto:        UseColours <- ["--colour", "auto"], MockVars::empty();   Ok(UseColours::Automatic));
-    test!(u_never:       UseColours <- ["--colour=never"], MockVars::empty();     Ok(UseColours::Never));
+    test!(u_always:      UseColours <- ["--colour=always"], MockVars::empty();    UseColours::Always);
+    test!(u_auto:        UseColours <- ["--colour", "auto"], MockVars::empty();   UseColours::Automatic);
+    test!(u_never:       UseColours <- ["--colour=never"], MockVars::empty();     UseColours::Never);
 
     // --color
-    test!(no_u_always:   UseColours <- ["--color", "always"], MockVars::empty();  Ok(UseColours::Always));
-    test!(no_u_auto:     UseColours <- ["--color=auto"], MockVars::empty();       Ok(UseColours::Automatic));
-    test!(no_u_never:    UseColours <- ["--color", "never"], MockVars::empty();   Ok(UseColours::Never));
+    test!(no_u_always:   UseColours <- ["--color", "always"], MockVars::empty();  UseColours::Always);
+    test!(no_u_auto:     UseColours <- ["--color=auto"], MockVars::empty();       UseColours::Automatic);
+    test!(no_u_never:    UseColours <- ["--color", "never"], MockVars::empty();   UseColours::Never);
 
     // Errors — Clap rejects invalid values at parse time
     #[test]
@@ -209,10 +209,10 @@ mod terminal_test {
     }
 
     // Overriding
-    test!(overridden_1:  UseColours <- ["--colour=auto", "--colour=never"], MockVars::empty();  Ok(UseColours::Never));
-    test!(overridden_2:  UseColours <- ["--color=auto",  "--colour=never"], MockVars::empty();  Ok(UseColours::Never));
-    test!(overridden_3:  UseColours <- ["--colour=auto", "--color=never"], MockVars::empty();   Ok(UseColours::Never));
-    test!(overridden_4:  UseColours <- ["--color=auto",  "--color=never"], MockVars::empty();   Ok(UseColours::Never));
+    test!(overridden_1:  UseColours <- ["--colour=auto", "--colour=never"], MockVars::empty();  UseColours::Never);
+    test!(overridden_2:  UseColours <- ["--color=auto",  "--colour=never"], MockVars::empty();  UseColours::Never);
+    test!(overridden_3:  UseColours <- ["--colour=auto", "--color=never"], MockVars::empty();   UseColours::Never);
+    test!(overridden_4:  UseColours <- ["--color=auto",  "--color=never"], MockVars::empty();   UseColours::Never);
 
     // --colour-scale is retired in 0.9; clap rejects any value at
     // parse time with a deprecation pointer to --gradient.  See

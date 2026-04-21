@@ -16,7 +16,7 @@ impl FileFilter {
             reverse: matches.has(flags::REVERSE),
             only_dirs: matches.has(flags::ONLY_DIRS),
             only_files: matches.has(flags::ONLY_FILES),
-            sort_field: SortField::deduce(matches)?,
+            sort_field: SortField::deduce(matches),
             sort_by_total_size: matches.has(flags::TOTAL),
             dot_filter: DotFilter::deduce(matches)?,
             ignore_patterns: IgnorePatterns::deduce(matches)?,
@@ -70,20 +70,18 @@ impl SortField {
     /// handles version-style names via `natord`.  We resolve it to
     /// `Name(AaBbCc)` here so it doesn't need its own registry
     /// entry.
-    fn deduce(matches: &MatchedFlags) -> Result<Self, OptionsError> {
+    fn deduce(matches: &MatchedFlags) -> Self {
         use crate::fs::sort_registry::SortFieldDef;
 
         let Some(word) = matches.get(flags::SORT) else {
-            return Ok(Self::default());
+            return Self::default();
         };
 
         if word == "version" {
-            return Ok(Self::Name(SortCase::AaBbCc));
+            return Self::Name(SortCase::AaBbCc);
         }
 
-        let field =
-            SortFieldDef::field_from_name(word).expect("Clap rejects invalid --sort values");
-        Ok(field)
+        SortFieldDef::field_from_name(word).expect("Clap rejects invalid --sort values")
     }
 }
 
@@ -209,22 +207,22 @@ mod test {
         use super::*;
 
         // Default behaviour
-        test!(empty:         SortField <- [];                  Ok(SortField::default()));
+        test!(empty:         SortField <- [];                  SortField::default());
 
         // Sort field arguments
-        test!(one_arg:       SortField <- ["--sort=mod"];       Ok(SortField::ModifiedDate));
-        test!(one_long:      SortField <- ["--sort=size"];     Ok(SortField::Size));
-        test!(one_short:     SortField <- ["-saccessed"];      Ok(SortField::AccessedDate));
-        test!(lowercase:     SortField <- ["--sort", "name"];  Ok(SortField::Name(SortCase::AaBbCc)));
-        test!(uppercase:     SortField <- ["--sort", "Name"];  Ok(SortField::Name(SortCase::ABCabc)));
-        test!(old:           SortField <- ["--sort", "new"];   Ok(SortField::ModifiedDate));
-        test!(oldest:        SortField <- ["--sort=newest"];   Ok(SortField::ModifiedDate));
-        test!(new:           SortField <- ["--sort", "old"];   Ok(SortField::ModifiedAge));
-        test!(newest:        SortField <- ["--sort=oldest"];   Ok(SortField::ModifiedAge));
-        test!(age:           SortField <- ["-sage"];           Ok(SortField::ModifiedAge));
+        test!(one_arg:       SortField <- ["--sort=mod"];       SortField::ModifiedDate);
+        test!(one_long:      SortField <- ["--sort=size"];     SortField::Size);
+        test!(one_short:     SortField <- ["-saccessed"];      SortField::AccessedDate);
+        test!(lowercase:     SortField <- ["--sort", "name"];  SortField::Name(SortCase::AaBbCc));
+        test!(uppercase:     SortField <- ["--sort", "Name"];  SortField::Name(SortCase::ABCabc));
+        test!(old:           SortField <- ["--sort", "new"];   SortField::ModifiedDate);
+        test!(oldest:        SortField <- ["--sort=newest"];   SortField::ModifiedDate);
+        test!(new:           SortField <- ["--sort", "old"];   SortField::ModifiedAge);
+        test!(newest:        SortField <- ["--sort=oldest"];   SortField::ModifiedAge);
+        test!(age:           SortField <- ["-sage"];           SortField::ModifiedAge);
 
-        test!(mix_hidden_lowercase:     SortField <- ["--sort", ".name"];  Ok(SortField::NameMixHidden(SortCase::AaBbCc)));
-        test!(mix_hidden_uppercase:     SortField <- ["--sort", ".Name"];  Ok(SortField::NameMixHidden(SortCase::ABCabc)));
+        test!(mix_hidden_lowercase:     SortField <- ["--sort", ".name"];  SortField::NameMixHidden(SortCase::AaBbCc));
+        test!(mix_hidden_uppercase:     SortField <- ["--sort", ".Name"];  SortField::NameMixHidden(SortCase::ABCabc));
 
         // Errors — Clap rejects invalid values at parse time
         #[test]
@@ -234,18 +232,18 @@ mod test {
         }
 
         // Overriding
-        test!(overridden:    SortField <- ["--sort=cr",       "--sort", "mod"];     Ok(SortField::ModifiedDate));
-        test!(overridden_2:  SortField <- ["--sort", "none",  "--sort=Extension"];  Ok(SortField::Extension(SortCase::ABCabc)));
+        test!(overridden:    SortField <- ["--sort=cr",       "--sort", "mod"];     SortField::ModifiedDate);
+        test!(overridden_2:  SortField <- ["--sort", "none",  "--sort=Extension"];  SortField::Extension(SortCase::ABCabc));
 
         // Batch D: new metadata sort fields
         #[cfg(unix)]
         mod metadata_sorts {
             use super::*;
 
-            test!(permissions:    SortField <- ["--sort=permissions"];  Ok(SortField::Permissions));
-            test!(perms_mode:     SortField <- ["--sort=mode"];         Ok(SortField::Permissions));
-            test!(perms_octal:    SortField <- ["--sort=octal"];        Ok(SortField::Permissions));
-            test!(size_filesize:  SortField <- ["--sort=filesize"];     Ok(SortField::Size));
+            test!(permissions:    SortField <- ["--sort=permissions"];  SortField::Permissions);
+            test!(perms_mode:     SortField <- ["--sort=mode"];         SortField::Permissions);
+            test!(perms_octal:    SortField <- ["--sort=octal"];        SortField::Permissions);
+            test!(size_filesize:  SortField <- ["--sort=filesize"];     SortField::Size);
 
             // `-s perms` is no longer a valid sort value (removed in
             // Batch D).  `perms` survives only as a backward-compat
@@ -256,20 +254,20 @@ mod test {
                 let cmd = crate::options::parser::build_command();
                 assert!(cmd.try_get_matches_from(["lx", "--sort=perms"]).is_err());
             }
-            test!(blocks:       SortField <- ["--sort=blocks"];       Ok(SortField::Blocks));
-            test!(links:        SortField <- ["--sort=links"];        Ok(SortField::HardLinks));
-            test!(flags:        SortField <- ["--sort=flags"];        Ok(SortField::Flags));
-            test!(user_lower:   SortField <- ["--sort=user"];         Ok(SortField::User(SortCase::AaBbCc)));
-            test!(user_upper:   SortField <- ["--sort=User"];         Ok(SortField::User(SortCase::ABCabc)));
-            test!(group_lower:  SortField <- ["--sort=group"];        Ok(SortField::Group(SortCase::AaBbCc)));
-            test!(group_upper:  SortField <- ["--sort=Group"];        Ok(SortField::Group(SortCase::ABCabc)));
-            test!(uid:          SortField <- ["--sort=uid"];          Ok(SortField::Uid));
-            test!(gid:          SortField <- ["--sort=gid"];          Ok(SortField::Gid));
-            test!(vcs:          SortField <- ["--sort=vcs"];          Ok(SortField::VcsStatusSort));
+            test!(blocks:       SortField <- ["--sort=blocks"];       SortField::Blocks);
+            test!(links:        SortField <- ["--sort=links"];        SortField::HardLinks);
+            test!(flags:        SortField <- ["--sort=flags"];        SortField::Flags);
+            test!(user_lower:   SortField <- ["--sort=user"];         SortField::User(SortCase::AaBbCc));
+            test!(user_upper:   SortField <- ["--sort=User"];         SortField::User(SortCase::ABCabc));
+            test!(group_lower:  SortField <- ["--sort=group"];        SortField::Group(SortCase::AaBbCc));
+            test!(group_upper:  SortField <- ["--sort=Group"];        SortField::Group(SortCase::ABCabc));
+            test!(uid:          SortField <- ["--sort=uid"];          SortField::Uid);
+            test!(gid:          SortField <- ["--sort=gid"];          SortField::Gid);
+            test!(vcs:          SortField <- ["--sort=vcs"];          SortField::VcsStatusSort);
 
             // `-s version` is an alias for the case-insensitive name
             // sort — natord already handles embedded-number ordering.
-            test!(version:      SortField <- ["--sort=version"];      Ok(SortField::Name(SortCase::AaBbCc)));
+            test!(version:      SortField <- ["--sort=version"];      SortField::Name(SortCase::AaBbCc));
         }
     }
 

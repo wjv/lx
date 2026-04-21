@@ -371,9 +371,9 @@ impl Options {
         };
 
         let view = View::deduce(matches, vars)?;
-        let dir_action = DirAction::deduce(matches, matches!(view.mode, Mode::Details(_)))?;
+        let dir_action = DirAction::deduce(matches, matches!(view.mode, Mode::Details(_)));
         let filter = FileFilter::deduce(matches)?;
-        let theme = ThemeOptions::deduce(matches, vars)?;
+        let theme = ThemeOptions::deduce(matches, vars);
         let count = matches.has(flags::COUNT) && !matches.has(flags::NO_COUNT);
 
         Ok(Self {

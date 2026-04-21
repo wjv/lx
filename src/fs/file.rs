@@ -615,7 +615,13 @@ impl<'dir> File<'dir> {
     }
 
     /// This file’s last changed timestamp, if available on this platform.
+    ///
+    /// The Unix impl is infallible (ctime is always present in stat),
+    /// but we return `Option` to match the other three timestamp
+    /// accessors and the Windows impl, which delegates to
+    /// `modified_time()` and genuinely can fail.
     #[cfg(unix)]
+    #[allow(clippy::unnecessary_wraps)]
     pub fn changed_time(&self) -> Option<SystemTime> {
         let (mut sec, mut nanosec) = (self.metadata().ctime(), self.metadata().ctime_nsec());
 
