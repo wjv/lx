@@ -186,6 +186,27 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
 
 // ── --dump-personality output ───────────────────────────────────
 
+/// Format a single TOML key = value pair.
+fn format_toml_kv(key: &str, value: &toml::Value) -> String {
+    match value {
+        toml::Value::String(s) => format!("{key} = \"{s}\""),
+        toml::Value::Boolean(b) => format!("{key} = {b}"),
+        toml::Value::Integer(i) => format!("{key} = {i}"),
+        toml::Value::Float(f) => format!("{key} = {f}"),
+        toml::Value::Array(arr) => {
+            let items: Vec<String> = arr
+                .iter()
+                .map(|v| match v {
+                    toml::Value::String(s) => format!("\"{s}\""),
+                    other => other.to_string(),
+                })
+                .collect();
+            format!("{key} = [{}]", items.join(", "))
+        }
+        other => format!("{key} = {other}"),
+    }
+}
+
 /// Names of all compiled-in personalities.
 const COMPILED_PERSONALITIES: &[&str] = &["default", "lx", "ll", "lll", "la", "tree", "ls"];
 
@@ -199,8 +220,27 @@ pub fn all_personality_names() -> Vec<String> {
             }
         }
     }
+    // Topological sort: parents before children.  Within each depth
+    // level, alphabetical order is preserved.
     names.sort();
-    names
+    let mut ordered = Vec::with_capacity(names.len());
+    let mut remaining = names;
+    while !remaining.is_empty() {
+        let (ready, rest): (Vec<_>, Vec<_>) = remaining.into_iter().partition(|name| {
+            lookup_personality(name)
+                .and_then(|def| def.inherits)
+                .is_none_or(|parent| ordered.iter().any(|n: &String| *n == parent))
+        });
+        if ready.is_empty() {
+            // Cycle or missing parent — append the rest alphabetically
+            // to avoid an infinite loop.
+            ordered.extend(rest);
+            break;
+        }
+        ordered.extend(ready);
+        remaining = rest;
+    }
+    ordered
 }
 
 /// Format a personality definition as TOML.
@@ -229,13 +269,24 @@ fn format_personality_toml(name: &str) -> Option<String> {
     let mut keys: Vec<_> = def.settings.keys().collect();
     keys.sort();
     for key in keys {
-        let value = &def.settings[key];
-        match value {
-            toml::Value::String(s) => lines.push(format!("{key} = \"{s}\"")),
-            toml::Value::Boolean(b) => lines.push(format!("{key} = {b}")),
-            toml::Value::Integer(i) => lines.push(format!("{key} = {i}")),
-            toml::Value::Float(f) => lines.push(format!("{key} = {f}")),
-            _ => lines.push(format!("{key} = {value}")),
+        lines.push(format_toml_kv(key, &def.settings[key]));
+    }
+
+    // Emit [[when]] blocks.
+    for cond in &def.when {
+        lines.push(String::new());
+        lines.push(format!("[[personality.{name}.when]]"));
+
+        let mut env_keys: Vec<_> = cond.env.keys().collect();
+        env_keys.sort();
+        for ek in env_keys {
+            lines.push(format_toml_kv(&format!("env.{ek}"), &cond.env[ek]));
+        }
+
+        let mut setting_keys: Vec<_> = cond.settings.keys().collect();
+        setting_keys.sort();
+        for sk in setting_keys {
+            lines.push(format_toml_kv(sk, &cond.settings[sk]));
         }
     }
 
