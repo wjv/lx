@@ -21,6 +21,7 @@ use crate::fs::File;
 /// files are compared and sorted based on the result, with the sort field
 /// performing the comparison.
 #[derive(PartialEq, Eq, Debug, Clone)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct FileFilter {
     /// Whether to group directories before or after other files.
     pub group_dirs: GroupDirs,

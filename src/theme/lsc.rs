@@ -112,7 +112,7 @@ impl Pair<'_> {
                 "37" => style = style.fg(White),
                 "38" => {
                     if let Some(c) = parse_into_high_colour(&mut iter) {
-                        style = style.fg(c)
+                        style = style.fg(c);
                     }
                 }
 
@@ -127,7 +127,7 @@ impl Pair<'_> {
                 "47" => style = style.on(White),
                 "48" => {
                     if let Some(c) = parse_into_high_colour(&mut iter) {
-                        style = style.on(c)
+                        style = style.on(c);
                     }
                 }
 

@@ -424,43 +424,43 @@ impl UiStyles {
             // sort field, so the same vocabulary works on every
             // surface).
             "permissions-user-read" | "perm-user-read" | "mode-user-read" => {
-                self.perms.user_read = style
+                self.perms.user_read = style;
             }
             "permissions-user-write" | "perm-user-write" | "mode-user-write" => {
-                self.perms.user_write = style
+                self.perms.user_write = style;
             }
             "permissions-user-execute" | "perm-user-exec" | "mode-user-exec" => {
-                self.perms.user_execute_file = style
+                self.perms.user_execute_file = style;
             }
             "permissions-user-execute-other" | "perm-user-exec-other" | "mode-user-exec-other" => {
-                self.perms.user_execute_other = style
+                self.perms.user_execute_other = style;
             }
             "permissions-group-read" | "perm-group-read" | "mode-group-read" => {
-                self.perms.group_read = style
+                self.perms.group_read = style;
             }
             "permissions-group-write" | "perm-group-write" | "mode-group-write" => {
-                self.perms.group_write = style
+                self.perms.group_write = style;
             }
             "permissions-group-execute" | "perm-group-exec" | "mode-group-exec" => {
-                self.perms.group_execute = style
+                self.perms.group_execute = style;
             }
             "permissions-other-read" | "perm-other-read" | "mode-other-read" => {
-                self.perms.other_read = style
+                self.perms.other_read = style;
             }
             "permissions-other-write" | "perm-other-write" | "mode-other-write" => {
-                self.perms.other_write = style
+                self.perms.other_write = style;
             }
             "permissions-other-execute" | "perm-other-exec" | "mode-other-exec" => {
-                self.perms.other_execute = style
+                self.perms.other_execute = style;
             }
             "permissions-special-user" | "perm-special-user" | "mode-special-user" => {
-                self.perms.special_user_file = style
+                self.perms.special_user_file = style;
             }
             "permissions-special-other" | "perm-special-other" | "mode-special-other" => {
-                self.perms.special_other = style
+                self.perms.special_other = style;
             }
             "permissions-attribute" | "perm-attribute" | "mode-attribute" => {
-                self.perms.attribute = style
+                self.perms.attribute = style;
             }
 
             // Size (individual magnitudes)

@@ -228,12 +228,12 @@ impl<'a> Render<'a> {
         match (self.vcs, self.dir) {
             (Some(g), Some(d)) => {
                 if !g.has_anything_for(&d.path) {
-                    self.vcs = None
+                    self.vcs = None;
                 }
             }
             (Some(g), None) => {
                 if !self.files.iter().any(|f| g.has_anything_for(&f.path)) {
-                    self.vcs = None
+                    self.vcs = None;
                 }
             }
             (None, _) => { /* Keep Git how it is */ }
@@ -272,7 +272,7 @@ impl<'a> Render<'a> {
         let original_height = divide_rounding_up(rows.len(), column_count);
         let height = divide_rounding_up(num_cells, column_count);
 
-        for (i, (file_name, row)) in file_names.iter().zip(rows.into_iter()).enumerate() {
+        for (i, (file_name, row)) in file_names.iter().zip(rows).enumerate() {
             let index = if self.grid.across {
                 i % column_count
             } else {

@@ -151,12 +151,12 @@ impl<'a> Render<'a> {
             match (self.vcs, self.dir) {
                 (Some(g), Some(d)) => {
                     if !g.has_anything_for(&d.path) {
-                        self.vcs = None
+                        self.vcs = None;
                     }
                 }
                 (Some(g), None) => {
                     if !self.files.iter().any(|f| g.has_anything_for(&f.path)) {
-                        self.vcs = None
+                        self.vcs = None;
                     }
                 }
                 (None, _) => { /* Keep Git how it is */ }
@@ -216,6 +216,7 @@ impl<'a> Render<'a> {
         depth: TreeDepth,
         size_total: &mut u64,
     ) {
+        use super::table::Column;
         use crate::fs::feature::xattr;
 
         // When --total-size is active in tree mode, eagerly pre-compute
@@ -237,7 +238,6 @@ impl<'a> Render<'a> {
         //  - full:  --extended is active → enumerate all xattrs (listxattr + getxattr per attr)
         //  - probe: permissions column needs the `@` indicator → single listxattr probe
         //  - none:  no permissions column, no --extended → skip entirely
-        use super::table::Column;
         let needs_xattr_full = self.opts.xattr;
         let needs_xattr_probe = !needs_xattr_full
             && self

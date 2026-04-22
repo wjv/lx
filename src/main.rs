@@ -293,7 +293,7 @@ fn try_main() -> Result<i32, LxError> {
             }
 
             let lx = Lx {
-                options,
+                options: *options,
                 writer,
                 input_paths,
                 theme,
@@ -595,7 +595,7 @@ impl Lx {
                         match f.to_dir() {
                             Ok(d) => dirs.push(d),
                             Err(e) => {
-                                writeln!(io::stderr(), "{}: {e}", file_path.to_string_lossy())?
+                                writeln!(io::stderr(), "{}: {e}", file_path.to_string_lossy())?;
                             }
                         }
                     } else {
@@ -704,7 +704,7 @@ impl Lx {
                         match child_dir.to_dir() {
                             Ok(d) => child_dirs.push(d),
                             Err(e) => {
-                                writeln!(io::stderr(), "{}: {}", child_dir.path.display(), e)?
+                                writeln!(io::stderr(), "{}: {}", child_dir.path.display(), e)?;
                             }
                         }
                     }

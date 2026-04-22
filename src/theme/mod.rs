@@ -782,8 +782,7 @@ impl render::VcsColours for Theme {
     fn not_modified(&self) -> Style {
         self.ui.punctuation
     }
-    #[allow(clippy::new_ret_no_self)]
-    fn new(&self) -> Style {
+    fn added(&self) -> Style {
         self.ui.vcs.new
     }
     fn modified(&self) -> Style {

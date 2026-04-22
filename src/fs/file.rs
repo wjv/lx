@@ -54,6 +54,7 @@ pub struct File<'dir> {
     /// The file type, obtained cheaply from `readdir` (via `d_type`) or
     /// from a stat call for top-level arguments.  Always available without
     /// a stat call when the file was discovered via directory iteration.
+    #[allow(clippy::struct_field_names)]
     file_type: std::fs::FileType,
 
     /// A lazily-cached `metadata` (`stat`) call for this file.

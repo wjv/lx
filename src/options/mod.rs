@@ -187,7 +187,7 @@ impl Options {
                 let flags = MatchedFlags::new(clap_matches);
 
                 match Self::deduce(&flags, vars) {
-                    Ok(options) => OptionsResult::Ok(options, frees),
+                    Ok(options) => OptionsResult::Ok(Box::new(options), frees),
                     Err(oe) => OptionsResult::InvalidOptions(oe),
                 }
             }
@@ -391,7 +391,7 @@ impl Options {
 #[derive(Debug)]
 pub enum OptionsResult {
     /// The options were parsed successfully.
-    Ok(Options, Vec<OsString>),
+    Ok(Box<Options>, Vec<OsString>),
 
     /// There was an error in the deduce phase.
     InvalidOptions(OptionsError),

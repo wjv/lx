@@ -33,7 +33,9 @@ impl f::VcsStatus {
     fn render(self, colours: &dyn Colours, backend: &str) -> AnsiString<'static> {
         match self {
             Self::NotModified => colours.not_modified().paint("-"),
-            Self::New => colours.new().paint(if backend == "JJ" { "A" } else { "N" }),
+            Self::New => colours
+                .added()
+                .paint(if backend == "JJ" { "A" } else { "N" }),
             Self::Modified => colours.modified().paint("M"),
             Self::Deleted => colours.deleted().paint("D"),
             Self::Renamed => colours.renamed().paint("R"),
@@ -48,8 +50,7 @@ impl f::VcsStatus {
 
 pub trait Colours {
     fn not_modified(&self) -> Style;
-    #[allow(clippy::new_ret_no_self)]
-    fn new(&self) -> Style;
+    fn added(&self) -> Style;
     fn modified(&self) -> Style;
     fn deleted(&self) -> Style;
     fn renamed(&self) -> Style;
@@ -73,7 +74,7 @@ pub mod test {
         fn not_modified(&self) -> Style {
             Fixed(90).normal()
         }
-        fn new(&self) -> Style {
+        fn added(&self) -> Style {
             Fixed(91).normal()
         }
         fn modified(&self) -> Style {
