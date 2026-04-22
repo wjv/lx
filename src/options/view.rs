@@ -271,10 +271,7 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Vec<Column> {
             }
         }
         // Individual adds, `-t` tier, and suppression flags still apply.
-        apply_bulk_time_clear(matches, &mut columns);
-        apply_individual_adds(matches, &mut columns);
-        apply_time_tier(matches, &mut columns);
-        apply_suppressions(matches, &mut columns);
+        apply_modifiers(matches, &mut columns);
         return columns;
     }
 
@@ -283,10 +280,7 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Vec<Column> {
         && let Some(cols) = format_columns(fmt_name)
     {
         let mut columns = cols;
-        apply_bulk_time_clear(matches, &mut columns);
-        apply_individual_adds(matches, &mut columns);
-        apply_time_tier(matches, &mut columns);
-        apply_suppressions(matches, &mut columns);
+        apply_modifiers(matches, &mut columns);
         return columns;
     }
 
@@ -298,12 +292,18 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Vec<Column> {
     };
     let mut columns = format_columns(tier_name).expect("compiled-in format always exists");
 
-    apply_bulk_time_clear(matches, &mut columns);
-    apply_individual_adds(matches, &mut columns);
-    apply_time_tier(matches, &mut columns);
-    apply_suppressions(matches, &mut columns);
+    apply_modifiers(matches, &mut columns);
 
     columns
+}
+
+/// Apply the four modifier passes that run after every column-source
+/// path (--columns, --format, or -l tier).
+fn apply_modifiers(matches: &MatchedFlags, columns: &mut Vec<Column>) {
+    apply_bulk_time_clear(matches, columns);
+    apply_individual_adds(matches, columns);
+    apply_time_tier(matches, columns);
+    apply_suppressions(matches, columns);
 }
 
 /// Add columns requested by individual flags (-i, -g, -H, -S, etc.)

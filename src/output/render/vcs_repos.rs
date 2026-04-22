@@ -12,12 +12,15 @@ impl f::VcsRepoStatus {
                 clean,
                 branch,
             } => {
-                let indicator = match *backend {
-                    "jj" => "J",
-                    "git" => "G",
-                    _ => "?",
+                let is_jj = *backend == "jj";
+                let indicator = if is_jj {
+                    "J"
+                } else if *backend == "git" {
+                    "G"
+                } else {
+                    "?"
                 };
-                let status = if *backend == "jj" {
+                let status = if is_jj {
                     colours.jj_repo()
                 } else if *clean {
                     colours.clean_repo()
