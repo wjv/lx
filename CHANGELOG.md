@@ -8,7 +8,7 @@ All notable changes to lx are documented here. lx is forked from
 ### Changed
 
 - **Tree traversal performance overhaul.**  Deep trees are 2–7×
-  faster than before and 2–4× faster than eza at every depth.
+  faster than before.
   - Replaced per-file rayon thread spawning with sequential
     traversal.  Eliminates thread-pool thrashing on deep trees.
     The `--total-size` parallel pre-computation is retained.
@@ -21,6 +21,22 @@ All notable changes to lx are documented here. lx is forked from
     or *full* (only with `--extended`).
 - TOML array syntax for pipe-separated config values
   (e.g. `ignore = ["*.tmp", "*.bak"]`).  Fixes wjv/lx#6.
+- `--dump-personality` now includes `[[when]]` conditional
+  override blocks and lists personalities in inheritance order
+  (parents before children).
+- Enabled `rustfmt` across the codebase (wjv/lx#11).
+
+### Internal
+
+- Clippy pedantic compliance: infallible `deduce()` functions
+  no longer return `Result`, `OptionsResult::Ok` variant boxed,
+  VCS `Colours::new()` renamed to `added()`, miscellaneous lint
+  fixes.
+- Split `show_config()` into per-section sub-functions
+  (prepares for wjv/lx#21).
+- Decomposed `extract_cli_settings()` into four focused helpers.
+- Committed `Cargo.lock` to pin transitive dependencies
+  (winnow version conflict in the gix/jj-lib tree).
 
 ## [0.9.0] — 2026-04-19
 
