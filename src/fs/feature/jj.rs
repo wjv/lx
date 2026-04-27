@@ -86,7 +86,7 @@ impl JjCache {
                 Err(e) => {
                     debug!("jj: Workspace::load({}) failed: {e}", search_dir.display());
                     if let Some(parent) = search_dir.parent() {
-                        search_dir = parent
+                        search_dir = parent;
                     } else {
                         debug!("jj: no jj workspace found");
                         return None;
