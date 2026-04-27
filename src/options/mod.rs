@@ -200,123 +200,130 @@ impl Options {
     fn extract_cli_settings(
         matches: &clap::ArgMatches,
     ) -> std::collections::HashMap<String, toml::Value> {
-        use crate::config::{SETTING_FLAGS, SettingKind, find_setting};
-        use std::collections::HashMap;
-
-        let mut settings: HashMap<String, toml::Value> = HashMap::new();
-
-        for def in SETTING_FLAGS {
-            // Map config key to Clap arg ID.  Most match the flag name
-            // without "--", but some differ (column enablers use "show-*"
-            // IDs, British/American aliases share a single Clap ID).
-            let clap_id = match def.key {
-                "permissions" => flags::SHOW_PERMISSIONS,
-                "size" => flags::SHOW_SIZE,
-                "filesize" => flags::SHOW_SIZE,
-                "user" => flags::SHOW_USER,
-                "colour" => flags::COLOR,
-                "color" => flags::COLOR,
-                "colour-scale" => flags::COLOR_SCALE,
-                "color-scale" => flags::COLOR_SCALE,
-                "ignore" => flags::IGNORE_GLOB,
-                _ => def.flag.strip_prefix("--").unwrap_or(def.flag),
-            };
-
-            // Some config keys share a Clap ID (e.g. "colour" and "color"
-            // both map to "--colour").  Skip if we already captured this.
-            if settings.contains_key(def.key) {
-                continue;
-            }
-
-            // Only include flags the user explicitly typed on this CLI.
-            if matches.value_source(clap_id) != Some(clap::parser::ValueSource::CommandLine) {
-                continue;
-            }
-
-            let value = match def.kind {
-                SettingKind::Bool => toml::Value::Boolean(true),
-                SettingKind::Str => {
-                    if let Some(v) = matches.get_one::<String>(clap_id) {
-                        toml::Value::String(v.clone())
-                    } else {
-                        continue;
-                    }
-                }
-                SettingKind::Int => {
-                    if let Some(v) = matches.get_one::<i64>(clap_id) {
-                        toml::Value::Integer(*v)
-                    } else if let Some(v) = matches.get_one::<String>(clap_id) {
-                        if let Ok(n) = v.parse::<i64>() {
-                            toml::Value::Integer(n)
-                        } else {
-                            continue;
-                        }
-                    } else {
-                        continue;
-                    }
-                }
-            };
-            settings.insert(def.key.to_string(), value);
-        }
-
-        // Handle compounding -t (TIME_TIER): expand to individual
-        // timestamp booleans so they're saved as explicit config keys.
-        if matches.value_source(flags::TIME_TIER) == Some(clap::parser::ValueSource::CommandLine) {
-            let count = matches.get_count(flags::TIME_TIER);
-            if count >= 1 {
-                settings.insert("modified".into(), toml::Value::Boolean(true));
-            }
-            if count >= 2 {
-                settings.insert("changed".into(), toml::Value::Boolean(true));
-            }
-            if count >= 3 {
-                settings.insert("created".into(), toml::Value::Boolean(true));
-                settings.insert("accessed".into(), toml::Value::Boolean(true));
-            }
-        }
-
-        // Handle compounding -l: the Clap ID is "long" with Count action.
-        // The personality config uses `format` to express detail tiers,
-        // but the simplest save is just `long = true` (already captured
-        // above as a Bool).  Advanced users can edit the file.
-
-        // Rewrite `no-X = true` as `X = false` when the positive
-        // counterpart is a Bool setting.  With three-state Bool
-        // semantics, `X = false` emits `--no-X` at load time, so the
-        // saved personality is correct and reads more naturally.
-        // Exceptions: `no-time` (no positive `time` key — it's a bulk
-        // clear), `no-icons`/`no-gradient` (positive is Str, not Bool).
-        let neg_keys: Vec<String> = settings
-            .keys()
-            .filter(|k| k.starts_with("no-"))
-            .cloned()
-            .collect();
-        for neg_key in neg_keys {
-            let pos_key = neg_key.strip_prefix("no-").unwrap().to_string();
-            if let Some(pos_def) = find_setting(&pos_key)
-                && matches!(pos_def.kind, SettingKind::Bool)
-            {
-                settings.remove(&neg_key);
-                settings.insert(pos_key, toml::Value::Boolean(false));
-            }
-        }
-
-        // Remove backward-compat alias keys when the canonical key
-        // for the same setting is also present (avoids redundant
-        // entries like both `size = false` and `filesize = false`).
-        for (canonical, alias) in [
-            ("size", "filesize"),
-            ("total", "total-size"),
-            ("octal", "octal-permissions"),
-        ] {
-            if settings.contains_key(canonical) {
-                settings.remove(alias);
-            }
-        }
-
+        let mut settings = collect_flag_values(matches);
+        expand_time_tiers(matches, &mut settings);
+        rewrite_negations(&mut settings);
+        dedup_aliases(&mut settings);
         settings
     }
+}
 
+/// Iterate `SETTING_FLAGS` and collect values the user explicitly
+/// passed on the command line.
+fn collect_flag_values(
+    matches: &clap::ArgMatches,
+) -> std::collections::HashMap<String, toml::Value> {
+    use crate::config::{SETTING_FLAGS, SettingKind};
+    use std::collections::HashMap;
+
+    let mut settings: HashMap<String, toml::Value> = HashMap::new();
+
+    for def in SETTING_FLAGS {
+        let clap_id = match def.key {
+            "permissions" => flags::SHOW_PERMISSIONS,
+            "size" | "filesize" => flags::SHOW_SIZE,
+            "user" => flags::SHOW_USER,
+            "colour" | "color" => flags::COLOR,
+            "colour-scale" | "color-scale" => flags::COLOR_SCALE,
+            "ignore" => flags::IGNORE_GLOB,
+            _ => def.flag.strip_prefix("--").unwrap_or(def.flag),
+        };
+
+        if settings.contains_key(def.key) {
+            continue;
+        }
+        if matches.value_source(clap_id) != Some(clap::parser::ValueSource::CommandLine) {
+            continue;
+        }
+
+        let value = match def.kind {
+            SettingKind::Bool => toml::Value::Boolean(true),
+            SettingKind::Str => {
+                if let Some(v) = matches.get_one::<String>(clap_id) {
+                    toml::Value::String(v.clone())
+                } else {
+                    continue;
+                }
+            }
+            SettingKind::Int => {
+                if let Some(v) = matches.get_one::<i64>(clap_id) {
+                    toml::Value::Integer(*v)
+                } else if let Some(v) = matches.get_one::<String>(clap_id) {
+                    if let Ok(n) = v.parse::<i64>() {
+                        toml::Value::Integer(n)
+                    } else {
+                        continue;
+                    }
+                } else {
+                    continue;
+                }
+            }
+        };
+        settings.insert(def.key.to_string(), value);
+    }
+
+    settings
+}
+
+/// Expand compounding `-t` (`TIME_TIER`) into individual timestamp booleans.
+fn expand_time_tiers(
+    matches: &clap::ArgMatches,
+    settings: &mut std::collections::HashMap<String, toml::Value>,
+) {
+    if matches.value_source(flags::TIME_TIER) != Some(clap::parser::ValueSource::CommandLine) {
+        return;
+    }
+    let count = matches.get_count(flags::TIME_TIER);
+    if count >= 1 {
+        settings.insert("modified".into(), toml::Value::Boolean(true));
+    }
+    if count >= 2 {
+        settings.insert("changed".into(), toml::Value::Boolean(true));
+    }
+    if count >= 3 {
+        settings.insert("created".into(), toml::Value::Boolean(true));
+        settings.insert("accessed".into(), toml::Value::Boolean(true));
+    }
+}
+
+/// Rewrite `no-X = true` as `X = false` when the positive counterpart
+/// is a Bool setting.  With three-state Bool semantics, `X = false`
+/// emits `--no-X` at load time, so the saved personality is correct
+/// and reads more naturally.
+fn rewrite_negations(settings: &mut std::collections::HashMap<String, toml::Value>) {
+    use crate::config::{SettingKind, find_setting};
+
+    let neg_keys: Vec<String> = settings
+        .keys()
+        .filter(|k| k.starts_with("no-"))
+        .cloned()
+        .collect();
+    for neg_key in neg_keys {
+        let pos_key = neg_key.strip_prefix("no-").unwrap().to_string();
+        if let Some(pos_def) = find_setting(&pos_key)
+            && matches!(pos_def.kind, SettingKind::Bool)
+        {
+            settings.remove(&neg_key);
+            settings.insert(pos_key, toml::Value::Boolean(false));
+        }
+    }
+}
+
+/// Remove backward-compat alias keys when the canonical key for the
+/// same setting is also present.
+fn dedup_aliases(settings: &mut std::collections::HashMap<String, toml::Value>) {
+    for (canonical, alias) in [
+        ("size", "filesize"),
+        ("total", "total-size"),
+        ("octal", "octal-permissions"),
+    ] {
+        if settings.contains_key(canonical) {
+            settings.remove(alias);
+        }
+    }
+}
+
+impl Options {
     /// Whether the View specified in this set of options includes a Git
     /// status column. It's only worth trying to discover a repository if the
     /// results will end up being displayed.
