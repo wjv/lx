@@ -229,7 +229,7 @@ pub fn all_personality_names() -> Vec<String> {
         let (ready, rest): (Vec<_>, Vec<_>) = remaining.into_iter().partition(|name| {
             lookup_personality(name)
                 .and_then(|def| def.inherits)
-                .is_none_or(|parent| ordered.iter().any(|n: &String| *n == parent))
+                .is_none_or(|parent| ordered.contains(&parent))
         });
         if ready.is_empty() {
             // Cycle or missing parent — append the rest alphabetically
