@@ -657,6 +657,94 @@ fn dump_personality_unknown() {
         .stderr(predicate::str::contains("[possible values:"));
 }
 
+#[test]
+fn dump_personality_default_has_when_blocks() {
+    let output = lx_no_colour()
+        .arg("--dump-personality=default")
+        .output()
+        .expect("failed to run lx");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // The default personality has [[when]] blocks for theme
+    // auto-selection on capable terminals.
+    assert!(
+        stdout.contains("[[personality.default.when]]"),
+        "missing [[when]] block header"
+    );
+    assert!(
+        stdout.contains("env.TERM ="),
+        "missing TERM condition in [[when]] block"
+    );
+    assert!(
+        stdout.contains("env.COLORTERM ="),
+        "missing COLORTERM condition in [[when]] block"
+    );
+    // Array values in env conditions.
+    assert!(
+        stdout.contains("[\"truecolor\", \"24bit\"]"),
+        "COLORTERM array not formatted correctly"
+    );
+    // Settings within [[when]] blocks.
+    assert!(
+        stdout.contains("theme = \"lx-256\""),
+        "missing lx-256 theme override"
+    );
+    assert!(
+        stdout.contains("theme = \"lx-24bit\""),
+        "missing lx-24bit theme override"
+    );
+}
+
+#[test]
+fn dump_personality_without_when_blocks() {
+    // Personalities without [[when]] blocks should not contain
+    // the [[when]] header.
+    lx_no_colour()
+        .arg("--dump-personality=ll")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[[personality.ll.when]]").not());
+}
+
+#[test]
+fn dump_personality_inheritance_order() {
+    // Parents must appear before children in the full dump.
+    let output = lx_no_colour()
+        .arg("--dump-personality")
+        .output()
+        .expect("failed to run lx");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    let pos = |name: &str| {
+        stdout
+            .find(&format!("[personality.{name}]"))
+            .unwrap_or_else(|| panic!("personality {name} not found in dump"))
+    };
+
+    // Compiled-in inheritance chains:
+    //   default → lx → ll → la
+    //   default → lx → lll
+    //   default → lx → tree
+    assert!(pos("default") < pos("lx"), "default must appear before lx");
+    assert!(pos("lx") < pos("ll"), "lx must appear before ll");
+    assert!(pos("lx") < pos("lll"), "lx must appear before lll");
+    assert!(pos("lx") < pos("tree"), "lx must appear before tree");
+    assert!(pos("ll") < pos("la"), "ll must appear before la");
+}
+
+#[test]
+fn dump_personality_valid_toml() {
+    // The dump output should be valid TOML.
+    let output = lx_no_colour()
+        .arg("--dump-personality=default")
+        .output()
+        .expect("failed to run lx");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    stdout
+        .parse::<toml::Table>()
+        .expect("--dump-personality output is not valid TOML");
+}
+
 // ── --dump-theme ─────────────────────────────────────────────────
 
 #[test]

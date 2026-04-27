@@ -367,14 +367,7 @@ pub fn save_personality_as(
     let mut keys: Vec<_> = settings.keys().collect();
     keys.sort();
     for key in keys {
-        let value = &settings[key];
-        match value {
-            toml::Value::String(s) => lines.push(format!("{key} = \"{s}\"")),
-            toml::Value::Boolean(b) => lines.push(format!("{key} = {b}")),
-            toml::Value::Integer(i) => lines.push(format!("{key} = {i}")),
-            toml::Value::Float(f) => lines.push(format!("{key} = {f}")),
-            _ => lines.push(format!("{key} = {value}")),
-        }
+        lines.push(format_toml_kv(key, &settings[key]));
     }
     lines.push(String::new()); // trailing newline
 
