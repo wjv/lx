@@ -12,6 +12,48 @@ use super::load::{find_config_path, find_drop_in_dir};
 use super::schema::{ConditionalOverride, PersonalityDef};
 use super::store::config;
 
+// ── Inheritance chain metadata ─────────────────────────────────
+
+/// One link in the personality inheritance chain.
+#[derive(Debug, Clone)]
+pub struct ChainLink {
+    /// Personality name at this level.
+    pub name: String,
+    /// Where the definition came from.
+    pub source: PersonalitySource,
+    /// Total number of `[[when]]` blocks defined at this level.
+    pub when_total: usize,
+    /// How many of those `[[when]]` blocks matched the current
+    /// environment.
+    pub when_matched: usize,
+}
+
+/// Where a personality definition comes from.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PersonalitySource {
+    /// Compiled into the lx binary.
+    Builtin,
+    /// Defined in the user's config file (or drop-in).
+    Config,
+    /// Config-defined, but a compiled-in personality of the same
+    /// name also exists.
+    ConfigOverridesBuiltin,
+}
+
+/// The resolved personality plus metadata about the resolution
+/// process.  Used by `--show-config` to display the inheritance
+/// chain and `[[when]]` match status.
+#[derive(Debug, Clone)]
+pub struct ResolvedPersonality {
+    /// The merged personality definition (settings, format, etc.).
+    pub def: PersonalityDef,
+    /// Inheritance chain, leaf first (the requested personality)
+    /// to root (the final ancestor with no `inherits`).
+    pub chain: Vec<ChainLink>,
+}
+
+// ── Resolution ─────────────────────────────────────────────────
+
 /// Look up a personality by name, resolving inheritance.
 ///
 /// Config-defined personalities take priority over compiled-in ones.
@@ -22,8 +64,14 @@ use super::store::config;
 /// Returns `Ok(Some(...))` on success, `Ok(None)` if the personality
 /// doesn't exist, or `Err(ConfigError)` on config errors (e.g. cycles).
 pub fn resolve_personality(name: &str) -> Result<Option<PersonalityDef>, ConfigError> {
+    Ok(resolve_personality_full(name)?.map(|r| r.def))
+}
+
+/// Like `resolve_personality`, but also returns the inheritance
+/// chain with source and `[[when]]` match metadata.
+pub fn resolve_personality_full(name: &str) -> Result<Option<ResolvedPersonality>, ConfigError> {
     // Build the inheritance chain: [leaf, ..., root].
-    let mut chain: Vec<PersonalityDef> = Vec::new();
+    let mut defs: Vec<(String, PersonalityDef)> = Vec::new();
     let mut visited: Vec<String> = Vec::new();
     let mut current = Some(name.to_string());
 
@@ -38,7 +86,7 @@ pub fn resolve_personality(name: &str) -> Result<Option<PersonalityDef>, ConfigE
 
         // Look up: config first, then compiled-in.
         let Some(def) = lookup_personality(pname) else {
-            if chain.is_empty() {
+            if defs.is_empty() {
                 return Ok(None); // top-level personality not found
             }
             return Err(ConfigError::MissingParent {
@@ -47,13 +95,34 @@ pub fn resolve_personality(name: &str) -> Result<Option<PersonalityDef>, ConfigE
             });
         };
         let next = def.inherits.clone();
-        chain.push(def);
+        defs.push((pname.clone(), def));
         current = next;
     }
 
+    // Build chain metadata before merging consumes the defs.
+    let cfg = config();
+    let chain: Vec<ChainLink> = defs
+        .iter()
+        .map(|(pname, def)| {
+            let in_config = cfg.is_some_and(|c| c.personality.contains_key(pname));
+            let in_builtin = compiled_personality(pname).is_some();
+            let source = match (in_config, in_builtin) {
+                (true, true) => PersonalitySource::ConfigOverridesBuiltin,
+                (true, false) => PersonalitySource::Config,
+                _ => PersonalitySource::Builtin,
+            };
+            ChainLink {
+                name: pname.clone(),
+                source,
+                when_total: def.when.len(),
+                when_matched: def.when.iter().filter(|c| c.matches()).count(),
+            }
+        })
+        .collect();
+
     // Merge from root (last) to leaf (first).
     let mut effective = PersonalityDef::default();
-    for def in chain.into_iter().rev() {
+    for (_name, def) in defs.into_iter().rev() {
         if def.format.is_some() {
             effective.format = def.format;
         }
@@ -78,7 +147,10 @@ pub fn resolve_personality(name: &str) -> Result<Option<PersonalityDef>, ConfigE
         }
     }
 
-    Ok(Some(effective))
+    Ok(Some(ResolvedPersonality {
+        def: effective,
+        chain,
+    }))
 }
 
 /// Look up a single personality definition by name (no inheritance).

@@ -1507,27 +1507,66 @@ Elvish and PowerShell completions cover the `lx` command
 
 Two families of flags help you inspect what `lx` is doing.
 
-**`--show-config`** prints a human-friendly, coloured overview of
-the active personality, theme, style, classes, and formats,
-including which config file was loaded:
+### `--show-config`
 
-```sh
-lx --show-config
+Prints a human-friendly, coloured overview of the active
+configuration.  The personality section is the most detailed:
+
+```
+Personality: la
+  activated by: -p
+  inheritance:
+    la (builtin)
+    ll (builtin)
+    lx (builtin)                    1 [[when]] block, 0 active
+    default (builtin)               2 [[when]] blocks, 2 active
+  format:
+    long2 (perms, size, user, group, modified, vcs)
+  settings:
+    all = true
+    classify = "never"
+    ...
 ```
 
-**`--dump-*`** prints copy-pasteable TOML definitions for any
-config object.  Each takes an optional `=NAME` to restrict output
-to a single object:
+The **inheritance** list shows the full chain from the requested
+personality down to its root ancestor.  Each entry shows:
+
+- **source**: `builtin`, `config`, or `config, overrides builtin`
+  if a config-defined personality shadows a compiled-in one.
+- **`[[when]]` block status**: how many conditional override blocks
+  are defined at that level and how many are currently active.
+  This is the first thing to check if theme auto-selection isn't
+  working as expected — if `0 active` appears where you expect a
+  match, the environment variable condition isn't being met.
+
+The **format** line shows the active format name and the columns
+it resolves to.
+
+The remaining sections show the active theme, style, available
+classes, and available formats.
+
+### `--dump-*`
+
+Prints copy-pasteable TOML definitions for any config object.
+Each takes an optional `=NAME` to restrict output to a single
+object:
 
 ```sh
 lx --dump-class                 # all class definitions
 lx --dump-class=temp            # just the temp class
 lx --dump-format                # all formats
 lx --dump-format=long2          # just long2
-lx --dump-personality=ll        # the resolved ll personality
+lx --dump-personality=ll        # the ll personality (with [[when]] blocks)
 lx --dump-style=exa             # the exa style
 lx --dump-theme=dracula         # the dracula theme (if loaded)
 ```
+
+Personality dumps include `[[when]]` blocks and list personalities
+in inheritance order (parents before children), so the output is
+valid, self-contained TOML that can be pasted directly into a
+config file.
+
+### Debug logging
 
 For deeper diagnostics — config-file discovery, theme resolution,
 personality cascade — set `LX_DEBUG=1` in the environment and

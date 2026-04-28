@@ -8,7 +8,7 @@ use nu_ansi_term::{Color, Style};
 
 use super::classes::resolve_classes;
 use super::load::find_config_path;
-use super::personality::resolve_personality;
+use super::personality::{PersonalitySource, resolve_personality_full};
 use super::schema::CONFIG_VERSION;
 use super::store::config;
 use super::styles::resolve_style;
@@ -103,72 +103,99 @@ fn show_personality(
     personality_name: &str,
     activated_by: &str,
     cli_theme_override: Option<&str>,
-    cfg: Option<&super::schema::Config>,
+    _cfg: Option<&super::schema::Config>,
 ) -> Option<String> {
     println!(
         "{} {}",
         s.label.paint("Personality:"),
         s.name.paint(personality_name)
     );
-    let source = if cfg.is_some_and(|c| c.personality.contains_key(personality_name)) {
-        "config"
-    } else {
-        "builtin"
-    };
-    println!("  {} {}", s.label.paint("source:"), s.dimmed.paint(source));
     println!(
         "  {} {}",
         s.label.paint("activated by:"),
         s.dimmed.paint(activated_by)
     );
 
-    if let Ok(Some(p)) = resolve_personality(personality_name) {
-        if let Some(ref inherits) = p.inherits {
+    let Ok(Some(resolved)) = resolve_personality_full(personality_name) else {
+        println!();
+        return cli_theme_override.map(String::from);
+    };
+
+    // Inheritance chain: leaf to root.
+    if !resolved.chain.is_empty() {
+        println!("  {}", s.label.paint("inheritance:"));
+        for link in &resolved.chain {
+            let source_str = match link.source {
+                PersonalitySource::Builtin => "builtin",
+                PersonalitySource::Config => "config",
+                PersonalitySource::ConfigOverridesBuiltin => "config, overrides builtin",
+            };
+
+            let when_str = if link.when_total == 0 {
+                String::new()
+            } else {
+                let active = format!(", {} active", link.when_matched);
+                let noun = if link.when_total == 1 {
+                    "block"
+                } else {
+                    "blocks"
+                };
+                format!("  {} [[when]] {noun}{}", link.when_total, active)
+            };
+
             println!(
-                "  {} {}",
-                s.label.paint("inherits:"),
-                s.name.paint(inherits)
+                "    {} {}{}",
+                s.name.paint(&link.name),
+                s.dimmed.paint(format!("({source_str})")),
+                s.dimmed.paint(when_str),
             );
         }
-        if let Some(ref fmt) = p.format {
-            println!("  {} {}", s.label.paint("format:"), s.name.paint(fmt));
-        }
-        if let Some(ref cols) = p.columns {
+    }
+
+    let p = &resolved.def;
+    if let Some(ref fmt) = p.format {
+        println!("  {}", s.label.paint("format:"));
+        let formats = super::formats::resolve_formats();
+        if let Some(cols) = formats.get(fmt.as_str()) {
             println!(
-                "  {} {}",
-                s.label.paint("columns:"),
-                s.value.paint(cols.to_csv())
+                "    {} {}",
+                s.name.paint(fmt),
+                s.dimmed.paint(format!("({})", cols.join(", "))),
             );
+        } else {
+            println!("    {}", s.name.paint(fmt));
         }
-        if !p.settings.is_empty() {
-            println!("  {}", s.label.paint("settings:"));
-            let mut keys: Vec<_> = p.settings.keys().collect();
-            keys.sort();
-            for key in keys {
-                println!(
-                    "    {} = {}",
-                    s.name.paint(key),
-                    s.value.paint(p.settings[key].to_string())
-                );
-            }
+    }
+    if let Some(ref cols) = p.columns {
+        println!(
+            "  {} {}",
+            s.label.paint("columns:"),
+            s.value.paint(cols.to_csv())
+        );
+    }
+    if !p.settings.is_empty() {
+        println!("  {}", s.label.paint("settings:"));
+        let mut keys: Vec<_> = p.settings.keys().collect();
+        keys.sort();
+        for key in keys {
+            println!(
+                "    {} = {}",
+                s.name.paint(key),
+                s.value.paint(p.settings[key].to_string())
+            );
         }
     }
     println!();
 
     // Resolve the theme name for downstream sections.
     cli_theme_override.map(String::from).or_else(|| {
-        resolve_personality(personality_name)
-            .ok()
-            .flatten()
-            .and_then(|p| {
-                p.settings.get("theme").and_then(|v| {
-                    if let toml::Value::String(s) = v {
-                        Some(s.clone())
-                    } else {
-                        None
-                    }
-                })
-            })
+        p.settings.get("theme").and_then(|v| {
+            if let toml::Value::String(s) = v {
+                Some(s.clone())
+            } else {
+                None
+            }
+        })
     })
 }
 
