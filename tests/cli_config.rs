@@ -745,6 +745,64 @@ fn dump_personality_valid_toml() {
         .expect("--dump-personality output is not valid TOML");
 }
 
+// ── --show-config implicit format ────────────────────────────────
+
+// `--show-config` currently emits ANSI escapes regardless of
+// `--colour=never` (a pre-existing UX nit), so the assertions
+// below match around the escape sequences rather than against
+// fully-formed substrings.
+
+#[test]
+fn show_config_implicit_format_long_with_l() {
+    // No personality declares a format, but `-l` is on the
+    // command line — surface the implicit `long` tier in its
+    // own top-level Format section.
+    lx_no_colour()
+        .args(["-l", "--show-config"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Format:"))
+        .stdout(predicate::str::contains("implicit, selected by -l"))
+        .stdout(predicate::str::is_match(r"long\b").unwrap());
+}
+
+#[test]
+fn show_config_implicit_format_long3_with_lll() {
+    lx_no_colour()
+        .args(["-lll", "--show-config"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Format:"))
+        .stdout(predicate::str::contains("implicit, selected by -lll"))
+        .stdout(predicate::str::contains("long3"));
+}
+
+#[test]
+fn show_config_no_format_section_without_l() {
+    // Without `-l` and no personality-declared format, the
+    // top-level Format section is omitted entirely.  The
+    // "implicit, selected by" marker (specific to the Format
+    // section) must not appear.  Note that "(implicit)" is
+    // also used by the Theme section's `use-style` line, so
+    // we match the more specific source-line phrasing.
+    lx_no_colour()
+        .args(["--show-config"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("implicit, selected by").not());
+}
+
+#[test]
+fn show_config_explicit_columns_suppresses_implicit() {
+    // `--columns` overrides the tier in `deduce_columns`, so the
+    // implicit hint must not appear even with `-l`.
+    lx_no_colour()
+        .args(["-l", "--columns=size", "--show-config"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("implicit, selected by").not());
+}
+
 // ── --dump-theme ─────────────────────────────────────────────────
 
 #[test]

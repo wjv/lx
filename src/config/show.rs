@@ -39,7 +39,12 @@ impl Styles {
 ///
 /// Shows the resolved personality, format, theme, style, and classes,
 /// indicating for each whether it's compiled-in or from the config file.
-pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_override: Option<&str>) {
+pub fn show_config(
+    personality_name: &str,
+    activated_by: &str,
+    cli_theme_override: Option<&str>,
+    implicit_format: Option<&str>,
+) {
     let s = Styles::new();
     let config_path = find_config_path();
     let cfg = config();
@@ -49,6 +54,7 @@ pub fn show_config(personality_name: &str, activated_by: &str, cli_theme_overrid
 
     show_config_file(&s, config_path.as_ref(), cfg);
     let theme_name = show_personality(&s, personality_name, activated_by, cli_theme_override, cfg);
+    show_format(&s, personality_name, implicit_format);
     let style_name = show_theme(&s, theme_name.as_deref(), cfg);
     show_style(&s, style_name.as_deref(), cfg);
     show_classes(&s, cfg);
@@ -153,18 +159,11 @@ fn show_personality(
     }
 
     let p = &resolved.def;
+    // Format declared directly by the personality chain.  Implicit
+    // `-l` tier and the column resolution live in their own
+    // top-level Format section — see `show_format`.
     if let Some(ref fmt) = p.format {
-        println!("  {}", s.label.paint("format:"));
-        let formats = super::formats::resolve_formats();
-        if let Some(cols) = formats.get(fmt.as_str()) {
-            println!(
-                "    {} {}",
-                s.name.paint(fmt),
-                s.dimmed.paint(format!("({})", cols.join(", "))),
-            );
-        } else {
-            println!("    {}", s.name.paint(fmt));
-        }
+        println!("  {} {}", s.label.paint("format:"), s.name.paint(fmt));
     }
     if let Some(ref cols) = p.columns {
         println!(
@@ -197,6 +196,59 @@ fn show_personality(
             }
         })
     })
+}
+
+// ── Format section ─────────────────────────────────────────────
+
+/// Show the active long-view format, if any.
+///
+/// The format may come from one of two sources:
+/// - a `format = "..."` declaration anywhere in the personality
+///   chain
+/// - the implicit `-l`/`-ll`/`-lll` tier when the user invoked
+///   `--show-config` alongside `-l` and no personality declared a
+///   format (or columns)
+///
+/// When neither applies (e.g. a grid-view default invocation),
+/// the section is omitted entirely.  The personality may still
+/// declare `columns` directly — that's surfaced under the
+/// Personality section, not here.
+fn show_format(s: &Styles, personality_name: &str, implicit_format: Option<&str>) {
+    let resolved = resolve_personality_full(personality_name).ok().flatten();
+    let p = resolved.as_ref().map(|r| &r.def);
+
+    // Skip if the personality declares `columns` directly — there
+    // is no named format to display, and the columns already
+    // appear under Personality.
+    if p.is_some_and(|p| p.columns.is_some() && p.format.is_none()) {
+        return;
+    }
+
+    let (fmt_name, source) = match p.and_then(|p| p.format.as_deref()) {
+        Some(name) => (name, "personality".to_string()),
+        None => match implicit_format {
+            Some(name) => {
+                let flag = match name {
+                    "long" => "-l",
+                    "long2" => "-ll",
+                    "long3" => "-lll",
+                    _ => "-l",
+                };
+                (name, format!("implicit, selected by {flag}"))
+            }
+            None => return,
+        },
+    };
+
+    let formats = super::formats::resolve_formats();
+    let columns = formats.get(fmt_name).map(|cols| cols.join(", "));
+
+    println!("{} {}", s.label.paint("Format:"), s.name.paint(fmt_name));
+    println!("  {} {}", s.label.paint("source:"), s.dimmed.paint(&source));
+    if let Some(cols) = columns {
+        println!("  {} {}", s.label.paint("columns:"), s.value.paint(cols));
+    }
+    println!();
 }
 
 // ── Theme section ──────────────────────────────────────────────

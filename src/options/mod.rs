@@ -105,7 +105,31 @@ impl Options {
                 }
 
                 if clap_matches.get_flag("show-config") {
-                    return OptionsResult::ShowConfig;
+                    // Detect the implicit `-l` tier so `--show-config`
+                    // can show the effective format when no personality
+                    // declares one.  An explicit `--columns` or
+                    // `--format` overrides the tier in `deduce_columns`,
+                    // so we suppress the hint when either is present.
+                    let long_count = clap_matches.get_count("long");
+                    let has_columns = clap_matches
+                        .value_source(flags::COLUMNS)
+                        .is_some_and(|src| src == clap::parser::ValueSource::CommandLine);
+                    let has_format = clap_matches
+                        .value_source(flags::FORMAT)
+                        .is_some_and(|src| src == clap::parser::ValueSource::CommandLine);
+                    let implicit_format = if long_count > 0 && !has_columns && !has_format {
+                        Some(
+                            match long_count {
+                                1 => "long",
+                                2 => "long2",
+                                _ => "long3",
+                            }
+                            .to_string(),
+                        )
+                    } else {
+                        None
+                    };
+                    return OptionsResult::ShowConfig { implicit_format };
                 }
 
                 if clap_matches.contains_id("dump-class")
@@ -413,7 +437,14 @@ pub enum OptionsResult {
     Completions(clap_complete::Shell),
 
     /// The user wants to see the active configuration.
-    ShowConfig,
+    ///
+    /// `implicit_format` carries the `-l` tier name (`"long"`,
+    /// `"long2"`, `"long3"`) when the user invoked `--show-config`
+    /// alongside `-l` and neither `--columns` nor `--format` would
+    /// override it.  `--show-config` displays this as the effective
+    /// format when the active personality declares neither
+    /// `format` nor `columns`.
+    ShowConfig { implicit_format: Option<String> },
 
     /// The user wants to see class definitions as TOML.
     /// Empty string means all classes; otherwise a specific class name.
