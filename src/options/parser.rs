@@ -925,12 +925,14 @@ pub fn build_command() -> Command {
         .arg(
             Arg::new(flags::NO_DIRS_FIRST)
                 .long("no-dirs-first")
+                .alias("no-F")
                 .hide(true)
                 .action(ArgAction::Count),
         )
         .arg(
             Arg::new(flags::NO_DIRS_LAST)
                 .long("no-dirs-last")
+                .alias("no-J")
                 .hide(true)
                 .action(ArgAction::Count),
         )

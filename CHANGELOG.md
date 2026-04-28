@@ -47,6 +47,9 @@ All notable changes to lx are documented here. lx is forked from
   preserve canonical declaration order (date tiers stay in
   now → today → … → flat).  Fixes wjv/lx#13.
 - Enabled `rustfmt` across the codebase (wjv/lx#11).
+- Hidden `--no-F` and `--no-J` aliases for `--no-dirs-first`
+  and `--no-dirs-last`, matching the short-suppressor pattern
+  every other negated short flag already follows.
 
 ### Fixed
 
