@@ -24,6 +24,10 @@ All notable changes to lx are documented here. lx is forked from
 - `--dump-personality` now includes `[[when]]` conditional
   override blocks and lists personalities in inheritance order
   (parents before children).
+- **`--show-config` personality section enhanced.**  Now displays
+  the full inheritance chain (leaf to root) with source annotations
+  (builtin/config/override), `[[when]]` block counts and active
+  status, and resolved format columns.  Fixes wjv/lx#21.
 - Enabled `rustfmt` across the codebase (wjv/lx#11).
 
 ### Internal
