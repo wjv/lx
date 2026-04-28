@@ -375,10 +375,17 @@ fn try_main() -> Result<i32, LxError> {
             eprintln!("Wrote default config to {}", path.display());
         }
 
-        OptionsResult::ShowConfig => {
+        OptionsResult::ShowConfig {
+            ref implicit_format,
+        } => {
             let name = active_personality.as_deref().unwrap_or("lx");
             let cli_theme = find_theme_arg(&cli_args);
-            config::show_config(name, personality_source, cli_theme.as_deref());
+            config::show_config(
+                name,
+                personality_source,
+                cli_theme.as_deref(),
+                implicit_format.as_deref(),
+            );
         }
 
         OptionsResult::SaveAs(ref name, _, _) => {

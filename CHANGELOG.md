@@ -28,6 +28,14 @@ All notable changes to lx are documented here. lx is forked from
   the full inheritance chain (leaf to root) with source annotations
   (builtin/config/override), `[[when]]` block counts and active
   status, and resolved format columns.  Fixes wjv/lx#21.
+- **`--show-config` gains a top-level `Format:` section.**  Shows
+  the active long-view format, its source (`personality` or
+  `implicit, selected by -lll`), and the resolved column list.
+  Appears whenever a long format is in effect — declared by the
+  personality chain or implied by `-l`/`-ll`/`-lll`.  The
+  Personality section now lists the format name only when the
+  chain declares one, keeping the two cases visually distinct.
+  Fixes wjv/lx#25.
 - **`--dump-theme` works for compiled-in themes** (`exa`,
   `lx-256`, `lx-24bit`).  Output is real, copy-pasteable TOML
   produced by walking the new theme key registry.  Fixes
