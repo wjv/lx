@@ -5,6 +5,18 @@ use crate::theme::smooth::SmoothLuts;
 use crate::theme::ui_styles::*;
 
 impl UiStyles {
+    /// Look up a compiled-in theme by name.  Mirrors the dispatch
+    /// in `apply_theme_chain`; used by `--dump-theme=NAME` to walk
+    /// the theme key registry and emit the resolved values.
+    pub fn compiled(name: &str) -> Option<Self> {
+        match name {
+            "exa" => Some(Self::default_theme()),
+            "lx-256" => Some(Self::lx_256_theme()),
+            "lx-24bit" => Some(Self::lx_24bit_theme()),
+            _ => None,
+        }
+    }
+
     #[rustfmt::skip]
     pub fn default_theme() -> Self {
         // ANSI date "gradient" collapses to a single colour —

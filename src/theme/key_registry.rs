@@ -44,10 +44,6 @@ pub enum StyleAccess {
     /// reading (for `--dump-theme`) and writing (for `set_config`)
     /// work.
     Direct {
-        // `get` is consumed by `--dump-theme` for compiled-in
-        // themes (wjv/lx#14), wired up alongside the
-        // dumpable/family-grouping work.
-        #[allow(dead_code)]
         get: fn(&UiStyles) -> Style,
         set: fn(&mut UiStyles, Style),
     },
@@ -78,11 +74,9 @@ impl ThemeKeyDef {
             .find(|d| d.name == name || d.aliases.contains(&name))
     }
 
-    /// Iterator over all `Direct` entries, in family-then-name order
-    /// — the canonical dump order.  Bulk entries are skipped.
-    // Consumed by `--dump-theme` for compiled-in themes
-    // (wjv/lx#14) once that landing wires it up.
-    #[allow(dead_code)]
+    /// Iterator over all `Direct` entries, in registry-declaration
+    /// order.  Bulk entries are skipped.  Used by `--dump-theme`
+    /// for compiled-in themes.
     pub fn dumpable() -> impl Iterator<Item = &'static ThemeKeyDef> {
         THEME_KEY_REGISTRY
             .iter()

@@ -5,6 +5,9 @@
 //! parents) lives in `src/theme/mod.rs` because it operates on
 //! `UiStyles` rather than the on-disk `ThemeDef`.
 
+use crate::theme::key_registry::{StyleAccess, ThemeKeyDef};
+use crate::theme::{UiStyles, render_style_to_lx};
+
 use super::error::ConfigError;
 use super::store::config;
 
@@ -37,17 +40,7 @@ pub fn all_theme_names() -> Vec<String> {
 /// Format a theme definition as TOML.
 fn format_theme_toml(name: &str) -> Option<String> {
     if is_builtin_theme(name) {
-        // Compiled-in themes from default_theme.rs can't be round-tripped
-        // to TOML.  Show a helpful comment instead.
-        return Some(format!(
-            "# [theme.{name}] is compiled-in and cannot be dumped as TOML.\n\
-             # To customise, create a new theme that inherits from it:\n\
-             #\n\
-             # [theme.custom]\n\
-             # inherits = \"{name}\"\n\
-             # directory = \"bold dodgerblue\"\n\
-             # date = \"steelblue\""
-        ));
+        return Some(format_builtin_theme_toml(name));
     }
 
     let cfg = config()?;
@@ -112,6 +105,66 @@ fn format_theme_toml(name: &str) -> Option<String> {
     }
 
     Some(lines.join("\n"))
+}
+
+/// Format a compiled-in theme as TOML by walking the theme key
+/// registry and rendering each `Direct` entry's resolved style
+/// back to a `parse_style`-compatible string.  Bulk keys are not
+/// emitted — they were never set as named fields, only as
+/// fan-out shortcuts.
+fn format_builtin_theme_toml(name: &str) -> String {
+    let ui = UiStyles::compiled(name).expect("is_builtin_theme guards this call");
+
+    let mut lines = vec![format!("[theme.{name}]")];
+
+    let mut pairs: Vec<(&'static str, String)> = ThemeKeyDef::dumpable()
+        .filter_map(|def| match def.access {
+            StyleAccess::Direct { get, .. } => Some((def.name, render_style_to_lx(get(&ui)))),
+            StyleAccess::Bulk { .. } => None,
+        })
+        .collect();
+
+    // Same partition + grouping as user themes: pull date-* out
+    // for the per-column tier-ordered block.
+    let (mut date_pairs, mut other_pairs): (Vec<_>, Vec<_>) = pairs
+        .drain(..)
+        .partition(|(k, _)| *k == "date" || k.starts_with("date-"));
+    other_pairs.sort_by_key(|(k, _)| *k);
+    date_pairs.sort_by(|a, b| {
+        date_sort_key(a.0)
+            .cmp(&date_sort_key(b.0))
+            .then_with(|| a.0.cmp(b.0))
+    });
+
+    let mut date_block: Vec<String> = Vec::new();
+    let mut last_group: Option<u8> = None;
+    for (k, v) in &date_pairs {
+        let group = date_sort_key(k).0;
+        if last_group.is_some_and(|g| g != group) {
+            date_block.push(String::new());
+        }
+        date_block.push(format!("{k} = \"{v}\""));
+        last_group = Some(group);
+    }
+
+    let insert_at = other_pairs.partition_point(|(k, _)| *k < "date");
+    for (k, v) in &other_pairs[..insert_at] {
+        lines.push(format!("{k} = \"{v}\""));
+    }
+    if !date_block.is_empty() {
+        if insert_at > 0 {
+            lines.push(String::new());
+        }
+        lines.extend(date_block);
+        if insert_at < other_pairs.len() {
+            lines.push(String::new());
+        }
+    }
+    for (k, v) in &other_pairs[insert_at..] {
+        lines.push(format!("{k} = \"{v}\""));
+    }
+
+    lines.join("\n")
 }
 
 /// Return a sort key for a date-family theme key so that

@@ -10,7 +10,7 @@ pub use self::ui_styles::{DateAge, UiStyles};
 pub mod key_registry;
 
 mod lsc;
-pub use self::lsc::LSColors;
+pub use self::lsc::{LSColors, render_style_to_lx};
 
 mod default_theme;
 

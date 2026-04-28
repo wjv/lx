@@ -282,6 +282,110 @@ pub fn parse_style(value: &str) -> Style {
     style
 }
 
+/// Render a `Style` back to a string [`parse_style`] can consume.
+///
+/// The output uses canonical forms: basic ANSI names for the eight
+/// primary colours, `#rrggbb` hex for `Rgb`, raw `38;5;N` for
+/// fixed-palette colours, and lowercase modifier names.  A
+/// `Style::default()` (no foreground, no modifiers) renders to the
+/// empty string, mirroring how `parse_style` interprets it.
+///
+/// Round-trip: `parse_style(&render_style_to_lx(s))` produces a
+/// `Style` equivalent to `s` for the colour shapes that lx's
+/// compiled-in themes use (basic ANSI, `Color::Fixed`, `Color::Rgb`)
+/// plus the modifier set.  Background colours and Light* variants
+/// are handled defensively but are not emitted by any compiled-in
+/// theme today.
+pub fn render_style_to_lx(style: Style) -> String {
+    let mut parts: Vec<String> = Vec::new();
+
+    if let Some(fg) = style.foreground {
+        parts.push(render_colour(fg));
+    }
+    if let Some(bg) = style.background {
+        // `parse_style` recognises raw ANSI codes, so emit the
+        // background as `48;5;N` or `48;2;R;G;B` for round-trip.
+        parts.push(render_background(bg));
+    }
+    if style.is_bold {
+        parts.push("bold".into());
+    }
+    if style.is_dimmed {
+        parts.push("dim".into());
+    }
+    if style.is_italic {
+        parts.push("italic".into());
+    }
+    if style.is_underline {
+        parts.push("underline".into());
+    }
+    if style.is_blink {
+        parts.push("blink".into());
+    }
+    if style.is_reverse {
+        parts.push("reverse".into());
+    }
+    if style.is_hidden {
+        parts.push("hidden".into());
+    }
+    if style.is_strikethrough {
+        parts.push("strikethrough".into());
+    }
+
+    parts.join(" ")
+}
+
+fn render_colour(c: Color) -> String {
+    match c {
+        Black => "black".into(),
+        Red => "red".into(),
+        Green => "green".into(),
+        Yellow => "yellow".into(),
+        Blue => "blue".into(),
+        Purple => "purple".into(),
+        Magenta => "purple".into(),
+        Cyan => "cyan".into(),
+        White => "white".into(),
+        Default => "default".into(),
+        Color::DarkGray => "38;5;8".into(),
+        Color::LightRed => "38;5;9".into(),
+        Color::LightGreen => "38;5;10".into(),
+        Color::LightYellow => "38;5;11".into(),
+        Color::LightBlue => "38;5;12".into(),
+        Color::LightPurple | Color::LightMagenta => "38;5;13".into(),
+        Color::LightCyan => "38;5;14".into(),
+        Color::LightGray => "38;5;15".into(),
+        Color::Fixed(n) => format!("38;5;{n}"),
+        Color::Rgb(r, g, b) => format!("#{r:02x}{g:02x}{b:02x}"),
+    }
+}
+
+fn render_background(c: Color) -> String {
+    match c {
+        Color::Fixed(n) => format!("48;5;{n}"),
+        Color::Rgb(r, g, b) => format!("48;2;{r};{g};{b}"),
+        // Basic colours: emit as 48;5;N where N is the standard
+        // 0–7 palette index.
+        Black => "48;5;0".into(),
+        Red => "48;5;1".into(),
+        Green => "48;5;2".into(),
+        Yellow => "48;5;3".into(),
+        Blue => "48;5;4".into(),
+        Purple | Magenta => "48;5;5".into(),
+        Cyan => "48;5;6".into(),
+        White => "48;5;7".into(),
+        Color::DarkGray => "48;5;8".into(),
+        Color::LightRed => "48;5;9".into(),
+        Color::LightGreen => "48;5;10".into(),
+        Color::LightYellow => "48;5;11".into(),
+        Color::LightBlue => "48;5;12".into(),
+        Color::LightPurple | Color::LightMagenta => "48;5;13".into(),
+        Color::LightCyan => "48;5;14".into(),
+        Color::LightGray => "48;5;15".into(),
+        Default => "49".into(),
+    }
+}
+
 /// Does this string look like raw ANSI codes rather than named colours?
 fn looks_like_ansi(s: &str) -> bool {
     // Contains semicolons and no spaces → definitely ANSI (e.g. "38;5;208")
@@ -688,5 +792,52 @@ mod parse_style_test {
     fn unknown_token_ignored() {
         // Unknown tokens are silently skipped.
         assert_eq!(parse_style("bold frobnicate blue"), Blue.bold());
+    }
+}
+
+#[cfg(test)]
+mod render_style_to_lx_test {
+    use super::*;
+
+    fn round_trip(style: Style) {
+        let s = render_style_to_lx(style);
+        let parsed = parse_style(&s);
+        assert_eq!(
+            parsed, style,
+            "round-trip failed: rendered {s:?} parsed back to {parsed:?}, expected {style:?}"
+        );
+    }
+
+    #[test]
+    fn default_style_renders_empty() {
+        assert_eq!(render_style_to_lx(Style::default()), "");
+    }
+
+    #[test]
+    fn basic_colours_round_trip() {
+        for c in [Black, Red, Green, Yellow, Blue, Purple, Cyan, White] {
+            round_trip(c.normal());
+            round_trip(c.bold());
+        }
+    }
+
+    #[test]
+    fn rgb_round_trips_as_hex() {
+        round_trip(Rgb(0xab, 0xcd, 0xef).normal());
+        round_trip(Rgb(0x00, 0x00, 0x00).bold());
+        round_trip(Rgb(0xff, 0xff, 0xff).italic());
+    }
+
+    #[test]
+    fn fixed_palette_round_trips() {
+        round_trip(Color::Fixed(208).normal());
+        round_trip(Color::Fixed(38).bold());
+    }
+
+    #[test]
+    fn modifiers_round_trip() {
+        round_trip(Blue.bold().underline());
+        round_trip(Red.italic().strikethrough());
+        round_trip(Style::default().dimmed());
     }
 }
