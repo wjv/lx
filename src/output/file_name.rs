@@ -161,13 +161,26 @@ impl<C: Colours> FileName<'_, '_, C> {
             bits.push(Style::default().paint("\""));
         }
 
-        // Absolute path: show the full resolved path instead of
-        // just the parent directory.
+        // Absolute path: show the full resolved parent path before
+        // the file's name.  Canonicalise the directory rather than
+        // the full file path, so that `.` and `..` entries keep
+        // their names instead of being resolved away.  The
+        // synthetic dot entries are special: `.` has the listed
+        // directory's path with no suffix, while `..` has it joined
+        // with `..`, so neither yields the right prefix via
+        // `Path::parent` alone.
         if self.options.absolute {
-            if let Ok(abs) = std::fs::canonicalize(&self.file.path)
-                && let Some(parent) = abs.parent()
-            {
-                self.add_parent_bits(&mut bits, parent);
+            let parent: Option<&Path> = if self.file.is_all_all {
+                self.file.parent_dir.map(|d| d.path.as_path())
+            } else {
+                self.file.path.parent()
+            };
+            let canonical = match parent {
+                Some(p) if !p.as_os_str().is_empty() => std::fs::canonicalize(p).ok(),
+                _ => std::env::current_dir().ok(),
+            };
+            if let Some(abs) = canonical {
+                self.add_parent_bits(&mut bits, &abs);
             }
         } else if self.file.parent_dir.is_none()
             && let Some(parent) = self.file.path.parent()

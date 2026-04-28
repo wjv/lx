@@ -54,6 +54,25 @@ fn no_absolute_shows_relative_names() {
         .stdout(predicate::str::contains(dir.path().to_string_lossy().as_ref()).not());
 }
 
+#[test]
+fn absolute_with_dot_entries_keeps_dots() {
+    // Regression: `lx -A -aa` used to render the `.` and `..`
+    // synthetic entries one directory level too high, because
+    // canonicalising the full path collapsed them away before
+    // taking the parent.
+    let dir = display_fixture();
+    let canonical = fs::canonicalize(dir.path()).unwrap();
+    let canonical_str = canonical.to_string_lossy().into_owned();
+
+    lx_no_colour()
+        .args(["-A", "-1", "-aa"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(format!("{canonical_str}/.\n")))
+        .stdout(predicate::str::contains(format!("{canonical_str}/..\n")));
+}
+
 // ── --classify ───────────────────────────────────────────────────
 
 #[test]

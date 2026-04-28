@@ -30,6 +30,13 @@ All notable changes to lx are documented here. lx is forked from
   status, and resolved format columns.  Fixes wjv/lx#21.
 - Enabled `rustfmt` across the codebase (wjv/lx#11).
 
+### Fixed
+
+- `-A` (`--absolute`) rendered the `.` and `..` synthetic entries
+  one directory level too high when combined with `-aa`.  The
+  prefix is now the listed directory's canonical path, so `.`
+  and `..` line up with their siblings.
+
 ### Internal
 
 - Clippy pedantic compliance: infallible `deduce()` functions
