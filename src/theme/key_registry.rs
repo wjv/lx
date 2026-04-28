@@ -1,8 +1,3 @@
-// Phase 1: the registry is introduced as a self-contained module
-// but not yet wired into `set_config`.  Removed once dispatch
-// migrates to the registry.
-#![allow(dead_code)]
-
 //! Theme key registry: the single source of truth for every named
 //! `[theme.NAME]` config key understood by lx.
 //!
@@ -49,6 +44,10 @@ pub enum StyleAccess {
     /// reading (for `--dump-theme`) and writing (for `set_config`)
     /// work.
     Direct {
+        // `get` is consumed by `--dump-theme` for compiled-in
+        // themes (wjv/lx#14), wired up alongside the
+        // dumpable/family-grouping work.
+        #[allow(dead_code)]
         get: fn(&UiStyles) -> Style,
         set: fn(&mut UiStyles, Style),
     },
@@ -64,6 +63,9 @@ pub enum StyleAccess {
 pub struct ThemeKeyDef {
     pub name: &'static str,
     pub aliases: &'static [&'static str],
+    // Read by `--dump-theme` for canonical key grouping (wjv/lx#13),
+    // wired up alongside the dumpable iterator below.
+    #[allow(dead_code)]
     pub family: ThemeFamily,
     pub access: StyleAccess,
 }
@@ -78,6 +80,9 @@ impl ThemeKeyDef {
 
     /// Iterator over all `Direct` entries, in family-then-name order
     /// — the canonical dump order.  Bulk entries are skipped.
+    // Consumed by `--dump-theme` for compiled-in themes
+    // (wjv/lx#14) once that landing wires it up.
+    #[allow(dead_code)]
     pub fn dumpable() -> impl Iterator<Item = &'static ThemeKeyDef> {
         THEME_KEY_REGISTRY
             .iter()

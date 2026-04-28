@@ -401,178 +401,22 @@ impl UiStyles {
     /// Returns `true` if the key was recognised.  The value is parsed
     /// via `parse_style()`, which accepts named colours, hex, X11
     /// names, modifiers, and raw ANSI codes.
+    ///
+    /// Dispatch goes through the theme key registry
+    /// (`super::key_registry`); each recognised key has one entry
+    /// that knows whether it writes a single field or fans out via
+    /// a bulk setter.
     pub fn set_config(&mut self, key: &str, value: &str) -> bool {
+        use super::key_registry::{StyleAccess, ThemeKeyDef};
         use super::lsc::parse_style;
+
+        let Some(def) = ThemeKeyDef::from_name(key) else {
+            return false;
+        };
         let style = parse_style(value);
-
-        match key {
-            // File kinds
-            "normal" => self.filekinds.normal = style,
-            "directory" => self.filekinds.directory = style,
-            "symlink" => self.filekinds.symlink = style,
-            "pipe" => self.filekinds.pipe = style,
-            "block-device" => self.filekinds.block_device = style,
-            "char-device" => self.filekinds.char_device = style,
-            "socket" => self.filekinds.socket = style,
-            "special" => self.filekinds.special = style,
-            "executable" => self.filekinds.executable = style,
-
-            // Permissions.  Three accepted prefixes: `permissions-*`
-            // (canonical, matches the column name), `perm-*` (legacy
-            // short form, documented in lxconfig.toml(5)), and
-            // `mode-*` (matches the `--mode` flag alias and the `mode`
-            // sort field, so the same vocabulary works on every
-            // surface).
-            "permissions-user-read" | "perm-user-read" | "mode-user-read" => {
-                self.perms.user_read = style;
-            }
-            "permissions-user-write" | "perm-user-write" | "mode-user-write" => {
-                self.perms.user_write = style;
-            }
-            "permissions-user-execute" | "perm-user-exec" | "mode-user-exec" => {
-                self.perms.user_execute_file = style;
-            }
-            "permissions-user-execute-other" | "perm-user-exec-other" | "mode-user-exec-other" => {
-                self.perms.user_execute_other = style;
-            }
-            "permissions-group-read" | "perm-group-read" | "mode-group-read" => {
-                self.perms.group_read = style;
-            }
-            "permissions-group-write" | "perm-group-write" | "mode-group-write" => {
-                self.perms.group_write = style;
-            }
-            "permissions-group-execute" | "perm-group-exec" | "mode-group-exec" => {
-                self.perms.group_execute = style;
-            }
-            "permissions-other-read" | "perm-other-read" | "mode-other-read" => {
-                self.perms.other_read = style;
-            }
-            "permissions-other-write" | "perm-other-write" | "mode-other-write" => {
-                self.perms.other_write = style;
-            }
-            "permissions-other-execute" | "perm-other-exec" | "mode-other-exec" => {
-                self.perms.other_execute = style;
-            }
-            "permissions-special-user" | "perm-special-user" | "mode-special-user" => {
-                self.perms.special_user_file = style;
-            }
-            "permissions-special-other" | "perm-special-other" | "mode-special-other" => {
-                self.perms.special_other = style;
-            }
-            "permissions-attribute" | "perm-attribute" | "mode-attribute" => {
-                self.perms.attribute = style;
-            }
-
-            // Size (individual magnitudes)
-            "size-number-byte" => self.size.number_byte = style,
-            "size-number-kilo" => self.size.number_kilo = style,
-            "size-number-mega" => self.size.number_mega = style,
-            "size-number-giga" => self.size.number_giga = style,
-            "size-number-huge" => self.size.number_huge = style,
-            "size-unit-byte" => self.size.unit_byte = style,
-            "size-unit-kilo" => self.size.unit_kilo = style,
-            "size-unit-mega" => self.size.unit_mega = style,
-            "size-unit-giga" => self.size.unit_giga = style,
-            "size-unit-huge" => self.size.unit_huge = style,
-            // Size (bulk setters)
-            "size-number" => self.set_number_style(style),
-            "size-unit" => self.set_unit_style(style),
-            "size-major" => self.size.major = style,
-            "size-minor" => self.size.minor = style,
-
-            // Users
-            "user-you" => self.users.user_you = style,
-            "user-other" => self.users.user_someone_else = style,
-            "group-yours" => self.users.group_yours = style,
-            "group-member" => self.users.group_member = style,
-            "group-other" => self.users.group_not_yours = style,
-            "uid-you" => self.users.uid_you = style,
-            "uid-other" => self.users.uid_someone_else = style,
-            "gid-yours" => self.users.gid_yours = style,
-            "gid-member" => self.users.gid_member = style,
-            "gid-other" => self.users.gid_not_yours = style,
-
-            // Links
-            "links" => self.links.normal = style,
-            "links-multi" => self.links.multi_link_file = style,
-
-            // VCS
-            "vcs-new" => self.vcs.new = style,
-            "vcs-modified" => self.vcs.modified = style,
-            "vcs-deleted" => self.vcs.deleted = style,
-            "vcs-renamed" => self.vcs.renamed = style,
-            "vcs-typechange" => self.vcs.typechange = style,
-            "vcs-ignored" => self.vcs.ignored = style,
-            "vcs-conflicted" => self.vcs.conflicted = style,
-
-            // UI elements
-            "punctuation" => self.punctuation = style,
-            // Bulk date setters fan out to all four timestamp columns.
-            "date" => self.date_for_each(|d| d.set_all(style)),
-            "date-now" => self.date_for_each(|d| d.now = style),
-            "date-today" => self.date_for_each(|d| d.today = style),
-            "date-week" => self.date_for_each(|d| d.week = style),
-            "date-month" => self.date_for_each(|d| d.month = style),
-            "date-year" => self.date_for_each(|d| d.year = style),
-            "date-old" => self.date_for_each(|d| d.old = style),
-            "date-flat" => self.date_for_each(|d| d.flat = style),
-
-            // Per-timestamp-column overrides.  These write directly
-            // to the named field, so theme authors can give each
-            // displayed timestamp column its own colour.  The
-            // caller (`apply_theme_def` in `theme/mod.rs`) sorts
-            // keys by specificity before calling `set_config`, so
-            // bulk `date*` setters are guaranteed to run before
-            // any `date-<col>*` override regardless of the order
-            // the keys appear in the theme block.
-            "date-modified" => self.date_modified.set_all(style),
-            "date-modified-now" => self.date_modified.now = style,
-            "date-modified-today" => self.date_modified.today = style,
-            "date-modified-week" => self.date_modified.week = style,
-            "date-modified-month" => self.date_modified.month = style,
-            "date-modified-year" => self.date_modified.year = style,
-            "date-modified-old" => self.date_modified.old = style,
-            "date-modified-flat" => self.date_modified.flat = style,
-
-            "date-accessed" => self.date_accessed.set_all(style),
-            "date-accessed-now" => self.date_accessed.now = style,
-            "date-accessed-today" => self.date_accessed.today = style,
-            "date-accessed-week" => self.date_accessed.week = style,
-            "date-accessed-month" => self.date_accessed.month = style,
-            "date-accessed-year" => self.date_accessed.year = style,
-            "date-accessed-old" => self.date_accessed.old = style,
-            "date-accessed-flat" => self.date_accessed.flat = style,
-
-            "date-changed" => self.date_changed.set_all(style),
-            "date-changed-now" => self.date_changed.now = style,
-            "date-changed-today" => self.date_changed.today = style,
-            "date-changed-week" => self.date_changed.week = style,
-            "date-changed-month" => self.date_changed.month = style,
-            "date-changed-year" => self.date_changed.year = style,
-            "date-changed-old" => self.date_changed.old = style,
-            "date-changed-flat" => self.date_changed.flat = style,
-
-            "date-created" => self.date_created.set_all(style),
-            "date-created-now" => self.date_created.now = style,
-            "date-created-today" => self.date_created.today = style,
-            "date-created-week" => self.date_created.week = style,
-            "date-created-month" => self.date_created.month = style,
-            "date-created-year" => self.date_created.year = style,
-            "date-created-old" => self.date_created.old = style,
-            "date-created-flat" => self.date_created.flat = style,
-            "inode" => self.inode = style,
-            "blocks" => self.blocks = style,
-            "header" => self.header = style,
-            "octal" => self.octal = style,
-            "flags" => self.flags = style,
-            "symlink-path" => self.symlink_path = style,
-            "control-char" => self.control_char = style,
-            "broken-symlink" => self.broken_symlink = style,
-            "broken-overlay" => self.broken_path_overlay = style,
-
-            _ => return false,
+        match def.access {
+            StyleAccess::Direct { set, .. } | StyleAccess::Bulk { set } => set(self, style),
         }
-
         true
     }
 }
