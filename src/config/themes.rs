@@ -5,7 +5,7 @@
 //! parents) lives in `src/theme/mod.rs` because it operates on
 //! `UiStyles` rather than the on-disk `ThemeDef`.
 
-use crate::theme::key_registry::{StyleAccess, ThemeKeyDef};
+use crate::theme::key_registry::{StyleAccess, THEME_KEY_REGISTRY, ThemeFamily, ThemeKeyDef};
 use crate::theme::{UiStyles, render_style_to_lx};
 
 use super::error::ConfigError;
@@ -54,55 +54,12 @@ fn format_theme_toml(name: &str) -> Option<String> {
         lines.push(format!("use-style = \"{use_style}\""));
     }
 
-    // Partition UI keys into the `date-*` family and everything else.
-    // Alphabetical ordering interleaves bulk `date-*` keys with per-
-    // column `date-<col>-*` keys, which destroys the "baseline +
-    // overrides" structure a theme author almost always wrote.  We
-    // pull the date keys out, sort them by (bulk vs per-column, then
-    // tier index), and re-insert them as a contiguous block at the
-    // alphabetical position where plain `date` would fall.
-    let (mut date_keys, mut other_keys): (Vec<_>, Vec<_>) = theme
+    let pairs: Vec<(&str, String)> = theme
         .ui
-        .keys()
-        .partition(|k| k.as_str() == "date" || k.starts_with("date-"));
-    other_keys.sort();
-    date_keys.sort_by(|a, b| {
-        date_sort_key(a)
-            .cmp(&date_sort_key(b))
-            .then_with(|| a.cmp(b))
-    });
-
-    // Build the date block with blank-line separators between
-    // groups (bulk, then each per-column group that has any keys).
-    let mut date_block: Vec<String> = Vec::new();
-    let mut last_group: Option<u8> = None;
-    for k in &date_keys {
-        let group = date_sort_key(k).0;
-        if last_group.is_some_and(|g| g != group) {
-            date_block.push(String::new());
-        }
-        date_block.push(format!("{k} = \"{}\"", theme.ui[*k]));
-        last_group = Some(group);
-    }
-
-    // Splice the date block into the alphabetical position where
-    // plain `date` would sort among the remaining keys.
-    let insert_at = other_keys.partition_point(|k| k.as_str() < "date");
-    for k in &other_keys[..insert_at] {
-        lines.push(format!("{k} = \"{}\"", theme.ui[*k]));
-    }
-    if !date_block.is_empty() {
-        if insert_at > 0 {
-            lines.push(String::new());
-        }
-        lines.extend(date_block);
-        if insert_at < other_keys.len() {
-            lines.push(String::new());
-        }
-    }
-    for k in &other_keys[insert_at..] {
-        lines.push(format!("{k} = \"{}\"", theme.ui[*k]));
-    }
+        .iter()
+        .map(|(k, v)| (k.as_str(), v.clone()))
+        .collect();
+    append_grouped_pairs(&mut lines, pairs);
 
     Some(lines.join("\n"))
 }
@@ -117,109 +74,51 @@ fn format_builtin_theme_toml(name: &str) -> String {
 
     let mut lines = vec![format!("[theme.{name}]")];
 
-    let mut pairs: Vec<(&'static str, String)> = ThemeKeyDef::dumpable()
+    let pairs: Vec<(&str, String)> = ThemeKeyDef::dumpable()
         .filter_map(|def| match def.access {
             StyleAccess::Direct { get, .. } => Some((def.name, render_style_to_lx(get(&ui)))),
             StyleAccess::Bulk { .. } => None,
         })
         .collect();
 
-    // Same partition + grouping as user themes: pull date-* out
-    // for the per-column tier-ordered block.
-    let (mut date_pairs, mut other_pairs): (Vec<_>, Vec<_>) = pairs
-        .drain(..)
-        .partition(|(k, _)| *k == "date" || k.starts_with("date-"));
-    other_pairs.sort_by_key(|(k, _)| *k);
-    date_pairs.sort_by(|a, b| {
-        date_sort_key(a.0)
-            .cmp(&date_sort_key(b.0))
-            .then_with(|| a.0.cmp(b.0))
-    });
-
-    let mut date_block: Vec<String> = Vec::new();
-    let mut last_group: Option<u8> = None;
-    for (k, v) in &date_pairs {
-        let group = date_sort_key(k).0;
-        if last_group.is_some_and(|g| g != group) {
-            date_block.push(String::new());
-        }
-        date_block.push(format!("{k} = \"{v}\""));
-        last_group = Some(group);
-    }
-
-    let insert_at = other_pairs.partition_point(|(k, _)| *k < "date");
-    for (k, v) in &other_pairs[..insert_at] {
-        lines.push(format!("{k} = \"{v}\""));
-    }
-    if !date_block.is_empty() {
-        if insert_at > 0 {
-            lines.push(String::new());
-        }
-        lines.extend(date_block);
-        if insert_at < other_pairs.len() {
-            lines.push(String::new());
-        }
-    }
-    for (k, v) in &other_pairs[insert_at..] {
-        lines.push(format!("{k} = \"{v}\""));
-    }
+    append_grouped_pairs(&mut lines, pairs);
 
     lines.join("\n")
 }
 
-/// Return a sort key for a date-family theme key so that
-/// `--dump-theme` output groups bulk keys (`date`, `date-<tier>`)
-/// together first, then each per-column family (`date-<col>-<tier>`)
-/// in canonical column order, each group in canonical tier order.
-///
-/// The returned pair is `(group, tier_index)`:
-///
-/// - group 0: bulk — `date`, `date-now`, `date-today`, …, `date-flat`
-/// - group 1: `date-modified` and `date-modified-<tier>`
-/// - group 2: `date-accessed` and `date-accessed-<tier>`
-/// - group 3: `date-changed`  and `date-changed-<tier>`
-/// - group 4: `date-created`  and `date-created-<tier>`
-/// - group 5: any date-prefixed key we don't recognise (stable,
-///   alphabetical via the caller's tiebreaker)
-///
-/// Tier index 0 is reserved for the "whole column" setter (`date`
-/// itself or `date-<col>` without a tier suffix), so it always
-/// sorts first within its group.
-///
-/// Non-date keys return `(u8::MAX, 0)`; the caller is expected not
-/// to pass them.
-fn date_sort_key(key: &str) -> (u8, u8) {
-    const TIERS: [&str; 8] = ["", "now", "today", "week", "month", "year", "old", "flat"];
-    const COLS: [&str; 4] = ["modified", "accessed", "changed", "created"];
+/// Append `key = "value"` lines to `out`, grouped by registry
+/// family with blank-line separators between families.  Within a
+/// family, lines come out in registry-declaration order (so date
+/// tiers stay in canonical now → today → … → flat order).  Keys
+/// not in the registry are placed at the end in alphabetical
+/// order, after a final blank-line separator.
+fn append_grouped_pairs(out: &mut Vec<String>, pairs: Vec<(&str, String)>) {
+    // Index each pair by its (family, registry position) so we can
+    // sort with one key.  Unknown keys get a sentinel family of
+    // `None` and a registry position past the end.
+    let mut indexed: Vec<(Option<ThemeFamily>, usize, &str, String)> = pairs
+        .into_iter()
+        .map(|(k, v)| {
+            let position = THEME_KEY_REGISTRY.iter().position(|d| d.name == k);
+            let family = position.map(|i| THEME_KEY_REGISTRY[i].family);
+            (family, position.unwrap_or(usize::MAX), k, v)
+        })
+        .collect();
 
-    if key == "date" {
-        return (0, 0);
-    }
+    // Known keys sort by (family, registry order).  Unknown keys
+    // sort alphabetically among themselves (they all share
+    // `family = None` and `position = MAX`, so the name is the
+    // tiebreaker).
+    indexed.sort_by(|a, b| (a.0, a.1, a.2).cmp(&(b.0, b.1, b.2)));
 
-    let Some(rest) = key.strip_prefix("date-") else {
-        return (u8::MAX, 0);
-    };
-
-    // Bulk tier: date-now, date-today, …, date-flat
-    if let Some(ti) = TIERS.iter().position(|t| *t == rest) {
-        return (0, ti as u8);
-    }
-
-    // Per-column whole: date-modified, date-accessed, …
-    if let Some(ci) = COLS.iter().position(|c| *c == rest) {
-        return ((1 + ci) as u8, 0);
-    }
-
-    // Per-column tier: date-modified-now, date-accessed-week, …
-    for (ci, col) in COLS.iter().enumerate() {
-        if let Some(tier) = rest.strip_prefix(col).and_then(|r| r.strip_prefix('-'))
-            && let Some(ti) = TIERS.iter().position(|t| *t == tier)
-        {
-            return ((1 + ci) as u8, ti as u8);
+    let mut last_family: Option<Option<ThemeFamily>> = None;
+    for (family, _pos, key, value) in indexed {
+        if last_family.is_some_and(|f| f != family) {
+            out.push(String::new());
         }
+        out.push(format!("{key} = \"{value}\""));
+        last_family = Some(family);
     }
-
-    (5, 0)
 }
 
 /// Print a single theme definition as copy-pasteable TOML.

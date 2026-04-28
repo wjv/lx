@@ -23,7 +23,9 @@ use super::ui_styles::UiStyles;
 
 /// Logical grouping for ordering and blank-line separation in
 /// `--dump-theme` output.  Variant order is the dump order; keep
-/// it stable.
+/// it stable.  Date keys split into five sub-families so
+/// per-column tier blocks come out as separate groups in the
+/// dump without any extra special-casing.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ThemeFamily {
     FileKinds,
@@ -33,7 +35,11 @@ pub enum ThemeFamily {
     Links,
     Vcs,
     Punctuation,
-    Date,
+    DateBulk,
+    DateModified,
+    DateAccessed,
+    DateChanged,
+    DateCreated,
     Columns,
     Symlinks,
 }
@@ -59,9 +65,6 @@ pub enum StyleAccess {
 pub struct ThemeKeyDef {
     pub name: &'static str,
     pub aliases: &'static [&'static str],
-    // Read by `--dump-theme` for canonical key grouping (wjv/lx#13),
-    // wired up alongside the dumpable iterator below.
-    #[allow(dead_code)]
     pub family: ThemeFamily,
     pub access: StyleAccess,
 }
@@ -270,59 +273,55 @@ fn punctuation(r: &mut Vec<ThemeKeyDef>) {
 
 #[rustfmt::skip]
 fn date(r: &mut Vec<ThemeKeyDef>) {
-    use ThemeFamily::Date as F;
+    use ThemeFamily::{DateBulk, DateModified, DateAccessed, DateChanged, DateCreated};
 
     // Bulk fan-outs across all four columns.
-    r.push(bulk("date",       F, |u, s| u.date_for_each(|d| d.set_all(s))));
-    r.push(bulk("date-now",   F, |u, s| u.date_for_each(|d| d.now = s)));
-    r.push(bulk("date-today", F, |u, s| u.date_for_each(|d| d.today = s)));
-    r.push(bulk("date-week",  F, |u, s| u.date_for_each(|d| d.week = s)));
-    r.push(bulk("date-month", F, |u, s| u.date_for_each(|d| d.month = s)));
-    r.push(bulk("date-year",  F, |u, s| u.date_for_each(|d| d.year = s)));
-    r.push(bulk("date-old",   F, |u, s| u.date_for_each(|d| d.old = s)));
-    r.push(bulk("date-flat",  F, |u, s| u.date_for_each(|d| d.flat = s)));
+    r.push(bulk("date",       DateBulk, |u, s| u.date_for_each(|d| d.set_all(s))));
+    r.push(bulk("date-now",   DateBulk, |u, s| u.date_for_each(|d| d.now = s)));
+    r.push(bulk("date-today", DateBulk, |u, s| u.date_for_each(|d| d.today = s)));
+    r.push(bulk("date-week",  DateBulk, |u, s| u.date_for_each(|d| d.week = s)));
+    r.push(bulk("date-month", DateBulk, |u, s| u.date_for_each(|d| d.month = s)));
+    r.push(bulk("date-year",  DateBulk, |u, s| u.date_for_each(|d| d.year = s)));
+    r.push(bulk("date-old",   DateBulk, |u, s| u.date_for_each(|d| d.old = s)));
+    r.push(bulk("date-flat",  DateBulk, |u, s| u.date_for_each(|d| d.flat = s)));
 
-    // Per-column bulk setters (set_all on one DateAge).
-    r.push(bulk("date-modified", F, |u, s| u.date_modified.set_all(s)));
-    r.push(bulk("date-accessed", F, |u, s| u.date_accessed.set_all(s)));
-    r.push(bulk("date-changed",  F, |u, s| u.date_changed.set_all(s)));
-    r.push(bulk("date-created",  F, |u, s| u.date_created.set_all(s)));
+    // Per-column bulk + per-tier direct entries, grouped by column
+    // so the dump emits one block per timestamp.
+    r.push(bulk("date-modified", DateModified, |u, s| u.date_modified.set_all(s)));
+    r.push(direct("date-modified-now",   &[], DateModified, |u| u.date_modified.now,   |u, s| u.date_modified.now = s));
+    r.push(direct("date-modified-today", &[], DateModified, |u| u.date_modified.today, |u, s| u.date_modified.today = s));
+    r.push(direct("date-modified-week",  &[], DateModified, |u| u.date_modified.week,  |u, s| u.date_modified.week = s));
+    r.push(direct("date-modified-month", &[], DateModified, |u| u.date_modified.month, |u, s| u.date_modified.month = s));
+    r.push(direct("date-modified-year",  &[], DateModified, |u| u.date_modified.year,  |u, s| u.date_modified.year = s));
+    r.push(direct("date-modified-old",   &[], DateModified, |u| u.date_modified.old,   |u, s| u.date_modified.old = s));
+    r.push(direct("date-modified-flat",  &[], DateModified, |u| u.date_modified.flat,  |u, s| u.date_modified.flat = s));
 
-    // date-modified-*
-    r.push(direct("date-modified-now",   &[], F, |u| u.date_modified.now,   |u, s| u.date_modified.now = s));
-    r.push(direct("date-modified-today", &[], F, |u| u.date_modified.today, |u, s| u.date_modified.today = s));
-    r.push(direct("date-modified-week",  &[], F, |u| u.date_modified.week,  |u, s| u.date_modified.week = s));
-    r.push(direct("date-modified-month", &[], F, |u| u.date_modified.month, |u, s| u.date_modified.month = s));
-    r.push(direct("date-modified-year",  &[], F, |u| u.date_modified.year,  |u, s| u.date_modified.year = s));
-    r.push(direct("date-modified-old",   &[], F, |u| u.date_modified.old,   |u, s| u.date_modified.old = s));
-    r.push(direct("date-modified-flat",  &[], F, |u| u.date_modified.flat,  |u, s| u.date_modified.flat = s));
+    r.push(bulk("date-accessed", DateAccessed, |u, s| u.date_accessed.set_all(s)));
+    r.push(direct("date-accessed-now",   &[], DateAccessed, |u| u.date_accessed.now,   |u, s| u.date_accessed.now = s));
+    r.push(direct("date-accessed-today", &[], DateAccessed, |u| u.date_accessed.today, |u, s| u.date_accessed.today = s));
+    r.push(direct("date-accessed-week",  &[], DateAccessed, |u| u.date_accessed.week,  |u, s| u.date_accessed.week = s));
+    r.push(direct("date-accessed-month", &[], DateAccessed, |u| u.date_accessed.month, |u, s| u.date_accessed.month = s));
+    r.push(direct("date-accessed-year",  &[], DateAccessed, |u| u.date_accessed.year,  |u, s| u.date_accessed.year = s));
+    r.push(direct("date-accessed-old",   &[], DateAccessed, |u| u.date_accessed.old,   |u, s| u.date_accessed.old = s));
+    r.push(direct("date-accessed-flat",  &[], DateAccessed, |u| u.date_accessed.flat,  |u, s| u.date_accessed.flat = s));
 
-    // date-accessed-*
-    r.push(direct("date-accessed-now",   &[], F, |u| u.date_accessed.now,   |u, s| u.date_accessed.now = s));
-    r.push(direct("date-accessed-today", &[], F, |u| u.date_accessed.today, |u, s| u.date_accessed.today = s));
-    r.push(direct("date-accessed-week",  &[], F, |u| u.date_accessed.week,  |u, s| u.date_accessed.week = s));
-    r.push(direct("date-accessed-month", &[], F, |u| u.date_accessed.month, |u, s| u.date_accessed.month = s));
-    r.push(direct("date-accessed-year",  &[], F, |u| u.date_accessed.year,  |u, s| u.date_accessed.year = s));
-    r.push(direct("date-accessed-old",   &[], F, |u| u.date_accessed.old,   |u, s| u.date_accessed.old = s));
-    r.push(direct("date-accessed-flat",  &[], F, |u| u.date_accessed.flat,  |u, s| u.date_accessed.flat = s));
+    r.push(bulk("date-changed",  DateChanged, |u, s| u.date_changed.set_all(s)));
+    r.push(direct("date-changed-now",    &[], DateChanged, |u| u.date_changed.now,    |u, s| u.date_changed.now = s));
+    r.push(direct("date-changed-today",  &[], DateChanged, |u| u.date_changed.today,  |u, s| u.date_changed.today = s));
+    r.push(direct("date-changed-week",   &[], DateChanged, |u| u.date_changed.week,   |u, s| u.date_changed.week = s));
+    r.push(direct("date-changed-month",  &[], DateChanged, |u| u.date_changed.month,  |u, s| u.date_changed.month = s));
+    r.push(direct("date-changed-year",   &[], DateChanged, |u| u.date_changed.year,   |u, s| u.date_changed.year = s));
+    r.push(direct("date-changed-old",    &[], DateChanged, |u| u.date_changed.old,    |u, s| u.date_changed.old = s));
+    r.push(direct("date-changed-flat",   &[], DateChanged, |u| u.date_changed.flat,   |u, s| u.date_changed.flat = s));
 
-    // date-changed-*
-    r.push(direct("date-changed-now",    &[], F, |u| u.date_changed.now,    |u, s| u.date_changed.now = s));
-    r.push(direct("date-changed-today",  &[], F, |u| u.date_changed.today,  |u, s| u.date_changed.today = s));
-    r.push(direct("date-changed-week",   &[], F, |u| u.date_changed.week,   |u, s| u.date_changed.week = s));
-    r.push(direct("date-changed-month",  &[], F, |u| u.date_changed.month,  |u, s| u.date_changed.month = s));
-    r.push(direct("date-changed-year",   &[], F, |u| u.date_changed.year,   |u, s| u.date_changed.year = s));
-    r.push(direct("date-changed-old",    &[], F, |u| u.date_changed.old,    |u, s| u.date_changed.old = s));
-    r.push(direct("date-changed-flat",   &[], F, |u| u.date_changed.flat,  |u, s| u.date_changed.flat = s));
-
-    // date-created-*
-    r.push(direct("date-created-now",    &[], F, |u| u.date_created.now,    |u, s| u.date_created.now = s));
-    r.push(direct("date-created-today",  &[], F, |u| u.date_created.today,  |u, s| u.date_created.today = s));
-    r.push(direct("date-created-week",   &[], F, |u| u.date_created.week,   |u, s| u.date_created.week = s));
-    r.push(direct("date-created-month",  &[], F, |u| u.date_created.month,  |u, s| u.date_created.month = s));
-    r.push(direct("date-created-year",   &[], F, |u| u.date_created.year,   |u, s| u.date_created.year = s));
-    r.push(direct("date-created-old",    &[], F, |u| u.date_created.old,    |u, s| u.date_created.old = s));
-    r.push(direct("date-created-flat",   &[], F, |u| u.date_created.flat,   |u, s| u.date_created.flat = s));
+    r.push(bulk("date-created",  DateCreated, |u, s| u.date_created.set_all(s)));
+    r.push(direct("date-created-now",    &[], DateCreated, |u| u.date_created.now,    |u, s| u.date_created.now = s));
+    r.push(direct("date-created-today",  &[], DateCreated, |u| u.date_created.today,  |u, s| u.date_created.today = s));
+    r.push(direct("date-created-week",   &[], DateCreated, |u| u.date_created.week,   |u, s| u.date_created.week = s));
+    r.push(direct("date-created-month",  &[], DateCreated, |u| u.date_created.month,  |u, s| u.date_created.month = s));
+    r.push(direct("date-created-year",   &[], DateCreated, |u| u.date_created.year,   |u, s| u.date_created.year = s));
+    r.push(direct("date-created-old",    &[], DateCreated, |u| u.date_created.old,    |u, s| u.date_created.old = s));
+    r.push(direct("date-created-flat",   &[], DateCreated, |u| u.date_created.flat,   |u, s| u.date_created.flat = s));
 }
 
 // ── Top-level column styles ──────────────────────────────────────
