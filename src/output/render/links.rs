@@ -1,45 +1,34 @@
 use locale::Numeric as NumericLocale;
-use nu_ansi_term::Style;
 
 use crate::fs::fields as f;
 use crate::output::cell::TextCell;
+use crate::theme::Theme;
 
 impl f::Links {
-    pub fn render<C: Colours>(&self, colours: &C, numeric: &NumericLocale) -> TextCell {
+    pub fn render(&self, theme: &Theme, numeric: &NumericLocale) -> TextCell {
         let style = if self.multiple {
-            colours.multi_link_file()
+            theme.ui.links.multi_link_file
         } else {
-            colours.normal()
+            theme.ui.links.normal
         };
 
         TextCell::paint(style, numeric.format_int(self.count))
     }
 }
 
-pub trait Colours {
-    fn normal(&self) -> Style;
-    fn multi_link_file(&self) -> Style;
-}
-
 #[cfg(test)]
 pub mod test {
-    use super::Colours;
     use crate::fs::fields as f;
     use crate::output::cell::{DisplayWidth, TextCell};
+    use crate::theme::Theme;
 
-    use locale;
     use nu_ansi_term::Color::*;
-    use nu_ansi_term::Style;
 
-    struct TestColours;
-
-    impl Colours for TestColours {
-        fn normal(&self) -> Style {
-            Blue.normal()
-        }
-        fn multi_link_file(&self) -> Style {
-            Blue.on(Red)
-        }
+    fn theme() -> Theme {
+        let mut t = Theme::test_default();
+        t.ui.links.normal = Blue.normal();
+        t.ui.links.multi_link_file = Blue.on(Red);
+        t
     }
 
     #[test]
@@ -56,7 +45,7 @@ pub mod test {
 
         assert_eq!(
             expected,
-            stati.render(&TestColours, &locale::Numeric::english())
+            stati.render(&theme(), &locale::Numeric::english())
         );
     }
 
@@ -74,7 +63,7 @@ pub mod test {
 
         assert_eq!(
             expected,
-            stati.render(&TestColours, &locale::Numeric::english())
+            stati.render(&theme(), &locale::Numeric::english())
         );
     }
 
@@ -92,7 +81,7 @@ pub mod test {
 
         assert_eq!(
             expected,
-            stati.render(&TestColours, &locale::Numeric::english())
+            stati.render(&theme(), &locale::Numeric::english())
         );
     }
 }

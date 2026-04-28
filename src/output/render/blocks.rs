@@ -1,55 +1,42 @@
-use nu_ansi_term::Style;
-
 use crate::fs::fields as f;
 use crate::output::cell::TextCell;
+use crate::theme::Theme;
 
 impl f::Blocks {
-    pub fn render<C: Colours>(&self, colours: &C) -> TextCell {
+    pub fn render(&self, theme: &Theme) -> TextCell {
         match self {
-            Self::Some(blk) => TextCell::paint(colours.block_count(), blk.to_string()),
-            Self::None => TextCell::blank(colours.no_blocks()),
+            Self::Some(blk) => TextCell::paint(theme.ui.blocks, blk.to_string()),
+            Self::None => TextCell::blank(theme.ui.punctuation),
         }
     }
-}
-
-pub trait Colours {
-    fn block_count(&self) -> Style;
-    fn no_blocks(&self) -> Style;
 }
 
 #[cfg(test)]
 pub mod test {
     use nu_ansi_term::Color::*;
-    use nu_ansi_term::Style;
 
-    use super::Colours;
     use crate::fs::fields as f;
     use crate::output::cell::TextCell;
+    use crate::theme::Theme;
 
-    struct TestColours;
-
-    impl Colours for TestColours {
-        fn block_count(&self) -> Style {
-            Red.blink()
-        }
-        fn no_blocks(&self) -> Style {
-            Green.italic()
-        }
+    fn theme() -> Theme {
+        let mut t = Theme::test_default();
+        t.ui.blocks = Red.blink();
+        t.ui.punctuation = Green.italic();
+        t
     }
 
     #[test]
     fn blocklessness() {
         let blox = f::Blocks::None;
         let expected = TextCell::blank(Green.italic());
-
-        assert_eq!(expected, blox.render(&TestColours));
+        assert_eq!(expected, blox.render(&theme()));
     }
 
     #[test]
     fn blockfulity() {
         let blox = f::Blocks::Some(3005);
         let expected = TextCell::paint_str(Red.blink(), "3005");
-
-        assert_eq!(expected, blox.render(&TestColours));
+        assert_eq!(expected, blox.render(&theme()));
     }
 }

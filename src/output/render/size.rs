@@ -1,15 +1,14 @@
 use locale::Numeric as NumericLocale;
-use nu_ansi_term::Style;
-use unit_prefix::Prefix;
 
 use crate::fs::fields as f;
 use crate::output::cell::{DisplayWidth, TextCell};
 use crate::output::table::SizeFormat;
+use crate::theme::Theme;
 
 impl f::Size {
-    pub fn render<C: Colours>(
+    pub fn render(
         self,
-        colours: &C,
+        theme: &Theme,
         size_format: SizeFormat,
         numerics: &NumericLocale,
     ) -> TextCell {
@@ -17,8 +16,8 @@ impl f::Size {
 
         let size = match self {
             Self::Some(s) => s,
-            Self::None => return TextCell::blank(colours.no_size()),
-            Self::DeviceIDs(ref ids) => return ids.render(colours),
+            Self::None => return TextCell::blank(theme.ui.punctuation),
+            Self::DeviceIDs(ref ids) => return ids.render(theme),
         };
 
         let result = match size_format {
@@ -34,13 +33,13 @@ impl f::Size {
                 // But format the number directly using the locale.
                 let string = numerics.format_int(size);
 
-                return TextCell::paint(colours.size(size, prefix), string);
+                return TextCell::paint(theme.size_style(size, prefix), string);
             }
         };
 
         let (prefix, n) = match result {
             NumberPrefix::Standalone(b) => {
-                return TextCell::paint(colours.size(size, None), numerics.format_int(b));
+                return TextCell::paint(theme.size_style(size, None), numerics.format_int(b));
             }
             NumberPrefix::Prefixed(p, n) => (p, n),
         };
@@ -56,8 +55,8 @@ impl f::Size {
             // symbol is guaranteed to be ASCII since unit prefixes are hardcoded.
             width: DisplayWidth::from(&*number) + symbol.len(),
             contents: vec![
-                colours.size(size, Some(prefix)).paint(number),
-                colours.unit(Some(prefix)).paint(symbol),
+                theme.size_style(size, Some(prefix)).paint(number),
+                theme.unit_style(Some(prefix)).paint(symbol),
             ]
             .into(),
         }
@@ -65,74 +64,60 @@ impl f::Size {
 }
 
 impl f::DeviceIDs {
-    fn render<C: Colours>(self, colours: &C) -> TextCell {
+    fn render(self, theme: &Theme) -> TextCell {
         let major = self.major.to_string();
         let minor = self.minor.to_string();
 
         TextCell {
             width: DisplayWidth::from(major.len() + 1 + minor.len()),
             contents: vec![
-                colours.major().paint(major),
-                colours.comma().paint(","),
-                colours.minor().paint(minor),
+                theme.ui.size.major.paint(major),
+                theme.ui.punctuation.paint(","),
+                theme.ui.size.minor.paint(minor),
             ]
             .into(),
         }
     }
 }
 
-pub trait Colours {
-    /// Pick the style for a file-size number.
-    ///
-    /// `bytes` is the raw file size; `prefix` is the unit prefix
-    /// chosen by the caller for display.  Discrete-tier themes
-    /// only need `prefix`; smooth-gradient themes use `bytes`
-    /// for a LUT lookup keyed on log-scaled size.  In
-    /// `JustBytes` mode the caller still passes the prefix so
-    /// the discrete fallback lands on the right tier.
-    fn size(&self, bytes: u64, prefix: Option<Prefix>) -> Style;
-    fn unit(&self, prefix: Option<Prefix>) -> Style;
-    fn no_size(&self) -> Style;
-
-    fn major(&self) -> Style;
-    fn comma(&self) -> Style;
-    fn minor(&self) -> Style;
-}
-
 #[cfg(test)]
 pub mod test {
-    use super::Colours;
     use crate::fs::fields as f;
     use crate::output::cell::{DisplayWidth, TextCell};
     use crate::output::table::SizeFormat;
+    use crate::theme::Theme;
 
     use locale::Numeric as NumericLocale;
     use nu_ansi_term::Color::*;
-    use nu_ansi_term::Style;
-    use unit_prefix::Prefix;
 
-    struct TestColours;
+    fn theme() -> Theme {
+        let mut t = Theme::test_default();
+        // size_style() returns number_byte for None, number_kilo for
+        // Kilo/Kibi, and so on; with all five tiers set to Fixed(66)
+        // we mirror the previous "TestColours::size always returns
+        // Fixed(66)" behaviour.
+        let size_style = Fixed(66).normal();
+        t.ui.size.number_byte = size_style;
+        t.ui.size.number_kilo = size_style;
+        t.ui.size.number_mega = size_style;
+        t.ui.size.number_giga = size_style;
+        t.ui.size.number_huge = size_style;
+        let unit_style = Fixed(77).bold();
+        t.ui.size.unit_byte = unit_style;
+        t.ui.size.unit_kilo = unit_style;
+        t.ui.size.unit_mega = unit_style;
+        t.ui.size.unit_giga = unit_style;
+        t.ui.size.unit_huge = unit_style;
+        t.ui.punctuation = Black.italic();
+        t.ui.size.major = Blue.on(Red);
+        t.ui.size.minor = Cyan.on(Yellow);
+        t
+    }
 
-    impl Colours for TestColours {
-        fn size(&self, _bytes: u64, _prefix: Option<Prefix>) -> Style {
-            Fixed(66).normal()
-        }
-        fn unit(&self, _prefix: Option<Prefix>) -> Style {
-            Fixed(77).bold()
-        }
-        fn no_size(&self) -> Style {
-            Black.italic()
-        }
-
-        fn major(&self) -> Style {
-            Blue.on(Red)
-        }
-        fn comma(&self) -> Style {
-            Green.italic()
-        }
-        fn minor(&self) -> Style {
-            Cyan.on(Yellow)
-        }
+    fn theme_with_punct(punct: nu_ansi_term::Style) -> Theme {
+        let mut t = theme();
+        t.ui.punctuation = punct;
+        t
     }
 
     #[test]
@@ -141,11 +126,7 @@ pub mod test {
         let expected = TextCell::blank(Black.italic());
         assert_eq!(
             expected,
-            directory.render(
-                &TestColours,
-                SizeFormat::JustBytes,
-                &NumericLocale::english()
-            )
+            directory.render(&theme(), SizeFormat::JustBytes, &NumericLocale::english())
         )
     }
 
@@ -160,7 +141,7 @@ pub mod test {
         assert_eq!(
             expected,
             directory.render(
-                &TestColours,
+                &theme(),
                 SizeFormat::DecimalBytes,
                 &NumericLocale::english()
             )
@@ -177,11 +158,7 @@ pub mod test {
 
         assert_eq!(
             expected,
-            directory.render(
-                &TestColours,
-                SizeFormat::BinaryBytes,
-                &NumericLocale::english()
-            )
+            directory.render(&theme(), SizeFormat::BinaryBytes, &NumericLocale::english())
         )
     }
 
@@ -195,16 +172,15 @@ pub mod test {
 
         assert_eq!(
             expected,
-            directory.render(
-                &TestColours,
-                SizeFormat::JustBytes,
-                &NumericLocale::english()
-            )
+            directory.render(&theme(), SizeFormat::JustBytes, &NumericLocale::english())
         )
     }
 
     #[test]
     fn device_ids() {
+        // The comma between major/minor is `theme.ui.punctuation`,
+        // which the original test asserted as `Green.italic()`.
+        let t = theme_with_punct(Green.italic());
         let directory = f::Size::DeviceIDs(f::DeviceIDs {
             major: 10,
             minor: 80,
@@ -221,11 +197,7 @@ pub mod test {
 
         assert_eq!(
             expected,
-            directory.render(
-                &TestColours,
-                SizeFormat::JustBytes,
-                &NumericLocale::english()
-            )
+            directory.render(&t, SizeFormat::JustBytes, &NumericLocale::english())
         )
     }
 }

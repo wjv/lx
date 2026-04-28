@@ -407,17 +407,15 @@ impl<'a> Render<'a> {
     }
 
     fn render_error(&self, error: &io::Error, tree: TreeParams, path: Option<PathBuf>) -> Row {
-        use crate::output::file_name::Colours;
-
         let error_message = if let Some(path) = path {
             format!("<{}: {}>", path.display(), error)
         } else {
             format!("<{error}>")
         };
 
-        // TODO: broken_symlink() doesn’t quite seem like the right name for
-        // the style that’s being used here. Maybe split it in two?
-        let name = TextCell::paint(self.theme.broken_symlink(), error_message);
+        // TODO: `broken_symlink` doesn’t quite seem like the right name for
+        // the style that’s being used here.  Maybe split it in two?
+        let name = TextCell::paint(self.theme.ui.broken_symlink, error_message);
         Row {
             cells: None,
             name,

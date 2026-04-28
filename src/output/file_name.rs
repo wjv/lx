@@ -7,7 +7,7 @@ use crate::fs::{File, FileTarget};
 use crate::output::cell::TextCellContents;
 use crate::output::escape;
 use crate::output::icons::{icon_for_file, iconify_style};
-use crate::output::render::FiletypeColours;
+use crate::theme::{Theme, apply_overlay};
 
 /// Basically a file name factory.
 #[derive(Debug, Copy, Clone)]
@@ -41,14 +41,10 @@ pub enum Quotes {
 impl Options {
     /// Create a new `FileName` that prints the given file’s name, painting it
     /// with the remaining arguments.
-    pub fn for_file<'a, 'dir, C>(
-        self,
-        file: &'a File<'dir>,
-        colours: &'a C,
-    ) -> FileName<'a, 'dir, C> {
+    pub fn for_file<'a, 'dir>(self, file: &'a File<'dir>, theme: &'a Theme) -> FileName<'a, 'dir> {
         FileName {
             file,
-            colours,
+            theme,
             link_style: LinkStyle::JustFilenames,
             options: self,
             target: if file.is_link() {
@@ -99,12 +95,12 @@ pub enum ShowIcons {
 
 /// A **file name** holds all the information necessary to display the name
 /// of the given file. This is used in all of the views.
-pub struct FileName<'a, 'dir, C> {
+pub struct FileName<'a, 'dir> {
     /// A reference to the file that we’re getting the name of.
     file: &'a File<'dir>,
 
-    /// The colours used to paint the file name and its surrounding text.
-    colours: &'a C,
+    /// The theme used to paint the file name and its surrounding text.
+    theme: &'a Theme,
 
     /// The file that this file points to if it’s a link.
     target: Option<FileTarget<'dir>>, // todo: remove?
@@ -115,16 +111,13 @@ pub struct FileName<'a, 'dir, C> {
     options: Options,
 }
 
-impl<C> FileName<'_, '_, C> {
+impl FileName<'_, '_> {
     /// Sets the flag on this file name to display link targets with an
     /// arrow followed by their path.
     pub fn with_link_paths(mut self) -> Self {
         self.link_style = LinkStyle::FullLinkPaths;
         self
     }
-}
-
-impl<C: Colours> FileName<'_, '_, C> {
     /// Paints the name of the file using the colours, resulting in a vector
     /// of coloured cells that can be printed to the terminal.
     ///
@@ -204,7 +197,7 @@ impl<C: Colours> FileName<'_, '_, C> {
             match target {
                 FileTarget::Ok(target) => {
                     bits.push(Style::default().paint(" "));
-                    bits.push(self.colours.normal_arrow().paint("->"));
+                    bits.push(self.theme.ui.punctuation.paint("->"));
                     bits.push(Style::default().paint(" "));
 
                     if let Some(parent) = target.path.parent() {
@@ -222,7 +215,7 @@ impl<C: Colours> FileName<'_, '_, C> {
 
                         let target_name = FileName {
                             file: target,
-                            colours: self.colours,
+                            theme: self.theme,
                             target: None,
                             link_style: LinkStyle::FullLinkPaths,
                             options: target_options,
@@ -242,14 +235,20 @@ impl<C: Colours> FileName<'_, '_, C> {
 
                 FileTarget::Broken(broken_path) => {
                     bits.push(Style::default().paint(" "));
-                    bits.push(self.colours.broken_symlink().paint("->"));
+                    bits.push(self.theme.ui.broken_symlink.paint("->"));
                     bits.push(Style::default().paint(" "));
 
                     escape(
                         broken_path.display().to_string(),
                         &mut bits,
-                        self.colours.broken_filename(),
-                        self.colours.broken_control_char(),
+                        apply_overlay(
+                            self.theme.ui.broken_symlink,
+                            self.theme.ui.broken_path_overlay,
+                        ),
+                        apply_overlay(
+                            self.theme.ui.control_char,
+                            self.theme.ui.broken_path_overlay,
+                        ),
                     );
                 }
 
@@ -283,20 +282,22 @@ impl<C: Colours> FileName<'_, '_, C> {
 
         if coconut == 1 && parent.has_root() {
             bits.push(
-                self.colours
-                    .symlink_path()
+                self.theme
+                    .ui
+                    .symlink_path
                     .paint(std::path::MAIN_SEPARATOR.to_string()),
             );
         } else if coconut >= 1 {
             escape(
                 parent.to_string_lossy().to_string(),
                 bits,
-                self.colours.symlink_path(),
-                self.colours.control_char(),
+                self.theme.ui.symlink_path,
+                self.theme.ui.control_char,
             );
             bits.push(
-                self.colours
-                    .symlink_path()
+                self.theme
+                    .ui
+                    .symlink_path
                     .paint(std::path::MAIN_SEPARATOR.to_string()),
             );
         }
@@ -350,7 +351,7 @@ impl<C: Colours> FileName<'_, '_, C> {
             self.file.name.clone(),
             &mut bits,
             file_style,
-            self.colours.control_char(),
+            self.theme.ui.control_char,
         );
 
         bits
@@ -365,56 +366,27 @@ impl<C: Colours> FileName<'_, '_, C> {
             && let Some(ref target) = self.target
             && target.is_broken()
         {
-            return self.colours.broken_symlink();
+            return self.theme.ui.broken_symlink;
         }
 
+        let kinds = &self.theme.ui.filekinds;
         match self.file {
-            f if f.is_directory() => self.colours.directory(),
+            f if f.is_directory() => kinds.directory,
             #[cfg(unix)]
-            f if f.is_executable_file() => self.colours.executable_file(),
-            f if f.is_link() => self.colours.symlink(),
+            f if f.is_executable_file() => kinds.executable,
+            f if f.is_link() => kinds.symlink,
             #[cfg(unix)]
-            f if f.is_pipe() => self.colours.pipe(),
+            f if f.is_pipe() => kinds.pipe,
             #[cfg(unix)]
-            f if f.is_block_device() => self.colours.block_device(),
+            f if f.is_block_device() => kinds.block_device,
             #[cfg(unix)]
-            f if f.is_char_device() => self.colours.char_device(),
+            f if f.is_char_device() => kinds.char_device,
             #[cfg(unix)]
-            f if f.is_socket() => self.colours.socket(),
-            f if !f.is_file() => self.colours.special(),
-            _ => self.colours.colour_file(self.file),
+            f if f.is_socket() => kinds.socket,
+            f if !f.is_file() => kinds.special,
+            _ => self.theme.colour_file(self.file),
         }
     }
-}
-
-/// The set of colours that are needed to paint a file name.
-pub trait Colours: FiletypeColours {
-    /// The style to paint the path of a symlink’s target, up to but not
-    /// including the file’s name.
-    fn symlink_path(&self) -> Style;
-
-    /// The style to paint the arrow between a link and its target.
-    fn normal_arrow(&self) -> Style;
-
-    /// The style to paint the filenames of broken links in views that don’t
-    /// show link targets, and the style to paint the *arrow* between the link
-    /// and its target in views that *do* show link targets.
-    fn broken_symlink(&self) -> Style;
-
-    /// The style to paint the entire filename of a broken link.
-    fn broken_filename(&self) -> Style;
-
-    /// The style to paint a non-displayable control character in a filename.
-    fn control_char(&self) -> Style;
-
-    /// The style to paint a non-displayable control character in a filename,
-    /// when the filename is being displayed as a broken link target.
-    fn broken_control_char(&self) -> Style;
-
-    /// The style to paint a file that has its executable bit set.
-    fn executable_file(&self) -> Style;
-
-    fn colour_file(&self, file: &File<'_>) -> Style;
 }
 
 /// Generate a string made of `n` spaces.

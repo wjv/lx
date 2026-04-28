@@ -1,8 +1,6 @@
 use nu_ansi_term::Style;
 
 use crate::fs::File;
-use crate::output::file_name::Colours as FileNameColours;
-use crate::output::render;
 
 mod ui_styles;
 pub use self::ui_styles::{DateAge, UiStyles};
@@ -123,6 +121,19 @@ pub struct Definitions {
 pub struct Theme {
     pub ui: UiStyles,
     pub exts: Box<dyn FileColours>,
+}
+
+impl Theme {
+    /// Minimal `Theme` for tests: default `UiStyles` (every field
+    /// `Style::default()`) and a no-op `FileColours`.  Tests
+    /// override the specific `theme.ui.*` fields they care about
+    /// after construction.
+    pub fn test_default() -> Self {
+        Self {
+            ui: UiStyles::default(),
+            exts: Box::new(NoFileColours),
+        }
+    }
 }
 
 impl Options {
@@ -744,168 +755,14 @@ impl ExtensionMappings {
     }
 }
 
-impl render::BlocksColours for Theme {
-    fn block_count(&self) -> Style {
-        self.ui.blocks
-    }
-    fn no_blocks(&self) -> Style {
-        self.ui.punctuation
-    }
-}
-
-impl render::FiletypeColours for Theme {
-    fn normal(&self) -> Style {
-        self.ui.filekinds.normal
-    }
-    fn directory(&self) -> Style {
-        self.ui.filekinds.directory
-    }
-    fn pipe(&self) -> Style {
-        self.ui.filekinds.pipe
-    }
-    fn symlink(&self) -> Style {
-        self.ui.filekinds.symlink
-    }
-    fn block_device(&self) -> Style {
-        self.ui.filekinds.block_device
-    }
-    fn char_device(&self) -> Style {
-        self.ui.filekinds.char_device
-    }
-    fn socket(&self) -> Style {
-        self.ui.filekinds.socket
-    }
-    fn special(&self) -> Style {
-        self.ui.filekinds.special
-    }
-}
-
-impl render::VcsColours for Theme {
-    fn not_modified(&self) -> Style {
-        self.ui.punctuation
-    }
-    fn added(&self) -> Style {
-        self.ui.vcs.new
-    }
-    fn modified(&self) -> Style {
-        self.ui.vcs.modified
-    }
-    fn deleted(&self) -> Style {
-        self.ui.vcs.deleted
-    }
-    fn renamed(&self) -> Style {
-        self.ui.vcs.renamed
-    }
-    fn type_change(&self) -> Style {
-        self.ui.vcs.typechange
-    }
-    fn ignored(&self) -> Style {
-        self.ui.vcs.ignored
-    }
-    fn conflicted(&self) -> Style {
-        self.ui.vcs.conflicted
-    }
-}
-
-impl render::VcsReposColours for Theme {
-    fn not_a_repo(&self) -> Style {
-        self.ui.punctuation
-    }
-    fn clean_repo(&self) -> Style {
-        self.ui.vcs.new
-    } // green-ish
-    fn dirty_repo(&self) -> Style {
-        self.ui.vcs.modified
-    } // yellow-ish
-    fn jj_repo(&self) -> Style {
-        self.ui.vcs.new
-    } // green-ish (neutral)
-}
-
-#[cfg(unix)]
-impl render::GroupColours for Theme {
-    fn yours(&self) -> Style {
-        self.ui.users.group_yours
-    }
-    fn member(&self) -> Style {
-        self.ui.users.group_member
-    }
-    fn not_yours(&self) -> Style {
-        self.ui.users.group_not_yours
-    }
-
-    fn gid_yours(&self) -> Style {
-        self.ui.users.gid_yours
-    }
-    fn gid_member(&self) -> Style {
-        self.ui.users.gid_member
-    }
-    fn gid_not_yours(&self) -> Style {
-        self.ui.users.gid_not_yours
-    }
-}
-
-impl render::LinksColours for Theme {
-    fn normal(&self) -> Style {
-        self.ui.links.normal
-    }
-    fn multi_link_file(&self) -> Style {
-        self.ui.links.multi_link_file
-    }
-}
-
-impl render::PermissionsColours for Theme {
-    fn dash(&self) -> Style {
-        self.ui.punctuation
-    }
-    fn user_read(&self) -> Style {
-        self.ui.perms.user_read
-    }
-    fn user_write(&self) -> Style {
-        self.ui.perms.user_write
-    }
-    fn user_execute_file(&self) -> Style {
-        self.ui.perms.user_execute_file
-    }
-    fn user_execute_other(&self) -> Style {
-        self.ui.perms.user_execute_other
-    }
-    fn group_read(&self) -> Style {
-        self.ui.perms.group_read
-    }
-    fn group_write(&self) -> Style {
-        self.ui.perms.group_write
-    }
-    fn group_execute(&self) -> Style {
-        self.ui.perms.group_execute
-    }
-    fn other_read(&self) -> Style {
-        self.ui.perms.other_read
-    }
-    fn other_write(&self) -> Style {
-        self.ui.perms.other_write
-    }
-    fn other_execute(&self) -> Style {
-        self.ui.perms.other_execute
-    }
-    fn special_user_file(&self) -> Style {
-        self.ui.perms.special_user_file
-    }
-    fn special_other(&self) -> Style {
-        self.ui.perms.special_other
-    }
-    fn attribute(&self) -> Style {
-        self.ui.perms.attribute
-    }
-}
-
-impl render::SizeColours for Theme {
-    fn size(&self, bytes: u64, prefix: Option<unit_prefix::Prefix>) -> Style {
+impl Theme {
+    /// Style for a file-size number, given the raw byte count and
+    /// the unit prefix chosen for display.  Smooth-gradient themes
+    /// override the discrete tier lookup with a position-based
+    /// LUT bucket.
+    pub fn size_style(&self, bytes: u64, prefix: Option<unit_prefix::Prefix>) -> Style {
         use unit_prefix::Prefix::*;
 
-        // Smooth gradient: look up the LUT bucket when the
-        // theme has one.  Otherwise fall through to the
-        // discrete per-tier match below.
         if let Some(lut) = self.ui.smooth_luts.size.as_deref() {
             let position = smooth::size_to_position(bytes);
             let bucket = (position * 255.0).round() as usize;
@@ -921,7 +778,8 @@ impl render::SizeColours for Theme {
         }
     }
 
-    fn unit(&self, prefix: Option<unit_prefix::Prefix>) -> Style {
+    /// Style for the unit suffix on a file size (`K`, `Mi`, ...).
+    pub fn unit_style(&self, prefix: Option<unit_prefix::Prefix>) -> Style {
         use unit_prefix::Prefix::*;
 
         match prefix {
@@ -932,62 +790,12 @@ impl render::SizeColours for Theme {
             None => self.ui.size.unit_byte,
         }
     }
-
-    fn no_size(&self) -> Style {
-        self.ui.punctuation
-    }
-    fn major(&self) -> Style {
-        self.ui.size.major
-    }
-    fn comma(&self) -> Style {
-        self.ui.punctuation
-    }
-    fn minor(&self) -> Style {
-        self.ui.size.minor
-    }
 }
 
-#[cfg(unix)]
-impl render::UserColours for Theme {
-    fn you(&self) -> Style {
-        self.ui.users.user_you
-    }
-    fn someone_else(&self) -> Style {
-        self.ui.users.user_someone_else
-    }
-
-    fn uid_you(&self) -> Style {
-        self.ui.users.uid_you
-    }
-    fn uid_someone_else(&self) -> Style {
-        self.ui.users.uid_someone_else
-    }
-}
-
-impl FileNameColours for Theme {
-    fn normal_arrow(&self) -> Style {
-        self.ui.punctuation
-    }
-    fn broken_symlink(&self) -> Style {
-        self.ui.broken_symlink
-    }
-    fn broken_filename(&self) -> Style {
-        apply_overlay(self.ui.broken_symlink, self.ui.broken_path_overlay)
-    }
-    fn broken_control_char(&self) -> Style {
-        apply_overlay(self.ui.control_char, self.ui.broken_path_overlay)
-    }
-    fn control_char(&self) -> Style {
-        self.ui.control_char
-    }
-    fn symlink_path(&self) -> Style {
-        self.ui.symlink_path
-    }
-    fn executable_file(&self) -> Style {
-        self.ui.filekinds.executable
-    }
-
-    fn colour_file(&self, file: &File<'_>) -> Style {
+impl Theme {
+    /// Style to paint a file's name based on its type and any
+    /// extension-based override from the active style.
+    pub fn colour_file(&self, file: &File<'_>) -> Style {
         self.exts
             .colour_file(file)
             .unwrap_or(self.ui.filekinds.normal)
@@ -1006,7 +814,7 @@ impl FileNameColours for Theme {
 /// character”, there are styles for “link path”, “control character”, and
 /// “broken link overlay”, the latter of which is just set to override the
 /// underline attribute on the other two.
-fn apply_overlay(mut base: Style, overlay: Style) -> Style {
+pub fn apply_overlay(mut base: Style, overlay: Style) -> Style {
     if let Some(fg) = overlay.foreground {
         base.foreground = Some(fg);
     }
@@ -1126,7 +934,6 @@ mod customs_test {
 #[cfg(unix)]
 mod uid_gid_theme_test {
     use super::*;
-    use crate::output::render::UserColours;
     use crate::theme::ui_styles::UiStyles;
     use nu_ansi_term::Color::*;
 
@@ -1138,16 +945,13 @@ mod uid_gid_theme_test {
     }
 
     #[test]
-    fn theme_trait_returns_direct_fields() {
+    fn theme_exposes_uid_styles() {
         let mut ui = UiStyles::default_theme();
         ui.users.uid_you = Red.normal();
         ui.users.uid_someone_else = Green.normal();
 
         let theme = theme_with(ui);
-        assert_eq!(<Theme as UserColours>::uid_you(&theme), Red.normal());
-        assert_eq!(
-            <Theme as UserColours>::uid_someone_else(&theme),
-            Green.normal()
-        );
+        assert_eq!(theme.ui.users.uid_you, Red.normal());
+        assert_eq!(theme.ui.users.uid_someone_else, Green.normal());
     }
 }

@@ -1,12 +1,12 @@
-use nu_ansi_term::Style;
-
 use crate::fs::fields as f;
 use crate::output::cell::TextCell;
+use crate::theme::Theme;
 
 impl f::VcsRepoStatus {
-    pub fn render(&self, colours: &dyn Colours) -> TextCell {
+    pub fn render(&self, theme: &Theme) -> TextCell {
+        let vcs = &theme.ui.vcs;
         match self {
-            Self::None => TextCell::paint(colours.not_a_repo(), "-".to_string()),
+            Self::None => TextCell::paint(theme.ui.punctuation, "-".to_string()),
             Self::Repo {
                 backend,
                 clean,
@@ -21,11 +21,12 @@ impl f::VcsRepoStatus {
                     "?"
                 };
                 let status = if is_jj {
-                    colours.jj_repo()
+                    // jj uses the green "new" colour as a neutral indicator.
+                    vcs.new
                 } else if *clean {
-                    colours.clean_repo()
+                    vcs.new
                 } else {
-                    colours.dirty_repo()
+                    vcs.modified
                 };
 
                 if let Some(name) = branch {
@@ -36,11 +37,4 @@ impl f::VcsRepoStatus {
             }
         }
     }
-}
-
-pub trait Colours {
-    fn not_a_repo(&self) -> Style;
-    fn clean_repo(&self) -> Style;
-    fn dirty_repo(&self) -> Style;
-    fn jj_repo(&self) -> Style;
 }

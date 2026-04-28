@@ -63,6 +63,12 @@ All notable changes to lx are documented here. lx is forked from
   through the registry, replacing a ~165-line match.  The
   registry also drives the new compiled-in `--dump-theme` and
   the family-grouped output.
+- **Dropped the `Colours` trait family** in `output/render/`.
+  The nine renderer traits and their ~250 lines of pass-through
+  impls on `Theme` are gone; column renderers now read
+  `theme.ui.<sub>.<field>` directly or call inherent methods
+  (`theme.size_style(bytes, prefix)`, `theme.colour_file(file)`).
+  Net 437 lines removed.  No behaviour change.
 - New `render_style_to_lx` helper in `theme/lsc.rs` is the
   inverse of `parse_style`, with unit tests covering the
   round-trip for basic colours, RGB hex, palette codes, and

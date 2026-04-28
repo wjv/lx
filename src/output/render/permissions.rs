@@ -2,19 +2,19 @@ use nu_ansi_term::{AnsiString, Style};
 
 use crate::fs::fields as f;
 use crate::output::cell::{DisplayWidth, TextCell};
-use crate::output::render::FiletypeColours;
+use crate::theme::Theme;
 
 impl f::PermissionsPlus {
     #[cfg(unix)]
-    pub fn render<C: Colours + FiletypeColours>(&self, colours: &C) -> TextCell {
-        let mut chars = vec![self.file_type.render(colours)];
+    pub fn render(&self, theme: &Theme) -> TextCell {
+        let mut chars = vec![self.file_type.render(theme)];
         chars.extend(
             self.permissions
-                .render(colours, self.file_type.is_regular_file()),
+                .render(theme, self.file_type.is_regular_file()),
         );
 
         if self.xattrs {
-            chars.push(colours.attribute().paint("@"));
+            chars.push(theme.ui.perms.attribute.paint("@"));
         }
 
         // As these are all ASCII characters, we can guarantee that they’re
@@ -27,9 +27,9 @@ impl f::PermissionsPlus {
     }
 
     #[cfg(windows)]
-    pub fn render<C: Colours + FiletypeColours>(&self, colours: &C) -> TextCell {
-        let mut chars = vec![self.attributes.render_type(colours)];
-        chars.extend(self.attributes.render(colours));
+    pub fn render(&self, theme: &Theme) -> TextCell {
+        let mut chars = vec![self.attributes.render_type(theme)];
+        chars.extend(self.attributes.render(theme));
 
         TextCell {
             width: DisplayWidth::from(chars.len()),
@@ -39,173 +39,125 @@ impl f::PermissionsPlus {
 }
 
 impl f::Permissions {
-    pub fn render<C: Colours>(
-        &self,
-        colours: &C,
-        is_regular_file: bool,
-    ) -> Vec<AnsiString<'static>> {
+    pub fn render(&self, theme: &Theme, is_regular_file: bool) -> Vec<AnsiString<'static>> {
+        let perms = &theme.ui.perms;
+        let dash = theme.ui.punctuation;
         let bit = |bit, chr: &'static str, style: Style| {
             if bit {
                 style.paint(chr)
             } else {
-                colours.dash().paint("-")
+                dash.paint("-")
             }
         };
 
         vec![
-            bit(self.user_read, "r", colours.user_read()),
-            bit(self.user_write, "w", colours.user_write()),
-            self.user_execute_bit(colours, is_regular_file),
-            bit(self.group_read, "r", colours.group_read()),
-            bit(self.group_write, "w", colours.group_write()),
-            self.group_execute_bit(colours),
-            bit(self.other_read, "r", colours.other_read()),
-            bit(self.other_write, "w", colours.other_write()),
-            self.other_execute_bit(colours),
+            bit(self.user_read, "r", perms.user_read),
+            bit(self.user_write, "w", perms.user_write),
+            self.user_execute_bit(theme, is_regular_file),
+            bit(self.group_read, "r", perms.group_read),
+            bit(self.group_write, "w", perms.group_write),
+            self.group_execute_bit(theme),
+            bit(self.other_read, "r", perms.other_read),
+            bit(self.other_write, "w", perms.other_write),
+            self.other_execute_bit(theme),
         ]
     }
 
-    fn user_execute_bit<C: Colours>(
-        &self,
-        colours: &C,
-        is_regular_file: bool,
-    ) -> AnsiString<'static> {
+    fn user_execute_bit(&self, theme: &Theme, is_regular_file: bool) -> AnsiString<'static> {
+        let perms = &theme.ui.perms;
+        let dash = theme.ui.punctuation;
         match (self.user_execute, self.setuid, is_regular_file) {
-            (false, false, _) => colours.dash().paint("-"),
-            (true, false, false) => colours.user_execute_other().paint("x"),
-            (true, false, true) => colours.user_execute_file().paint("x"),
-            (false, true, _) => colours.special_other().paint("S"),
-            (true, true, false) => colours.special_other().paint("s"),
-            (true, true, true) => colours.special_user_file().paint("s"),
+            (false, false, _) => dash.paint("-"),
+            (true, false, false) => perms.user_execute_other.paint("x"),
+            (true, false, true) => perms.user_execute_file.paint("x"),
+            (false, true, _) => perms.special_other.paint("S"),
+            (true, true, false) => perms.special_other.paint("s"),
+            (true, true, true) => perms.special_user_file.paint("s"),
         }
     }
 
-    fn group_execute_bit<C: Colours>(&self, colours: &C) -> AnsiString<'static> {
+    fn group_execute_bit(&self, theme: &Theme) -> AnsiString<'static> {
+        let perms = &theme.ui.perms;
+        let dash = theme.ui.punctuation;
         match (self.group_execute, self.setgid) {
-            (false, false) => colours.dash().paint("-"),
-            (true, false) => colours.group_execute().paint("x"),
-            (false, true) => colours.special_other().paint("S"),
-            (true, true) => colours.special_other().paint("s"),
+            (false, false) => dash.paint("-"),
+            (true, false) => perms.group_execute.paint("x"),
+            (false, true) => perms.special_other.paint("S"),
+            (true, true) => perms.special_other.paint("s"),
         }
     }
 
-    fn other_execute_bit<C: Colours>(&self, colours: &C) -> AnsiString<'static> {
+    fn other_execute_bit(&self, theme: &Theme) -> AnsiString<'static> {
+        let perms = &theme.ui.perms;
+        let dash = theme.ui.punctuation;
         match (self.other_execute, self.sticky) {
-            (false, false) => colours.dash().paint("-"),
-            (true, false) => colours.other_execute().paint("x"),
-            (false, true) => colours.special_other().paint("T"),
-            (true, true) => colours.special_other().paint("t"),
+            (false, false) => dash.paint("-"),
+            (true, false) => perms.other_execute.paint("x"),
+            (false, true) => perms.special_other.paint("T"),
+            (true, true) => perms.special_other.paint("t"),
         }
     }
 }
 
 #[cfg(windows)]
 impl f::Attributes {
-    pub fn render<C: Colours + FiletypeColours>(&self, colours: &C) -> Vec<AnsiString<'static>> {
+    pub fn render(&self, theme: &Theme) -> Vec<AnsiString<'static>> {
+        let perms = &theme.ui.perms;
+        let dash = theme.ui.punctuation;
         let bit = |bit, chr: &'static str, style: Style| {
             if bit {
                 style.paint(chr)
             } else {
-                colours.dash().paint("-")
+                dash.paint("-")
             }
         };
 
         vec![
-            bit(self.archive, "a", colours.normal()),
-            bit(self.readonly, "r", colours.user_read()),
-            bit(self.hidden, "h", colours.special_user_file()),
-            bit(self.system, "s", colours.special_other()),
+            bit(self.archive, "a", theme.ui.filekinds.normal),
+            bit(self.readonly, "r", perms.user_read),
+            bit(self.hidden, "h", perms.special_user_file),
+            bit(self.system, "s", perms.special_other),
         ]
     }
 
-    pub fn render_type<C: Colours + FiletypeColours>(&self, colours: &C) -> AnsiString<'static> {
+    pub fn render_type(&self, theme: &Theme) -> AnsiString<'static> {
+        let kinds = &theme.ui.filekinds;
         if self.reparse_point {
-            colours.pipe().paint("l")
+            kinds.pipe.paint("l")
         } else if self.directory {
-            colours.directory().paint("d")
+            kinds.directory.paint("d")
         } else {
-            colours.dash().paint("-")
+            theme.ui.punctuation.paint("-")
         }
     }
-}
-
-pub trait Colours {
-    fn dash(&self) -> Style;
-
-    fn user_read(&self) -> Style;
-    fn user_write(&self) -> Style;
-    fn user_execute_file(&self) -> Style;
-    fn user_execute_other(&self) -> Style;
-
-    fn group_read(&self) -> Style;
-    fn group_write(&self) -> Style;
-    fn group_execute(&self) -> Style;
-
-    fn other_read(&self) -> Style;
-    fn other_write(&self) -> Style;
-    fn other_execute(&self) -> Style;
-
-    fn special_user_file(&self) -> Style;
-    fn special_other(&self) -> Style;
-
-    fn attribute(&self) -> Style;
 }
 
 #[cfg(test)]
 #[allow(unused_results)]
 pub mod test {
-    use super::Colours;
     use crate::fs::fields as f;
     use crate::output::cell::TextCellContents;
+    use crate::theme::Theme;
 
     use nu_ansi_term::Color::*;
-    use nu_ansi_term::Style;
 
-    struct TestColours;
-
-    impl Colours for TestColours {
-        fn dash(&self) -> Style {
-            Fixed(11).normal()
-        }
-        fn user_read(&self) -> Style {
-            Fixed(101).normal()
-        }
-        fn user_write(&self) -> Style {
-            Fixed(102).normal()
-        }
-        fn user_execute_file(&self) -> Style {
-            Fixed(103).normal()
-        }
-        fn user_execute_other(&self) -> Style {
-            Fixed(113).normal()
-        }
-        fn group_read(&self) -> Style {
-            Fixed(104).normal()
-        }
-        fn group_write(&self) -> Style {
-            Fixed(105).normal()
-        }
-        fn group_execute(&self) -> Style {
-            Fixed(106).normal()
-        }
-        fn other_read(&self) -> Style {
-            Fixed(107).normal()
-        }
-        fn other_write(&self) -> Style {
-            Fixed(108).normal()
-        }
-        fn other_execute(&self) -> Style {
-            Fixed(109).normal()
-        }
-        fn special_user_file(&self) -> Style {
-            Fixed(110).normal()
-        }
-        fn special_other(&self) -> Style {
-            Fixed(111).normal()
-        }
-        fn attribute(&self) -> Style {
-            Fixed(112).normal()
-        }
+    fn theme() -> Theme {
+        let mut t = Theme::test_default();
+        t.ui.punctuation = Fixed(11).normal();
+        t.ui.perms.user_read = Fixed(101).normal();
+        t.ui.perms.user_write = Fixed(102).normal();
+        t.ui.perms.user_execute_file = Fixed(103).normal();
+        t.ui.perms.user_execute_other = Fixed(113).normal();
+        t.ui.perms.group_read = Fixed(104).normal();
+        t.ui.perms.group_write = Fixed(105).normal();
+        t.ui.perms.group_execute = Fixed(106).normal();
+        t.ui.perms.other_read = Fixed(107).normal();
+        t.ui.perms.other_write = Fixed(108).normal();
+        t.ui.perms.other_execute = Fixed(109).normal();
+        t.ui.perms.special_user_file = Fixed(110).normal();
+        t.ui.perms.special_other = Fixed(111).normal();
+        t.ui.perms.attribute = Fixed(112).normal();
+        t
     }
 
     #[test]
@@ -237,7 +189,7 @@ pub mod test {
             Fixed(11).paint("-"),
         ]);
 
-        assert_eq!(expected, bits.render(&TestColours, false).into())
+        assert_eq!(expected, bits.render(&theme(), false).into())
     }
 
     #[test]
@@ -269,7 +221,7 @@ pub mod test {
             Fixed(109).paint("x"),
         ]);
 
-        assert_eq!(expected, bits.render(&TestColours, true).into())
+        assert_eq!(expected, bits.render(&theme(), true).into())
     }
 
     #[test]
@@ -301,7 +253,7 @@ pub mod test {
             Fixed(111).paint("t"),
         ]);
 
-        assert_eq!(expected, bits.render(&TestColours, true).into())
+        assert_eq!(expected, bits.render(&theme(), true).into())
     }
 
     #[test]
@@ -333,6 +285,6 @@ pub mod test {
             Fixed(111).paint("T"),
         ]);
 
-        assert_eq!(expected, bits.render(&TestColours, true).into())
+        assert_eq!(expected, bits.render(&theme(), true).into())
     }
 }

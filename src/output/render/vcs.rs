@@ -1,17 +1,18 @@
-use nu_ansi_term::{AnsiString, Style};
+use nu_ansi_term::AnsiString;
 
 use crate::fs::fields as f;
 use crate::output::cell::{DisplayWidth, TextCell};
+use crate::theme::Theme;
 
 impl f::VcsFileStatus {
-    pub fn render(self, colours: &dyn Colours, backend: &str) -> TextCell {
+    pub fn render(self, theme: &Theme, backend: &str) -> TextCell {
         if self.staged == self.unstaged {
             // Single-column display (jj, or git with identical status).
             TextCell {
                 width: DisplayWidth::from(2),
                 contents: vec![
-                    self.unstaged.render(colours, backend),
-                    colours.not_modified().paint(" "),
+                    self.unstaged.render(theme, backend),
+                    theme.ui.punctuation.paint(" "),
                 ]
                 .into(),
             }
@@ -20,8 +21,8 @@ impl f::VcsFileStatus {
             TextCell {
                 width: DisplayWidth::from(2),
                 contents: vec![
-                    self.staged.render(colours, backend),
-                    self.unstaged.render(colours, backend),
+                    self.staged.render(theme, backend),
+                    self.unstaged.render(theme, backend),
                 ]
                 .into(),
             }
@@ -30,71 +31,42 @@ impl f::VcsFileStatus {
 }
 
 impl f::VcsStatus {
-    fn render(self, colours: &dyn Colours, backend: &str) -> AnsiString<'static> {
+    fn render(self, theme: &Theme, backend: &str) -> AnsiString<'static> {
+        let vcs = &theme.ui.vcs;
         match self {
-            Self::NotModified => colours.not_modified().paint("-"),
-            Self::New => colours
-                .added()
-                .paint(if backend == "JJ" { "A" } else { "N" }),
-            Self::Modified => colours.modified().paint("M"),
-            Self::Deleted => colours.deleted().paint("D"),
-            Self::Renamed => colours.renamed().paint("R"),
-            Self::TypeChange => colours.type_change().paint("T"),
-            Self::Ignored => colours.ignored().paint("I"),
-            Self::Conflicted => colours.conflicted().paint("!"),
-            Self::Copied => colours.renamed().paint("C"),
-            Self::Untracked => colours.ignored().paint("U"),
+            Self::NotModified => theme.ui.punctuation.paint("-"),
+            Self::New => vcs.new.paint(if backend == "JJ" { "A" } else { "N" }),
+            Self::Modified => vcs.modified.paint("M"),
+            Self::Deleted => vcs.deleted.paint("D"),
+            Self::Renamed => vcs.renamed.paint("R"),
+            Self::TypeChange => vcs.typechange.paint("T"),
+            Self::Ignored => vcs.ignored.paint("I"),
+            Self::Conflicted => vcs.conflicted.paint("!"),
+            Self::Copied => vcs.renamed.paint("C"),
+            Self::Untracked => vcs.ignored.paint("U"),
         }
     }
 }
 
-pub trait Colours {
-    fn not_modified(&self) -> Style;
-    fn added(&self) -> Style;
-    fn modified(&self) -> Style;
-    fn deleted(&self) -> Style;
-    fn renamed(&self) -> Style;
-    fn type_change(&self) -> Style;
-    fn ignored(&self) -> Style;
-    fn conflicted(&self) -> Style;
-}
-
 #[cfg(test)]
 pub mod test {
-    use super::Colours;
     use crate::fs::fields as f;
     use crate::output::cell::{DisplayWidth, TextCell};
+    use crate::theme::Theme;
 
     use nu_ansi_term::Color::*;
-    use nu_ansi_term::Style;
 
-    struct TestColours;
-
-    impl Colours for TestColours {
-        fn not_modified(&self) -> Style {
-            Fixed(90).normal()
-        }
-        fn added(&self) -> Style {
-            Fixed(91).normal()
-        }
-        fn modified(&self) -> Style {
-            Fixed(92).normal()
-        }
-        fn deleted(&self) -> Style {
-            Fixed(93).normal()
-        }
-        fn renamed(&self) -> Style {
-            Fixed(94).normal()
-        }
-        fn type_change(&self) -> Style {
-            Fixed(95).normal()
-        }
-        fn ignored(&self) -> Style {
-            Fixed(96).normal()
-        }
-        fn conflicted(&self) -> Style {
-            Fixed(97).normal()
-        }
+    fn theme() -> Theme {
+        let mut t = Theme::test_default();
+        t.ui.punctuation = Fixed(90).normal();
+        t.ui.vcs.new = Fixed(91).normal();
+        t.ui.vcs.modified = Fixed(92).normal();
+        t.ui.vcs.deleted = Fixed(93).normal();
+        t.ui.vcs.renamed = Fixed(94).normal();
+        t.ui.vcs.typechange = Fixed(95).normal();
+        t.ui.vcs.ignored = Fixed(96).normal();
+        t.ui.vcs.conflicted = Fixed(97).normal();
+        t
     }
 
     #[test]
@@ -110,7 +82,7 @@ pub mod test {
             contents: vec![Fixed(90).paint("-"), Fixed(90).paint(" ")].into(),
         };
 
-        assert_eq!(expected, stati.render(&TestColours, "Git"))
+        assert_eq!(expected, stati.render(&theme(), "Git"))
     }
 
     #[test]
@@ -125,7 +97,7 @@ pub mod test {
             contents: vec![Fixed(91).paint("N"), Fixed(92).paint("M")].into(),
         };
 
-        assert_eq!(expected, stati.render(&TestColours, "Git"))
+        assert_eq!(expected, stati.render(&theme(), "Git"))
     }
 
     #[test]
@@ -140,6 +112,6 @@ pub mod test {
             contents: vec![Fixed(91).paint("A"), Fixed(90).paint(" ")].into(),
         };
 
-        assert_eq!(expected, stati.render(&TestColours, "JJ"))
+        assert_eq!(expected, stati.render(&theme(), "JJ"))
     }
 }

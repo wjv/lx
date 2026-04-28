@@ -6,6 +6,7 @@ use uzers::{Groups, Users};
 
 use crate::fs::fields as f;
 use crate::output::cell::TextCell;
+use crate::theme::Theme;
 
 /// The current process's full group set: effective GID + supplementary
 /// groups.  Cached for the lifetime of the process.
@@ -29,8 +30,8 @@ static MY_GROUPS: LazyLock<HashSet<u32>> = LazyLock::new(|| {
 impl f::Group {
     /// Render the group as its name, falling back to the numeric GID
     /// if the name can't be resolved.  Used for the `--group` column.
-    pub fn render<C: Colours, U: Users + Groups>(self, colours: &C, users: &U) -> TextCell {
-        let style = self.style(colours, users, /* gid_column= */ false);
+    pub fn render<U: Users + Groups>(self, theme: &Theme, users: &U) -> TextCell {
+        let style = self.style(theme, /* gid_column= */ false);
         match self.lookup_name(users) {
             Some(name) => TextCell::paint(style, name),
             None => TextCell::paint(style, self.0.to_string()),
@@ -39,11 +40,10 @@ impl f::Group {
 
     /// Render the group as the raw numeric GID.  Used for the `--gid`
     /// column.  Uses the dedicated `gid_*` style slots so themes can
-    /// distinguish it visually from the name column while still
-    /// cascading from the `group_*` slots when unset.
-    pub fn render_gid<C: Colours, U: Users + Groups>(self, colours: &C, users: &U) -> TextCell {
+    /// distinguish it visually from the name column.
+    pub fn render_gid<U: Users + Groups>(self, theme: &Theme, _users: &U) -> TextCell {
         TextCell::paint(
-            self.style(colours, users, /* gid_column= */ true),
+            self.style(theme, /* gid_column= */ true),
             self.0.to_string(),
         )
     }
@@ -60,12 +60,8 @@ impl f::Group {
     /// `/etc/group` membership lists, so macOS Directory Services
     /// groups and LDAP groups are handled correctly.
     /// `gid_column` selects the `gid_*` style slots.
-    fn style<C: Colours, U: Users + Groups>(
-        self,
-        colours: &C,
-        _users: &U,
-        gid_column: bool,
-    ) -> Style {
+    fn style(self, theme: &Theme, gid_column: bool) -> Style {
+        let users = &theme.ui.users;
         let tier = if self.0 == uzers::get_effective_gid() {
             GroupTier::Primary
         } else if MY_GROUPS.contains(&self.0) {
@@ -75,12 +71,12 @@ impl f::Group {
         };
 
         match (gid_column, tier) {
-            (false, GroupTier::Primary) => colours.yours(),
-            (false, GroupTier::Member) => colours.member(),
-            (false, GroupTier::Other) => colours.not_yours(),
-            (true, GroupTier::Primary) => colours.gid_yours(),
-            (true, GroupTier::Member) => colours.gid_member(),
-            (true, GroupTier::Other) => colours.gid_not_yours(),
+            (false, GroupTier::Primary) => users.group_yours,
+            (false, GroupTier::Member) => users.group_member,
+            (false, GroupTier::Other) => users.group_not_yours,
+            (true, GroupTier::Primary) => users.gid_yours,
+            (true, GroupTier::Member) => users.gid_member,
+            (true, GroupTier::Other) => users.gid_not_yours,
         }
     }
 }
@@ -91,53 +87,29 @@ enum GroupTier {
     Other,
 }
 
-pub trait Colours {
-    fn yours(&self) -> Style;
-    fn member(&self) -> Style;
-    fn not_yours(&self) -> Style;
-
-    fn gid_yours(&self) -> Style;
-    fn gid_member(&self) -> Style;
-    fn gid_not_yours(&self) -> Style;
-}
-
 #[cfg(test)]
 #[allow(unused_results)]
 pub mod test {
-    use super::Colours;
     use crate::fs::fields as f;
     use crate::output::cell::TextCell;
+    use crate::theme::Theme;
 
     use nu_ansi_term::Color::*;
-    use nu_ansi_term::Style;
     use uzers::Group;
     use uzers::mock::MockUsers;
 
-    /// Test colours with distinct slots for name/GID columns so
+    /// Test theme with distinct slots for name/GID columns so
     /// tests can verify `render_gid` picks up the GID-specific
-    /// styles.  Real cascade from group slots is covered by
-    /// theme-level tests.
-    struct TestColours;
-
-    impl Colours for TestColours {
-        fn yours(&self) -> Style {
-            Fixed(80).normal()
-        }
-        fn member(&self) -> Style {
-            Fixed(84).normal()
-        }
-        fn not_yours(&self) -> Style {
-            Fixed(81).normal()
-        }
-        fn gid_yours(&self) -> Style {
-            Fixed(82).normal()
-        }
-        fn gid_member(&self) -> Style {
-            Fixed(85).normal()
-        }
-        fn gid_not_yours(&self) -> Style {
-            Fixed(83).normal()
-        }
+    /// styles.
+    fn theme() -> Theme {
+        let mut t = Theme::test_default();
+        t.ui.users.group_yours = Fixed(80).normal();
+        t.ui.users.group_member = Fixed(84).normal();
+        t.ui.users.group_not_yours = Fixed(81).normal();
+        t.ui.users.gid_yours = Fixed(82).normal();
+        t.ui.users.gid_member = Fixed(85).normal();
+        t.ui.users.gid_not_yours = Fixed(83).normal();
+        t
     }
 
     /// Use a GID that's guaranteed not in the test runner's real
@@ -151,10 +123,10 @@ pub mod test {
 
         let group = f::Group(FOREIGN_GID);
         let expected = TextCell::paint_str(Fixed(81).normal(), "folk");
-        assert_eq!(expected, group.render(&TestColours, &users));
+        assert_eq!(expected, group.render(&theme(), &users));
 
         let expected = TextCell::paint(Fixed(83).normal(), FOREIGN_GID.to_string());
-        assert_eq!(expected, group.render_gid(&TestColours, &users));
+        assert_eq!(expected, group.render_gid(&theme(), &users));
     }
 
     #[test]
@@ -163,9 +135,9 @@ pub mod test {
 
         let group = f::Group(FOREIGN_GID);
         let expected_name = TextCell::paint(Fixed(81).normal(), FOREIGN_GID.to_string());
-        assert_eq!(expected_name, group.render(&TestColours, &users));
+        assert_eq!(expected_name, group.render(&theme(), &users));
         let expected_gid = TextCell::paint(Fixed(83).normal(), FOREIGN_GID.to_string());
-        assert_eq!(expected_gid, group.render_gid(&TestColours, &users));
+        assert_eq!(expected_gid, group.render_gid(&theme(), &users));
     }
 
     #[test]
@@ -177,7 +149,7 @@ pub mod test {
 
         let group = f::Group(egid);
         let expected = TextCell::paint_str(Fixed(80).normal(), "primary");
-        assert_eq!(expected, group.render(&TestColours, &users));
+        assert_eq!(expected, group.render(&theme(), &users));
     }
 
     #[test]
@@ -192,7 +164,7 @@ pub mod test {
 
             let group = f::Group(gid);
             let expected = TextCell::paint_str(Fixed(84).normal(), "supplementary");
-            assert_eq!(expected, group.render(&TestColours, &users));
+            assert_eq!(expected, group.render(&theme(), &users));
         }
         // Skip if the test runner has no supplementary groups.
     }
@@ -203,7 +175,7 @@ pub mod test {
         let expected = TextCell::paint_str(Fixed(83).normal(), "2147483648");
         assert_eq!(
             expected,
-            group.render_gid(&TestColours, &MockUsers::with_current_uid(0))
+            group.render_gid(&theme(), &MockUsers::with_current_uid(0))
         );
     }
 }
