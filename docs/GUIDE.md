@@ -1559,12 +1559,22 @@ lx --dump-format=long2          # just long2
 lx --dump-personality=ll        # the ll personality (with [[when]] blocks)
 lx --dump-style=exa             # the exa style
 lx --dump-theme=dracula         # the dracula theme (if loaded)
+lx --dump-theme=lx-24bit        # the compiled-in 24-bit theme
 ```
 
 Personality dumps include `[[when]]` blocks and list personalities
 in inheritance order (parents before children), so the output is
 valid, self-contained TOML that can be pasted directly into a
 config file.
+
+Theme dumps work for both user-defined themes and the three
+compiled-in themes (`exa`, `lx-256`, `lx-24bit`).  Output is
+grouped by key family — file kinds, permissions, size, users,
+links, VCS, then the four per-timestamp date blocks, then
+columns and symlink overlays — with blank lines between families.
+This is the same shape `--init-config` writes, so a copy-paste
+into `~/.config/lx/lxconfig.toml` produces an immediately usable
+theme block.
 
 ### Debug logging
 

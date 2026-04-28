@@ -676,10 +676,16 @@ fn dump_theme_groups_date_keys_by_column() {
         .skip_while(|l| !l.starts_with("date") && !l.starts_with("directory"))
         .collect();
 
-    // Expected body, in exact order.  Blank lines separate the bulk
-    // block from each per-column block, and the whole date block
-    // from the trailing non-date keys.
+    // Expected body, in exact order.  Output is grouped by family
+    // (FileKinds, Size, DateBulk, DateModified, …) in registry
+    // declaration order, with blank-line separators between
+    // families.  Within each date family, keys appear in canonical
+    // tier order (now → today → … → flat).
     let expected = vec![
+        "directory = \"bold blue\"",
+        "",
+        "size-major = \"white\"",
+        "",
         "date-now = \"cyan\"",
         "date-today = \"magenta\"",
         "",
@@ -690,9 +696,6 @@ fn dump_theme_groups_date_keys_by_column() {
         "date-changed-now = \"orange\"",
         "",
         "date-created-now = \"red\"",
-        "",
-        "directory = \"bold blue\"",
-        "size-major = \"white\"",
     ];
 
     assert_eq!(

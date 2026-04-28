@@ -28,6 +28,16 @@ All notable changes to lx are documented here. lx is forked from
   the full inheritance chain (leaf to root) with source annotations
   (builtin/config/override), `[[when]]` block counts and active
   status, and resolved format columns.  Fixes wjv/lx#21.
+- **`--dump-theme` works for compiled-in themes** (`exa`,
+  `lx-256`, `lx-24bit`).  Output is real, copy-pasteable TOML
+  produced by walking the new theme key registry.  Fixes
+  wjv/lx#14.
+- **`--dump-theme` output grouped by key family** with blank-line
+  separators — file kinds, permissions, size, users, links, VCS,
+  punctuation, then the four per-timestamp date blocks, then
+  columns and symlink overlays.  Within each family, keys
+  preserve canonical declaration order (date tiers stay in
+  now → today → … → flat).  Fixes wjv/lx#13.
 - Enabled `rustfmt` across the codebase (wjv/lx#11).
 
 ### Fixed
@@ -46,6 +56,17 @@ All notable changes to lx are documented here. lx is forked from
 - Split `show_config()` into per-section sub-functions
   (prepares for wjv/lx#21).
 - Decomposed `extract_cli_settings()` into four focused helpers.
+- **Theme key registry.**  New `src/theme/key_registry.rs`
+  enumerates every named `[theme.NAME]` config key in one place,
+  pairing each with getter and setter function pointers and a
+  family for grouping.  `UiStyles::set_config` now dispatches
+  through the registry, replacing a ~165-line match.  The
+  registry also drives the new compiled-in `--dump-theme` and
+  the family-grouped output.
+- New `render_style_to_lx` helper in `theme/lsc.rs` is the
+  inverse of `parse_style`, with unit tests covering the
+  round-trip for basic colours, RGB hex, palette codes, and
+  modifiers.
 - Committed `Cargo.lock` to pin transitive dependencies
   (winnow version conflict in the gix/jj-lib tree).
 

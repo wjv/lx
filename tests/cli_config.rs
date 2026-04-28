@@ -749,12 +749,53 @@ fn dump_personality_valid_toml() {
 
 #[test]
 fn dump_theme_exa() {
+    // Compiled-in `exa` theme uses basic ANSI colour names.
     lx_no_colour()
         .arg("--dump-theme=exa")
         .assert()
         .success()
-        .stdout(predicate::str::contains("compiled-in"))
-        .stdout(predicate::str::contains("inherits = \"exa\""));
+        .stdout(predicate::str::contains("[theme.exa]"))
+        .stdout(predicate::str::contains("directory = \"blue bold\""))
+        .stdout(predicate::str::contains("symlink = \"cyan\""));
+}
+
+#[test]
+fn dump_theme_lx_256_uses_palette_codes() {
+    // Compiled-in `lx-256` theme uses `Color::Fixed(N)`, which
+    // round-trips as raw `38;5;N` ANSI codes.
+    lx_no_colour()
+        .arg("--dump-theme=lx-256")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[theme.lx-256]"))
+        .stdout(predicate::str::is_match(r##"= "38;5;\d+""##).unwrap());
+}
+
+#[test]
+fn dump_theme_lx_24bit_uses_hex() {
+    // Compiled-in `lx-24bit` theme uses `Color::Rgb`, which
+    // round-trips as `#rrggbb`.
+    lx_no_colour()
+        .arg("--dump-theme=lx-24bit")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[theme.lx-24bit]"))
+        .stdout(predicate::str::is_match(r##"= "#[0-9a-f]{6}""##).unwrap());
+}
+
+#[test]
+fn dump_theme_groups_date_keys() {
+    // The four per-column date families should appear as
+    // contiguous blocks separated by blank lines.
+    lx_no_colour()
+        .arg("--dump-theme=lx-24bit")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("date-modified-now"))
+        .stdout(predicate::str::contains("date-modified-flat"))
+        .stdout(predicate::str::contains("date-accessed-now"))
+        .stdout(predicate::str::contains("date-changed-now"))
+        .stdout(predicate::str::contains("date-created-now"));
 }
 
 #[test]
