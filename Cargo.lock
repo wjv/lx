@@ -2091,7 +2091,7 @@ dependencies = [
 
 [[package]]
 name = "lx-ls"
-version = "0.10.0-pre.13"
+version = "0.10.0-feat.theme-registry"
 dependencies = [
  "assert_cmd",
  "chrono",

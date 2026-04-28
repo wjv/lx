@@ -7,6 +7,8 @@ use crate::output::render;
 mod ui_styles;
 pub use self::ui_styles::{DateAge, UiStyles};
 
+pub mod key_registry;
+
 mod lsc;
 pub use self::lsc::LSColors;
 
