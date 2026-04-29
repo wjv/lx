@@ -36,6 +36,16 @@ All notable changes to lx are documented here. lx is forked from
   Personality section now lists the format name only when the
   chain declares one, keeping the two cases visually distinct.
   Fixes wjv/lx#25.
+- **`--show-config` gains an "available catalogue" half**, listing
+  every defined personality, format, theme, style, and class
+  with its source and a one-line summary (or `description` key
+  where defined).  The new `--show-config=MODE` selector
+  controls how much to show: `active` (default — just what's
+  running), `full` (active + catalogue, with a horizontal-rule
+  divider), or `available` (catalogue only).  Bare
+  `--show-config` keeps its previous compact behaviour; reach
+  for `=full` when you want the complete picture.  Fixes
+  wjv/lx#24.
 - **`--dump-theme` works for compiled-in themes** (`exa`,
   `lx-256`, `lx-24bit`).  Output is real, copy-pasteable TOML
   produced by walking the new theme key registry.  Fixes

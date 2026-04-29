@@ -1400,9 +1400,20 @@ pub fn build_command() -> Command {
         .arg(
             Arg::new("show-config")
                 .long("show-config")
-                .help("Show the active configuration and exit")
+                .help(
+                    "Show configuration and exit\n\
+                     [active (default), full, available]",
+                )
                 .help_heading("Configuration")
-                .action(ArgAction::SetTrue),
+                .value_name("MODE")
+                .num_args(0..=1)
+                .default_missing_value("active")
+                .hide_possible_values(true)
+                .value_parser([
+                    PossibleValue::new("active"),
+                    PossibleValue::new("full"),
+                    PossibleValue::new("available"),
+                ]),
         )
         .arg(
             Arg::new("dump-class")

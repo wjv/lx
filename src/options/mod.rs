@@ -104,7 +104,18 @@ impl Options {
                     return OptionsResult::Completions(*shell);
                 }
 
-                if clap_matches.get_flag("show-config") {
+                if clap_matches.contains_id("show-config")
+                    && clap_matches.value_source("show-config")
+                        == Some(clap::parser::ValueSource::CommandLine)
+                {
+                    let mode = match clap_matches
+                        .get_one::<String>("show-config")
+                        .map(String::as_str)
+                    {
+                        Some("full") => ShowConfigMode::Full,
+                        Some("available") => ShowConfigMode::Available,
+                        _ => ShowConfigMode::Active,
+                    };
                     // Detect the implicit `-l` tier so `--show-config`
                     // can show the effective format when no personality
                     // declares one.  An explicit `--columns` or
@@ -129,7 +140,10 @@ impl Options {
                     } else {
                         None
                     };
-                    return OptionsResult::ShowConfig { implicit_format };
+                    return OptionsResult::ShowConfig {
+                        mode,
+                        implicit_format,
+                    };
                 }
 
                 if clap_matches.contains_id("dump-class")
@@ -418,6 +432,20 @@ impl Options {
     }
 }
 
+/// Which sections of `--show-config` to emit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShowConfigMode {
+    /// Just the active half: what's currently running.  The default
+    /// when `--show-config` is given without an explicit mode.
+    Active,
+    /// Both halves: active + the available catalogue, separated by
+    /// a horizontal rule.
+    Full,
+    /// Just the catalogue half: every defined personality, format,
+    /// theme, style, and class.
+    Available,
+}
+
 /// The result of the `Options::parse` function.
 #[derive(Debug)]
 pub enum OptionsResult {
@@ -438,13 +466,20 @@ pub enum OptionsResult {
 
     /// The user wants to see the active configuration.
     ///
+    /// `mode` selects how much to show: just the active half
+    /// ("what's running"), the full output including the
+    /// available catalogue, or the catalogue alone.
+    ///
     /// `implicit_format` carries the `-l` tier name (`"long"`,
     /// `"long2"`, `"long3"`) when the user invoked `--show-config`
     /// alongside `-l` and neither `--columns` nor `--format` would
     /// override it.  `--show-config` displays this as the effective
     /// format when the active personality declares neither
     /// `format` nor `columns`.
-    ShowConfig { implicit_format: Option<String> },
+    ShowConfig {
+        mode: ShowConfigMode,
+        implicit_format: Option<String>,
+    },
 
     /// The user wants to see class definitions as TOML.
     /// Empty string means all classes; otherwise a specific class name.
