@@ -5,6 +5,7 @@
 #   --theme=catppuccin-latte  or  theme = "catppuccin-latte" in a personality
 
 [theme.catppuccin-latte]
+description = "Catppuccin Latte — pastel light variant"
 inherits = "exa"
 use-style = "catppuccin-latte"
 

@@ -16,6 +16,30 @@ use super::store::config;
 /// in the `--dump-theme` listing.
 pub const BUILTIN_THEMES: &[&str] = &["exa", "lx-256", "lx-24bit"];
 
+/// One-line descriptions for each compiled-in theme.  Surfaced by
+/// `--show-config` and `--dump-theme`.  Compiled-in themes have no
+/// `ThemeDef`, so the description lives here in a parallel table
+/// rather than as a struct field.
+pub const BUILTIN_THEME_DESCRIPTIONS: &[(&str, &str)] = &[
+    ("exa", "Heritage exa look in basic 8-colour ANSI"),
+    (
+        "lx-256",
+        "256-colour palette gradient (any 256-colour terminal)",
+    ),
+    (
+        "lx-24bit",
+        "Truecolour gradient (24-bit, smooth interpolation)",
+    ),
+];
+
+/// Look up a compiled-in theme's description by name.
+pub fn builtin_theme_description(name: &str) -> Option<&'static str> {
+    BUILTIN_THEME_DESCRIPTIONS
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map(|(_, d)| *d)
+}
+
 /// Check if a theme name refers to a compiled-in builtin.
 pub fn is_builtin_theme(name: &str) -> bool {
     BUILTIN_THEMES.contains(&name)
@@ -47,6 +71,9 @@ fn format_theme_toml(name: &str) -> Option<String> {
     let theme = cfg.theme.get(name)?;
     let mut lines = vec![format!("[theme.{name}]")];
 
+    if let Some(ref description) = theme.description {
+        lines.push(format!("description = \"{description}\""));
+    }
     if let Some(ref inherits) = theme.inherits {
         lines.push(format!("inherits = \"{inherits}\""));
     }
@@ -73,6 +100,9 @@ fn format_builtin_theme_toml(name: &str) -> String {
     let ui = UiStyles::compiled(name).expect("is_builtin_theme guards this call");
 
     let mut lines = vec![format!("[theme.{name}]")];
+    if let Some(description) = builtin_theme_description(name) {
+        lines.push(format!("description = \"{description}\""));
+    }
 
     let pairs: Vec<(&str, String)> = ThemeKeyDef::dumpable()
         .filter_map(|def| match def.access {

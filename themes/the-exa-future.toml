@@ -27,6 +27,7 @@
 # Copy this file to ~/.config/lx/conf.d/ to make it available.
 
 [theme.the-exa-future]
+description = "The original exa look, reproduced in 24-bit truecolour"
 inherits = "exa"
 
 # RGB equivalents of the standard ANSI primaries (the darker,

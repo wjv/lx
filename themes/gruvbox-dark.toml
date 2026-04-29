@@ -5,6 +5,7 @@
 #   --theme=gruvbox-dark  or  theme = "gruvbox-dark" in a personality
 
 [theme.gruvbox-dark]
+description = "Gruvbox Dark — retro warm palette on dark background"
 inherits = "exa"
 use-style = "gruvbox-dark"
 

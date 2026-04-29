@@ -5,6 +5,7 @@
 # Copy to ~/.config/lx/conf.d/ and edit to customise.
 
 [theme.exa]
+description = "Editable copy of the compiled-in `exa` — heritage 8-colour ANSI"
 use-style = "exa"
 
 # File kinds

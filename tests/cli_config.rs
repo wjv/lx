@@ -658,6 +658,31 @@ fn dump_personality_unknown() {
 }
 
 #[test]
+fn dump_personality_emits_description() {
+    // Compiled-in personalities carry a one-line description
+    // that `--dump-personality` emits right after the section
+    // header.
+    lx_no_colour()
+        .arg("--dump-personality=lll")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[personality.lll]"))
+        .stdout(predicate::str::contains("description ="));
+}
+
+#[test]
+fn dump_theme_emits_description() {
+    // Compiled-in themes carry a description too, looked up
+    // via `BUILTIN_THEME_DESCRIPTIONS`.
+    lx_no_colour()
+        .arg("--dump-theme=lx-24bit")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[theme.lx-24bit]"))
+        .stdout(predicate::str::contains("description ="));
+}
+
+#[test]
 fn dump_personality_default_has_when_blocks() {
     let output = lx_no_colour()
         .arg("--dump-personality=default")

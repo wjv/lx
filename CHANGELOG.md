@@ -50,6 +50,13 @@ All notable changes to lx are documented here. lx is forked from
 - Hidden `--no-F` and `--no-J` aliases for `--no-dirs-first`
   and `--no-dirs-last`, matching the short-suppressor pattern
   every other negated short flag already follows.
+- Optional `description` key on `[personality.NAME]` and
+  `[theme.NAME]` blocks: a one-line summary surfaced by
+  `--show-config` and emitted by the corresponding `--dump-*`
+  flag.  Compiled-in personalities and themes carry
+  descriptions out of the box; the curated themes in `themes/`
+  do too.  The default config template (`--init-config`)
+  writes them alongside its example personalities.
 
 ### Fixed
 

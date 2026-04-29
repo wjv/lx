@@ -180,6 +180,9 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
         // that satisfy both conditions (e.g. xterm-256color +
         // COLORTERM=truecolor).
         "default" => Some(PersonalityDef {
+            description: Some(
+                "Shared base; auto-selects a richer theme on capable terminals".into(),
+            ),
             settings: HashMap::from([
                 ("gradient".into(), Str("all".into())),
                 ("group-dirs".into(), Str("none".into())),
@@ -212,16 +215,19 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
             ..Default::default()
         }),
         "lx" => Some(PersonalityDef {
+            description: Some("Default for the `lx` binary; inherits `default`".into()),
             inherits: Some("default".into()),
             ..Default::default()
         }),
         "ll" => Some(PersonalityDef {
+            description: Some("Two-tier long view; directories grouped first".into()),
             inherits: Some("lx".into()),
             format: Some("long2".into()),
             settings: HashMap::from([("group-dirs".into(), Str("first".into()))]),
             ..Default::default()
         }),
         "lll" => Some(PersonalityDef {
+            description: Some("Three-tier long view with header and ISO timestamps".into()),
             inherits: Some("lx".into()),
             format: Some("long3".into()),
             settings: HashMap::from([
@@ -232,11 +238,13 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
             ..Default::default()
         }),
         "la" => Some(PersonalityDef {
+            description: Some("Like `ll`, but includes hidden files".into()),
             inherits: Some("ll".into()),
             settings: HashMap::from([("all".into(), Boolean(true))]),
             ..Default::default()
         }),
         "tree" => Some(PersonalityDef {
+            description: Some("Long-view tree; directories grouped first".into()),
             inherits: Some("default".into()),
             format: Some("long2".into()),
             settings: HashMap::from([
@@ -246,6 +254,9 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
             ..Default::default()
         }),
         "ls" => Some(PersonalityDef {
+            description: Some(
+                "Plain `ls`-style: across-the-rows grid, no colours, no decorations".into(),
+            ),
             settings: HashMap::from([
                 ("grid".into(), Boolean(true)),
                 ("across".into(), Boolean(true)),
@@ -322,6 +333,9 @@ fn format_personality_toml(name: &str) -> Option<String> {
     let def = lookup_personality(name)?;
     let mut lines = vec![format!("[personality.{name}]")];
 
+    if let Some(ref description) = def.description {
+        lines.push(format!("description = \"{description}\""));
+    }
     if let Some(ref inherits) = def.inherits {
         lines.push(format!("inherits = \"{inherits}\""));
     }

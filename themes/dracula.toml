@@ -5,6 +5,7 @@
 #   --theme=dracula  or  theme = "dracula" in a personality
 
 [theme.dracula]
+description = "Dracula — dark theme with vibrant accents"
 inherits = "exa"
 use-style = "dracula"
 

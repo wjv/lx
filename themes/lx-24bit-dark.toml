@@ -19,6 +19,7 @@
 # the size and date gradient slots.
 
 [theme.lx-24bit-dark]
+description = "lx-24bit tuned for dark backgrounds — brighter gradients"
 inherits = "lx-24bit"
 
 # Brighter, more saturated size gradient.

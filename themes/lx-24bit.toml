@@ -6,6 +6,7 @@
 # Copy to ~/.config/lx/conf.d/ and edit to customise.
 
 [theme.lx-24bit]
+description = "Editable copy of the compiled-in `lx-24bit` — truecolour gradient"
 inherits = "exa"
 use-style = "exa"
 

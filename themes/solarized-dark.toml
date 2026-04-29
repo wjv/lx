@@ -5,6 +5,7 @@
 #   --theme=solarized-dark  or  theme = "solarized-dark" in a personality
 
 [theme.solarized-dark]
+description = "Solarized Dark — accented neutrals on dark base"
 inherits = "exa"
 use-style = "solarized-dark"
 

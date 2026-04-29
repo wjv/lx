@@ -92,6 +92,12 @@ install-personalities-jj: install-jj
     @ln -sf ~/.local/bin/lx ~/.local/bin/tree
     @echo "Created personality symlinks in ~/.local/bin: ll la lll tree"
 
+# Install the curated themes from themes/ into the drop-in directory
+install-themes:
+    @mkdir -p ~/.config/lx/conf.d
+    cp themes/*.toml ~/.config/lx/conf.d/
+    @echo "Installed themes from themes/ to ~/.config/lx/conf.d/"
+
 # Generate shell completions
 completions:
     @mkdir -p completions

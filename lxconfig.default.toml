@@ -49,6 +49,7 @@ long3 = ["permissions", "links", "size", "blocks", "user", "group",
 
 ## Shared base: settings that all personalities inherit.
 [personality.default]
+description = "Shared base; auto-selects a richer theme on capable terminals"
 group-dirs = "none"           # first / last / none
 icons = "never"               # always / auto / never
 classify = "never"            # always / auto / never
@@ -76,14 +77,17 @@ theme = "lx-24bit"
 
 ## The "lx" personality applies when the binary is invoked as "lx".
 [personality.lx]
+description = "Default for the `lx` binary; inherits `default`"
 inherits = "default"
 
 [personality.ll]
+description = "Two-tier long view; directories grouped first"
 inherits = "lx"
 format = "long2"
 group-dirs = "first"
 
 [personality.lll]
+description = "Three-tier long view with header and ISO timestamps"
 inherits = "lx"
 format = "long3"
 group-dirs = "first"
@@ -91,16 +95,19 @@ header = true
 time-style = "long-iso"
 
 [personality.la]
+description = "Like `ll`, but includes hidden files"
 inherits = "ll"
 all = true
 
 [personality.tree]
+description = "Long-view tree; directories grouped first"
 inherits = "default"
 format = "long2"
 group-dirs = "first"
 tree = true
 
 [personality.ls]
+description = "Plain `ls`-style: across-the-rows grid, no colours, no decorations"
 grid = true
 across = true
 ## (no inherits — standalone, mimics plain ls)

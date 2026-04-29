@@ -6,6 +6,7 @@
 # Copy to ~/.config/lx/conf.d/ and edit to customise.
 
 [theme.lx-256]
+description = "Editable copy of the compiled-in `lx-256` — 256-colour gradient"
 inherits = "exa"
 use-style = "exa"
 

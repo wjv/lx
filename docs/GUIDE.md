@@ -531,11 +531,16 @@ starts with a `[personality.NAME]` header:
 
 ```toml
 [personality.stree]
+description = "Tree view, biggest files first"
 tree = true
 group-dirs = "first"
 sort = "size"
 reverse = true
 ```
+
+The optional `description` is a one-line summary that `--show-config`
+surfaces in its catalogue and that `--dump-personality` emits.  Skip
+it if you don't care; it's purely informational.
 
 If I were to run `lx` with this personality, it would be the same as if
 I executed:
@@ -1154,19 +1159,24 @@ when you want full control.
 
 ```toml
 [theme.midnight]
-inherits   = "lx-256"
-directory  = "bold cornflowerblue"
-executable = "bold khaki"
-symlink    = "lightsteelblue"
-date       = "steelblue"
-date-now   = "bold lightsteelblue"
-date-old   = "slategray"
-size-major = "cornflowerblue"
-size-minor = "slategray"
-vcs-new    = "bold khaki"
+description  = "Cornflower blues on a midnight palette"
+inherits     = "lx-256"
+directory    = "bold cornflowerblue"
+executable   = "bold khaki"
+symlink      = "lightsteelblue"
+date         = "steelblue"
+date-now     = "bold lightsteelblue"
+date-old     = "slategray"
+size-major   = "cornflowerblue"
+size-minor   = "slategray"
+vcs-new      = "bold khaki"
 vcs-modified = "salmon"
 punctuation  = "midnightblue"
 ```
+
+The optional `description` is a one-line summary that `--show-config`
+surfaces in its catalogue and that `--dump-theme` emits.  Skip it
+if you don't care.
 
 ### Using a theme
 

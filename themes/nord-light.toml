@@ -9,6 +9,7 @@
 #   --theme=nord-light  or  theme = "nord-light" in a personality
 
 [theme.nord-light]
+description = "Nord Light — Arctic palette inverted for light backgrounds"
 inherits = "exa"
 use-style = "nord-light"
 

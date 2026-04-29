@@ -220,6 +220,11 @@ group-dirs = "first"
 .Ed
 .Ss Structural fields
 .Bl -tag -width Ds
+.It Sy description
+Optional one-line summary, surfaced by
+.Sy --show-config
+and emitted by
+.Sy --dump-personality .
 .It Sy inherits
 Name of a parent personality (see
 .Sx Inheritance
@@ -611,6 +616,11 @@ date = "steelblue"
 .Ed
 .Ss Structural fields
 .Bl -tag -width Ds
+.It Sy description
+Optional one-line summary, surfaced by
+.Sy --show-config
+and emitted by
+.Sy --dump-theme .
 .It Sy inherits
 Inherit from another theme.
 The parent's UI keys are applied first; this theme's keys override.

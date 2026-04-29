@@ -99,6 +99,10 @@ impl Config {
 #[derive(Debug, Default, Deserialize, Clone)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct ThemeDef {
+    /// Optional one-line description, shown under
+    /// `--show-config`'s available-catalogue section.
+    pub description: Option<String>,
+
     /// Inherit from another theme.  The parent's UI keys are applied
     /// first; this theme's keys override.  The special name `"exa"`
     /// refers to the compiled-in default theme.
@@ -205,6 +209,10 @@ impl ConditionalOverride {
 #[derive(Debug, Default, Deserialize, Clone)]
 #[serde(default)]
 pub struct PersonalityDef {
+    /// Optional one-line description, shown under
+    /// `--show-config`'s available-catalogue section.
+    pub description: Option<String>,
+
     /// Inherit from another personality.  The parent's settings
     /// are applied first; this personality's values override per-key.
     /// `format` and `columns` replace (not merge) the parent's.

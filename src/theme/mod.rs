@@ -507,6 +507,7 @@ mod apply_theme_def_test {
             ui.insert(k.into(), v.into());
         }
         ThemeDef {
+            description: None,
             inherits: None,
             use_style: None,
             ui,

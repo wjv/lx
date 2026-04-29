@@ -5,6 +5,7 @@
 #   --theme=nord  or  theme = "nord" in a personality
 
 [theme.nord]
+description = "Nord — Arctic, north-bluish palette on dark backgrounds"
 inherits = "exa"
 use-style = "nord"
 
