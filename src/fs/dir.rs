@@ -196,17 +196,16 @@ impl<'dir> Iterator for Files<'dir, '_> {
 /// Usually files in Unix use a leading dot to be hidden or visible, but two
 /// entries in particular are “extra-hidden”: `.` and `..`, which only become
 /// visible after an extra `-a` option.
+///
+/// The two concerns — showing dotfiles, and showing the synthetic `.` /
+/// `..` entries — are independent.  `-a` enables the first, `-aa` enables
+/// both, and `--dot-entries` enables only the second.
 #[derive(PartialEq, Eq, Debug, Copy, Clone, Default)]
-pub enum DotFilter {
-    /// Shows files, dotfiles, and `.` and `..`.
-    DotfilesAndDots,
-
-    /// Show files and dotfiles, but hide `.` and `..`.
-    Dotfiles,
-
-    /// Just show files, hiding anything beginning with a dot.
-    #[default]
-    JustFiles,
+pub struct DotFilter {
+    /// Show entries whose names begin with a dot (e.g. `.git`).
+    pub show_dotfiles: bool,
+    /// Show the synthetic `.` and `..` entries.
+    pub show_dot_entries: bool,
 }
 
 /// Whether a directory name is a VCS metadata directory that should be
@@ -231,19 +230,15 @@ fn is_vcs_dir(name: &str) -> bool {
 impl DotFilter {
     /// Whether this filter should show dotfiles in a listing.
     fn shows_dotfiles(self) -> bool {
-        match self {
-            Self::JustFiles => false,
-            Self::Dotfiles => true,
-            Self::DotfilesAndDots => true,
-        }
+        self.show_dotfiles
     }
 
-    /// Whether this filter should add dot directories to a listing.
+    /// Whether this filter should add `.` and `..` to a listing.
     fn dots(self) -> DotsNext {
-        match self {
-            Self::JustFiles => DotsNext::Files,
-            Self::Dotfiles => DotsNext::Files,
-            Self::DotfilesAndDots => DotsNext::Dot,
+        if self.show_dot_entries {
+            DotsNext::Dot
+        } else {
+            DotsNext::Files
         }
     }
 }

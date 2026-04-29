@@ -796,6 +796,13 @@ pub fn build_command() -> Command {
                 .action(ArgAction::Count),
         )
         .arg(
+            Arg::new(flags::DOT_ENTRIES)
+                .long("dot-entries")
+                .help("Show the synthetic . and .. entries")
+                .hide(true)
+                .action(ArgAction::SetTrue),
+        )
+        .arg(
             Arg::new(flags::LIST_DIRS)
                 .short('d')
                 .long("list-dirs")

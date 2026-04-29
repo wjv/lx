@@ -5,6 +5,15 @@ All notable changes to lx are documented here. lx is forked from
 
 ## [Unreleased] — 0.10.0
 
+### Added
+
+- **`dot-entries` personality config key.**  Closes the gap where
+  `-aa` (showing `.` and `..`) had no representation in
+  personality definitions.  `all = true` corresponds to `-a`;
+  `dot-entries = true` corresponds to the second `-a` count and
+  is also independently settable.  `--save-as` of `lx -aa` now
+  emits both keys.  Fixes wjv/lx#30.
+
 ### Changed
 
 - **Tree traversal performance overhaul.**  Deep trees are 2–7×

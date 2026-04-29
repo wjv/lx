@@ -240,6 +240,7 @@ impl Options {
     ) -> std::collections::HashMap<String, toml::Value> {
         let mut settings = collect_flag_values(matches);
         expand_time_tiers(matches, &mut settings);
+        expand_all_count(matches, &mut settings);
         rewrite_negations(&mut settings);
         dedup_aliases(&mut settings);
         settings
@@ -301,6 +302,19 @@ fn collect_flag_values(
     }
 
     settings
+}
+
+/// Expand compounding `-a` (`ALL`) count >= 2 into `dot-entries = true`.
+fn expand_all_count(
+    matches: &clap::ArgMatches,
+    settings: &mut std::collections::HashMap<String, toml::Value>,
+) {
+    if matches.value_source(flags::ALL) != Some(clap::parser::ValueSource::CommandLine) {
+        return;
+    }
+    if matches.get_count(flags::ALL) >= 2 {
+        settings.insert("dot-entries".into(), toml::Value::Boolean(true));
+    }
 }
 
 /// Expand compounding `-t` (`TIME_TIER`) into individual timestamp booleans.

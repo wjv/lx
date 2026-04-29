@@ -122,24 +122,30 @@ impl Default for SortField {
 }
 
 impl DotFilter {
-    /// Determines the dot filter based on how many `--all` options were
-    /// given: one will show dotfiles, but two will show `.` and `..` too.
+    /// Determines the dot filter from `--all` (count) and the explicit
+    /// `--dot-entries` flag.  `-a` enables dotfiles; `-aa` additionally
+    /// enables the synthetic `.` and `..` entries.  `--dot-entries` is
+    /// independent: it can enable the synthetic entries on its own.
     ///
-    /// It also checks for the `--tree` option, because of a special case
-    /// where `--tree --all --all` won't work: listing the parent directory
-    /// in tree mode would loop onto itself!
+    /// Tree mode and the synthetic entries are incompatible (listing
+    /// the parent directory in tree mode would loop onto itself), so
+    /// any path that would set `show_dot_entries` errors when `--tree`
+    /// is also active.
     pub fn deduce(matches: &MatchedFlags) -> Result<Self, OptionsError> {
         let count = matches.count(flags::ALL);
+        let dot_entries_flag = matches.has(flags::DOT_ENTRIES);
 
-        if count == 0 {
-            Ok(Self::JustFiles)
-        } else if count == 1 {
-            Ok(Self::Dotfiles)
-        } else if matches.has(flags::TREE) {
-            Err(OptionsError::TreeAllAll)
-        } else {
-            Ok(Self::DotfilesAndDots)
+        let show_dotfiles = count >= 1;
+        let show_dot_entries = count >= 2 || dot_entries_flag;
+
+        if show_dot_entries && matches.has(flags::TREE) {
+            return Err(OptionsError::TreeAllAll);
         }
+
+        Ok(Self {
+            show_dotfiles,
+            show_dot_entries,
+        })
     }
 }
 
@@ -274,20 +280,43 @@ mod test {
     mod dot_filters {
         use super::*;
 
+        const JUST_FILES: DotFilter = DotFilter {
+            show_dotfiles: false,
+            show_dot_entries: false,
+        };
+        const DOTFILES: DotFilter = DotFilter {
+            show_dotfiles: true,
+            show_dot_entries: false,
+        };
+        const DOTFILES_AND_DOTS: DotFilter = DotFilter {
+            show_dotfiles: true,
+            show_dot_entries: true,
+        };
+        const DOT_ENTRIES_ONLY: DotFilter = DotFilter {
+            show_dotfiles: false,
+            show_dot_entries: true,
+        };
+
         // Default behaviour
-        test!(empty:      DotFilter <- [];               Ok(DotFilter::JustFiles));
+        test!(empty:      DotFilter <- [];               Ok(JUST_FILES));
 
         // --all
-        test!(all:        DotFilter <- ["--all"];        Ok(DotFilter::Dotfiles));
-        test!(all_all:    DotFilter <- ["--all", "-a"];  Ok(DotFilter::DotfilesAndDots));
-        test!(all_all_2:  DotFilter <- ["-aa"];          Ok(DotFilter::DotfilesAndDots));
+        test!(all:        DotFilter <- ["--all"];        Ok(DOTFILES));
+        test!(all_all:    DotFilter <- ["--all", "-a"];  Ok(DOTFILES_AND_DOTS));
+        test!(all_all_2:  DotFilter <- ["-aa"];          Ok(DOTFILES_AND_DOTS));
 
-        test!(all_all_3:  DotFilter <- ["-aaa"];         Ok(DotFilter::DotfilesAndDots));
+        test!(all_all_3:  DotFilter <- ["-aaa"];         Ok(DOTFILES_AND_DOTS));
+
+        // --dot-entries
+        test!(dot_entries:       DotFilter <- ["--dot-entries"];          Ok(DOT_ENTRIES_ONLY));
+        test!(dot_entries_alone: DotFilter <- ["--dot-entries"];          Ok(DOT_ENTRIES_ONLY));
+        test!(all_and_dot_entries: DotFilter <- ["-a", "--dot-entries"];  Ok(DOTFILES_AND_DOTS));
 
         // --all and --tree
-        test!(tree_a:     DotFilter <- ["-Ta"];          Ok(DotFilter::Dotfiles));
+        test!(tree_a:     DotFilter <- ["-Ta"];          Ok(DOTFILES));
         test!(tree_aa:    DotFilter <- ["-Taa"];         Err(OptionsError::TreeAllAll));
         test!(tree_aaa:   DotFilter <- ["-Taaa"];        Err(OptionsError::TreeAllAll));
+        test!(tree_dot_entries: DotFilter <- ["-T", "--dot-entries"];  Err(OptionsError::TreeAllAll));
     }
 
     mod ignore_patterns {

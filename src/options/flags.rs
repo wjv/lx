@@ -17,6 +17,7 @@ pub const COLOR_SCALE: &str = "color-scale";
 
 // filtering and sorting options
 pub const ALL: &str = "all";
+pub const DOT_ENTRIES: &str = "dot-entries";
 pub const LIST_DIRS: &str = "list-dirs";
 pub const LEVEL: &str = "level";
 pub const REVERSE: &str = "reverse";
