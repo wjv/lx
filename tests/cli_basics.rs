@@ -291,6 +291,43 @@ fn only_dirs() {
         .stdout(predicate::str::contains("Cargo.toml").not());
 }
 
+#[test]
+fn only_dirs_filters_cli_arguments() {
+    // Regression: `--only-dirs` previously applied only to files
+    // discovered inside a directory, never to CLI-named files
+    // themselves.  With `-d` (treat directories as files), every
+    // listed file goes through the argument-filter path, exposing
+    // the gap.
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path();
+    std::fs::write(root.join("a_file.txt"), "x").unwrap();
+    std::fs::create_dir(root.join("a_dir")).unwrap();
+
+    lx_no_colour()
+        .current_dir(root)
+        .args(["-1dD", "a_file.txt", "a_dir"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("a_dir"))
+        .stdout(predicate::str::contains("a_file.txt").not());
+}
+
+#[test]
+fn only_files_filters_cli_arguments() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path();
+    std::fs::write(root.join("a_file.txt"), "x").unwrap();
+    std::fs::create_dir(root.join("a_dir")).unwrap();
+
+    lx_no_colour()
+        .current_dir(root)
+        .args(["-1df", "a_file.txt", "a_dir"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("a_file.txt"))
+        .stdout(predicate::str::contains("a_dir").not());
+}
+
 // ── Long-view columns ─────────────────────────────────────────────
 
 #[test]

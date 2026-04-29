@@ -64,6 +64,11 @@ All notable changes to lx are documented here. lx is forked from
   one directory level too high when combined with `-aa`.  The
   prefix is now the listed directory's canonical path, so `.`
   and `..` line up with their siblings.
+- `-D` / `--only-dirs` and `-f` / `--only-files` now filter
+  CLI-named arguments too, not only files discovered inside a
+  directory.  Previously, `lx -dD a_file.txt a_dir` would still
+  show `a_file.txt` despite `--only-dirs`; the filter now
+  applies uniformly.
 
 ### Internal
 

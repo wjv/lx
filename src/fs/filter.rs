@@ -133,6 +133,19 @@ impl FileFilter {
                 f.deref_link();
             }
         }
+
+        // `--only-dirs` / `--only-files` are explicit type filters
+        // the user just asked for; they apply to CLI-named files
+        // too, not just to children discovered by recursing.  This
+        // is a deliberate departure from `ignore_patterns`, which
+        // keeps explicitly-named files (so `lx -I '*.tmp' .vimrc`
+        // still shows `.vimrc`).
+        if self.only_dirs {
+            files.retain(File::is_directory);
+        }
+        if self.only_files {
+            files.retain(|f| !f.is_directory());
+        }
     }
 
     /// Sort the files in the given vector based on the sort field option.
