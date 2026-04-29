@@ -1519,8 +1519,25 @@ Two families of flags help you inspect what `lx` is doing.
 
 ### `--show-config`
 
-Prints a human-friendly, coloured overview of the active
-configuration.  The personality section is the most detailed:
+Prints a human-friendly, coloured overview of the configuration.
+Output divides into two halves:
+
+- **Active** (default) — what's currently running: where the
+  config came from, the resolved personality with inheritance
+  chain, the active format, theme, and style.
+- **Available** — a catalogue of every defined personality,
+  format, theme, style, and class, each with its source and a
+  one-line summary or `description`.
+
+`--show-config[=MODE]` controls which halves to emit:
+
+| Form                       | Shows               |
+|----------------------------|---------------------|
+| `--show-config`            | Active half (default) |
+| `--show-config=full`       | Both, separated by a horizontal rule |
+| `--show-config=available`  | Catalogue only      |
+
+The personality section in the active half is the most detailed:
 
 ```
 Personality: la
@@ -1530,12 +1547,14 @@ Personality: la
     ll (builtin)
     lx (builtin)                    1 [[when]] block, 0 active
     default (builtin)               2 [[when]] blocks, 2 active
-  format:
-    long2 (perms, size, user, group, modified, vcs)
   settings:
     all = true
     classify = "never"
     ...
+
+Format: long2
+  source: personality
+  columns: perms, size, user, group, modified, vcs
 ```
 
 The **inheritance** list shows the full chain from the requested
@@ -1549,11 +1568,9 @@ personality down to its root ancestor.  Each entry shows:
   working as expected — if `0 active` appears where you expect a
   match, the environment variable condition isn't being met.
 
-The **format** line shows the active format name and the columns
+The **Format** section shows the active format name, its source
+(`personality` or `implicit, selected by -lll`), and the columns
 it resolves to.
-
-The remaining sections show the active theme, style, available
-classes, and available formats.
 
 ### `--dump-*`
 

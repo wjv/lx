@@ -376,11 +376,13 @@ fn try_main() -> Result<i32, LxError> {
         }
 
         OptionsResult::ShowConfig {
+            mode,
             ref implicit_format,
         } => {
             let name = active_personality.as_deref().unwrap_or("lx");
             let cli_theme = find_theme_arg(&cli_args);
             config::show_config(
+                mode,
                 name,
                 personality_source,
                 cli_theme.as_deref(),

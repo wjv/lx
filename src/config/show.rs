@@ -40,11 +40,14 @@ impl Styles {
 /// Shows the resolved personality, format, theme, style, and classes,
 /// indicating for each whether it's compiled-in or from the config file.
 pub fn show_config(
+    mode: crate::options::ShowConfigMode,
     personality_name: &str,
     activated_by: &str,
     cli_theme_override: Option<&str>,
     implicit_format: Option<&str>,
 ) {
+    use crate::options::ShowConfigMode::{Active, Available, Full};
+
     let s = Styles::new();
     let config_path = find_config_path();
     let cfg = config();
@@ -52,13 +55,38 @@ pub fn show_config(
     println!("{}", s.heading.paint("lx configuration"));
     println!();
 
-    show_config_file(&s, config_path.as_ref(), cfg);
-    let theme_name = show_personality(&s, personality_name, activated_by, cli_theme_override, cfg);
-    show_format(&s, personality_name, implicit_format);
-    let style_name = show_theme(&s, theme_name.as_deref(), cfg);
-    show_style(&s, style_name.as_deref(), cfg);
-    show_classes(&s, cfg);
-    show_formats(&s, cfg);
+    // Active half: where config comes from + what's currently
+    // running.
+    if matches!(mode, Active | Full) {
+        show_config_file(&s, config_path.as_ref(), cfg);
+        let theme_name =
+            show_personality(&s, personality_name, activated_by, cli_theme_override, cfg);
+        show_format(&s, personality_name, implicit_format);
+        let style_name = show_theme(&s, theme_name.as_deref(), cfg);
+        show_style(&s, style_name.as_deref(), cfg);
+    }
+
+    // Divider only when both halves are present.
+    if matches!(mode, Full) {
+        show_divider(&s);
+    }
+
+    // Available half: catalogue of every defined personality,
+    // format, theme, style, and class.
+    if matches!(mode, Available | Full) {
+        show_available_personalities(&s, cfg);
+        show_formats(&s, cfg);
+        show_available_themes(&s, cfg);
+        show_available_styles(&s, cfg);
+        show_classes(&s, cfg);
+    }
+}
+
+/// Dimmed horizontal rule that separates the Active half (top)
+/// from the Available catalogue (bottom).
+fn show_divider(s: &Styles) {
+    println!("{}", s.dimmed.paint("─".repeat(64)));
+    println!();
 }
 
 // ── Config file section ────────────────────────────────────────
@@ -385,21 +413,173 @@ fn show_classes(s: &Styles, cfg: Option<&super::schema::Config>) {
 // ── Formats section ────────────────────────────────────────────
 
 fn show_formats(s: &Styles, cfg: Option<&super::schema::Config>) {
-    println!("{}", s.label.paint("Formats:"));
-    let compiled = vec!["long", "long2", "long3"];
-    for fname in &compiled {
-        let source = if cfg.is_some_and(|c| c.format.contains_key(*fname)) {
-            "config (overrides builtin)"
-        } else {
-            "builtin"
-        };
-        println!("  {}: {}", s.name.paint(*fname), s.dimmed.paint(source));
-    }
+    let formats = super::formats::resolve_formats();
+    let compiled = ["long", "long2", "long3"];
+
+    let mut names: Vec<String> = compiled.iter().map(|s| (*s).to_string()).collect();
     if let Some(cfg) = cfg {
         for fname in cfg.format.keys() {
-            if !compiled.contains(&fname.as_str()) {
-                println!("  {}: {}", s.name.paint(fname), s.dimmed.paint("config"));
+            if !names.iter().any(|n| n == fname) {
+                names.push(fname.clone());
             }
         }
     }
+    names.sort();
+
+    println!(
+        "{} {} defined",
+        s.label.paint("Formats:"),
+        s.value.paint(names.len().to_string())
+    );
+    for fname in &names {
+        let in_compiled = compiled.contains(&fname.as_str());
+        let in_config = cfg.is_some_and(|c| c.format.contains_key(fname));
+        let source = match (in_config, in_compiled) {
+            (true, true) => "config, overrides builtin",
+            (true, false) => "config",
+            (false, true) => "builtin",
+            (false, false) => "?",
+        };
+        let column_count = formats.get(fname.as_str()).map_or(0, Vec::len);
+        let summary = if column_count == 1 {
+            "1 column".to_string()
+        } else {
+            format!("{column_count} columns")
+        };
+        println!(
+            "  {} {}: {}",
+            s.name.paint(fname),
+            s.dimmed.paint(format!("({source})")),
+            s.value.paint(summary),
+        );
+    }
+    println!();
+}
+
+// ── Available catalogue: personalities ─────────────────────────
+
+fn show_available_personalities(s: &Styles, cfg: Option<&super::schema::Config>) {
+    use super::personality::{is_compiled_personality, personality_description};
+
+    let names = super::personality::all_personality_names();
+    println!(
+        "{} {} defined",
+        s.label.paint("Personalities:"),
+        s.value.paint(names.len().to_string())
+    );
+    for name in &names {
+        let in_config = cfg.is_some_and(|c| c.personality.contains_key(name));
+        let in_builtin = is_compiled_personality(name);
+        let source = match (in_config, in_builtin) {
+            (true, true) => "config, overrides builtin",
+            (true, false) => "config",
+            (false, true) => "builtin",
+            (false, false) => "?",
+        };
+        let desc = personality_description(name);
+        match desc.as_deref() {
+            Some(d) if !d.is_empty() => println!(
+                "  {} {}: {}",
+                s.name.paint(name),
+                s.dimmed.paint(format!("({source})")),
+                s.value.paint(d),
+            ),
+            _ => println!(
+                "  {} {}",
+                s.name.paint(name),
+                s.dimmed.paint(format!("({source})")),
+            ),
+        }
+    }
+    println!();
+}
+
+// ── Available catalogue: themes ────────────────────────────────
+
+fn show_available_themes(s: &Styles, cfg: Option<&super::schema::Config>) {
+    use super::themes::{all_theme_names, builtin_theme_description, is_builtin_theme};
+
+    let names = all_theme_names();
+    println!(
+        "{} {} defined",
+        s.label.paint("Themes:"),
+        s.value.paint(names.len().to_string())
+    );
+    for name in &names {
+        let in_config = cfg.is_some_and(|c| c.theme.contains_key(name));
+        let in_builtin = is_builtin_theme(name);
+        let source = match (in_config, in_builtin) {
+            (true, true) => "config, overrides builtin",
+            (true, false) => "config",
+            (false, true) => "builtin",
+            (false, false) => "?",
+        };
+        // User-defined description wins over builtin when the
+        // user shadows a builtin name with their own block.
+        let user_desc = cfg
+            .and_then(|c| c.theme.get(name))
+            .and_then(|t| t.description.as_deref());
+        let desc = user_desc.or_else(|| builtin_theme_description(name));
+        match desc {
+            Some(d) if !d.is_empty() => println!(
+                "  {} {}: {}",
+                s.name.paint(name),
+                s.dimmed.paint(format!("({source})")),
+                s.value.paint(d),
+            ),
+            _ => println!(
+                "  {} {}",
+                s.name.paint(name),
+                s.dimmed.paint(format!("({source})")),
+            ),
+        }
+    }
+    println!();
+}
+
+// ── Available catalogue: styles ────────────────────────────────
+
+fn show_available_styles(s: &Styles, cfg: Option<&super::schema::Config>) {
+    let names = super::styles::all_style_names();
+    println!(
+        "{} {} defined",
+        s.label.paint("Styles:"),
+        s.value.paint(names.len().to_string())
+    );
+    for name in &names {
+        let in_config = cfg.is_some_and(|c| c.style.contains_key(name));
+        let in_builtin = name == "exa";
+        let source = match (in_config, in_builtin) {
+            (true, true) => "config, overrides builtin",
+            (true, false) => "config",
+            (false, true) => "builtin",
+            (false, false) => "?",
+        };
+        // Summary: count of class references and patterns, mirroring
+        // the Classes section's "N patterns" shape.
+        let resolved = resolve_style(name);
+        let summary = match resolved {
+            Some(style) => {
+                let cls = style.classes.len();
+                let pat = style.patterns.len();
+                format!("{cls} class refs, {pat} patterns")
+            }
+            None => String::new(),
+        };
+        if summary.is_empty() {
+            println!(
+                "  {} {}",
+                s.name.paint(name),
+                s.dimmed.paint(format!("({source})")),
+            );
+        } else {
+            println!(
+                "  {} {}: {}",
+                s.name.paint(name),
+                s.dimmed.paint(format!("({source})")),
+                s.value.paint(summary),
+            );
+        }
+    }
+    println!();
 }

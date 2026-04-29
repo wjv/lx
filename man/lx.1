@@ -937,13 +937,16 @@ block syntax for environment-based personality overrides, and the
 complete theme/style/class vocabulary \(em see
 .Xr lxconfig.toml 5 .
 .Bl -tag -width Ds
-.It Fl -show-config
-Show a coloured summary of the active configuration and exit.
-Includes the personality inheritance chain with sources
-.Pq builtin vs config ,
-.Ql [[when]]
-block counts and match status, resolved format columns,
-theme, style, classes, and formats.
+.It Fl -show-config Ns Op = Ns Ar MODE
+Show a coloured summary of the configuration and exit.
+.Ar MODE
+selects how much to emit:
+.Cm active
+(default — what's running: personality chain, format, theme, style),
+.Cm full
+(active plus the available catalogue, separated by a horizontal rule), or
+.Cm available
+(catalogue only — every defined personality, format, theme, style, and class).
 .It Fl -init-config
 Generate a commented starter config file at
 .Pa ~/.lxconfig.toml .

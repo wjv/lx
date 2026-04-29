@@ -828,6 +828,50 @@ fn show_config_explicit_columns_suppresses_implicit() {
         .stdout(predicate::str::contains("implicit, selected by").not());
 }
 
+// ── --show-config modes (active / full / available) ─────────────
+
+#[test]
+fn show_config_default_omits_catalogue() {
+    // Bare `--show-config` shows only the active half.  No
+    // `Personalities:`, `Themes:`, `Styles:`, `Classes:`, or
+    // `Formats:` catalogue headers should appear.
+    lx_no_colour()
+        .arg("--show-config")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Personality:"))
+        .stdout(predicate::str::contains("Personalities:").not())
+        .stdout(predicate::str::contains("Themes:").not())
+        .stdout(predicate::str::contains("Classes:").not());
+}
+
+#[test]
+fn show_config_full_shows_both_halves() {
+    lx_no_colour()
+        .arg("--show-config=full")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Personality:"))
+        .stdout(predicate::str::contains("Personalities:"))
+        .stdout(predicate::str::contains("Themes:"))
+        .stdout(predicate::str::contains("Classes:"));
+}
+
+#[test]
+fn show_config_available_omits_active() {
+    // `--show-config=available` shows only the catalogue.  No
+    // `Personality:`/`Format:`/`Theme:`/`Style:` singular headers.
+    lx_no_colour()
+        .arg("--show-config=available")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Personalities:"))
+        .stdout(predicate::str::contains("Themes:"))
+        .stdout(predicate::str::contains("Classes:"))
+        .stdout(predicate::str::contains("Personality:").not())
+        .stdout(predicate::str::contains("Theme:").not());
+}
+
 // ── --dump-theme ─────────────────────────────────────────────────
 
 #[test]

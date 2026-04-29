@@ -293,6 +293,20 @@ fn format_toml_kv(key: &str, value: &toml::Value) -> String {
 /// Names of all compiled-in personalities.
 const COMPILED_PERSONALITIES: &[&str] = &["default", "lx", "ll", "lll", "la", "tree", "ls"];
 
+/// True iff `name` is a compiled-in personality.  A user-defined
+/// personality with the same name shadows the compiled-in one but
+/// is still considered to "exist as a builtin" by this predicate.
+pub fn is_compiled_personality(name: &str) -> bool {
+    COMPILED_PERSONALITIES.contains(&name)
+}
+
+/// Look up a personality's `description` field, preferring the
+/// user's config when both shadow.  Returns `None` if the
+/// personality has no description (or no definition at all).
+pub fn personality_description(name: &str) -> Option<String> {
+    lookup_personality(name).and_then(|d| d.description)
+}
+
 /// Return the names of all known personalities (compiled-in + config).
 pub fn all_personality_names() -> Vec<String> {
     let mut names: Vec<String> = COMPILED_PERSONALITIES.iter().map(|s| (*s).into()).collect();
