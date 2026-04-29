@@ -46,6 +46,7 @@ pub(crate) static SETTING_FLAGS: &[SettingDef] = &[
 
     // filtering and sorting
     SettingDef { key: "all",           flag: "--all",            kind: SettingKind::Bool },
+    SettingDef { key: "dot-entries",   flag: "--dot-entries",    kind: SettingKind::Bool },
     SettingDef { key: "list-dirs",     flag: "--list-dirs",      kind: SettingKind::Bool },
     SettingDef { key: "level",         flag: "--level",          kind: SettingKind::Int },
     SettingDef { key: "reverse",       flag: "--reverse",        kind: SettingKind::Bool },
