@@ -1288,3 +1288,48 @@ fn no_time_still_works_as_bulk_clear() {
     // noticeably shorter.
     assert!(stdout.contains("test.txt"), "file should appear in output");
 }
+
+// ── --show-as=NAME ─────────────────────────────────────────────
+
+#[test]
+fn show_as_emits_personality_section_to_stdout() {
+    lx_no_colour()
+        .args(["-l", "--header", "--group-dirs=first", "--show-as=preview"])
+        .assert()
+        .success()
+        .stdout(
+            predicate::str::contains("[personality.preview]")
+                .and(predicate::str::contains("inherits = \"lx\""))
+                .and(predicate::str::contains("header = true"))
+                .and(predicate::str::contains("group-dirs = \"first\"")),
+        );
+}
+
+#[test]
+fn show_as_writes_no_file() {
+    let dir = tempdir().expect("tempdir");
+    let home = dir.path();
+    let conf_d = home.join(".config/lx/conf.d");
+    fs::create_dir_all(&conf_d).unwrap();
+
+    lx_no_colour()
+        .env("HOME", home)
+        .env_remove("XDG_CONFIG_HOME")
+        .args(["-l", "--show-as=preview"])
+        .assert()
+        .success();
+
+    assert!(
+        !conf_d.join("preview.toml").exists(),
+        "--show-as must not write a file"
+    );
+}
+
+#[test]
+fn show_as_at_count_emits_xattr_indicator() {
+    lx_no_colour()
+        .args(["-@", "--show-as=preview"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("xattr-indicator = true"));
+}

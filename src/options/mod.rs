@@ -210,6 +210,15 @@ impl Options {
                     );
                 }
 
+                if let Some(name) = clap_matches.get_one::<String>("show-as") {
+                    let settings = Self::extract_cli_settings(&clap_matches);
+                    return OptionsResult::ShowAs(
+                        name.clone(),
+                        None, // inherits — set by main.rs from active personality
+                        settings,
+                    );
+                }
+
                 if clap_matches.get_flag("init-config") {
                     return OptionsResult::InitConfig;
                 }
@@ -544,6 +553,14 @@ pub enum OptionsResult {
     /// The user wants to save CLI flags as a personality.
     /// Contains: (name, inherits, settings as TOML key/value pairs).
     SaveAs(
+        String,
+        Option<String>,
+        std::collections::HashMap<String, toml::Value>,
+    ),
+
+    /// The user wants to preview CLI flags as a personality on stdout.
+    /// Contains: (name, inherits, settings as TOML key/value pairs).
+    ShowAs(
         String,
         Option<String>,
         std::collections::HashMap<String, toml::Value>,

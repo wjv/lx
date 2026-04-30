@@ -999,6 +999,11 @@ with a
 .Pa .bak
 suffix.
 Exits after saving without listing files.
+.It Fl -show-as Ns = Ns Ar NAME
+Print the same TOML snippet that
+.Fl -save-as
+would write, but to standard output instead of a file.
+Useful for previewing or piping into a config file manually.
 .El
 .Pp
 The

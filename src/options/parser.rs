@@ -1508,6 +1508,14 @@ pub fn build_command() -> Command {
                 .require_equals(true),
         )
         .arg(
+            Arg::new("show-as")
+                .long("show-as")
+                .help("Print CLI flags as a personality TOML snippet to stdout")
+                .help_heading("Configuration")
+                .value_name("NAME")
+                .require_equals(true),
+        )
+        .arg(
             Arg::new("init-config")
                 .long("init-config")
                 .help("Generate a default config file")
