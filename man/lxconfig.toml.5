@@ -533,7 +533,29 @@ Variable must be set (to any value, including empty).
 Variable must be truly unset (not just empty).
 .El
 .Pp
+A block can also gate on the host operating system using the
+.Sy platform
+key, matched against Rust's
+.Sy std::env::consts::OS
+(values
+.Cm macos ,
+.Cm linux ,
+.Cm freebsd ,
+.Cm openbsd ,
+.Cm netbsd ,
+etc.):
+.Bl -tag -width Ds
+.It Sy platform = \(dqstring\(dq
+Exact match against the host OS name.
+.It Sy platform = [\(dqstring\(dq, \(dqstring\(dq]
+TOML array \(em matches if any element matches.
+.El
+.Pp
 All conditions within a single block must match (AND logic).
+.Sy env
+and
+.Sy platform
+conditions can be combined freely.
 .Pp
 .Sy Examples\&:
 .Bd -literal -offset indent
@@ -562,6 +584,14 @@ theme = "lx-256"
 [[personality.default.when]]
 env.COLORTERM = ["truecolor", "24bit"]
 theme = "lx-24bit"
+
+# Platform-conditional default: turn off some setting on macOS only.
+[personality.lx]
+some-setting = true
+
+[[personality.lx.when]]
+platform = "macos"
+some-setting = false
 .Ed
 .Pp
 .Sy Evaluation rules\&:

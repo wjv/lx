@@ -140,7 +140,10 @@ pub fn resolve_personality_full(name: &str) -> Result<Option<ResolvedPersonality
     // Apply matching conditional overrides (in order; later wins).
     for cond in &effective.when {
         if cond.matches() {
-            debug!("conditional override matched: env = {:?}", cond.env);
+            debug!(
+                "conditional override matched: env = {:?}, platform = {:?}",
+                cond.env, cond.platform
+            );
             for (key, value) in &cond.settings {
                 effective.settings.insert(key.clone(), value.clone());
             }
@@ -193,6 +196,7 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
             when: vec![
                 ConditionalOverride {
                     env: HashMap::from([("TERM".into(), toml::Value::String("*-256color".into()))]),
+                    platform: None,
                     settings: HashMap::from([(
                         "theme".into(),
                         toml::Value::String("lx-256".into()),
@@ -206,6 +210,7 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
                             toml::Value::String("24bit".into()),
                         ]),
                     )]),
+                    platform: None,
                     settings: HashMap::from([(
                         "theme".into(),
                         toml::Value::String("lx-24bit".into()),
@@ -376,6 +381,10 @@ fn format_personality_toml(name: &str) -> Option<String> {
     for cond in &def.when {
         lines.push(String::new());
         lines.push(format!("[[personality.{name}.when]]"));
+
+        if let Some(p) = &cond.platform {
+            lines.push(format_toml_kv("platform", p));
+        }
 
         let mut env_keys: Vec<_> = cond.env.keys().collect();
         env_keys.sort();

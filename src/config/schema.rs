@@ -150,6 +150,10 @@ pub struct StyleDef {
 /// - **`false`** (`env.DISPLAY = false`) — variable must be truly
 ///   unset (not just empty)
 ///
+/// Platform conditions use `platform = ...` to gate on the host
+/// operating system, matched against `std::env::consts::OS`
+/// (e.g. `"macos"`, `"linux"`, `"freebsd"`).
+///
 /// All conditions in a block must match (AND logic).
 #[derive(Debug, Default, Deserialize, Clone)]
 #[serde(default)]
@@ -159,15 +163,21 @@ pub struct ConditionalOverride {
     #[serde(default)]
     pub env: HashMap<String, toml::Value>,
 
+    /// Platform condition.  Matched against `std::env::consts::OS`
+    /// (e.g. `"macos"`, `"linux"`, `"freebsd"`).  Accepts a string
+    /// (exact match) or array of strings (any-of).
+    #[serde(default)]
+    pub platform: Option<toml::Value>,
+
     /// Settings to overlay when conditions match.
     #[serde(flatten)]
     pub settings: HashMap<String, toml::Value>,
 }
 
 impl ConditionalOverride {
-    /// Check whether all `env` conditions are satisfied.
+    /// Check whether all conditions (env + platform) are satisfied.
     ///
-    /// Each value can be:
+    /// `env` values can be:
     /// - **String** — literal exact match, OR a glob pattern if it
     ///   contains glob metacharacters (`*`, `?`, `[`).
     /// - **Array of strings** — any element matches (each element is
@@ -175,10 +185,15 @@ impl ConditionalOverride {
     /// - **`true`** — variable must be set to anything (even empty).
     /// - **`false`** — variable must be unset entirely.
     ///
+    /// `platform` accepts a string (exact match against
+    /// `std::env::consts::OS`) or an array of strings (any-of).
+    ///
     /// Globs and arrays were added in config schema 0.6; the existing
     /// literal-string and boolean forms continue to work unchanged.
+    /// The `platform` predicate was added later and is purely
+    /// additive.
     pub(super) fn matches(&self) -> bool {
-        self.env.iter().all(|(key, condition)| {
+        let env_ok = self.env.iter().all(|(key, condition)| {
             let actual = env::var(key).unwrap_or_default();
             match condition {
                 toml::Value::String(expected) => super::load::match_string(&actual, expected),
@@ -191,7 +206,20 @@ impl ConditionalOverride {
                 // Anything else: ignore (treat as always-true).
                 _ => true,
             }
-        })
+        });
+
+        let platform_ok = match &self.platform {
+            None => true,
+            Some(toml::Value::String(want)) => want == std::env::consts::OS,
+            Some(toml::Value::Array(items)) => items.iter().any(|item| match item {
+                toml::Value::String(s) => s == std::env::consts::OS,
+                _ => false,
+            }),
+            // Unsupported value type: ignore (treat as always-true).
+            Some(_) => true,
+        };
+
+        env_ok && platform_ok
     }
 }
 

@@ -7,6 +7,11 @@ All notable changes to lx are documented here. lx is forked from
 
 ### Added
 
+- **`platform` predicate for `[[when]]` blocks.**  Conditional
+  overrides can now gate on the host operating system, matched
+  against Rust's `std::env::consts::OS` (`"macos"`, `"linux"`,
+  `"freebsd"`, etc.).  Accepts a string or an array of strings.
+  Combines freely with existing `env.*` conditions (AND logic).
 - **`dot-entries` personality config key.**  Closes the gap where
   `-aa` (showing `.` and `..`) had no representation in
   personality definitions.  `all = true` corresponds to `-a`;

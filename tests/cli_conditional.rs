@@ -327,3 +327,149 @@ fn v03_config_without_when_no_warning() {
         .success()
         .stderr(predicate::str::contains("0.3").not());
 }
+
+// ── Platform predicate ───────────────────────────────────────────
+
+#[test]
+fn when_platform_matches_current_overrides() {
+    // The test runs on whatever the host OS happens to be; pick
+    // that as the matching platform so the override always fires.
+    let here = std::env::consts::OS;
+    let toml = format!(
+        r#"
+        [personality.lx]
+        sort = "name"
+
+        [[personality.lx.when]]
+        platform = "{here}"
+        sort = "size"
+        "#
+    );
+    let (_dir, mut cmd) = lx_with_conditional_config(&toml);
+
+    cmd.args(["--show-config"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("sort").and(predicate::str::contains("size")));
+}
+
+#[test]
+fn when_platform_other_does_not_override() {
+    // A platform string that we are definitely not running on.
+    let other = if std::env::consts::OS == "macos" {
+        "linux"
+    } else {
+        "macos"
+    };
+    let toml = format!(
+        r#"
+        [personality.lx]
+        sort = "name"
+
+        [[personality.lx.when]]
+        platform = "{other}"
+        sort = "size"
+        "#
+    );
+    let (_dir, mut cmd) = lx_with_conditional_config(&toml);
+
+    cmd.args(["--show-config"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("sort").and(predicate::str::contains("name")));
+}
+
+#[test]
+fn when_platform_array_any_match_overrides() {
+    let here = std::env::consts::OS;
+    let toml = format!(
+        r#"
+        [personality.lx]
+        sort = "name"
+
+        [[personality.lx.when]]
+        platform = ["{here}", "haiku"]
+        sort = "size"
+        "#
+    );
+    let (_dir, mut cmd) = lx_with_conditional_config(&toml);
+
+    cmd.args(["--show-config"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("sort").and(predicate::str::contains("size")));
+}
+
+#[test]
+fn when_platform_array_no_match_uses_base() {
+    let toml = r#"
+        [personality.lx]
+        sort = "name"
+
+        [[personality.lx.when]]
+        platform = ["plan9", "haiku"]
+        sort = "size"
+    "#;
+    let (_dir, mut cmd) = lx_with_conditional_config(toml);
+
+    cmd.args(["--show-config"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("sort").and(predicate::str::contains("name")));
+}
+
+#[test]
+fn when_platform_and_env_both_required() {
+    // Both conditions in a block must match (AND).  Set the env
+    // variable to the right value, but use the wrong platform —
+    // override should NOT apply.
+    let other = if std::env::consts::OS == "macos" {
+        "linux"
+    } else {
+        "macos"
+    };
+    let toml = format!(
+        r#"
+        [personality.lx]
+        sort = "name"
+
+        [[personality.lx.when]]
+        platform = "{other}"
+        env.LX_TEST_COND = "yes"
+        sort = "size"
+        "#
+    );
+    let (_dir, mut cmd) = lx_with_conditional_config(&toml);
+
+    cmd.env("LX_TEST_COND", "yes")
+        .args(["--show-config"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("sort").and(predicate::str::contains("name")));
+}
+
+#[test]
+fn when_platform_inherits_through_chain() {
+    // A platform-gated override on a parent personality should
+    // apply when the child inherits it.
+    let here = std::env::consts::OS;
+    let toml = format!(
+        r#"
+        [personality.parent]
+        sort = "name"
+
+        [[personality.parent.when]]
+        platform = "{here}"
+        sort = "size"
+
+        [personality.child]
+        inherits = "parent"
+        "#
+    );
+    let (_dir, mut cmd) = lx_with_conditional_config(&toml);
+
+    cmd.args(["-p", "child", "--show-config"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("sort").and(predicate::str::contains("size")));
+}

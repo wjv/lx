@@ -878,11 +878,13 @@ You can redefine the three built-in formats in your own config. Changing the def
 ### Conditional overrides
 
 Personalities can include `[[personality.NAME.when]]` blocks that
-activate based on environment variables.  This allows you to adapt a
-personality to different terminals, SSH sessions, and so on… all
-without shell-level scripting:
+activate based on environment variables or the host operating
+system.  This allows you to adapt a personality to different
+terminals, SSH sessions, platforms, and so on… all without
+shell-level scripting:
 
-A `[[when]]` block must contain one or more of the special configuration token `env`. Some examples:
+A `[[when]]` block must contain at least one `env` or `platform`
+condition.  Some examples:
 
 ```toml
 [personality.ll]                # A basic long listing
@@ -890,7 +892,7 @@ inherits = "lx"
 format = "long2"
 header = true
 
-[[personality.ll.when]]         
+[[personality.ll.when]]
 env.TERM_PROGRAM = "ghostty"    # When using `ll` on Ghostty, enable icons
 icons = "always"
 
@@ -898,15 +900,27 @@ icons = "always"
 env.SSH_CONNECTION = true       # Disable icons, colour when SSHing
 colour = "never"
 icons = "never"
+
+[[personality.ll.when]]
+platform = "macos"              # On macOS, prefer the system's `ls`-style
+group-dirs = "none"             #   group-dirs behaviour (none) over `first`
 ```
 
-Conditions take three forms:
+Environment conditions take three forms:
 - `env.VAR = "value"` — matches when `$VAR` equals the given
   string exactly;
 - `env.VAR = true` — matches when `$VAR` is set (to anything);
 - `env.VAR = false` — matches when `$VAR` is unset.
 
-You can set multiple `env` keys in a single `[[when]]` block. In that case, they must *all* match. (In other words, an implicit `AND`).
+The `platform` condition matches against Rust's `std::env::consts::OS`
+(`"macos"`, `"linux"`, `"freebsd"`, etc.):
+- `platform = "macos"` — match on macOS only;
+- `platform = ["linux", "freebsd"]` — match on any of the listed
+  platforms.
+
+You can mix `env` and `platform` keys, and set multiple `env`
+keys in a single `[[when]]` block.  All conditions in a block
+must match (implicit `AND`).
 
 Multiple `[[when]]` blocks for the same personality stack, with later matches overriding earlier ones.
 
