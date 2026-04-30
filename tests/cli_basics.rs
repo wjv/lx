@@ -520,3 +520,62 @@ fn header_without_long_is_fine() {
 fn level_without_recurse_is_fine() {
     lx_no_colour().args(["--level=3", "."]).assert().success();
 }
+
+// ── Regression tests for wjv/lx#33 and wjv/lx#34 ────────────────
+
+/// `-R -L<N>` with a positional path should descend N levels,
+/// exactly as if invoked from inside that path.  Previously, depth
+/// was measured against absolute path components, so an absolute
+/// positional argument always exceeded the limit and recursion
+/// stopped after the first level.
+#[test]
+fn recurse_with_level_and_positional_path() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path();
+    std::fs::create_dir_all(root.join("a/aa/aaa")).unwrap();
+    std::fs::write(root.join("a/aa/aaa/leaf"), b"").unwrap();
+
+    // -RL2 should recurse one level deep: lists `a` then its
+    // contents (`aa`), and stops there.
+    let assert = lx_no_colour()
+        .args(["-RL2", root.to_str().unwrap()])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&assert.get_output().stdout).to_string();
+    assert!(stdout.contains("aa"), "depth-2 should reach `aa`: {stdout}");
+    assert!(
+        !stdout.contains("aaa"),
+        "depth-2 should NOT reach `aaa`: {stdout}"
+    );
+
+    // -RL3 should reach one level deeper.
+    let assert = lx_no_colour()
+        .args(["-RL3", root.to_str().unwrap()])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&assert.get_output().stdout).to_string();
+    assert!(
+        stdout.contains("aaa"),
+        "depth-3 should reach `aaa`: {stdout}"
+    );
+}
+
+/// `-T` on a symlinked directory passed as a positional argument
+/// should follow the symlink and render its contents as a tree,
+/// matching the bare and `-R` behaviour.
+#[cfg(unix)]
+#[test]
+fn tree_follows_symlinked_positional_dir() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let target = dir.path().join("target");
+    let link = dir.path().join("link");
+    std::fs::create_dir(&target).unwrap();
+    std::fs::write(target.join("leaf"), b"").unwrap();
+    std::os::unix::fs::symlink(&target, &link).unwrap();
+
+    lx_no_colour()
+        .args(["-T", link.to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("leaf"));
+}

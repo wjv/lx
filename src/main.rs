@@ -24,7 +24,7 @@
 use std::env;
 use std::ffi::OsString;
 use std::io::{self, ErrorKind, Write};
-use std::path::{Component, PathBuf};
+use std::path::PathBuf;
 
 use nu_ansi_term::{AnsiStrings, Style};
 
@@ -633,7 +633,7 @@ impl Lx {
         self.options.filter.filter_argument_files(&mut files);
         self.print_files(None, files)?;
 
-        let result = self.print_dirs(dirs, no_files, is_only_dir, exit_status);
+        let result = self.print_dirs(dirs, no_files, is_only_dir, exit_status, 1);
 
         if self.options.count {
             let count = self.numeric.format_int(self.item_count as isize);
@@ -668,6 +668,7 @@ impl Lx {
         mut first: bool,
         is_only_dir: bool,
         exit_status: i32,
+        depth: usize,
     ) -> io::Result<i32> {
         for dir in dir_files {
             // Put a gap between directories, or between the list of files and
@@ -707,33 +708,28 @@ impl Lx {
                 .filter
                 .sort_files(&mut children, self.vcs.as_deref());
 
-            if let Some(recurse_opts) = self.options.dir_action.recurse_options() {
-                let depth = dir
-                    .path
-                    .components()
-                    .filter(|&c| c != Component::CurDir)
-                    .count()
-                    + 1;
-                if !recurse_opts.tree && !recurse_opts.is_too_deep(depth) {
-                    let mut child_dirs = Vec::new();
-                    for child_dir in children.iter().filter(|f| {
-                        f.is_directory() && !f.is_all_all && !self.options.filter.is_pruned(f)
-                    }) {
-                        match child_dir.to_dir() {
-                            Ok(d) => child_dirs.push(d),
-                            Err(e) => {
-                                writeln!(io::stderr(), "{}: {}", child_dir.path.display(), e)?;
-                            }
+            if let Some(recurse_opts) = self.options.dir_action.recurse_options()
+                && !recurse_opts.tree
+                && !recurse_opts.is_too_deep(depth)
+            {
+                let mut child_dirs = Vec::new();
+                for child_dir in children.iter().filter(|f| {
+                    f.is_directory() && !f.is_all_all && !self.options.filter.is_pruned(f)
+                }) {
+                    match child_dir.to_dir() {
+                        Ok(d) => child_dirs.push(d),
+                        Err(e) => {
+                            writeln!(io::stderr(), "{}: {}", child_dir.path.display(), e)?;
                         }
                     }
-
-                    self.print_files(Some(&dir), children)?;
-                    match self.print_dirs(child_dirs, false, false, exit_status) {
-                        Ok(_) => (),
-                        Err(e) => return Err(e),
-                    }
-                    continue;
                 }
+
+                self.print_files(Some(&dir), children)?;
+                match self.print_dirs(child_dirs, false, false, exit_status, depth + 1) {
+                    Ok(_) => (),
+                    Err(e) => return Err(e),
+                }
+                continue;
             }
 
             self.print_files(Some(&dir), children)?;

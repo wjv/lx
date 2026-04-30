@@ -284,8 +284,15 @@ impl<'a> Render<'a> {
                 let table_row = table.as_ref().map(|t| t.row_for_file(file, has_xattrs));
 
                 let mut dir = None;
+                // At the top level, follow a symlinked directory passed
+                // as a positional argument: it's an explicit user intent
+                // to enter that directory.  Below the top level,
+                // symlink-following is governed by --symlinks=follow,
+                // which is applied earlier as a filter.
+                let entry_is_dir =
+                    file.is_directory() || (depth.0 == 0 && file.points_to_directory());
                 if let Some(r) = self.recurse
-                    && file.is_directory()
+                    && entry_is_dir
                     && r.tree
                     && !r.is_too_deep(depth.0)
                     && !self.filter.is_pruned(file)

@@ -5,6 +5,18 @@ All notable changes to lx are documented here. lx is forked from
 
 ## [Unreleased] — 0.10.0
 
+### Fixed
+
+- **`-R -L<N> /path` now honours the depth limit** instead of
+  collapsing to a single level when given an absolute positional
+  argument.  Recursion depth is now measured relative to the
+  starting argument rather than absolute path components
+  (wjv/lx#33).
+- **`-T` now follows a symlinked directory passed as a positional
+  argument**, matching the existing bare and `-R` behaviour.
+  Symlinks encountered *during* recursion remain governed by
+  `--symlinks=show|hide|follow` (wjv/lx#34).
+
 ### Added
 
 - **`--show-as=NAME`.**  Mirror of `--save-as`: prints the same
