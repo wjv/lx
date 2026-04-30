@@ -7,6 +7,14 @@ All notable changes to lx are documented here. lx is forked from
 
 ### Fixed
 
+- **Default to one entry per line when stdout is not a terminal**,
+  matching `ls` and most ls-like tools.  Previously, an inherited
+  `COLUMNS` environment variable (common in tmux and several shell
+  configs) was honoured even on a pipe, so commands like
+  `lx *.md | wc -l` produced grid output and surprised pipelines.
+  `--width`/`-w` is treated as an explicit user request and is
+  still honoured on a pipe; `COLUMNS` is now only consulted when
+  stdout is a TTY.
 - **`-R -L<N> /path` now honours the depth limit** instead of
   collapsing to a single level when given an absolute positional
   argument.  Recursion depth is now measured relative to the

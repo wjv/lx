@@ -138,13 +138,13 @@ impl TerminalWidth {
 
         // --width/-w flag takes highest priority.
         if let Some(w) = matches.get_usize(flags::WIDTH) {
-            return Ok(Self::Set(w));
+            return Ok(Self::Explicit(w));
         }
 
         // COLUMNS environment variable.
         if let Some(columns) = vars.get(vars::COLUMNS).and_then(|s| s.into_string().ok()) {
             match columns.parse() {
-                Ok(width) => Ok(Self::Set(width)),
+                Ok(width) => Ok(Self::Inherited(width)),
                 Err(e) => {
                     let source = NumberSource::Env(vars::COLUMNS);
                     Err(OptionsError::FailedParse(columns, source, e))

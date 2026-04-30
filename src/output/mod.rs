@@ -65,21 +65,45 @@ pub enum Mode {
 /// The width of the terminal requested by the user.
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub enum TerminalWidth {
-    /// The user requested this specific number of columns.
-    Set(usize),
+    /// Explicitly set via `--width`/`-w`.  Always honoured, even
+    /// when stdout is piped: the user is asking for grid output of
+    /// a specific width regardless of the destination.
+    Explicit(usize),
 
-    /// Look up the terminal size at runtime.
+    /// Inherited from the `COLUMNS` environment variable.  Only
+    /// honoured when stdout is a terminal — otherwise the var is
+    /// likely just leftover from the parent shell and the user
+    /// expects ls-style one-per-line on a pipe.
+    Inherited(usize),
+
+    /// Look up the terminal size at runtime.  Returns `None` when
+    /// stdout is not a terminal.
     Automatic,
 }
 
 impl TerminalWidth {
     pub fn actual_terminal_width(self) -> Option<usize> {
-        // All of stdin, stdout, and stderr could not be connected to a
-        // terminal, but we’re only interested in stdout because it’s
-        // where the output goes.
+        use std::io::IsTerminal;
+
+        // --width is unconditional.
+        if let Self::Explicit(width) = self {
+            return Some(width);
+        }
+
+        // For everything else, the destination matters.  If stdout
+        // is a pipe or file, we want to default to one-per-line —
+        // matching ls.  We must not fall back to terminal_size's
+        // stderr/stdin probes here, because they'd report a size
+        // for `lx | wc -l` whenever the surrounding terminal is a
+        // tty, defeating the point.
+        let stdout = std::io::stdout();
+        if !stdout.is_terminal() {
+            return None;
+        }
 
         match self {
-            Self::Set(width) => Some(width),
+            Self::Explicit(_) => unreachable!(),
+            Self::Inherited(width) => Some(width),
             Self::Automatic => terminal_size::terminal_size().map(|(w, _)| w.0.into()),
         }
     }

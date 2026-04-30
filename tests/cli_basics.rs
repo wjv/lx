@@ -579,3 +579,49 @@ fn tree_follows_symlinked_positional_dir() {
         .success()
         .stdout(predicate::str::contains("leaf"));
 }
+
+/// `assert_cmd` runs lx with stdout captured, so it isn't a TTY.
+/// In that case, the default grid view should fall back to one
+/// file per line, ignoring an inherited `COLUMNS` value.
+/// Matches `ls`'s behaviour and avoids breaking pipelines like
+/// `lx *.md | wc -l`.
+#[test]
+fn columns_env_ignored_when_not_tty() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(dir.path().join("a"), b"").unwrap();
+    std::fs::write(dir.path().join("b"), b"").unwrap();
+
+    let assert = lx_no_colour()
+        .env("COLUMNS", "120")
+        .arg(dir.path())
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&assert.get_output().stdout);
+    assert_eq!(
+        stdout.lines().count(),
+        2,
+        "piped output should be one entry per line, got: {stdout:?}"
+    );
+}
+
+/// Explicit `--width=N` is the user asking for a grid of that
+/// width regardless of where stdout is going, so it must be
+/// honoured even on a pipe.
+#[test]
+fn explicit_width_forces_grid_on_pipe() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(dir.path().join("a"), b"").unwrap();
+    std::fs::write(dir.path().join("b"), b"").unwrap();
+
+    let assert = lx_no_colour()
+        .args(["--width=120"])
+        .arg(dir.path())
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&assert.get_output().stdout);
+    assert_eq!(
+        stdout.lines().count(),
+        1,
+        "--width should force a grid even on a pipe, got: {stdout:?}"
+    );
+}
