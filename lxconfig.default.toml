@@ -55,6 +55,7 @@ icons = "never"               # always / auto / never
 classify = "never"            # always / auto / never
 gradient = "all"              # all / none / size / date / size,date
 theme = "exa"                 # named theme (see below)
+xattr-indicator = true        # `@` indicator on permissions; off on macOS (see below)
 # colour = "auto"             # always / auto / never (overrides $NO_COLOR)
 # time-style = "default"      # default / iso / long-iso / full-iso (overrides $TIME_STYLE)
 # smooth = false              # 24-bit themes only: use smooth gradients
@@ -74,6 +75,15 @@ theme = "lx-256"
 [[personality.default.when]]
 env.COLORTERM = ["truecolor", "24bit"]   # array — any element matches
 theme = "lx-24bit"
+
+## On macOS, listxattr is disproportionately expensive (it dominates
+## tree traversal time on APFS).  Disable the `@` indicator probe by
+## default; users who want the indicator can override per-personality
+## with `xattr-indicator = true`, or pass `-l@` per invocation.
+
+[[personality.default.when]]
+platform = "macos"
+xattr-indicator = false
 
 ## The "lx" personality applies when the binary is invoked as "lx".
 [personality.lx]

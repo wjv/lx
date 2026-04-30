@@ -7,6 +7,24 @@ All notable changes to lx are documented here. lx is forked from
 
 ### Added
 
+- **`-@` is now a count flag.**  `-@` (count 1) shows only the
+  `@` indicator on the permissions field; `-@@` (count 2) keeps
+  the existing behaviour of listing each attribute and size.
+  `--xattr` is added as a visible alias for `--extended`.
+- **`xattr-indicator` personality config key.**  Bool config that
+  controls whether the `@` indicator is probed.  Independent of
+  `extended` (which is preserved unchanged).  `--save-as` of
+  `lx -@` emits `xattr-indicator = true`; `--save-as` of
+  `lx -@@` emits both `extended = true` and `xattr-indicator = true`.
+- **macOS now defaults to `xattr-indicator = false`.**  The
+  compiled-in `default` personality declares
+  `xattr-indicator = true`, with a `[[when]] platform = "macos"`
+  overlay flipping it off.  This is a 3.5× perf win on macOS
+  long-view tree traversal because `listxattr` is
+  disproportionately expensive on APFS.  Users who want the
+  indicator on macOS can opt in via `-l@` per invocation or by
+  declaring `xattr-indicator = true` in their personality.
+  Closes wjv/lx#8.
 - **`platform` predicate for `[[when]]` blocks.**  Conditional
   overrides can now gate on the host operating system, matched
   against Rust's `std::env::consts::OS` (`"macos"`, `"linux"`,

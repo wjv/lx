@@ -328,6 +328,7 @@ to
 .Sy created Pq bool ,
 .Sy total Pq bool ,
 .Sy extended Pq bool ,
+.Sy xattr-indicator Pq bool ,
 .Sy octal Pq bool ,
 .Sy flags Pq bool ,
 .Sy permissions Pq bool ,
@@ -585,13 +586,14 @@ theme = "lx-256"
 env.COLORTERM = ["truecolor", "24bit"]
 theme = "lx-24bit"
 
-# Platform-conditional default: turn off some setting on macOS only.
+# Platform-conditional default: enable the xattr `@` indicator
+# everywhere except on macOS, where listxattr is expensive.
 [personality.lx]
-some-setting = true
+xattr-indicator = true
 
 [[personality.lx.when]]
 platform = "macos"
-some-setting = false
+xattr-indicator = false
 .Ed
 .Pp
 .Sy Evaluation rules\&:

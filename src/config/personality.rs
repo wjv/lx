@@ -192,6 +192,11 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
                 ("icons".into(), Str("never".into())),
                 ("classify".into(), Str("never".into())),
                 ("theme".into(), Str("exa".into())),
+                // Default-on for the `@` indicator probe; flipped
+                // off on macOS in the [[when]] block below because
+                // listxattr there is disproportionately expensive
+                // (see CHANGELOG for the 0.10 perf details).
+                ("xattr-indicator".into(), Boolean(true)),
             ]),
             when: vec![
                 ConditionalOverride {
@@ -215,6 +220,11 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
                         "theme".into(),
                         toml::Value::String("lx-24bit".into()),
                     )]),
+                },
+                ConditionalOverride {
+                    env: HashMap::new(),
+                    platform: Some(toml::Value::String("macos".into())),
+                    settings: HashMap::from([("xattr-indicator".into(), Boolean(false))]),
                 },
             ],
             ..Default::default()

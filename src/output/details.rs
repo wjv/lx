@@ -101,6 +101,12 @@ pub struct Options {
 
     /// Whether to show each file’s extended attributes.
     pub xattr: bool,
+
+    /// Whether to probe for the `@` indicator in the permissions
+    /// column.  Independent of `xattr`: an indicator probe is a
+    /// single `listxattr` per file, whereas full enumeration is
+    /// `listxattr` plus a `getxattr` per attribute.
+    pub xattr_indicator: bool,
 }
 
 pub struct Render<'a> {
@@ -240,6 +246,7 @@ impl<'a> Render<'a> {
         //  - none:  no permissions column, no --extended → skip entirely
         let needs_xattr_full = self.opts.xattr;
         let needs_xattr_probe = !needs_xattr_full
+            && self.opts.xattr_indicator
             && self
                 .opts
                 .table
