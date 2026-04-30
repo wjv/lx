@@ -401,6 +401,15 @@ fn try_main() -> Result<i32, LxError> {
             config::save_personality_as(name, inherits, &cli_settings)?;
         }
 
+        OptionsResult::ShowAs(ref name, _, _) => {
+            let cli_settings = match Options::parse(&cli_args, &LiveVars) {
+                OptionsResult::ShowAs(_, _, settings) => settings,
+                _ => std::collections::HashMap::new(),
+            };
+            let inherits = active_personality.as_deref();
+            config::show_personality_as(name, inherits, &cli_settings);
+        }
+
         OptionsResult::DumpClass(ref name) => {
             if name.is_empty() {
                 config::show_class_all();

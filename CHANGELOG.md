@@ -7,6 +7,11 @@ All notable changes to lx are documented here. lx is forked from
 
 ### Added
 
+- **`--show-as=NAME`.**  Mirror of `--save-as`: prints the same
+  TOML personality snippet to stdout instead of writing to
+  `conf.d/`.  Useful for previewing what `--save-as` would produce,
+  piping into a config file manually, or inspecting the effective
+  flag delta of an invocation.
 - **`-@` is now a count flag.**  `-@` (count 1) shows only the
   `@` indicator on the permissions field; `-@@` (count 2) keeps
   the existing behaviour of listing each attribute and size.

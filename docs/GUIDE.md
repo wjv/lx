@@ -809,6 +809,12 @@ inheriting everything else from the active personality.
 
 If you had invoked `lx` as (say) `ll` when using `--save-as`, the saved personality inherits from `ll`. If you had not invoked any specific personality while saving, the saved personality inherits from the `lx` personality.
 
+To preview the same TOML snippet without writing a file, use `--show-as=NAME` instead. It's useful for sanity-checking what `--save-as` would produce, or for piping into a config file manually:
+
+```sh
+lx -l --total --sort=size --reverse --show-as=du
+```
+
 ### `LX_PERSONALITY`
 
 You can set a session-level default via the `LX_PERSONALITY`

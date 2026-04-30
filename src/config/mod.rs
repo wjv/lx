@@ -68,7 +68,7 @@ pub use self::load::find_config_path;
 
 pub use self::personality::{
     all_personality_names, dump_personality, dump_personality_all, resolve_personality,
-    save_personality_as,
+    save_personality_as, show_personality_as,
 };
 
 pub use self::themes::{all_theme_names, dump_theme, dump_theme_all, is_builtin_theme};
