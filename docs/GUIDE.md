@@ -256,10 +256,13 @@ a full list, see the lx(1) man page.
 
 ### Compounding flags
 
-Two flags compound by repetition. One of them you've already seen:
+Several flags compound by repetition. One of them you've already seen:
 
 - `-l` / `-ll` / `-lll` — detail tiers for the long view
 - `-t` / `-tt` / `-ttt` — timestamp tiers
+- `-a` / `-aa` — show dotfiles, then also `.` and `..`
+- `-@` / `-@@` — show the `@` indicator on files with extended
+  attributes, then also list the attributes themselves
 
 Files and directories on UNIX filesystems can have up to four
 timestamps: "modified", "changed", "created" and "accessed". `lx` can
@@ -285,6 +288,16 @@ only the ones you want:
 ```sh
 lx -lll --no-time --accessed    # show only accessed timestamp
 ```
+
+A note on `-@`/`-@@`: probing for extended attributes is cheap on
+Linux but disproportionately expensive on macOS (its `listxattr`
+can dominate tree-traversal time on APFS).  As a result, `lx`
+ships with the `@` indicator off by default *only* on macOS.
+Linux and BSD users see no behavioural change.  macOS users who
+want the indicator can opt in per invocation with `-l@`, or
+permanently with `xattr-indicator = true` in their personality.
+This is a showcase of the `platform` predicate for `[[when]]`
+blocks; see "Conditional overrides" below for the gory details.
 
 ### Filtering the file listing
 
@@ -1687,7 +1700,7 @@ Quick-reference table of all short flag allocations.
 | `-S` | `--blocks`                 | Allocated block count           |
 | `-u` | `--user`                   | Owner name                      |
 | `-g` | `--group`                  | Group name                      |
-| `-@` | `--extended`               | Extended attributes             |
+| `-@` | `--extended` (alias `--xattr`) | Extended attributes (`-@` indicator only, `-@@` full listing) |
 | `-h` | `--header`                 | Header row                      |
 | `-b` | `--bytes`                  | Raw byte counts                 |
 | `-K` | `--decimal`                | Decimal size prefixes (k, M, G) |

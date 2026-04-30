@@ -77,6 +77,7 @@ pub(crate) static SETTING_FLAGS: &[SettingDef] = &[
     SettingDef { key: "total-size",    flag: "--total",          kind: SettingKind::Bool },
     SettingDef { key: "count",         flag: "--count",          kind: SettingKind::Bool },
     SettingDef { key: "extended",      flag: "--extended",       kind: SettingKind::Bool },
+    SettingDef { key: "xattr-indicator", flag: "--xattr-indicator", kind: SettingKind::Bool },
     SettingDef { key: "octal",         flag: "--octal",          kind: SettingKind::Bool },
     // `octal-permissions` kept as a backward-compat alias for the
     // pre-rename canonical name; both produce the same flag.
@@ -211,6 +212,12 @@ pub(super) fn settings_to_args(
                 };
                 if truthy {
                     args.push(def.flag.into());
+                    // `extended = true` means "full xattr listing"
+                    // (count 2), so emit the flag twice.  The
+                    // single-count slot is owned by `xattr-indicator`.
+                    if key == "extended" {
+                        args.push(def.flag.into());
+                    }
                 } else {
                     // `key = false` means "suppress this, even if
                     // inherited".  Look up the corresponding `no-key`

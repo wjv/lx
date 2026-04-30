@@ -631,12 +631,36 @@ adds.
 Accepts
 .Fl -no-timestamps
 as a hidden alias.
-.It Fl @ , Fl -extended
-List each file's extended attributes and sizes.
+.It Fl @ , Fl -extended , Fl -xattr
+Show extended attributes.
+Use once
+.Pq Fl @
+to enable just the
+.Sq @
+indicator on the permissions field; use twice
+.Pq Fl @@
+to also list each attribute and size.
+.Fl -xattr
+is a visible alias for
+.Fl -extended .
 Suppressor:
 .Fl -no-extended
 /
-.Fl -no-@ .
+.Fl -no-@
+/
+.Fl -no-xattr .
+.It Fl -xattr-indicator
+Show the
+.Sq @
+indicator on the permissions field.
+Equivalent to a single
+.Fl @ ;
+primarily intended as the
+.Sy xattr-indicator
+config key for personalities; see
+.Xr lxconfig.toml 5 .
+Hidden from
+.Fl -help .
 .It Fl h , Fl -header
 Add a header row to each column.
 Suppressor:

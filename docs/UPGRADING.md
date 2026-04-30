@@ -10,8 +10,49 @@ Each section is written assuming you're coming from the immediately
 preceding release.  If you're jumping multiple versions, read them
 in order.
 
+- [Upgrading to 0.10](#upgrading-to-010)
 - [Upgrading to 0.9](#upgrading-to-09)
 - [Upgrading to 0.8](#upgrading-to-08)
+
+
+## Upgrading to 0.10
+
+0.10 is mostly a **consolidation release** (cleanup, refactoring,
+no big new features).  One user-visible behavioural change:
+
+### `-@` is now a count flag
+
+Previously `-@` / `--extended` was a single flag that listed each
+file's extended attributes.  In 0.10 it becomes a *count flag*:
+
+- `-@` (count 1) — shows only the `@` indicator on the
+  permissions field.
+- `-@@` (count 2) — additionally lists each attribute and size
+  (the previous `-@` behaviour).
+
+Existing scripts and configs that use `-@` / `--extended` to
+mean "full xattr listing" need to switch to `-@@`.  The
+`extended = true` config key continues to mean "full listing",
+unchanged.  A new `xattr-indicator` config key controls the
+indicator-only tier.  `--xattr` is added as a visible alias
+for `--extended`.
+
+### `@` indicator is off by default on macOS
+
+Probing for extended attributes is cheap on Linux but
+disproportionately expensive on macOS (its `listxattr` can
+dominate tree-traversal time on APFS — 96% of `lx -lTL5 ~`
+samples in our profiling).  As a result, the compiled-in
+`default` personality now ships with a
+`[[when]] platform = "macos"` overlay that disables the `@`
+indicator on macOS only.
+
+- **Linux/BSD users:** no behavioural change.  `lx -l` still
+  shows `@`.
+- **macOS users:** plain `lx -l` no longer shows `@`.  Pass
+  `-l@` per invocation to opt in, or set
+  `xattr-indicator = true` in your personality to opt in
+  permanently.
 
 
 ## Upgrading to 0.9

@@ -241,6 +241,7 @@ impl Options {
         let mut settings = collect_flag_values(matches);
         expand_time_tiers(matches, &mut settings);
         expand_all_count(matches, &mut settings);
+        expand_extended_count(matches, &mut settings);
         rewrite_negations(&mut settings);
         dedup_aliases(&mut settings);
         settings
@@ -314,6 +315,29 @@ fn expand_all_count(
     }
     if matches.get_count(flags::ALL) >= 2 {
         settings.insert("dot-entries".into(), toml::Value::Boolean(true));
+    }
+}
+
+/// Expand compounding `-@` (`EXTENDED`) count.
+///
+/// Count 1 (`-@`) sets `xattr-indicator = true`.  Count 2 (`-@@`)
+/// also sets `extended = true`.  Mirrors `expand_all_count`.
+fn expand_extended_count(
+    matches: &clap::ArgMatches,
+    settings: &mut std::collections::HashMap<String, toml::Value>,
+) {
+    if matches.value_source(flags::EXTENDED) != Some(clap::parser::ValueSource::CommandLine) {
+        return;
+    }
+    let count = matches.get_count(flags::EXTENDED);
+    if count >= 1 {
+        settings.insert("xattr-indicator".into(), toml::Value::Boolean(true));
+    }
+    if count < 2 {
+        // Count 1 means *indicator only* — strip the `extended`
+        // entry that `collect_flag_values` would have inserted
+        // on the basis of "value-source is command-line".
+        settings.remove("extended");
     }
 }
 

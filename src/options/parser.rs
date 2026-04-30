@@ -781,10 +781,19 @@ pub fn build_command() -> Command {
             Arg::new(flags::EXTENDED)
                 .short('@')
                 .long("extended")
-                .help("Show extended attributes and sizes")
+                .visible_alias("xattr")
+                .help("Show extended attributes (-@@ for full listing, -@ for indicator only)")
                 .help_heading("Long view")
                 .action(ArgAction::Count)
                 .overrides_with(flags::NO_EXTENDED),
+        )
+        .arg(
+            Arg::new(flags::XATTR_INDICATOR)
+                .long("xattr-indicator")
+                .help("Show the @ marker on files with extended attributes")
+                .hide(true)
+                .action(ArgAction::SetTrue)
+                .overrides_with(flags::NO_XATTR_INDICATOR),
         )
         // ── Filtering and sorting ─────────────────────────────────
         .arg(
@@ -1138,9 +1147,17 @@ pub fn build_command() -> Command {
             Arg::new(flags::NO_EXTENDED)
                 .long("no-extended")
                 .alias("no-@")
+                .alias("no-xattr")
                 .hide(true)
                 .action(ArgAction::Count)
                 .overrides_with(flags::EXTENDED),
+        )
+        .arg(
+            Arg::new(flags::NO_XATTR_INDICATOR)
+                .long("no-xattr-indicator")
+                .hide(true)
+                .action(ArgAction::Count)
+                .overrides_with(flags::XATTR_INDICATOR),
         )
         .arg(
             Arg::new(flags::NO_FLAGS)

@@ -84,25 +84,52 @@ impl grid::Options {
 
 impl details::Options {
     fn deduce_tree(matches: &MatchedFlags) -> Self {
+        let (xattr, xattr_indicator) = deduce_xattr_levels(matches);
         Self {
             table: None,
             header: false,
-            xattr: xattr::ENABLED
-                && matches.has(flags::EXTENDED)
-                && !matches.has(flags::NO_EXTENDED),
+            xattr,
+            xattr_indicator,
         }
     }
 
     fn deduce_long<V: Vars>(matches: &MatchedFlags, vars: &V, long_count: u8) -> Self {
+        let (xattr, xattr_indicator) = deduce_xattr_levels(matches);
         Self {
             table: Some(TableOptions::deduce(matches, vars, long_count)),
             header: (matches.has(flags::HEADER) || long_count >= 3)
                 && !matches.has(flags::NO_HEADER),
-            xattr: xattr::ENABLED
-                && matches.has(flags::EXTENDED)
-                && !matches.has(flags::NO_EXTENDED),
+            xattr,
+            xattr_indicator,
         }
     }
+}
+
+/// Resolve the two-tier xattr flags from CLI input.
+///
+/// Returns `(full, indicator)` where:
+/// - `full` (`-@@`, count ≥ 2, or `--extended`) → enumerate all xattrs
+/// - `indicator` (`-@`, count ≥ 1, or `--xattr-indicator`) → probe for `@` only
+///
+/// `full` implies `indicator` semantically, but the renderer uses
+/// only `full` when it's set (the probe is redundant).
+fn deduce_xattr_levels(matches: &MatchedFlags) -> (bool, bool) {
+    if !xattr::ENABLED {
+        return (false, false);
+    }
+
+    let extended_count = matches.count(flags::EXTENDED);
+    let extended_suppressed = matches.has(flags::NO_EXTENDED);
+
+    let full = extended_count >= 2 && !extended_suppressed;
+
+    let indicator_suppressed = matches.has(flags::NO_XATTR_INDICATOR);
+    let indicator = full
+        || (!indicator_suppressed
+            && (extended_count >= 1 || matches.has(flags::XATTR_INDICATOR))
+            && !extended_suppressed);
+
+    (full, indicator)
 }
 
 impl TerminalWidth {
