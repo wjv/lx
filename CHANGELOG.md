@@ -36,6 +36,16 @@ All notable changes to lx are documented here. lx is forked from
 
 ### Added
 
+- **`--version` now shows compiled-in feature flags.**  Output
+  becomes `lx 0.10.0 [+git]` for the default build,
+  `lx 0.10.0 [+git +jj]` with `--features jj`, and bare
+  `lx 0.10.0` with `--no-default-features`.  Closes the
+  diagnostic gap where bug reports couldn't reveal whether the
+  binary was built with VCS support.
+- **`--help` and `--version` now have entries in `lx(1)`** under
+  a new "Meta options" subsection.  Previously documented only
+  in `--help` itself.
+
 - **`-X` / `--filesystem=same` / `--xdev`**: stop tree (`-T`) and
   recursive (`-R`) descent at filesystem boundaries, matching BSD
   `ls -X`, `find -xdev`, and `tree --xdev`.  `-X` is the BSD short

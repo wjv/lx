@@ -508,10 +508,24 @@ impl MatchedFlags {
     }
 }
 
+/// Version string with compiled-in feature suffix.
+///
+/// `[+git +jj]` follows the same `[bracket]` typographic convention
+/// used elsewhere in lx's CLI surface (see `--help` annotations) for
+/// structured machine-readable suffixes.  `+` marks a feature as
+/// compiled-in; absent features are simply omitted.
+const VERSION: &str = if cfg!(feature = "jj") {
+    concat!(env!("CARGO_PKG_VERSION"), " [+git +jj]")
+} else if cfg!(feature = "git") {
+    concat!(env!("CARGO_PKG_VERSION"), " [+git]")
+} else {
+    env!("CARGO_PKG_VERSION")
+};
+
 /// Build the Clap `Command` that defines all lx flags.
 pub fn build_command() -> Command {
     Command::new("lx")
-        .version(env!("CARGO_PKG_VERSION"))
+        .version(VERSION)
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .styles(help_styles())
         .max_term_width(80)
