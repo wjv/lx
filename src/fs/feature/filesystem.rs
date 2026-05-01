@@ -134,9 +134,11 @@ mod imp {
         let buf = unsafe { buf.assume_init() };
 
         // f_type's exact integer type varies by libc/architecture
-        // (`__fsword_t` on glibc); cast through i64 to a unified
-        // comparison space.
-        let f_type = buf.f_type as i64;
+        // (`__fsword_t` on glibc; i64 on 64-bit, i32 on 32-bit).
+        // `From` widens i32 to i64 and is identity on i64, so this
+        // works portably without a cast (and without tripping the
+        // trivial-numeric-cast lint on 64-bit targets).
+        let f_type: i64 = buf.f_type.into();
         NETWORK_FS_MAGICS.contains(&f_type)
     }
 }
