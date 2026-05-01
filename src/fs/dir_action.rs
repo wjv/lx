@@ -64,6 +64,12 @@ pub enum Filesystem {
     /// Stay on the starting filesystem (matches BSD `ls -X`,
     /// `find -xdev`, `tree --xdev`).  Compares `st_dev`.
     Same,
+
+    /// Cross local filesystem boundaries but skip network mounts
+    /// (NFS, SMB/CIFS, AFS, etc.).  FUSE filesystems are treated as
+    /// network by default.  At each cross-device transition,
+    /// `statfs()` decides whether the new filesystem is local.
+    Local,
 }
 
 /// The options that determine how to recurse into a directory.

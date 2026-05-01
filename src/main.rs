@@ -672,12 +672,15 @@ impl Lx {
         root_dev: Option<u64>,
     ) -> io::Result<i32> {
         use crate::fs::dir_action::Filesystem;
+        use crate::fs::feature::filesystem::is_network_fs;
         use std::os::unix::fs::MetadataExt;
-        let same_fs = self
+        let fs_mode = self
             .options
             .dir_action
             .recurse_options()
-            .is_some_and(|r| r.filesystem == Filesystem::Same);
+            .map(|r| r.filesystem)
+            .unwrap_or(Filesystem::All);
+        let needs_anchor = matches!(fs_mode, Filesystem::Same | Filesystem::Local);
 
         for dir in dir_files {
             // Put a gap between directories, or between the list of files and
@@ -720,7 +723,7 @@ impl Lx {
             // Establish the filesystem-boundary anchor for this
             // traversal: the dev of this dir if we don't already
             // inherit one from a parent call.
-            let local_root_dev = if same_fs {
+            let local_root_dev = if needs_anchor {
                 root_dev.or_else(|| std::fs::metadata(&dir.path).ok().map(|m| m.dev()))
             } else {
                 None
@@ -734,13 +737,21 @@ impl Lx {
                 for child_dir in children.iter().filter(|f| {
                     f.is_directory() && !f.is_all_all && !self.options.filter.is_pruned(f)
                 }) {
-                    // --filesystem=same: skip child dirs on a different
-                    // device.  st_dev is in already-loaded metadata, so
-                    // this is a zero-syscall check.
+                    // --filesystem=same/local: at a cross-device
+                    // boundary, refuse (same) or consult statfs(2)
+                    // and refuse if network-backed (local).
+                    // st_dev is in already-loaded metadata.
                     if let Some(root) = local_root_dev
                         && child_dir.metadata().dev() != root
                     {
-                        continue;
+                        let allow = match fs_mode {
+                            Filesystem::Same => false,
+                            Filesystem::Local => !is_network_fs(&child_dir.path),
+                            Filesystem::All => true, // unreachable; needs_anchor would be false
+                        };
+                        if !allow {
+                            continue;
+                        }
                     }
                     match child_dir.to_dir() {
                         Ok(d) => child_dirs.push(d),

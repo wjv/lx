@@ -445,12 +445,14 @@ impl<'a> Render<'a> {
 
     /// Whether tree descent may enter `file`, given its tree depth and
     /// the root device captured at depth 0.  Enforces
-    /// `--filesystem=same` by comparing `file`'s `st_dev` to
-    /// `root_dev`.  Top-level entries (`depth.0 == 0`) are always
-    /// allowed: they're the roots of their own subtrees and there's
-    /// nothing to compare against yet.
+    /// `--filesystem={same,local}` by comparing `file`'s `st_dev` to
+    /// `root_dev` and (for `local`) consulting `statfs(2)` at
+    /// boundary crossings.  Top-level entries (`depth.0 == 0`) are
+    /// always allowed: they're the roots of their own subtrees and
+    /// there's nothing to compare against yet.
     fn allow_descent(&self, file: &File<'_>, depth: TreeDepth, root_dev: Option<u64>) -> bool {
         use crate::fs::dir_action::Filesystem;
+        use crate::fs::feature::filesystem::is_network_fs;
         use std::os::unix::fs::MetadataExt;
         let Some(r) = self.recurse else { return true };
         if r.filesystem == Filesystem::All {
@@ -462,7 +464,17 @@ impl<'a> Render<'a> {
         let Some(root) = root_dev else {
             return true;
         };
-        file.metadata().dev() == root
+        // Same device — always allow regardless of mode.
+        if file.metadata().dev() == root {
+            return true;
+        }
+        // Cross-device boundary.  `same` refuses; `local` consults
+        // statfs and refuses only if the new fs is network-backed.
+        match r.filesystem {
+            Filesystem::Same => false,
+            Filesystem::Local => !is_network_fs(&file.path),
+            Filesystem::All => true, // unreachable due to early return
+        }
     }
 
     fn render_error(&self, error: &io::Error, tree: TreeParams, path: Option<PathBuf>) -> Row {

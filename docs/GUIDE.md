@@ -357,6 +357,20 @@ Each top-level argument establishes its own filesystem anchor, so
 `lx -X /a /b` treats `/a` and `/b` independently. The check uses
 metadata already in memory, so the cost is essentially zero.
 
+`--filesystem=local` is a softer variant: cross local mount
+boundaries (a separate disk, a tmpfs, an APFS volume) but skip
+network filesystems (NFS, SMB/CIFS, AFS, FUSE). At each cross-
+device transition lx consults `statfs(2)` to identify the
+filesystem type:
+
+```sh
+lx -T --filesystem=local /  # walk the whole local tree, skip mounts
+```
+
+This is more useful than `same` when your tree spans several
+local volumes you genuinely want listed but you don't want lx to
+disappear into a slow network mount.
+
 ### Sorting
 
 `lx`'s sort vocabulary is rich: anything you can display as a

@@ -2,6 +2,7 @@ use std::path::Path;
 
 use crate::fs::fields as f;
 
+pub mod filesystem;
 pub mod xattr;
 
 /// Backend-agnostic VCS cache.  Implementations discover repositories,

@@ -228,11 +228,21 @@ descent at filesystem boundaries.
 is
 .Cm same
 (child directories on a different device are listed but not
-entered) or
+entered),
+.Cm local
+(cross local mount boundaries but skip network filesystems —
+NFS, SMB/CIFS, AFS, FUSE, etc. — using
+.Xr statfs 2
+at each cross-device transition), or
 .Cm all
 (default).
 Each top-level positional argument establishes its own filesystem
 anchor.
+.Cm local
+is implemented for macOS and Linux; on other Unix platforms it
+falls back to
+.Cm all
+behaviour.
 Also accepted:
 .Fl -fs Ns = Ns Ar MODE .
 .It Fl X

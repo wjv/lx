@@ -56,8 +56,12 @@ All notable changes to lx are documented here. lx is forked from
   `--no-filesystem` (with `--no-fs`/`--no-X`/`--no-xdev` aliases)
   resets to the default.  Also available as a personality config
   key: `filesystem = "same"` in any `[personality.NAME]` block.
-  `--filesystem=local` (skip network mounts, cross local
-  boundaries) is reserved for a follow-up (wjv/lx#17).
+- **`--filesystem=local`**: cross local mount boundaries but skip
+  network filesystems (NFS, SMB/CIFS, AFS, FUSE, …).  At each
+  cross-device transition `statfs(2)` decides; FUSE is treated as
+  network by default.  One syscall per boundary, not per file.
+  Implemented for macOS and Linux; falls back to `all` behaviour
+  on other Unix platforms.  Closes wjv/lx#17.
 
 ### Added
 

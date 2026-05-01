@@ -57,9 +57,7 @@ impl Filesystem {
         }
         match matches.get(flags::FILESYSTEM) {
             Some("same") => Self::Same,
-            // Clap restricts the values to {same, all} today; "local"
-            // will be added when the network-mount detection code
-            // lands.  Treat anything else as the default.
+            Some("local") => Self::Local,
             _ => Self::All,
         }
     }

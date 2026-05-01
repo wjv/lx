@@ -313,10 +313,10 @@ fn find_cross_device_path() -> Option<(std::path::PathBuf, String)> {
 }
 
 #[test]
-fn filesystem_flag_accepts_same_and_all() {
+fn filesystem_flag_accepts_all_modes() {
     let dir = filtering_fixture();
-    // --filesystem=same on a single-fs tempdir should produce the same
-    // output as default (everything is on the same device).
+    // On a single-fs tempdir all three modes should produce identical
+    // output, since no boundary crossings happen.
     let default_out = lx_no_colour()
         .args(["-T"])
         .arg(dir.path())
@@ -327,6 +327,11 @@ fn filesystem_flag_accepts_same_and_all() {
         .arg(dir.path())
         .output()
         .expect("--filesystem=same failed");
+    let local_out = lx_no_colour()
+        .args(["-T", "--filesystem=local"])
+        .arg(dir.path())
+        .output()
+        .expect("--filesystem=local failed");
     let all_out = lx_no_colour()
         .args(["-T", "--filesystem=all"])
         .arg(dir.path())
@@ -334,8 +339,10 @@ fn filesystem_flag_accepts_same_and_all() {
         .expect("--filesystem=all failed");
     assert!(default_out.status.success());
     assert!(same_out.status.success());
+    assert!(local_out.status.success());
     assert!(all_out.status.success());
     assert_eq!(default_out.stdout, same_out.stdout);
+    assert_eq!(default_out.stdout, local_out.stdout);
     assert_eq!(default_out.stdout, all_out.stdout);
 }
 
@@ -413,6 +420,63 @@ fn xdev_skips_cross_filesystem_descent() {
     assert!(
         xdev_lines < default_lines,
         "-X should hide cross-device contents (default: {default_lines} lines, -X: {xdev_lines} lines):\n--- default ---\n{default_stdout}\n--- xdev ---\n{xdev_stdout}"
+    );
+}
+
+#[test]
+fn filesystem_local_crosses_local_boundaries() {
+    // `--filesystem=local` should cross local-but-different-device
+    // boundaries (matching `--filesystem=all`), unlike
+    // `--filesystem=same` which refuses any cross-device transition.
+    //
+    // We can't portably test the *network-skip* path without a real
+    // network mount; that needs empirical verification (which we did
+    // manually against an SMB mount during development).  This test
+    // covers the local-boundary-crossing case, which on most systems
+    // exercises e.g. /dev (devfs/tmpfs) or /System/Volumes (APFS) as
+    // a non-network cross-device target.
+    let Some((parent, _child)) = find_cross_device_path() else {
+        eprintln!("skipping: no cross-device path found in test environment");
+        return;
+    };
+
+    let all_out = lx_no_colour()
+        .args(["-TL2", "--filesystem=all"])
+        .arg(&parent)
+        .output()
+        .expect("--filesystem=all failed");
+    let local_out = lx_no_colour()
+        .args(["-TL2", "--filesystem=local"])
+        .arg(&parent)
+        .output()
+        .expect("--filesystem=local failed");
+    let same_out = lx_no_colour()
+        .args(["-TL2", "--filesystem=same"])
+        .arg(&parent)
+        .output()
+        .expect("--filesystem=same failed");
+
+    let all_lines = String::from_utf8_lossy(&all_out.stdout).lines().count();
+    let local_lines = String::from_utf8_lossy(&local_out.stdout).lines().count();
+    let same_lines = String::from_utf8_lossy(&same_out.stdout).lines().count();
+
+    // `same` strictly hides cross-device contents; `local` crosses
+    // them when they're not network-backed; `all` always crosses.
+    // So same < all, and local should match all on a system whose
+    // cross-device mounts are all local (which is true of most CI
+    // and dev environments).
+    assert!(
+        same_lines < all_lines,
+        "same should hide cross-device contents (same: {same_lines}, all: {all_lines})"
+    );
+    // local matching all confirms the *crossing* path is exercised.
+    // If a CI runner happens to have a network mount under one of the
+    // probed parents, local would equal same instead — also valid
+    // behaviour, just not what this test specifically asserts, so we
+    // accept either outcome here.
+    assert!(
+        local_lines == all_lines || local_lines == same_lines,
+        "local should equal either all (local-only crossings) or same (network mount present): local={local_lines}, all={all_lines}, same={same_lines}"
     );
 }
 

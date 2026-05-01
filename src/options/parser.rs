@@ -853,12 +853,18 @@ pub fn build_command() -> Command {
             Arg::new(flags::FILESYSTEM)
                 .long("filesystem")
                 .visible_alias("fs")
-                .help("Don't cross filesystem boundaries when recursing [same, all (default)]")
+                .help(
+                    "Don't cross filesystem boundaries when recursing [same, local, all (default)]",
+                )
                 .help_heading("Filtering & Sorting")
                 .action(ArgAction::Set)
                 .value_name("MODE")
                 .hide_possible_values(true)
-                .value_parser([PossibleValue::new("same"), PossibleValue::new("all")]),
+                .value_parser([
+                    PossibleValue::new("same"),
+                    PossibleValue::new("local"),
+                    PossibleValue::new("all"),
+                ]),
         )
         .arg(
             // -X is the BSD `ls -X` short form for --filesystem=same.
