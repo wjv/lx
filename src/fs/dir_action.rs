@@ -54,6 +54,18 @@ impl DirAction {
     }
 }
 
+/// Whether recursion should cross filesystem boundaries.
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Default)]
+pub enum Filesystem {
+    /// Cross any filesystem boundary (default; matches `find` without `-xdev`).
+    #[default]
+    All,
+
+    /// Stay on the starting filesystem (matches BSD `ls -X`,
+    /// `find -xdev`, `tree --xdev`).  Compares `st_dev`.
+    Same,
+}
+
 /// The options that determine how to recurse into a directory.
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub struct RecurseOptions {
@@ -64,6 +76,9 @@ pub struct RecurseOptions {
     /// The maximum number of times that recursion should descend to, if one
     /// is specified.
     pub max_depth: Option<usize>,
+
+    /// Filesystem-boundary policy for descent.
+    pub filesystem: Filesystem,
 }
 
 impl RecurseOptions {

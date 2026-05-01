@@ -32,6 +32,9 @@ pub const NO_DIRS_FIRST: &str = "no-dirs-first";
 pub const NO_DIRS_LAST: &str = "no-dirs-last";
 pub const ONLY_DIRS: &str = "only-dirs";
 pub const ONLY_FILES: &str = "only-files";
+pub const FILESYSTEM: &str = "filesystem";
+pub const XDEV: &str = "xdev";
+pub const NO_FILESYSTEM: &str = "no-filesystem";
 
 // long view options
 pub const BINARY: &str = "binary";

@@ -342,6 +342,21 @@ lx -T -P 'target|node_modules'  # show these dirs but don't recurse
 lx -TZ -P target                # pruned tree with total sizes (du)
 ```
 
+`-X` / `--filesystem=same` (also `--xdev` for `find`/`tree` muscle
+memory) stops tree and recursive descent at filesystem boundaries.
+A child directory on a different device is listed but not entered.
+This is invaluable when listing trees that include network mounts
+(NFS, SMB) or other filesystems you don't want to walk into:
+
+```sh
+lx -TX ~                # tree of $HOME, don't cross into mounted volumes
+lx -RX -L4 /            # recurse 4 deep, stay on the root filesystem
+```
+
+Each top-level argument establishes its own filesystem anchor, so
+`lx -X /a /b` treats `/a` and `/b` independently. The check uses
+metadata already in memory, so the cost is essentially zero.
+
 ### Sorting
 
 `lx`'s sort vocabulary is rich: anything you can display as a
@@ -1689,6 +1704,7 @@ Quick-reference table of all short flag allocations.
 | `-J` | `--dirs-last`   | Directories last (`--group-dirs=last`)   |
 | `-I` | `--ignore`      | Glob patterns to hide                    |
 | `-P` | `--prune`       | Glob patterns to show but not recurse    |
+| `-X` | `--filesystem=same` | Don't cross filesystem boundaries    |
 | `-s` | `--sort`        | Sort field                               |
 | `-r` | `--reverse`     | Reverse sort order                       |
 

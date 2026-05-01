@@ -89,6 +89,7 @@ pub(crate) static SETTING_FLAGS: &[SettingDef] = &[
     SettingDef { key: "ignore",        flag: "--ignore",         kind: SettingKind::Str },
     SettingDef { key: "prune",         flag: "--prune",          kind: SettingKind::Str },
     SettingDef { key: "symlinks",      flag: "--symlinks",       kind: SettingKind::Str },
+    SettingDef { key: "filesystem",    flag: "--filesystem",     kind: SettingKind::Str },
     SettingDef { key: "classify",      flag: "--classify",       kind: SettingKind::Str },
 
     // VCS

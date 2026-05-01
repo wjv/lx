@@ -186,6 +186,7 @@ impl<'a> Render<'a> {
                 &mut rows,
                 &self.files,
                 TreeDepth::root(),
+                None,
                 &mut size_total,
             );
             let file_count = rows.len() - rows_before;
@@ -201,6 +202,7 @@ impl<'a> Render<'a> {
                 &mut rows,
                 &self.files,
                 TreeDepth::root(),
+                None,
                 &mut size_total,
             );
 
@@ -220,6 +222,10 @@ impl<'a> Render<'a> {
         rows: &mut Vec<Row>,
         src: &[File<'dir>],
         depth: TreeDepth,
+        // The root dev for this subtree.  None at the top of each tree
+        // (a per-file dev is captured per top-level entry); Some(dev)
+        // for any deeper recursion.
+        root_dev: Option<u64>,
         size_total: &mut u64,
     ) {
         use super::table::Column;
@@ -296,6 +302,7 @@ impl<'a> Render<'a> {
                     && r.tree
                     && !r.is_too_deep(depth.0)
                     && !self.filter.is_pruned(file)
+                    && self.allow_descent(file, depth, root_dev)
                 {
                     match file.to_dir() {
                         Ok(d) => {
@@ -390,7 +397,23 @@ impl<'a> Render<'a> {
                         ));
                     }
 
-                    self.add_files_to_table(table, rows, &files, depth.deeper(), size_total);
+                    // At the tree root, each top-level entry establishes
+                    // its own filesystem-boundary anchor; deeper levels
+                    // inherit the anchor captured here.
+                    let subtree_root_dev = if depth.0 == 0 {
+                        use std::os::unix::fs::MetadataExt;
+                        Some(egg.file.metadata().dev())
+                    } else {
+                        root_dev
+                    };
+                    self.add_files_to_table(
+                        table,
+                        rows,
+                        &files,
+                        depth.deeper(),
+                        subtree_root_dev,
+                        size_total,
+                    );
                     continue;
                 }
             }
@@ -418,6 +441,28 @@ impl<'a> Render<'a> {
             cells: Some(header),
             name: TextCell::paint_str(self.theme.ui.header, "Name"),
         }
+    }
+
+    /// Whether tree descent may enter `file`, given its tree depth and
+    /// the root device captured at depth 0.  Enforces
+    /// `--filesystem=same` by comparing `file`'s `st_dev` to
+    /// `root_dev`.  Top-level entries (`depth.0 == 0`) are always
+    /// allowed: they're the roots of their own subtrees and there's
+    /// nothing to compare against yet.
+    fn allow_descent(&self, file: &File<'_>, depth: TreeDepth, root_dev: Option<u64>) -> bool {
+        use crate::fs::dir_action::Filesystem;
+        use std::os::unix::fs::MetadataExt;
+        let Some(r) = self.recurse else { return true };
+        if r.filesystem == Filesystem::All {
+            return true;
+        }
+        if depth.0 == 0 {
+            return true;
+        }
+        let Some(root) = root_dev else {
+            return true;
+        };
+        file.metadata().dev() == root
     }
 
     fn render_error(&self, error: &io::Error, tree: TreeParams, path: Option<PathBuf>) -> Row {

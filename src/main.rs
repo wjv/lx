@@ -633,7 +633,7 @@ impl Lx {
         self.options.filter.filter_argument_files(&mut files);
         self.print_files(None, files)?;
 
-        let result = self.print_dirs(dirs, no_files, is_only_dir, exit_status, 1);
+        let result = self.print_dirs(dirs, no_files, is_only_dir, exit_status, 1, None);
 
         if self.options.count {
             let count = self.numeric.format_int(self.item_count as isize);
@@ -669,7 +669,16 @@ impl Lx {
         is_only_dir: bool,
         exit_status: i32,
         depth: usize,
+        root_dev: Option<u64>,
     ) -> io::Result<i32> {
+        use crate::fs::dir_action::Filesystem;
+        use std::os::unix::fs::MetadataExt;
+        let same_fs = self
+            .options
+            .dir_action
+            .recurse_options()
+            .is_some_and(|r| r.filesystem == Filesystem::Same);
+
         for dir in dir_files {
             // Put a gap between directories, or between the list of files and
             // the first directory.
@@ -708,6 +717,15 @@ impl Lx {
                 .filter
                 .sort_files(&mut children, self.vcs.as_deref());
 
+            // Establish the filesystem-boundary anchor for this
+            // traversal: the dev of this dir if we don't already
+            // inherit one from a parent call.
+            let local_root_dev = if same_fs {
+                root_dev.or_else(|| std::fs::metadata(&dir.path).ok().map(|m| m.dev()))
+            } else {
+                None
+            };
+
             if let Some(recurse_opts) = self.options.dir_action.recurse_options()
                 && !recurse_opts.tree
                 && !recurse_opts.is_too_deep(depth)
@@ -716,6 +734,14 @@ impl Lx {
                 for child_dir in children.iter().filter(|f| {
                     f.is_directory() && !f.is_all_all && !self.options.filter.is_pruned(f)
                 }) {
+                    // --filesystem=same: skip child dirs on a different
+                    // device.  st_dev is in already-loaded metadata, so
+                    // this is a zero-syscall check.
+                    if let Some(root) = local_root_dev
+                        && child_dir.metadata().dev() != root
+                    {
+                        continue;
+                    }
                     match child_dir.to_dir() {
                         Ok(d) => child_dirs.push(d),
                         Err(e) => {
@@ -725,7 +751,14 @@ impl Lx {
                 }
 
                 self.print_files(Some(&dir), children)?;
-                match self.print_dirs(child_dirs, false, false, exit_status, depth + 1) {
+                match self.print_dirs(
+                    child_dirs,
+                    false,
+                    false,
+                    exit_status,
+                    depth + 1,
+                    local_root_dev,
+                ) {
                     Ok(_) => (),
                     Err(e) => return Err(e),
                 }

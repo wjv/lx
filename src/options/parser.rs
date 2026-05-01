@@ -836,6 +836,36 @@ pub fn build_command() -> Command {
                 .action(ArgAction::Count),
         )
         .arg(
+            Arg::new(flags::FILESYSTEM)
+                .long("filesystem")
+                .visible_alias("fs")
+                .help("Don't cross filesystem boundaries when recursing [same, all (default)]")
+                .help_heading("Filtering & Sorting")
+                .action(ArgAction::Set)
+                .value_name("MODE")
+                .hide_possible_values(true)
+                .value_parser([PossibleValue::new("same"), PossibleValue::new("all")]),
+        )
+        .arg(
+            // -X is the BSD `ls -X` short form for --filesystem=same.
+            // --xdev is a hidden long alias for find/tree muscle memory.
+            Arg::new(flags::XDEV)
+                .short('X')
+                .alias("xdev")
+                .help("Stay on the starting filesystem\n[short for --filesystem=same]")
+                .help_heading("Filtering & Sorting")
+                .action(ArgAction::Count),
+        )
+        .arg(
+            Arg::new(flags::NO_FILESYSTEM)
+                .long("no-filesystem")
+                .alias("no-fs")
+                .alias("no-X")
+                .alias("no-xdev")
+                .hide(true)
+                .action(ArgAction::Count),
+        )
+        .arg(
             Arg::new(flags::SYMLINKS)
                 .long("symlinks")
                 .help("How to handle symlinks [show, hide, follow]")

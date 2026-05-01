@@ -3,7 +3,7 @@
 use crate::options::flags;
 use crate::options::parser::MatchedFlags;
 
-use crate::fs::dir_action::{DirAction, RecurseOptions};
+use crate::fs::dir_action::{DirAction, Filesystem, RecurseOptions};
 
 impl DirAction {
     /// Determine which action to perform when trying to list a directory.
@@ -36,7 +36,32 @@ impl RecurseOptions {
     pub fn deduce(matches: &MatchedFlags, tree: bool) -> Self {
         // Clap validates --level as a usize at parse time.
         let max_depth = matches.get_usize(flags::LEVEL);
-        Self { tree, max_depth }
+        let filesystem = Filesystem::deduce(matches);
+        Self {
+            tree,
+            max_depth,
+            filesystem,
+        }
+    }
+}
+
+impl Filesystem {
+    fn deduce(matches: &MatchedFlags) -> Self {
+        // --no-* takes precedence over both --filesystem=MODE and -X.
+        if matches.has(flags::NO_FILESYSTEM) {
+            return Self::All;
+        }
+        // -X / --xdev: short for --filesystem=same.
+        if matches.has(flags::XDEV) {
+            return Self::Same;
+        }
+        match matches.get(flags::FILESYSTEM) {
+            Some("same") => Self::Same,
+            // Clap restricts the values to {same, all} today; "local"
+            // will be added when the network-mount detection code
+            // lands.  Treat anything else as the default.
+            _ => Self::All,
+        }
     }
 }
 
@@ -64,21 +89,21 @@ mod test {
 
     // Recursing
     use self::DirAction::Recurse;
-    test!(rec_short:       DirAction <- ["-R"];                           Recurse(RecurseOptions { tree: false, max_depth: None }));
-    test!(rec_long:        DirAction <- ["--recurse"];                    Recurse(RecurseOptions { tree: false, max_depth: None }));
-    test!(rec_lim_short:   DirAction <- ["-RL4"];                         Recurse(RecurseOptions { tree: false, max_depth: Some(4) }));
-    test!(rec_lim_short_2: DirAction <- ["-RL=5"];                        Recurse(RecurseOptions { tree: false, max_depth: Some(5) }));
-    test!(rec_lim_long:    DirAction <- ["--recurse", "--level", "666"];  Recurse(RecurseOptions { tree: false, max_depth: Some(666) }));
-    test!(rec_lim_long_2:  DirAction <- ["--recurse", "--level=0118"];    Recurse(RecurseOptions { tree: false, max_depth: Some(118) }));
-    test!(tree:            DirAction <- ["--tree"];                       Recurse(RecurseOptions { tree: true,  max_depth: None }));
-    test!(rec_tree:        DirAction <- ["--recurse", "--tree"];          Recurse(RecurseOptions { tree: true,  max_depth: None }));
-    test!(rec_short_tree:  DirAction <- ["-TR"];                          Recurse(RecurseOptions { tree: true,  max_depth: None }));
+    test!(rec_short:       DirAction <- ["-R"];                           Recurse(RecurseOptions { tree: false, max_depth: None, filesystem: Filesystem::All }));
+    test!(rec_long:        DirAction <- ["--recurse"];                    Recurse(RecurseOptions { tree: false, max_depth: None, filesystem: Filesystem::All }));
+    test!(rec_lim_short:   DirAction <- ["-RL4"];                         Recurse(RecurseOptions { tree: false, max_depth: Some(4), filesystem: Filesystem::All }));
+    test!(rec_lim_short_2: DirAction <- ["-RL=5"];                        Recurse(RecurseOptions { tree: false, max_depth: Some(5), filesystem: Filesystem::All }));
+    test!(rec_lim_long:    DirAction <- ["--recurse", "--level", "666"];  Recurse(RecurseOptions { tree: false, max_depth: Some(666), filesystem: Filesystem::All }));
+    test!(rec_lim_long_2:  DirAction <- ["--recurse", "--level=0118"];    Recurse(RecurseOptions { tree: false, max_depth: Some(118), filesystem: Filesystem::All }));
+    test!(tree:            DirAction <- ["--tree"];                       Recurse(RecurseOptions { tree: true, max_depth: None, filesystem: Filesystem::All }));
+    test!(rec_tree:        DirAction <- ["--recurse", "--tree"];          Recurse(RecurseOptions { tree: true, max_depth: None, filesystem: Filesystem::All }));
+    test!(rec_short_tree:  DirAction <- ["-TR"];                          Recurse(RecurseOptions { tree: true, max_depth: None, filesystem: Filesystem::All }));
 
     // Overriding --list-dirs, --recurse, and --tree
-    test!(dirs_recurse:    DirAction <- ["--list-dirs", "--recurse"];     Recurse(RecurseOptions { tree: false, max_depth: None }));
-    test!(dirs_tree:       DirAction <- ["--list-dirs", "--tree"];        Recurse(RecurseOptions { tree: true,  max_depth: None }));
+    test!(dirs_recurse:    DirAction <- ["--list-dirs", "--recurse"];     Recurse(RecurseOptions { tree: false, max_depth: None, filesystem: Filesystem::All }));
+    test!(dirs_tree:       DirAction <- ["--list-dirs", "--tree"];        Recurse(RecurseOptions { tree: true, max_depth: None, filesystem: Filesystem::All }));
     test!(just_level:      DirAction <- ["--level=4"];                    DirAction::List);
 
     // Overriding levels
-    test!(overriding_1:    DirAction <- ["-RL=6", "-L=7"];               Recurse(RecurseOptions { tree: false, max_depth: Some(7) }));
+    test!(overriding_1:    DirAction <- ["-RL=6", "-L=7"];               Recurse(RecurseOptions { tree: false, max_depth: Some(7), filesystem: Filesystem::All }));
 }

@@ -36,6 +36,21 @@ All notable changes to lx are documented here. lx is forked from
 
 ### Added
 
+- **`-X` / `--filesystem=same` / `--xdev`**: stop tree (`-T`) and
+  recursive (`-R`) descent at filesystem boundaries, matching BSD
+  `ls -X`, `find -xdev`, and `tree --xdev`.  `-X` is the BSD short
+  form; `--filesystem=MODE` is the canonical long form (with
+  `--fs=MODE` shorter alias and `--xdev` as a hidden long alias for
+  muscle memory).  Compares `st_dev` from already-loaded metadata,
+  so the check adds zero syscalls in tree mode.  Hidden
+  `--no-filesystem` (with `--no-fs`/`--no-X`/`--no-xdev` aliases)
+  resets to the default.  Also available as a personality config
+  key: `filesystem = "same"` in any `[personality.NAME]` block.
+  `--filesystem=local` (skip network mounts, cross local
+  boundaries) is reserved for a follow-up (wjv/lx#17).
+
+### Added
+
 - **`--show-as=NAME`.**  Mirror of `--save-as`: prints the same
   TOML personality snippet to stdout instead of writing to
   `conf.d/`.  Useful for previewing what `--save-as` would produce,

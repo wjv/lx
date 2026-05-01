@@ -218,6 +218,28 @@ into symlinked directories in
 .Fl T Ns / Ns Fl R
 mode.
 Broken symlinks are always shown regardless of mode.
+.It Fl -filesystem Ns = Ns Ar MODE
+Stop tree
+.Pq Fl T
+and recursive
+.Pq Fl R
+descent at filesystem boundaries.
+.Ar MODE
+is
+.Cm same
+(child directories on a different device are listed but not
+entered) or
+.Cm all
+(default).
+Each top-level positional argument establishes its own filesystem
+anchor.
+Also accepted:
+.Fl -fs Ns = Ns Ar MODE .
+.It Fl X
+Stay on the starting filesystem (short for
+.Fl -filesystem Ns = Ns Cm same ) .
+Legacy alias:
+.Fl -xdev .
 .El
 .Pp
 See also

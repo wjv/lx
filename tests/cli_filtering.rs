@@ -281,3 +281,155 @@ fn symlinks_follow_recurses_into_linked_dirs() {
         "Expected inner.txt twice (under real_dir and linked_dir), got:\n{stdout}"
     );
 }
+
+// ── --filesystem / -X / --xdev ────────────────────────────────────
+
+/// Find a path under `/` whose `st_dev` differs from `/`'s.  Returns
+/// (parent_path, child_name) where parent_path contains a child of a
+/// different device.  Returns `None` if the test environment has no
+/// such layout (everything on one filesystem).
+fn find_cross_device_path() -> Option<(std::path::PathBuf, String)> {
+    use std::os::unix::fs::MetadataExt;
+    let root_dev = std::fs::metadata("/").ok()?.dev();
+    // Candidate parents to scan.  /System/Volumes on macOS hosts a
+    // bunch of sub-volume mounts; /sys, /proc, /dev on Linux are
+    // separate filesystems.
+    for parent in ["/System/Volumes", "/dev", "/proc", "/sys"] {
+        let parent = std::path::Path::new(parent);
+        let Ok(entries) = std::fs::read_dir(parent) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let Ok(md) = entry.metadata() else { continue };
+            if md.is_dir() && md.dev() != root_dev {
+                return Some((
+                    parent.to_path_buf(),
+                    entry.file_name().to_string_lossy().into_owned(),
+                ));
+            }
+        }
+    }
+    None
+}
+
+#[test]
+fn filesystem_flag_accepts_same_and_all() {
+    let dir = filtering_fixture();
+    // --filesystem=same on a single-fs tempdir should produce the same
+    // output as default (everything is on the same device).
+    let default_out = lx_no_colour()
+        .args(["-T"])
+        .arg(dir.path())
+        .output()
+        .expect("default failed");
+    let same_out = lx_no_colour()
+        .args(["-T", "--filesystem=same"])
+        .arg(dir.path())
+        .output()
+        .expect("--filesystem=same failed");
+    let all_out = lx_no_colour()
+        .args(["-T", "--filesystem=all"])
+        .arg(dir.path())
+        .output()
+        .expect("--filesystem=all failed");
+    assert!(default_out.status.success());
+    assert!(same_out.status.success());
+    assert!(all_out.status.success());
+    assert_eq!(default_out.stdout, same_out.stdout);
+    assert_eq!(default_out.stdout, all_out.stdout);
+}
+
+#[test]
+fn xdev_short_flag_equivalent_to_filesystem_same() {
+    let dir = filtering_fixture();
+    let x_out = lx_no_colour()
+        .args(["-T", "-X"])
+        .arg(dir.path())
+        .output()
+        .expect("-X failed");
+    let same_out = lx_no_colour()
+        .args(["-T", "--filesystem=same"])
+        .arg(dir.path())
+        .output()
+        .expect("--filesystem=same failed");
+    let xdev_out = lx_no_colour()
+        .args(["-T", "--xdev"])
+        .arg(dir.path())
+        .output()
+        .expect("--xdev failed");
+    assert!(x_out.status.success());
+    assert_eq!(x_out.stdout, same_out.stdout);
+    assert_eq!(x_out.stdout, xdev_out.stdout);
+}
+
+#[test]
+fn filesystem_invalid_value_rejected() {
+    lx_no_colour()
+        .args(["--filesystem=garbage"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn xdev_skips_cross_filesystem_descent() {
+    // Skip if the test environment has nothing on a different filesystem.
+    let Some((parent, child)) = find_cross_device_path() else {
+        eprintln!("skipping: no cross-device path found in test environment");
+        return;
+    };
+
+    // Without -X: the child dir's contents should appear in tree mode
+    // (depth 2 is enough to show one level into the child).
+    let default_out = lx_no_colour()
+        .args(["-TL2"])
+        .arg(&parent)
+        .output()
+        .expect("default failed");
+    let default_stdout = String::from_utf8_lossy(&default_out.stdout);
+
+    // With -X: the child dir should appear, but its contents should not.
+    let xdev_out = lx_no_colour()
+        .args(["-X", "-TL2"])
+        .arg(&parent)
+        .output()
+        .expect("-X failed");
+    let xdev_stdout = String::from_utf8_lossy(&xdev_out.stdout);
+
+    // Both runs list the cross-device child name itself.
+    assert!(
+        default_stdout.contains(&child),
+        "default should list {child}: {default_stdout}"
+    );
+    assert!(
+        xdev_stdout.contains(&child),
+        "-X should still list {child}: {xdev_stdout}"
+    );
+
+    // -X output must be no longer than default output (it can only
+    // skip lines, never add them).  And it must be strictly shorter,
+    // because we found a cross-device dir whose contents got hidden.
+    let default_lines = default_stdout.lines().count();
+    let xdev_lines = xdev_stdout.lines().count();
+    assert!(
+        xdev_lines < default_lines,
+        "-X should hide cross-device contents (default: {default_lines} lines, -X: {xdev_lines} lines):\n--- default ---\n{default_stdout}\n--- xdev ---\n{xdev_stdout}"
+    );
+}
+
+#[test]
+fn no_filesystem_resets_to_all() {
+    let dir = filtering_fixture();
+    // -X then --no-filesystem: should be equivalent to no -X.
+    let default_out = lx_no_colour()
+        .args(["-T"])
+        .arg(dir.path())
+        .output()
+        .expect("default failed");
+    let reset_out = lx_no_colour()
+        .args(["-T", "-X", "--no-filesystem"])
+        .arg(dir.path())
+        .output()
+        .expect("-X --no-filesystem failed");
+    assert!(reset_out.status.success());
+    assert_eq!(default_out.stdout, reset_out.stdout);
+}
