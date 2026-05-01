@@ -1608,30 +1608,52 @@ The personality section in the active half is the most detailed:
 Personality: la
   activated by: -p
   inheritance:
-    la (builtin)
-    ll (builtin)
-    lx (builtin)                    1 [[when]] block, 0 active
-    default (builtin)               2 [[when]] blocks, 2 active
-  settings:
+    ▸ la (builtin)
+      settings:
+        all = true
+    ▸ ll (builtin)
+      format: long2
+    ▸ default (builtin)
+      settings:
+        classify = "never"
+        theme = "exa"
+      [[when]] #1 → matched
+        ✓ env.COLORTERM = ["truecolor", "24bit"]
+        • theme = "lx-24bit"
+      [[when]] #2 → not matched
+        ✗ platform = "linux"
+        • xattr-indicator = false
+  effective settings:
     all = true
     classify = "never"
-    ...
+    theme = "lx-24bit"
 
 Format: long2
   source: personality
   columns: perms, size, user, group, modified, vcs
 ```
 
-The **inheritance** list shows the full chain from the requested
-personality down to its root ancestor.  Each entry shows:
+The **inheritance** list shows the chain from the requested
+personality down to its root ancestor (each link prefixed with
+`▸`).  For each link, you see:
 
 - **source**: `builtin`, `config`, or `config, overrides builtin`
   if a config-defined personality shadows a compiled-in one.
-- **`[[when]]` block status**: how many conditional override blocks
-  are defined at that level and how many are currently active.
-  This is the first thing to check if theme auto-selection isn't
-  working as expected — if `0 active` appears where you expect a
-  match, the environment variable condition isn't being met.
+- **`format`**, **`columns`**, **`settings`**: what the link
+  declares directly in `[personality.NAME]`.
+- **`[[when]] #N`**: each conditional override block, with its
+  match status (`matched` / `not matched`), per-condition
+  outcomes (`✓` / `✗`), and the settings it would (or did) apply.
+  Unmatched blocks render entirely dimmed, so the eye reads them
+  as "noted, not in effect".
+
+This is the first place to look when conditional overrides
+aren't behaving as expected — the `✗` row tells you which
+condition failed.
+
+The **`effective settings:`** block at the bottom is the
+bottom-line answer: the resolved values after merging parents
+into children and applying any matched `[[when]]` blocks.
 
 The **Format** section shows the active format name, its source
 (`personality` or `implicit, selected by -lll`), and the columns

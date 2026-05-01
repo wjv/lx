@@ -127,6 +127,17 @@ All notable changes to lx are documented here. lx is forked from
   the full inheritance chain (leaf to root) with source annotations
   (builtin/config/override), `[[when]]` block counts and active
   status, and resolved format columns.  Fixes wjv/lx#21.
+- **`--show-config` per-block `[[when]]` detail.**  Replaces the
+  bare "N blocks, M active" count with a full per-block listing:
+  each `[[when]]` block shows its conditions (with per-condition
+  `✓`/`✗` match outcomes), overall match status, and the settings
+  it would (or did) apply.  Each chain link also lists its direct
+  `format`/`columns`/`settings` contributions, with an
+  `effective settings:` summary at the bottom giving the
+  resolved bottom-line answer.  Unmatched blocks render entirely
+  dimmed.  Personality / Format / Theme / Style headers all use a
+  consistent yellow for object names; chain rows lead with `▸` as
+  a structural marker.  See wjv/lx#36.
 - **`--show-config` gains a top-level `Format:` section.**  Shows
   the active long-view format, its source (`personality` or
   `implicit, selected by -lll`), and the resolved column list.

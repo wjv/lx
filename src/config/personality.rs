@@ -21,11 +21,11 @@ pub struct ChainLink {
     pub name: String,
     /// Where the definition came from.
     pub source: PersonalitySource,
-    /// Total number of `[[when]]` blocks defined at this level.
-    pub when_total: usize,
-    /// How many of those `[[when]]` blocks matched the current
-    /// environment.
-    pub when_matched: usize,
+    /// The personality definition declared at *this* level (before
+    /// merging with parents/children).  Lets diagnostic surfaces
+    /// show each link's direct contributions — its own
+    /// `format`/`columns`/`settings`, plus the `[[when]]` blocks.
+    pub def: PersonalityDef,
 }
 
 /// Where a personality definition comes from.
@@ -114,8 +114,7 @@ pub fn resolve_personality_full(name: &str) -> Result<Option<ResolvedPersonality
             ChainLink {
                 name: pname.clone(),
                 source,
-                when_total: def.when.len(),
-                when_matched: def.when.iter().filter(|c| c.matches()).count(),
+                def: def.clone(),
             }
         })
         .collect();

@@ -221,6 +221,77 @@ impl ConditionalOverride {
 
         env_ok && platform_ok
     }
+
+    /// Like `matches`, but returns a structured per-condition
+    /// outcome usable by diagnostic surfaces (`--show-config`).
+    /// Each entry is one condition (an `env.X` row, or the
+    /// `platform` row), pre-rendered for display.
+    pub fn explain(&self) -> Vec<ConditionOutcome> {
+        let mut out = Vec::new();
+        let mut env_keys: Vec<_> = self.env.keys().collect();
+        env_keys.sort();
+        for key in env_keys {
+            let condition = &self.env[key];
+            let actual = env::var(key).unwrap_or_default();
+            let matched = match condition {
+                toml::Value::String(expected) => super::load::match_string(&actual, expected),
+                toml::Value::Array(items) => items.iter().any(|item| match item {
+                    toml::Value::String(s) => super::load::match_string(&actual, s),
+                    _ => false,
+                }),
+                toml::Value::Boolean(true) => env::var(key).is_ok(),
+                toml::Value::Boolean(false) => env::var(key).is_err(),
+                _ => true,
+            };
+            out.push(ConditionOutcome {
+                description: format!("env.{key} = {}", condition_repr(condition)),
+                matched,
+            });
+        }
+        if let Some(p) = &self.platform {
+            let current = std::env::consts::OS;
+            let matched = match p {
+                toml::Value::String(want) => want == current,
+                toml::Value::Array(items) => items.iter().any(|item| match item {
+                    toml::Value::String(s) => s == current,
+                    _ => false,
+                }),
+                _ => true,
+            };
+            out.push(ConditionOutcome {
+                description: format!("platform = {}", condition_repr(p)),
+                matched,
+            });
+        }
+        out
+    }
+}
+
+/// Outcome of evaluating a single condition (one `env.X` or the
+/// `platform`).
+#[derive(Debug, Clone)]
+pub struct ConditionOutcome {
+    /// Human-readable rendering of the condition itself
+    /// (e.g. `env.LX_DEBUG = "1"`, `platform = ["macos", "linux"]`).
+    pub description: String,
+    /// Whether this condition is satisfied in the current
+    /// environment.
+    pub matched: bool,
+}
+
+/// Render a condition value as it would appear in the source
+/// TOML (best-effort: strings get quoted, arrays bracketed,
+/// booleans verbatim).
+fn condition_repr(v: &toml::Value) -> String {
+    match v {
+        toml::Value::String(s) => format!("\"{s}\""),
+        toml::Value::Boolean(b) => b.to_string(),
+        toml::Value::Array(items) => {
+            let parts: Vec<String> = items.iter().map(condition_repr).collect();
+            format!("[{}]", parts.join(", "))
+        }
+        other => other.to_string(),
+    }
 }
 
 // ── PersonalityDef ──────────────────────────────────────────────

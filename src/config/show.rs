@@ -142,7 +142,7 @@ fn show_personality(
     println!(
         "{} {}",
         s.label.paint("Personality:"),
-        s.name.paint(personality_name)
+        s.heading.paint(personality_name)
     );
     println!(
         "  {} {}",
@@ -165,43 +165,121 @@ fn show_personality(
                 PersonalitySource::ConfigOverridesBuiltin => "config, overrides builtin",
             };
 
-            let when_str = if link.when_total == 0 {
-                String::new()
-            } else {
-                let active = format!(", {} active", link.when_matched);
-                let noun = if link.when_total == 1 {
-                    "block"
-                } else {
-                    "blocks"
-                };
-                format!("  {} [[when]] {noun}{}", link.when_total, active)
-            };
-
             println!(
-                "    {} {}{}",
-                s.name.paint(&link.name),
+                "    {} {}",
+                s.heading.paint(format!("\u{25B8} {}", link.name)),
                 s.dimmed.paint(format!("({source_str})")),
-                s.dimmed.paint(when_str),
             );
+
+            // Direct contributions of *this* link (before the
+            // merge): format, columns, settings declared in
+            // [personality.NAME] itself.  Parents in the chain
+            // contribute these too; without them the inheritance
+            // display would only show [[when]] blocks, which is
+            // misleading.
+            if let Some(ref fmt) = link.def.format {
+                println!("      {} {}", s.label.paint("format:"), s.name.paint(fmt));
+            }
+            if let Some(ref cols) = link.def.columns {
+                println!(
+                    "      {} {}",
+                    s.label.paint("columns:"),
+                    s.value.paint(cols.to_csv()),
+                );
+            }
+            if !link.def.settings.is_empty() {
+                println!("      {}", s.label.paint("settings:"));
+                let mut keys: Vec<_> = link.def.settings.keys().collect();
+                keys.sort();
+                for key in keys {
+                    println!(
+                        "        {} = {}",
+                        s.name.paint(key),
+                        s.value.paint(link.def.settings[key].to_string()),
+                    );
+                }
+            }
+
+            // Per-block [[when]] detail: each block lists its
+            // conditions (with per-condition match status), the
+            // overall match result, and the settings it would
+            // apply.  Replaces the bare "N blocks, M active"
+            // count: useful as a count, useless for diagnosis.
+            for (i, block) in link.def.when.iter().enumerate() {
+                let outcomes = block.explain();
+                let block_matched = outcomes.iter().all(|o| o.matched);
+                // Unmatched blocks render entirely dimmed: the
+                // tag, the equals signs, the keys and values.
+                // Matched blocks keep the live label/key/value
+                // colouring.  "noted, not in effect" should be
+                // visually quiet across the whole block.
+                let tag_style = if block_matched { s.label } else { s.dimmed };
+                let status = if block_matched {
+                    s.value.paint("matched")
+                } else {
+                    s.dimmed.paint("not matched")
+                };
+                println!(
+                    "      {} {} {}",
+                    tag_style.paint(format!("[[when]] #{}", i + 1)),
+                    s.dimmed.paint("→"),
+                    status,
+                );
+                for outcome in &outcomes {
+                    let mark = if outcome.matched { "✓" } else { "✗" };
+                    println!(
+                        "        {} {}",
+                        s.dimmed.paint(mark),
+                        s.dimmed.paint(&outcome.description),
+                    );
+                }
+                if !block.settings.is_empty() {
+                    let (key_style, eq_style, val_style) = if block_matched {
+                        (s.name, Style::default(), s.value)
+                    } else {
+                        (s.dimmed, s.dimmed, s.dimmed)
+                    };
+                    let mut keys: Vec<_> = block.settings.keys().collect();
+                    keys.sort();
+                    for key in keys {
+                        let val = &block.settings[key];
+                        println!(
+                            "        {} {} {} {}",
+                            s.dimmed.paint("•"),
+                            key_style.paint(key),
+                            eq_style.paint("="),
+                            val_style.paint(val.to_string()),
+                        );
+                    }
+                }
+            }
         }
     }
 
     let p = &resolved.def;
-    // Format declared directly by the personality chain.  Implicit
-    // `-l` tier and the column resolution live in their own
-    // top-level Format section — see `show_format`.
+    // Effective view: what the chain produces after merging
+    // (parents → child overrides) and applying any matched
+    // [[when]] blocks.  Each row above contributes; these rows
+    // are the result.  `effective format:` is the
+    // *chain-declared* format only — the implicit `-l` tier and
+    // column resolution live in their own top-level Format
+    // section (see `show_format`).
     if let Some(ref fmt) = p.format {
-        println!("  {} {}", s.label.paint("format:"), s.name.paint(fmt));
+        println!(
+            "  {} {}",
+            s.label.paint("effective format:"),
+            s.name.paint(fmt),
+        );
     }
     if let Some(ref cols) = p.columns {
         println!(
             "  {} {}",
-            s.label.paint("columns:"),
-            s.value.paint(cols.to_csv())
+            s.label.paint("effective columns:"),
+            s.value.paint(cols.to_csv()),
         );
     }
     if !p.settings.is_empty() {
-        println!("  {}", s.label.paint("settings:"));
+        println!("  {}", s.label.paint("effective settings:"));
         let mut keys: Vec<_> = p.settings.keys().collect();
         keys.sort();
         for key in keys {
@@ -271,7 +349,7 @@ fn show_format(s: &Styles, personality_name: &str, implicit_format: Option<&str>
     let formats = super::formats::resolve_formats();
     let columns = formats.get(fmt_name).map(|cols| cols.join(", "));
 
-    println!("{} {}", s.label.paint("Format:"), s.name.paint(fmt_name));
+    println!("{} {}", s.label.paint("Format:"), s.heading.paint(fmt_name));
     println!("  {} {}", s.label.paint("source:"), s.dimmed.paint(&source));
     if let Some(cols) = columns {
         println!("  {} {}", s.label.paint("columns:"), s.value.paint(cols));
@@ -288,7 +366,7 @@ fn show_theme(
     cfg: Option<&super::schema::Config>,
 ) -> Option<String> {
     if let Some(tname) = theme_name {
-        println!("{} {}", s.label.paint("Theme:"), s.name.paint(tname));
+        println!("{} {}", s.label.paint("Theme:"), s.heading.paint(tname));
         let source = if is_builtin_theme(tname) {
             "builtin"
         } else if cfg.is_some_and(|c| c.theme.contains_key(tname)) {
@@ -340,7 +418,7 @@ fn show_theme(
 
 fn show_style(s: &Styles, style_name: Option<&str>, cfg: Option<&super::schema::Config>) {
     if let Some(sname) = style_name {
-        println!("{} {}", s.label.paint("Style:"), s.name.paint(sname));
+        println!("{} {}", s.label.paint("Style:"), s.heading.paint(sname));
         let source = if sname == "exa" {
             "builtin"
         } else if cfg.is_some_and(|c| c.style.contains_key(sname)) {
