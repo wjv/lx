@@ -235,6 +235,14 @@ impl JjCache {
         match git2::Repository::open(&git_path) {
             Ok(repo) => {
                 debug!("jj: opened backing git store at {}", git_path.display());
+                // Non-colocated layouts open a bare git repo with no
+                // working directory, so `is_path_ignored` can't locate
+                // `.gitignore`.  Point the repo at the jj workspace.
+                if repo.is_bare()
+                    && let Err(e) = repo.set_workdir(workdir, false)
+                {
+                    debug!("jj: failed to set workdir on bare git store: {e}");
+                }
                 Some(repo)
             }
             Err(e) => {

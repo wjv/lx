@@ -242,3 +242,192 @@ fn auto_falls_back_to_git() {
         .stdout(predicate::str::contains("N"))
         .stdout(predicate::str::contains("untracked.txt"));
 }
+
+// ── non-colocated jj repo fixtures ────────────────────────────────
+
+/// Run `jj` in `cwd` with the given args.  Panics on failure.
+fn jj_run(cwd: &std::path::Path, args: &[&str]) {
+    let output = StdCommand::new("jj")
+        .args(args)
+        .current_dir(cwd)
+        .output()
+        .expect("jj command failed to spawn");
+    assert!(
+        output.status.success(),
+        "jj {:?} failed: {}",
+        args,
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+/// Create a non-colocated jj repo (`.jj/` only, no `.git/` at root).
+/// Includes a tracked file, an untracked file, and a `.gitignore`
+/// covering `*.log` plus an `ignored.log` file.
+fn jj_non_colocated_fixture() -> tempfile::TempDir {
+    let dir = tempdir().expect("failed to create tempdir");
+    let path = dir.path();
+
+    // --no-colocate keeps .git/ out of the workspace root; the git
+    // store lives inside .jj/repo/store/git/ as a bare repo.
+    jj_run(path, &["git", "init", "--no-colocate"]);
+
+    fs::write(path.join("tracked.txt"), "hello").unwrap();
+    fs::write(path.join(".gitignore"), "*.log\n").unwrap();
+    fs::write(path.join("ignored.log"), "noise").unwrap();
+    jj_run(path, &["describe", "-m", "initial"]);
+    jj_run(path, &["new"]);
+    fs::write(path.join("untracked.txt"), "new").unwrap();
+    // jj-lib doesn't auto-snapshot when invoked as a library; force
+    // a snapshot so the file shows up as added in the working copy.
+    jj_run(path, &["status"]);
+
+    dir
+}
+
+/// Create a jj repo backed by an *external* git repo
+/// (`jj git init --git-repo <path>`).  The jj working directory and
+/// the git working directory are the same; jj treats this as a
+/// colocated layout pointing at an existing git repo.
+fn jj_external_git_fixture() -> tempfile::TempDir {
+    let dir = tempdir().expect("failed to create tempdir");
+    let path = dir.path();
+
+    // Bootstrap a git repo with a commit.
+    StdCommand::new("git")
+        .args(["init", "-b", "main"])
+        .current_dir(path)
+        .output()
+        .expect("git init failed");
+    StdCommand::new("git")
+        .args(["config", "user.email", "test@test.com"])
+        .current_dir(path)
+        .output()
+        .expect("git config failed");
+    StdCommand::new("git")
+        .args(["config", "user.name", "Test"])
+        .current_dir(path)
+        .output()
+        .expect("git config failed");
+    fs::write(path.join("tracked.txt"), "hello").unwrap();
+    fs::write(path.join(".gitignore"), "*.log\n").unwrap();
+    StdCommand::new("git")
+        .args(["add", "tracked.txt", ".gitignore"])
+        .current_dir(path)
+        .output()
+        .expect("git add failed");
+    StdCommand::new("git")
+        .args(["commit", "-m", "initial"])
+        .current_dir(path)
+        .output()
+        .expect("git commit failed");
+
+    // Layer jj on top of the existing git repo.
+    jj_run(path, &["git", "init", "--git-repo", "."]);
+
+    fs::write(path.join("ignored.log"), "noise").unwrap();
+    fs::write(path.join("untracked.txt"), "new").unwrap();
+    // Force a snapshot so the post-init writes are visible to jj-lib.
+    jj_run(path, &["status"]);
+
+    dir
+}
+
+// ── non-colocated jj behaviour ────────────────────────────────────
+
+#[test]
+fn jj_non_colocated_auto_picks_jj() {
+    if !jj_feature_enabled() || !jj_available() {
+        eprintln!("skipping: jj feature disabled or jj not available");
+        return;
+    }
+
+    let dir = jj_non_colocated_fixture();
+    // --vcs=auto should pick jj because .jj/ is present and .git/
+    // is not at the workspace root.  Single-column status is the
+    // jj-specific signal we look for.
+    lx_no_colour()
+        .args(["--vcs=auto", "--vcs-status", "-l"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("tracked.txt"))
+        .stdout(predicate::str::contains("MM").not())
+        .stdout(predicate::str::contains("NN").not());
+}
+
+#[test]
+fn jj_non_colocated_status_column_works() {
+    if !jj_feature_enabled() || !jj_available() {
+        eprintln!("skipping: jj feature disabled or jj not available");
+        return;
+    }
+
+    let dir = jj_non_colocated_fixture();
+    lx_no_colour()
+        .args(["--vcs=jj", "--vcs-status", "-l"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        // The newly-created file should show A (added) in jj.
+        .stdout(predicate::str::contains("untracked.txt"))
+        .stdout(predicate::str::contains("A"));
+}
+
+#[test]
+fn jj_non_colocated_vcs_ignore_hides_ignored_files() {
+    // Regression test: before the set_workdir patch, --vcs-ignore
+    // did nothing on non-colocated repos because the bare git store
+    // had no working directory and git2's is_path_ignored returned
+    // false unconditionally.
+    if !jj_feature_enabled() || !jj_available() {
+        eprintln!("skipping: jj feature disabled or jj not available");
+        return;
+    }
+
+    let dir = jj_non_colocated_fixture();
+    lx_no_colour()
+        .args(["--vcs=jj", "--vcs-ignore"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("tracked.txt"))
+        .stdout(predicate::str::contains("untracked.txt"))
+        .stdout(predicate::str::contains("ignored.log").not());
+}
+
+#[test]
+fn jj_external_git_repo_status_works() {
+    // jj git init --git-repo <existing-git-repo> creates a layout
+    // that's colocated in placement but uses a pre-existing git
+    // store rather than letting jj manage one.
+    if !jj_feature_enabled() || !jj_available() {
+        eprintln!("skipping: jj feature disabled or jj not available");
+        return;
+    }
+
+    let dir = jj_external_git_fixture();
+    lx_no_colour()
+        .args(["--vcs=jj", "--vcs-status", "-l"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("tracked.txt"))
+        .stdout(predicate::str::contains("untracked.txt"));
+}
+
+#[test]
+fn jj_external_git_repo_vcs_ignore_works() {
+    if !jj_feature_enabled() || !jj_available() {
+        eprintln!("skipping: jj feature disabled or jj not available");
+        return;
+    }
+
+    let dir = jj_external_git_fixture();
+    lx_no_colour()
+        .args(["--vcs=jj", "--vcs-ignore"])
+        .arg(dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("tracked.txt"))
+        .stdout(predicate::str::contains("ignored.log").not());
+}

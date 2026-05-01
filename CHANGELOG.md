@@ -24,6 +24,15 @@ All notable changes to lx are documented here. lx is forked from
   argument**, matching the existing bare and `-R` behaviour.
   Symlinks encountered *during* recursion remain governed by
   `--symlinks=show|hide|follow` (wjv/lx#34).
+- **`--vcs-ignore` now hides gitignored files in non-colocated jj
+  repositories** (`.jj/` only, no `.git/` at the workspace root).
+  Previously a no-op on this layout: lx opened the bare backing
+  git store but never set its working directory, so
+  `git2::is_path_ignored` had no `.gitignore` to consult and
+  silently returned `false` for every path.  The status column
+  now correctly shows ignored files as `I` on this layout too.
+  Test coverage for non-colocated repos and external-git-repo
+  (`jj git init --git-repo`) layouts added (wjv/lx#15).
 
 ### Added
 
