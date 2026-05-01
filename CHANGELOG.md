@@ -60,8 +60,12 @@ All notable changes to lx are documented here. lx is forked from
   network filesystems (NFS, SMB/CIFS, AFS, FUSE, …).  At each
   cross-device transition `statfs(2)` decides; FUSE is treated as
   network by default.  One syscall per boundary, not per file.
-  Implemented for macOS and Linux; falls back to `all` behaviour
-  on other Unix platforms.  Closes wjv/lx#17.
+  Implemented for macOS, Linux, and the major BSDs; falls back to
+  `all` behaviour on other Unix platforms.  Closes wjv/lx#17.
+- **`-XX` short for `--filesystem=local`**: compounds `-X` the
+  same way `-l`/`-ll`/`-lll`, `-t`/`-tt`/`-ttt`, and `-@`/`-@@` do
+  ("more letters, more shown").  `-X` remains BSD-compatible
+  (`--filesystem=same`).
 
 ### Added
 

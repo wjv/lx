@@ -872,7 +872,11 @@ pub fn build_command() -> Command {
             Arg::new(flags::XDEV)
                 .short('X')
                 .alias("xdev")
-                .help("Stay on the starting filesystem\n[short for --filesystem=same]")
+                .help(
+                    "Stay on the same filesystem when recursing — repeat to \
+                     skip network mounts only: -XX\n\
+                     [short for --filesystem=same / --filesystem=local]",
+                )
                 .help_heading("Filtering & Sorting")
                 .action(ArgAction::Count),
         )

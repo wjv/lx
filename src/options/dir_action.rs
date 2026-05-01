@@ -51,9 +51,14 @@ impl Filesystem {
         if matches.has(flags::NO_FILESYSTEM) {
             return Self::All;
         }
-        // -X / --xdev: short for --filesystem=same.
-        if matches.has(flags::XDEV) {
-            return Self::Same;
+        // `-X` compounds: -X = same, -XX = local (more letters
+        // = more shown, mirroring -l/-ll/-lll, -t/-tt/-ttt,
+        // -@/-@@).  `--xdev` (the legacy long alias) is treated
+        // as a single -X.
+        match matches.count(flags::XDEV) {
+            0 => {}
+            1 => return Self::Same,
+            _ => return Self::Local,
         }
         match matches.get(flags::FILESYSTEM) {
             Some("same") => Self::Same,

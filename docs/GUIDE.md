@@ -361,10 +361,13 @@ metadata already in memory, so the cost is essentially zero.
 boundaries (a separate disk, a tmpfs, an APFS volume) but skip
 network filesystems (NFS, SMB/CIFS, AFS, FUSE). At each cross-
 device transition lx consults `statfs(2)` to identify the
-filesystem type:
+filesystem type. The short form is **`-XX`** — compounding `-X`
+the same way `-l`/`-ll`/`-lll` and `-@`/`-@@` work, with "more
+letters = more shown":
 
 ```sh
-lx -T --filesystem=local /  # walk the whole local tree, skip mounts
+lx -TXX /                   # walk the whole local tree, skip network mounts
+lx -T --filesystem=local /  # same thing, long form
 ```
 
 This is more useful than `same` when your tree spans several
@@ -1719,6 +1722,7 @@ Quick-reference table of all short flag allocations.
 | `-I` | `--ignore`      | Glob patterns to hide                    |
 | `-P` | `--prune`       | Glob patterns to show but not recurse    |
 | `-X` | `--filesystem=same` | Don't cross filesystem boundaries    |
+| `-XX` | `--filesystem=local` | Cross local boundaries, skip network |
 | `-s` | `--sort`        | Sort field                               |
 | `-r` | `--reverse`     | Reverse sort order                       |
 

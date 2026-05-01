@@ -245,11 +245,15 @@ falls back to
 behaviour.
 Also accepted:
 .Fl -fs Ns = Ns Ar MODE .
-.It Fl X
-Stay on the starting filesystem (short for
-.Fl -filesystem Ns = Ns Cm same ) .
-Legacy alias:
+.It Fl X , Fl XX
+.Fl X
+is short for
+.Fl -filesystem Ns = Ns Cm same ;
+legacy alias:
 .Fl -xdev .
+.Fl XX
+is short for
+.Fl -filesystem Ns = Ns Cm local .
 .El
 .Pp
 See also

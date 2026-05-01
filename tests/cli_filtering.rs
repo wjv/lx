@@ -347,6 +347,23 @@ fn filesystem_flag_accepts_all_modes() {
 }
 
 #[test]
+fn xdev_double_equivalent_to_filesystem_local() {
+    let dir = filtering_fixture();
+    let xx_out = lx_no_colour()
+        .args(["-T", "-XX"])
+        .arg(dir.path())
+        .output()
+        .expect("-XX failed");
+    let local_out = lx_no_colour()
+        .args(["-T", "--filesystem=local"])
+        .arg(dir.path())
+        .output()
+        .expect("--filesystem=local failed");
+    assert!(xx_out.status.success());
+    assert_eq!(xx_out.stdout, local_out.stdout);
+}
+
+#[test]
 fn xdev_short_flag_equivalent_to_filesystem_same() {
     let dir = filtering_fixture();
     let x_out = lx_no_colour()
