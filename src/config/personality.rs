@@ -26,6 +26,13 @@ pub struct ChainLink {
     /// show each link's direct contributions — its own
     /// `format`/`columns`/`settings`, plus the `[[when]]` blocks.
     pub def: PersonalityDef,
+    /// When `source == ConfigOverridesBuiltin`, the compiled-in
+    /// definition that the user's config shadows.  Used by
+    /// `--show-config` to surface the silent-shadowing case (keys
+    /// and `[[when]]` blocks present in the builtin but absent
+    /// from the override).  `None` for `Builtin` and pure
+    /// `Config` links.
+    pub shadowed_builtin: Option<PersonalityDef>,
 }
 
 /// Where a personality definition comes from.
@@ -111,10 +118,16 @@ pub fn resolve_personality_full(name: &str) -> Result<Option<ResolvedPersonality
                 (true, false) => PersonalitySource::Config,
                 _ => PersonalitySource::Builtin,
             };
+            let shadowed_builtin = if source == PersonalitySource::ConfigOverridesBuiltin {
+                compiled_personality(pname)
+            } else {
+                None
+            };
             ChainLink {
                 name: pname.clone(),
                 source,
                 def: def.clone(),
+                shadowed_builtin,
             }
         })
         .collect();

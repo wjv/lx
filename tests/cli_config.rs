@@ -1053,18 +1053,18 @@ fn bool_false_suppresses_inherited_column() {
     );
 
     let work = tempdir().expect("failed to create workdir");
-    fs::write(work.path().join("hello.txt"), "hi").unwrap();
+    // 100-byte content: a size that can never collide with a
+    // day-of-month number in the date column.  (A 2-byte file
+    // collides with `2 May`, breaking this test on May 2nd.)
+    fs::write(work.path().join("hello.txt"), "x".repeat(100)).unwrap();
 
     // ll includes the size column; nosize should suppress it.
-    // With size present, output contains the file size ("2" or "2 B").
-    // Without it, the size is absent.
     let with_size = cmd
         .args(["-p", "ll", "--colour=never"])
         .arg(work.path())
         .output()
         .expect("failed to run lx");
     let with_size_out = String::from_utf8_lossy(&with_size.stdout);
-    // ll shows sizes — verify baseline
     assert!(
         with_size_out.contains("hello.txt"),
         "baseline: file should appear"
@@ -1084,14 +1084,14 @@ fn bool_false_suppresses_inherited_column() {
         .expect("failed to run lx");
     let without_size_out = String::from_utf8_lossy(&without_size.stdout);
 
-    // The size column in ll shows "2" for a 2-byte file.
-    // With size suppressed, the number should be absent.
+    // 100 bytes is far above any possible day-of-month, so this
+    // unambiguously checks the size column.
     assert!(
-        with_size_out.contains(" 2 "),
+        with_size_out.contains(" 100 "),
         "baseline: ll should show file size"
     );
     assert!(
-        !without_size_out.contains(" 2 "),
+        !without_size_out.contains(" 100 "),
         "size = false should suppress the size column"
     );
 }

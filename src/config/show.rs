@@ -253,6 +253,105 @@ fn show_personality(
                     }
                 }
             }
+
+            // Shadowed-builtin diff: when a user config personality
+            // shares a name with a compiled-in one, the user's
+            // [personality.NAME] block fully replaces the builtin's
+            // — including any [[when]] blocks and settings the
+            // builtin had.  Surface what's in the builtin but not
+            // in the user's override so the silent-shadowing case
+            // (a 0.10 release adding new defaults to a personality
+            // the user has overridden) is visible.
+            //
+            // Conservative semantic: list every key in the builtin
+            // that doesn't appear in the user's override (regardless
+            // of value); list every [[when]] block in the builtin
+            // (the user's `when` array fully replaces the builtin's
+            // — there's no partial merge at the [[when]] level).
+            // Format/columns get the same key-presence treatment.
+            if let Some(ref builtin) = link.shadowed_builtin {
+                let shadow_format = if link.def.format.is_none() {
+                    builtin.format.clone()
+                } else {
+                    None
+                };
+                let shadow_columns = if link.def.columns.is_none() {
+                    builtin.columns.clone()
+                } else {
+                    None
+                };
+                let mut shadowed_settings: Vec<&String> = builtin
+                    .settings
+                    .keys()
+                    .filter(|k| !link.def.settings.contains_key(*k))
+                    .collect();
+                shadowed_settings.sort();
+
+                let has_anything = shadow_format.is_some()
+                    || shadow_columns.is_some()
+                    || !shadowed_settings.is_empty()
+                    || !builtin.when.is_empty();
+
+                if has_anything {
+                    println!(
+                        "      {}",
+                        s.dimmed
+                            .paint("in the builtin but shadowed by user configuration:"),
+                    );
+                    if let Some(fmt) = shadow_format {
+                        println!(
+                            "        {} {} {} {}",
+                            s.dimmed.paint("•"),
+                            s.dimmed.paint("format"),
+                            s.dimmed.paint("="),
+                            s.dimmed.paint(format!("\"{fmt}\"")),
+                        );
+                    }
+                    if let Some(cols) = shadow_columns {
+                        println!(
+                            "        {} {} {} {}",
+                            s.dimmed.paint("•"),
+                            s.dimmed.paint("columns"),
+                            s.dimmed.paint("="),
+                            s.dimmed.paint(cols.to_csv()),
+                        );
+                    }
+                    for key in shadowed_settings {
+                        let val = &builtin.settings[key];
+                        println!(
+                            "        {} {} {} {}",
+                            s.dimmed.paint("•"),
+                            s.dimmed.paint(key),
+                            s.dimmed.paint("="),
+                            s.dimmed.paint(val.to_string()),
+                        );
+                    }
+                    for (i, block) in builtin.when.iter().enumerate() {
+                        let outcomes = block.explain();
+                        println!("        {}", s.dimmed.paint(format!("[[when]] #{}", i + 1)));
+                        for outcome in &outcomes {
+                            let mark = if outcome.matched { "✓" } else { "✗" };
+                            println!(
+                                "          {} {}",
+                                s.dimmed.paint(mark),
+                                s.dimmed.paint(&outcome.description),
+                            );
+                        }
+                        let mut keys: Vec<_> = block.settings.keys().collect();
+                        keys.sort();
+                        for key in keys {
+                            let val = &block.settings[key];
+                            println!(
+                                "          {} {} {} {}",
+                                s.dimmed.paint("•"),
+                                s.dimmed.paint(key),
+                                s.dimmed.paint("="),
+                                s.dimmed.paint(val.to_string()),
+                            );
+                        }
+                    }
+                }
+            }
         }
     }
 
