@@ -37,6 +37,22 @@ unchanged.  A new `xattr-indicator` config key controls the
 indicator-only tier.  `--xattr` is added as a visible alias
 for `--extended`.
 
+### Smooth gradients are on by default
+
+In 0.9, smooth gradients (Oklab interpolation between theme
+anchors) shipped opt-in via `--smooth`.  In 0.10, they're the
+default for any theme whose anchors are 24-bit RGB
+(`lx-24bit`, the curated themes, your own hex/rgb themes).
+
+- **Most users won't notice this as a change** — they upgrade,
+  the gradients look slightly smoother, and that's it.
+- **256-colour and basic-ANSI themes are unaffected** — they
+  don't expose RGB anchors to interpolate between, so smoothing
+  is a no-op there.
+- **If you prefer the older discrete-tier look** on a 24-bit
+  theme, pass `--no-smooth` or set `smooth = false` in your
+  personality.
+
 ### `@` indicator is off by default on macOS
 
 Probing for extended attributes is cheap on Linux but

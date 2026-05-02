@@ -535,16 +535,24 @@ lx -lt --gradient=none                # equivalent to --no-gradient
 ### Smooth truecolour gradients
 
 When using a 24-bit ("truecolour") colour scheme (default on any
-terminal that supports it), you can tell `lx` to smoothly interpolate
-between the fixed colours in the gradient by using the `--smooth` flag.
+terminal that supports it), `lx` smoothly interpolates between the
+gradient's per-tier anchor colours so transitions don't snap at
+tier boundaries.  This is on by default since 0.10 and produces a
+more visually appealing gradient, especially across files of
+varying size or age.
 
-This is useful for creating a more visually appealing gradient,
-especially when dealing with a large number of files or directories.
+If you prefer the older discrete-tier look — where each tier
+shows its anchor colour exactly, with a clear boundary between
+them — pass `--no-smooth`, or set `smooth = false` in your
+personality.
 
 The interpolation formulas come from Björn Ottosson's 2020
 paper on Oklab, <https://bottosson.github.io/posts/oklab/>.
 
-> Note: On a terminal that doesn't support truecolour, `--smooth` is a no-op.
+> Note: On a terminal that doesn't support truecolour, smoothing
+> is a no-op — the 256-colour and basic-ANSI themes don't expose
+> RGB anchors to interpolate between, so the discrete-tier
+> rendering applies regardless.
 
 
 ## Personalities and Formats

@@ -107,10 +107,16 @@ snapping at tier boundaries.
 Only takes effect on 24-bit themes
 .Pq Sy lx-24bit , No the curated themes, or any theme using hex/rgb values ;
 silently a no-op on 256-colour or basic ANSI themes.
-Default: off.
+Default: on.
+The flag is retained for symmetry with
+.Fl -no-smooth ;
+explicitly passing
+.Fl -smooth
+is a no-op on the default.
 .It Fl -no-smooth
-Hidden suppressor for
-.Fl -smooth .
+Disable smoothing.
+Use when you prefer the discrete tier-anchor look on a 24-bit
+theme.
 .It Fl -icons Ns Op = Ns Ar WHEN
 Display icons next to file names.
 .Ar WHEN

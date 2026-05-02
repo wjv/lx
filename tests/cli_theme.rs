@@ -869,11 +869,14 @@ fn run_with_varied_mtimes(theme: &str, extra_args: &[&str]) -> Vec<u8> {
 
 #[test]
 fn smooth_changes_24bit_output() {
-    let discrete = run_with_varied_mtimes("lx-24bit", &[]);
-    let smooth = run_with_varied_mtimes("lx-24bit", &["--smooth"]);
+    // Smooth is default-on since 0.10; opting out with
+    // `--no-smooth` should produce different output on a 24-bit
+    // theme (whose anchors interpolate).
+    let smooth = run_with_varied_mtimes("lx-24bit", &[]);
+    let discrete = run_with_varied_mtimes("lx-24bit", &["--no-smooth"]);
     assert_ne!(
         discrete, smooth,
-        "--smooth should change lx-24bit output (interpolating between anchors)",
+        "smoothing should change lx-24bit output relative to --no-smooth",
     );
 }
 
@@ -881,23 +884,23 @@ fn smooth_changes_24bit_output() {
 fn smooth_is_noop_on_256_palette_theme() {
     // lx-256 uses Color::Fixed palette colours; is_smoothable()
     // returns false, so the LUT is never built and the output
-    // must match the discrete render byte-for-byte.
-    let discrete = run_with_varied_mtimes("lx-256", &[]);
-    let smooth = run_with_varied_mtimes("lx-256", &["--smooth"]);
+    // must match the --no-smooth render byte-for-byte.
+    let smooth = run_with_varied_mtimes("lx-256", &[]);
+    let discrete = run_with_varied_mtimes("lx-256", &["--no-smooth"]);
     assert_eq!(
         discrete, smooth,
-        "--smooth should be a no-op on lx-256 (palette anchors gate it out)",
+        "smoothing should be a no-op on lx-256 (palette anchors gate it out)",
     );
 }
 
 #[test]
 fn smooth_is_noop_on_ansi_exa_theme() {
     // The builtin exa theme uses basic ANSI colours; same gate.
-    let discrete = run_with_varied_mtimes("exa", &[]);
-    let smooth = run_with_varied_mtimes("exa", &["--smooth"]);
+    let smooth = run_with_varied_mtimes("exa", &[]);
+    let discrete = run_with_varied_mtimes("exa", &["--no-smooth"]);
     assert_eq!(
         discrete, smooth,
-        "--smooth should be a no-op on the exa theme (basic ANSI anchors)",
+        "smoothing should be a no-op on the exa theme (basic ANSI anchors)",
     );
 }
 

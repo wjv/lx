@@ -1393,7 +1393,7 @@ pub fn build_command() -> Command {
         .arg(
             Arg::new(flags::SMOOTH)
                 .long("smooth")
-                .help("Smoothly interpolate gradients\n(24-bit themes only)")
+                .help("Smoothly interpolate gradients [on by default]\n(24-bit themes only; --no-smooth opts out)")
                 .help_heading("Appearance")
                 .action(ArgAction::Count),
         )

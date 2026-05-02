@@ -64,15 +64,20 @@ pub struct GradientFlags {
 }
 
 impl GradientFlags {
-    /// All gradients on.  This is the default — themes that ship
-    /// gradient values are designed to show them.
+    /// All gradients on, smoothed.  This is the default — themes
+    /// that ship gradient values are designed to show them, and
+    /// smoothing is a no-op on themes whose anchors aren't all
+    /// 24-bit `Color::Rgb`, so it's safe to enable everywhere.
+    /// 24-bit themes (`lx-24bit`, custom RGB themes) get the
+    /// 256-stop interpolated rendering automatically; 256-colour
+    /// themes (`lx-256`, `exa`) keep their discrete tiers.
     pub const ALL: Self = Self {
         size: true,
         modified: true,
         accessed: true,
         changed: true,
         created: true,
-        smooth: false,
+        smooth: true,
     };
 
     /// All gradients off.  Each column collapses to its theme's

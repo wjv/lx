@@ -114,6 +114,17 @@ All notable changes to lx are documented here. lx is forked from
 
 ### Changed
 
+- **Smooth gradients are now on by default.**  In 0.9 smoothing
+  was opt-in via `--smooth` so we could see how users felt about
+  it.  In 0.10 it's the default for any theme whose anchors are
+  24-bit RGB (`lx-24bit`, the curated themes, custom hex/rgb
+  themes).  Discrete-tier rendering still applies on 256-colour
+  and basic-ANSI themes — they don't expose RGB anchors to
+  interpolate between, so smoothing is silently a no-op there
+  (no behavioural change).  Users who prefer the discrete-tier
+  look on a 24-bit theme can pass `--no-smooth` or set
+  `smooth = false` in their personality.
+
 - **Tree traversal performance overhaul.**  Deep trees are 2–7×
   faster than before.
   - Replaced per-file rayon thread spawning with sequential

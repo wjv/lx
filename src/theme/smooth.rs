@@ -616,7 +616,11 @@ mod test {
         #[test]
         fn smooth_off_leaves_every_lut_none() {
             let mut ui = ui_with_24bit_date_gradient();
-            ui.apply_gradient_flags(GradientFlags::ALL); // smooth defaults to false
+            // GradientFlags::ALL has smooth = true since 0.10;
+            // turn it off explicitly for this test.
+            let mut gradient = GradientFlags::ALL;
+            gradient.smooth = false;
+            ui.apply_gradient_flags(gradient);
 
             assert!(ui.smooth_luts.size.is_none());
             assert!(ui.smooth_luts.modified.is_none());
