@@ -7,6 +7,14 @@ All notable changes to lx are documented here. lx is forked from
 
 ### Fixed
 
+- **Personality settings emit in deterministic order.**
+  `settings_to_args` previously iterated a `HashMap`, so a
+  personality block declaring two settings that influence the
+  same flag would emit in random order and "last-wins"
+  precedence became "random-wins".  Latent today (no compiled-in
+  personality has such pairs); locks in deterministic behaviour
+  ahead of any that ship later.
+
 - **Default to one entry per line when stdout is not a terminal**,
   matching `ls` and most ls-like tools.  Previously, an inherited
   `COLUMNS` environment variable (common in tmux and several shell

@@ -191,7 +191,17 @@ pub(super) fn settings_to_args(
 ) -> Vec<OsString> {
     let mut args = Vec::new();
 
-    for (key, value) in settings {
+    // Sort keys so iteration order is stable.  Without this, two
+    // settings that influence the same flag (e.g. `all = false`
+    // alongside `dot-entries = true`) emit in random order, and
+    // "last-wins" precedence becomes "random-wins".  Latent today
+    // — no compiled-in personality has such pairs — but locks in
+    // deterministic behaviour ahead of any that ship later.
+    let mut keys: Vec<&String> = settings.keys().collect();
+    keys.sort();
+
+    for key in keys {
+        let value = &settings[key];
         let Some(def) = find_setting(key) else {
             if let Some(hint) = removed_setting_hint(key) {
                 eprintln!("lx: setting '{key}' in {context}: {hint}");
