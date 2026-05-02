@@ -3,7 +3,213 @@
 All notable changes to lx are documented here. lx is forked from
 [exa](https://github.com/ogham/exa) v0.10.1.
 
-## [Unreleased] — 0.10.0
+## [0.10.0] — 2026-05-03
+
+0.10 was conceived as a **consolidation release** — cleanup,
+refactoring, resolution of open questions from 0.9, no big new
+features.  It mostly held to that, but ended up shipping more
+genuine additions than the framing suggested.
+
+**Highlights:**
+
+- **Filesystem-boundary-aware tree walking** (`-X`/`-XX`,
+  `--filesystem={same,local,all}`).  `--filesystem=local` skips
+  network mounts via `statfs(2)` while still crossing local
+  boundaries — an ls-like-CLI primitive nothing else exposes.
+- **`--show-config` is now a real diagnostic tool**, not just a
+  status display: per-block `[[when]]` outcomes, shadowed-builtin
+  diff, full catalogue of defined personalities/formats/themes/
+  styles/classes, all rendered to a consistent visual grammar
+  (bright = applied; dim = noted, not in effect).
+- **Smooth gradients are now the default** on 24-bit themes
+  (Oklab interpolation between anchor colours; `--no-smooth`
+  opts out).
+- **`-@` becomes a count flag** with macOS opting out by default,
+  closing a 96% perf trap on APFS.
+- **Deep tree traversal is 2–7× faster.**  Per-file thread
+  spawning replaced with sequential traversal; file metadata is
+  now lazy; smarter xattr strategy.  Tree view without `-l`
+  makes zero `stat()` calls.
+- **Plus polish** across the diagnostic surface (`--show-as`,
+  `--show`, `--version` exposes feature flags), the config layer
+  (`platform` predicate, `dot-entries`, `xattr-indicator`,
+  `description` keys), and the traversal/VCS internals
+  (non-colocated jj `--vcs-ignore` fixed; `-R -L<N>` and
+  `-T <symlink>` corner cases fixed).
+
+Breaking-change details and migration notes live in
+[`docs/UPGRADING.md`](docs/UPGRADING.md).
+
+### Added
+
+- **Filesystem-boundary-aware tree walking.**  New flag family
+  for stopping `-T` / `-R` descent at filesystem boundaries.
+  Closes wjv/lx#17.
+  - `-X` / `--filesystem=same` / `--xdev`: don't cross any
+    device boundary.  Matches BSD `ls -X`, `find -xdev`, and
+    `tree --xdev`.  `-X` is the BSD short form;
+    `--filesystem=MODE` is the canonical long form (with
+    `--fs=MODE` shorter alias and `--xdev` as a hidden long
+    alias).  Compares `st_dev` from already-loaded metadata, so
+    the check adds zero syscalls in tree mode.  Hidden
+    `--no-filesystem` (with `--no-fs`/`--no-X`/`--no-xdev`
+    aliases) resets to the default.  Also available as a
+    personality config key: `filesystem = "same"` in any
+    `[personality.NAME]` block.
+  - `--filesystem=local`: cross local mount boundaries but skip
+    network filesystems (NFS, SMB/CIFS, AFS, FUSE, …).  At each
+    cross-device transition `statfs(2)` decides; FUSE is
+    treated as network by default.  One syscall per boundary,
+    not per file.  Implemented for macOS, Linux, and the major
+    BSDs; falls back to `all` behaviour on other Unix
+    platforms.
+  - `-XX` short for `--filesystem=local`: compounds `-X` the
+    same way `-l`/`-ll`/`-lll`, `-t`/`-tt`/`-ttt`, and
+    `-@`/`-@@` do ("more letters, more shown").  `-X` remains
+    BSD-compatible (`--filesystem=same`).
+
+- **TOML preview for the current invocation.**  Two flag pairs
+  for previewing or capturing CLI flags as a personality
+  definition.
+  - `--show-as=NAME`: mirror of `--save-as`, but prints the
+    TOML snippet to stdout instead of writing to `conf.d/`.
+    Useful for previewing what `--save-as` would produce,
+    piping into a config file manually, or inspecting the
+    effective flag delta of an invocation.
+  - `--show` and bare `--show-as` for anonymous preview: drops
+    the requirement to invent a name just to preview.  `--show`
+    is a visible alias for `--show-as` with no value; both emit
+    `[personality.UNNAMED]` with every line commented out, so
+    an accidental `> file.toml` doesn't write live-but-broken
+    config.  `--show-as=NAME` is unchanged.
+
+- **xattr indicator, redesigned.**  Closes wjv/lx#8.
+  - `-@` is now a count flag.  `-@` (count 1) shows only the
+    `@` indicator on the permissions field; `-@@` (count 2)
+    keeps the existing behaviour of listing each attribute and
+    size.  `--xattr` is added as a visible alias for
+    `--extended`.
+  - New `xattr-indicator` personality config key controls
+    whether the `@` indicator is probed.  Independent of
+    `extended` (preserved unchanged).  `--save-as` of `lx -@`
+    emits `xattr-indicator = true`; `--save-as` of `lx -@@`
+    emits both `extended = true` and `xattr-indicator = true`.
+  - macOS now defaults to `xattr-indicator = false`.  The
+    compiled-in `default` personality declares
+    `xattr-indicator = true`, with a `[[when]] platform =
+    "macos"` overlay flipping it off.  This is a 3.5× perf win
+    on macOS long-view tree traversal because `listxattr` is
+    disproportionately expensive on APFS.  Users who want the
+    indicator on macOS can opt in via `-l@` per invocation or
+    by declaring `xattr-indicator = true` in their personality.
+
+- **`--version` now shows compiled-in feature flags.**  Output
+  becomes `lx 0.10.0 [+git]` for the default build,
+  `lx 0.10.0 [+git +jj]` with `--features jj`, and bare
+  `lx 0.10.0` with `--no-default-features`.  Closes the
+  diagnostic gap where bug reports couldn't reveal whether the
+  binary was built with VCS support.
+
+- **`platform` predicate for `[[when]]` blocks.**  Conditional
+  overrides can now gate on the host operating system, matched
+  against Rust's `std::env::consts::OS` (`"macos"`, `"linux"`,
+  `"freebsd"`, etc.).  Accepts a string or an array of strings.
+  Combines freely with existing `env.*` conditions (AND logic).
+
+- **`dot-entries` personality config key.**  Closes the gap where
+  `-aa` (showing `.` and `..`) had no representation in
+  personality definitions.  `all = true` corresponds to `-a`;
+  `dot-entries = true` corresponds to the second `-a` count and
+  is also independently settable.  `--save-as` of `lx -aa` now
+  emits both keys.  Fixes wjv/lx#30.
+
+- Optional `description` key on `[personality.NAME]` and
+  `[theme.NAME]` blocks: a one-line summary surfaced by
+  `--show-config` and emitted by the corresponding `--dump-*`
+  flag.  Compiled-in personalities and themes carry
+  descriptions out of the box; the curated themes in `themes/`
+  do too.  The default config template (`--init-config`)
+  writes them alongside its example personalities.
+
+- TOML array syntax for pipe-separated config values
+  (e.g. `ignore = ["*.tmp", "*.bak"]`).  Fixes wjv/lx#6.
+
+- Hidden `--no-F` and `--no-J` aliases for `--no-dirs-first`
+  and `--no-dirs-last`, matching the short-suppressor pattern
+  every other negated short flag already follows.
+
+- `--help` and `--version` now have entries in `lx(1)` under a
+  new "Meta options" subsection.  Previously documented only in
+  `--help` itself.
+
+### Changed
+
+- **Tree traversal performance overhaul.**  Deep trees are 2–7×
+  faster than before.
+  - Replaced per-file rayon thread spawning with sequential
+    traversal.  Eliminates thread-pool thrashing on deep trees.
+    The `--total-size` parallel pre-computation is retained.
+  - File metadata is now lazy: stat calls are deferred until a
+    column renderer actually needs them.  File type comes from
+    `readdir` for free.  Tree view without `-l` makes zero stat
+    calls.
+  - Three-tier xattr strategy: *skip* when no permissions column
+    is active, *probe* (single syscall for the `@` indicator),
+    or *full* (only with `--extended`).
+- **Smooth gradients are now on by default.**  In 0.9 smoothing
+  was opt-in via `--smooth` so we could see how users felt about
+  it.  In 0.10 it's the default for any theme whose anchors are
+  24-bit RGB (`lx-24bit`, the curated themes, custom hex/rgb
+  themes).  Discrete-tier rendering still applies on 256-colour
+  and basic-ANSI themes — they don't expose RGB anchors to
+  interpolate between, so smoothing is silently a no-op there
+  (no behavioural change).  Users who prefer the discrete-tier
+  look on a 24-bit theme can pass `--no-smooth` or set
+  `smooth = false` in their personality.
+- **`--show-config` is now genuinely diagnostic.**  The active
+  half went from a status display to a debugging tool over the
+  course of the cycle:
+  - Inheritance chain rendered leaf-to-root, each link tagged
+    with its source (`builtin`, `config`, or `config, overrides
+    builtin`) and its direct `format`/`columns`/`settings`
+    contributions (fixes wjv/lx#21).
+  - Per-block `[[when]]` detail: each block lists its
+    conditions with per-condition `✓`/`✗` match outcomes, the
+    overall match status, and the settings it would (or did)
+    apply.
+  - Shadowed-builtin diff: when a config personality shares a
+    name with a compiled-in one, an "in the builtin but
+    shadowed by user configuration:" section lists settings
+    and `[[when]]` blocks present in the builtin but absent
+    from the override.  Closes the silent-shadowing trap where
+    new compiled-in defaults are invisibly lost when the
+    user's `[personality.NAME]` block replaces the builtin
+    (closes wjv/lx#36).
+  - New top-level `Format:` section shows the active long-view
+    format with source (`personality` or `implicit, selected by
+    -lll`) and the resolved column list (fixes wjv/lx#25).
+  - New `--show-config=MODE` selector splits the output into
+    `active`, `available` (full catalogue of defined
+    personalities/formats/themes/styles/classes), or `full`
+    (both, with a horizontal-rule divider).  Bare
+    `--show-config` keeps its compact behaviour (fixes
+    wjv/lx#24).
+  - Visual rule throughout: bright = applied, dim = noted but
+    not in effect.  Personality / Format / Theme / Style
+    headers use a consistent yellow for object names; chain
+    rows lead with `▸` as a structural marker.
+- **`--dump-theme` works for compiled-in themes** (`exa`,
+  `lx-256`, `lx-24bit`).  Output is real, copy-pasteable TOML
+  produced by walking the new theme key registry, grouped by
+  key family with blank-line separators (file kinds,
+  permissions, size, users, links, VCS, punctuation, then the
+  four per-timestamp date blocks, then columns and symlink
+  overlays).  Within each family, keys preserve canonical
+  declaration order.  Fixes wjv/lx#13, wjv/lx#14.
+- `--dump-personality` now includes `[[when]]` conditional
+  override blocks and lists personalities in inheritance order
+  (parents before children).
+- Enabled `rustfmt` across the codebase (wjv/lx#11).
 
 ### Fixed
 
@@ -14,7 +220,6 @@ All notable changes to lx are documented here. lx is forked from
   precedence became "random-wins".  Latent today (no compiled-in
   personality has such pairs); locks in deterministic behaviour
   ahead of any that ship later.
-
 - **Default to one entry per line when stdout is not a terminal**,
   matching `ls` and most ls-like tools.  Previously, an inherited
   `COLUMNS` environment variable (common in tmux and several shell
@@ -41,171 +246,6 @@ All notable changes to lx are documented here. lx is forked from
   now correctly shows ignored files as `I` on this layout too.
   Test coverage for non-colocated repos and external-git-repo
   (`jj git init --git-repo`) layouts added (wjv/lx#15).
-
-### Added
-
-- **`--version` now shows compiled-in feature flags.**  Output
-  becomes `lx 0.10.0 [+git]` for the default build,
-  `lx 0.10.0 [+git +jj]` with `--features jj`, and bare
-  `lx 0.10.0` with `--no-default-features`.  Closes the
-  diagnostic gap where bug reports couldn't reveal whether the
-  binary was built with VCS support.
-- **`--help` and `--version` now have entries in `lx(1)`** under
-  a new "Meta options" subsection.  Previously documented only
-  in `--help` itself.
-
-- **`-X` / `--filesystem=same` / `--xdev`**: stop tree (`-T`) and
-  recursive (`-R`) descent at filesystem boundaries, matching BSD
-  `ls -X`, `find -xdev`, and `tree --xdev`.  `-X` is the BSD short
-  form; `--filesystem=MODE` is the canonical long form (with
-  `--fs=MODE` shorter alias and `--xdev` as a hidden long alias for
-  muscle memory).  Compares `st_dev` from already-loaded metadata,
-  so the check adds zero syscalls in tree mode.  Hidden
-  `--no-filesystem` (with `--no-fs`/`--no-X`/`--no-xdev` aliases)
-  resets to the default.  Also available as a personality config
-  key: `filesystem = "same"` in any `[personality.NAME]` block.
-- **`--filesystem=local`**: cross local mount boundaries but skip
-  network filesystems (NFS, SMB/CIFS, AFS, FUSE, …).  At each
-  cross-device transition `statfs(2)` decides; FUSE is treated as
-  network by default.  One syscall per boundary, not per file.
-  Implemented for macOS, Linux, and the major BSDs; falls back to
-  `all` behaviour on other Unix platforms.  Closes wjv/lx#17.
-- **`-XX` short for `--filesystem=local`**: compounds `-X` the
-  same way `-l`/`-ll`/`-lll`, `-t`/`-tt`/`-ttt`, and `-@`/`-@@` do
-  ("more letters, more shown").  `-X` remains BSD-compatible
-  (`--filesystem=same`).
-
-### Added
-
-- **`--show-as=NAME`.**  Mirror of `--save-as`: prints the same
-  TOML personality snippet to stdout instead of writing to
-  `conf.d/`.  Useful for previewing what `--save-as` would produce,
-  piping into a config file manually, or inspecting the effective
-  flag delta of an invocation.
-- **`--show` and bare `--show-as` for anonymous preview.**  Drops
-  the requirement to invent a name just to preview an
-  invocation's TOML.  `--show` is a visible alias for
-  `--show-as` with no value; both emit `[personality.UNNAMED]`
-  with every line commented out, so an accidental `> file.toml`
-  doesn't write live-but-broken config.  `--show-as=NAME` is
-  unchanged.
-- **`-@` is now a count flag.**  `-@` (count 1) shows only the
-  `@` indicator on the permissions field; `-@@` (count 2) keeps
-  the existing behaviour of listing each attribute and size.
-  `--xattr` is added as a visible alias for `--extended`.
-- **`xattr-indicator` personality config key.**  Bool config that
-  controls whether the `@` indicator is probed.  Independent of
-  `extended` (which is preserved unchanged).  `--save-as` of
-  `lx -@` emits `xattr-indicator = true`; `--save-as` of
-  `lx -@@` emits both `extended = true` and `xattr-indicator = true`.
-- **macOS now defaults to `xattr-indicator = false`.**  The
-  compiled-in `default` personality declares
-  `xattr-indicator = true`, with a `[[when]] platform = "macos"`
-  overlay flipping it off.  This is a 3.5× perf win on macOS
-  long-view tree traversal because `listxattr` is
-  disproportionately expensive on APFS.  Users who want the
-  indicator on macOS can opt in via `-l@` per invocation or by
-  declaring `xattr-indicator = true` in their personality.
-  Closes wjv/lx#8.
-- **`platform` predicate for `[[when]]` blocks.**  Conditional
-  overrides can now gate on the host operating system, matched
-  against Rust's `std::env::consts::OS` (`"macos"`, `"linux"`,
-  `"freebsd"`, etc.).  Accepts a string or an array of strings.
-  Combines freely with existing `env.*` conditions (AND logic).
-- **`dot-entries` personality config key.**  Closes the gap where
-  `-aa` (showing `.` and `..`) had no representation in
-  personality definitions.  `all = true` corresponds to `-a`;
-  `dot-entries = true` corresponds to the second `-a` count and
-  is also independently settable.  `--save-as` of `lx -aa` now
-  emits both keys.  Fixes wjv/lx#30.
-
-### Changed
-
-- **Smooth gradients are now on by default.**  In 0.9 smoothing
-  was opt-in via `--smooth` so we could see how users felt about
-  it.  In 0.10 it's the default for any theme whose anchors are
-  24-bit RGB (`lx-24bit`, the curated themes, custom hex/rgb
-  themes).  Discrete-tier rendering still applies on 256-colour
-  and basic-ANSI themes — they don't expose RGB anchors to
-  interpolate between, so smoothing is silently a no-op there
-  (no behavioural change).  Users who prefer the discrete-tier
-  look on a 24-bit theme can pass `--no-smooth` or set
-  `smooth = false` in their personality.
-
-- **Tree traversal performance overhaul.**  Deep trees are 2–7×
-  faster than before.
-  - Replaced per-file rayon thread spawning with sequential
-    traversal.  Eliminates thread-pool thrashing on deep trees.
-    The `--total-size` parallel pre-computation is retained.
-  - File metadata is now lazy: stat calls are deferred until a
-    column renderer actually needs them.  File type comes from
-    `readdir` for free.  Tree view without `-l` makes zero stat
-    calls.
-  - Three-tier xattr strategy: *skip* when no permissions column
-    is active, *probe* (single syscall for the `@` indicator),
-    or *full* (only with `--extended`).
-- TOML array syntax for pipe-separated config values
-  (e.g. `ignore = ["*.tmp", "*.bak"]`).  Fixes wjv/lx#6.
-- `--dump-personality` now includes `[[when]]` conditional
-  override blocks and lists personalities in inheritance order
-  (parents before children).
-- **`--show-config` personality section enhanced.**  Now displays
-  the full inheritance chain (leaf to root) with source annotations
-  (builtin/config/override), `[[when]]` block counts and active
-  status, and resolved format columns.  Fixes wjv/lx#21.
-- **`--show-config` per-block `[[when]]` detail.**  Replaces the
-  bare "N blocks, M active" count with a full per-block listing:
-  each `[[when]]` block shows its conditions (with per-condition
-  `✓`/`✗` match outcomes), overall match status, and the settings
-  it would (or did) apply.  Each chain link also lists its direct
-  `format`/`columns`/`settings` contributions, with an
-  `effective settings:` summary at the bottom giving the
-  resolved bottom-line answer.  Unmatched blocks render entirely
-  dimmed.  Personality / Format / Theme / Style headers all use a
-  consistent yellow for object names; chain rows lead with `▸` as
-  a structural marker.  See wjv/lx#36.
-- **`--show-config` gains a top-level `Format:` section.**  Shows
-  the active long-view format, its source (`personality` or
-  `implicit, selected by -lll`), and the resolved column list.
-  Appears whenever a long format is in effect — declared by the
-  personality chain or implied by `-l`/`-ll`/`-lll`.  The
-  Personality section now lists the format name only when the
-  chain declares one, keeping the two cases visually distinct.
-  Fixes wjv/lx#25.
-- **`--show-config` gains an "available catalogue" half**, listing
-  every defined personality, format, theme, style, and class
-  with its source and a one-line summary (or `description` key
-  where defined).  The new `--show-config=MODE` selector
-  controls how much to show: `active` (default — just what's
-  running), `full` (active + catalogue, with a horizontal-rule
-  divider), or `available` (catalogue only).  Bare
-  `--show-config` keeps its previous compact behaviour; reach
-  for `=full` when you want the complete picture.  Fixes
-  wjv/lx#24.
-- **`--dump-theme` works for compiled-in themes** (`exa`,
-  `lx-256`, `lx-24bit`).  Output is real, copy-pasteable TOML
-  produced by walking the new theme key registry.  Fixes
-  wjv/lx#14.
-- **`--dump-theme` output grouped by key family** with blank-line
-  separators — file kinds, permissions, size, users, links, VCS,
-  punctuation, then the four per-timestamp date blocks, then
-  columns and symlink overlays.  Within each family, keys
-  preserve canonical declaration order (date tiers stay in
-  now → today → … → flat).  Fixes wjv/lx#13.
-- Enabled `rustfmt` across the codebase (wjv/lx#11).
-- Hidden `--no-F` and `--no-J` aliases for `--no-dirs-first`
-  and `--no-dirs-last`, matching the short-suppressor pattern
-  every other negated short flag already follows.
-- Optional `description` key on `[personality.NAME]` and
-  `[theme.NAME]` blocks: a one-line summary surfaced by
-  `--show-config` and emitted by the corresponding `--dump-*`
-  flag.  Compiled-in personalities and themes carry
-  descriptions out of the box; the curated themes in `themes/`
-  do too.  The default config template (`--init-config`)
-  writes them alongside its example personalities.
-
-### Fixed
-
 - `-A` (`--absolute`) rendered the `.` and `..` synthetic entries
   one directory level too high when combined with `-aa`.  The
   prefix is now the listed directory's canonical path, so `.`

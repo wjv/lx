@@ -1035,6 +1035,13 @@ selects how much to emit:
 (active plus the available catalogue, separated by a horizontal rule), or
 .Cm available
 (catalogue only — every defined personality, format, theme, style, and class).
+The personality section reports per-block
+.Sy [[when]]
+match outcomes (with which condition succeeded or failed) and,
+when a config personality shadows a compiled-in one, the
+settings and
+.Sy [[when]]
+blocks present in the builtin but absent from the override.
 .It Fl -init-config
 Generate a commented starter config file at
 .Pa ~/.lxconfig.toml .

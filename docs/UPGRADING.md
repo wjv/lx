@@ -20,10 +20,14 @@ in order.
 0.10 is mostly a **consolidation release** (cleanup, refactoring,
 no big new features).  One user-visible behavioural change:
 
-### `-@` is now a count flag
+### `-@` redesign and macOS default
 
-Previously `-@` / `--extended` was a single flag that listed each
-file's extended attributes.  In 0.10 it becomes a *count flag*:
+The xattr handling changed in two ways that interact, so they're
+worth treating together.
+
+**`-@` is now a count flag.**  Previously `-@` / `--extended`
+was a single flag that listed each file's extended attributes.
+In 0.10 it becomes a *count flag*:
 
 - `-@` (count 1) — shows only the `@` indicator on the
   permissions field.
@@ -34,8 +38,23 @@ Existing scripts and configs that use `-@` / `--extended` to
 mean "full xattr listing" need to switch to `-@@`.  The
 `extended = true` config key continues to mean "full listing",
 unchanged.  A new `xattr-indicator` config key controls the
-indicator-only tier.  `--xattr` is added as a visible alias
-for `--extended`.
+indicator-only tier.  `--xattr` is added as a visible alias for
+`--extended`.
+
+**On macOS, the `@` indicator is now off by default.**
+Probing for extended attributes is cheap on Linux but
+disproportionately expensive on macOS (its `listxattr` can
+dominate tree-traversal time on APFS — 96% of `lx -lTL5 ~`
+samples in our profiling).  The compiled-in `default`
+personality now ships with a `[[when]] platform = "macos"`
+overlay that disables the `@` indicator on macOS only.
+
+- **Linux/BSD users:** no behavioural change.  `lx -l` still
+  shows `@`.
+- **macOS users:** plain `lx -l` no longer shows `@`.  Pass
+  `-l@` per invocation to opt in, or set
+  `xattr-indicator = true` in your personality to opt in
+  permanently.
 
 ### Smooth gradients are on by default
 
@@ -52,23 +71,6 @@ default for any theme whose anchors are 24-bit RGB
 - **If you prefer the older discrete-tier look** on a 24-bit
   theme, pass `--no-smooth` or set `smooth = false` in your
   personality.
-
-### `@` indicator is off by default on macOS
-
-Probing for extended attributes is cheap on Linux but
-disproportionately expensive on macOS (its `listxattr` can
-dominate tree-traversal time on APFS — 96% of `lx -lTL5 ~`
-samples in our profiling).  As a result, the compiled-in
-`default` personality now ships with a
-`[[when]] platform = "macos"` overlay that disables the `@`
-indicator on macOS only.
-
-- **Linux/BSD users:** no behavioural change.  `lx -l` still
-  shows `@`.
-- **macOS users:** plain `lx -l` no longer shows `@`.  Pass
-  `-l@` per invocation to opt in, or set
-  `xattr-indicator = true` in your personality to opt in
-  permanently.
 
 
 ## Upgrading to 0.9

@@ -1,4 +1,5 @@
 # lx — file Lister eXtended
+<!-- vim: set fo+=at fo-=w tw=72 cc=73 :-->
 
 [![CI](https://github.com/wjv/lx/actions/workflows/ci.yml/badge.svg)](https://github.com/wjv/lx/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/lx-ls.svg)](https://crates.io/crates/lx-ls)
@@ -52,27 +53,34 @@ Same data, three personalities, three completely different views. No aliases.
 Personalities can inherit from each other, pick formats and themes,
 bundle filter rules, and activate conditionally based on environment
 variables (different behaviour inside SSH, in a specific terminal,
-on a particular host, …).  `lx` ships with compiled-in personalities
-so it works the way you'd expect out of the box — and you can override or 
-extend any of them from your config file.
+on a particular host, …).
+
+`lx` ships with compiled-in personalities so it works the way you'd
+expect out of the box — and you can override or extend any of them from
+your config file.
 
 ### A CLI you can predict
 
-`lx`'s flag surface is designed to be **orthogonal**.  Every long view column
-has the same three things — an add flag, a `--no-*` counterpart, and a sort 
-key. Learn a flag once, and you can guess the rest:
+`lx`'s flag surface is designed to be **orthogonal**.  Every long view
+column has the same three things: a flag to add it, a `--no-*`
+counterpart to hide it, and a sort key to sort on that column. Learn
+a flag once, and you can guess the rest:
 
 ```sh
 lx -l --inode         # add the inode column to long view
+lx -l -i              # - same thing; short flag
 lx -l --no-inode      # remove it (even if the current format includes it)
+lx -l --no-i          # - same thing; short flag
 lx -l -s inode        # sort by it (without having to show the column)
 ```
 
 Short flags aim to be **guessable mnemonics** — `-u` for `--user`, `-g` for 
-`--group`, `-m` for `--modified`.  Related actions share a letter in different 
-cases: `-b` and `-B` modify the file size column to show raw *byte* counts
-or *Binary* size prefixes, respectively.  `-d` (list directories as files)
-pairs with `-D` (list *only* directories).
+`--group`, `-m` for `--modified`. 
+
+**Related actions share a letter** in different cases: `-b` and `-B`
+modify the file size column to show raw *byte* counts or *Binary* size
+prefixes, respectively.  `-d` (list directories as files) pairs with
+`-D` (list *only* directories).
 
 View detail **compounds**: `-l` fulfils its historical role of showing more 
 detail in a "long" view, but using it multiple times (`-ll` / `-lll`) increases 
@@ -88,10 +96,11 @@ other's way.
 the 8/256-colour ANSI palette, so a fresh `lx` looks the same on 
 a twenty-year-old serial console as it does on a modern 
 [Ghostty](https://ghostty.org) — identical columns, identical layout, sensible 
-colours… whether your background is light or dark.  The invariant is strict: `lx 
---init-config` generates a config file that *documents* the defaults without 
-altering them, so you can go from zero-config to fully-tuned without ever 
-crossing a behavioural discontinuity.
+colours. And it works on a light or dark background.
+
+`lx --init-config` generates a config file that *documents* the defaults
+without altering them, so you can go from zero-config to fully-tuned
+without ever crossing a behavioural discontinuity.
 
 **When you want more:** `lx` may be the most flexibly configurable
 `ls`-like around.  You've already seen personalities as symlinks;
@@ -118,13 +127,17 @@ env.SSH_CONNECTION = true
 colour = "never"                # …disable all colour
 ```
 
-`lx` ships with curated example [themes](themes) which you can drop in 
-a `conf.d` directory.
+Sounds and looks too complicated? *Ignore it!* `lx` offers powerful
+features from the get-go, with no configuration. The complexity hides
+until you need it.
 
-A suite of flags (`--show-config` and `--dump-*`) lets you inspect and
-troubleshoot your configuration.
+**There's more:**
 
-`lx --upgrade-config` migrates schemas between releases automatically.
+* A suite of flags (`--show-config` and `--dump-*`) lets you inspect and
+  troubleshoot your configuration.
+* `lx --upgrade-config` migrates schemas between releases automatically.
+* `lx` ships with curated example [themes](themes) which you can drop in
+  a `conf.d` directory.
 
 ### Version control integration
 
@@ -140,22 +153,28 @@ The jj backend is opt-in at compile time to keep the default binary small
 
 A big tree shouldn't make `lx` feel sluggish. When computing recursive sizes, 
 `lx` walks each directory **once**. An in-memory cache catches cases where the 
-same directory would otherwise be visited twice.
+same directory would otherwise be visited repeatedly.
 
 ```sh
 lx -lTZ ~/Projects    # long + tree + total size, in one pass
 ```
 
-This is most visible on high-latency filesystems like NFS, where
-every extra `stat()` round-trip costs real milliseconds: `lx` 0.9
-lists large NFS-hosted trees in roughly a tenth of the wall time
-earlier `lx` releases took.
+On high-latency filesystems like NFS, where every extra `stat()`
+round-trip costs real milliseconds, `lx` 0.9 lists large trees in
+roughly a tenth of the wall time earlier `lx` releases took.
 
-Local SSDs benefit too — just less visibly, because there's less
-latency to save in the first place.
+`lx` 0.10 keeps that NFS work and adds a second round of
+traversal-engine improvements aimed at deep local trees: lazy metadata,
+a smarter xattr strategy, and other optimisations make deep tree
+traversal 2–7× faster than it was in 0.9.
 
-> For a walkthrough of *everything* above, see the [user guide](docs/GUIDE.md)!
+### A fine manual
 
+For a more in-depth walkthrough of *everything* above, see the
+[user guide](docs/GUIDE.md)!
+
+*But you don't need to!* `lx` works exactly as you'd expect a good CLI
+citizen to. If you get stuck there's `--help` and man pages.
 
 ## Installation
 
@@ -166,7 +185,8 @@ brew tap wjv/tap
 brew install lx
 ```
 
-Installs the `lx` binary (with jj support) and man pages.
+Installs the `lx` binary (with jj support), man pages, and shell
+completions.
 
 ### From crates.io
 
@@ -176,15 +196,16 @@ cargo install lx-ls --features jj  # + jj support
 ```
 
 The crate is published as [`lx-ls`](https://crates.io/crates/lx-ls)
-on crates.io (the name `lx` is taken by an unrelated library).  The
-installed binary is still called `lx`.
+on crates.io.  The installed binary is still called `lx`.
 
-### Pre-built binaries
+### Pre-built binaries and man pages
 
 Download from the [GitHub releases
 page](https://github.com/wjv/lx/releases) for macOS (Intel and Apple
 Silicon) and Linux (x86_64 and aarch64).  All release binaries include
 jj support.
+
+Put both man pages in your man path, or view with `man <file>`.
 
 ### Build from source
 

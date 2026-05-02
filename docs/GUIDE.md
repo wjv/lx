@@ -254,6 +254,11 @@ Some of the column names have aliases that may be shorter and easier to
 remember. For instance, you can use `mode` instead of `permissions`. For
 a full list, see the lx(1) man page.
 
+Of course, defining the columns like this using `--columns` makes for
+a very unwieldy command line. Later on we'll see how to give a name to
+a column layout format you want to use often, and then use that name to
+refer to it.
+
 ### Compounding flags
 
 Several flags compound by repetition. One of them you've already seen:
@@ -262,7 +267,11 @@ Several flags compound by repetition. One of them you've already seen:
 - `-t` / `-tt` / `-ttt` — timestamp tiers
 - `-a` / `-aa` — show dotfiles, then also `.` and `..`
 - `-@` / `-@@` — show the `@` indicator on files with extended
-  attributes, then also list the attributes themselves
+  attributes; also list the attributes themselves (`-@@`)
+- `-X` / `-XX` — limit recursive commands to the current filesystem
+  (`-X`) or all local filesystems (`-XX`)
+
+Let's take a closer look at `-t` as an example of a compounding flag:
 
 Files and directories on UNIX filesystems can have up to four
 timestamps: "modified", "changed", "created" and "accessed". `lx` can
@@ -271,7 +280,8 @@ provides flags to control their display (of course). You can look up
 these flags in the `--help` or the lx(1) man page. (Their names are
 unsurprising.)
 
-But far easier is the compounding `-t` flag (which has no long variant).
+But far easier than looking up or remembering their names is the
+compounding `-t` flag:
 
 - A single `-t` adds `modified`
 - `-tt` adds `modified` and `changed`
@@ -281,6 +291,10 @@ The two compose: `lx -ll -tt` gives you the tier-2 long view with
 two timestamp columns added. `-t` composes with whatever format
 you're already using; it doesn't replace it.
 
+<!--
+The next paragraph & exmaple don't really belong in this section.
+-->
+
 Use `--no-time` to clear all timestamps at once — handy when you
 want to start from a format that includes timestamps and add back
 only the ones you want:
@@ -289,15 +303,15 @@ only the ones you want:
 lx -lll --no-time --accessed    # show only accessed timestamp
 ```
 
-A note on `-@`/`-@@`: probing for extended attributes is cheap on
-Linux but disproportionately expensive on macOS (its `listxattr`
-can dominate tree-traversal time on APFS).  As a result, `lx`
-ships with the `@` indicator off by default *only* on macOS.
-Linux and BSD users see no behavioural change.  macOS users who
-want the indicator can opt in per invocation with `-l@`, or
-permanently with `xattr-indicator = true` in their personality.
-This is a showcase of the `platform` predicate for `[[when]]`
-blocks; see "Conditional overrides" below for the gory details.
+> A note on `-@`/`-@@` and performance:
+
+> Probing for extended attributes is disproportionately expensive on
+> macOS.  As a result, `lx` ships with the `@` indicator off by default
+> *only* on macOS, but can be shown per invocation with `-@`.
+> 
+> The disable-by-default on macOS is done through `lx`'s standard
+> personality system using [conditional
+> overrides](#conditional-overrides), and can be changed by the user.
 
 ### Filtering the file listing
 
@@ -1381,39 +1395,6 @@ compiled-in version.
 
 > For the full definitions of the built-in classes, see the lxconfig.toml(5) man page.
 
-### Starting from a clean slate
-
-If you want no compiled-in
-class colouring at all (for example, because you've got an
-exhaustive `$LS_COLORS` list and want to drive all file-type
-colouring from there), point your personality at a style that
-references only classes you define yourself — or define a style
-with no class or extension entries and use it via `use-style`:
-
-```toml
-[style.empty]
-# deliberately empty — no class.* or extension keys
-
-[theme.mine]
-use-style = "empty"
-
-[personality.default]
-theme = "mine"
-```
-
-The style layer is the compiled-in file-type colouring; an empty
-style switches it off entirely.
-
-
-### `$LS_COLORS`
-
-`lx` honours `LS_COLORS` for interoperability — if your shell
-profile already sets it, lx picks up your file-type and extension
-colours automatically.  But `LS_COLORS` is a legacy format: its
-vocabulary is limited to a handful of file-kind keys plus glob
-patterns, with raw ANSI SGR values, no inheritance, no per-column
-overrides, no gradients.
-
 ### Activating a theme
 
 Set a theme permanently through a personality:
@@ -1445,6 +1426,38 @@ mkdir -p ~/.config/lx/conf.d
 cp themes/dracula.toml ~/.config/lx/conf.d/
 lx -l --theme=dracula
 ```
+
+### `$LS_COLORS`
+
+`lx` honours `LS_COLORS` for interoperability — if your shell
+profile already sets it, lx picks up your file-type and extension
+colours automatically.  But `LS_COLORS` is a legacy format: its
+vocabulary is limited to a handful of file-kind keys plus glob
+patterns, with raw ANSI SGR values, no inheritance, no per-column
+overrides, no gradients.
+
+### Starting from a clean slate
+
+If you want no compiled-in
+class colouring at all (for example, because you've got an
+exhaustive `$LS_COLORS` list and want to drive all file-type
+colouring from there), point your personality at a style that
+references only classes you define yourself — or define a style
+with no class or extension entries and use it via `use-style`:
+
+```toml
+[style.empty]
+# deliberately empty — no class.* or extension keys
+
+[theme.mine]
+use-style = "empty"
+
+[personality.default]
+theme = "mine"
+```
+
+The style layer is the compiled-in file-type colouring; an empty
+style switches it off entirely.
 
 
 ## VCS integration
@@ -1629,7 +1642,7 @@ Personality: la
         all = true
     ▸ ll (builtin)
       format: long2
-    ▸ default (builtin)
+    ▸ default (config, overrides builtin)
       settings:
         classify = "never"
         theme = "exa"
@@ -1639,6 +1652,11 @@ Personality: la
       [[when]] #2 → not matched
         ✗ platform = "linux"
         • xattr-indicator = false
+      in the builtin but shadowed by user configuration:
+        • xattr-indicator = true
+        [[when]] #1
+          ✓ platform = "macos"
+          • xattr-indicator = false
   effective settings:
     all = true
     classify = "never"
@@ -1662,10 +1680,20 @@ personality down to its root ancestor (each link prefixed with
   outcomes (`✓` / `✗`), and the settings it would (or did) apply.
   Unmatched blocks render entirely dimmed, so the eye reads them
   as "noted, not in effect".
+- **`in the builtin but shadowed by user configuration:`** — only
+  appears for `config, overrides builtin` links.  Lists the
+  settings and `[[when]]` blocks that the compiled-in version
+  declares but your override doesn't preserve.  This is where
+  you'd notice, for example, that the compiled-in
+  `[personality.default]` has a macOS-specific `[[when]]`
+  overlay that your custom `[personality.default]` silently
+  drops.  Renders fully dimmed: same "noted, not in effect"
+  rule.
 
 This is the first place to look when conditional overrides
 aren't behaving as expected — the `✗` row tells you which
-condition failed.
+condition failed; the shadowed-builtin section tells you what
+the builtin had that you've lost.
 
 The **`effective settings:`** block at the bottom is the
 bottom-line answer: the resolved values after merging parents
