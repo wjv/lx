@@ -1562,11 +1562,22 @@ pub fn build_command() -> Command {
                 .require_equals(true),
         )
         .arg(
+            // `--show-as=NAME` emits a personality TOML snippet for
+            // the current invocation.  `--show` (visible alias) and
+            // bare `--show-as` (no value, or `--show-as=` with an
+            // empty string) skip the naming step and emit
+            // `[personality.UNNAMED]` with every line commented out
+            // — so an accidental `> file.toml` doesn't write
+            // live-but-broken config.  `require_equals(true)` keeps
+            // unrelated positional args from being consumed as the
+            // value when the user types `lx --show foo.txt`.
             Arg::new("show-as")
                 .long("show-as")
-                .help("Print CLI flags as a personality TOML snippet to stdout")
+                .visible_alias("show")
+                .help("Print CLI flags as a personality TOML snippet to stdout\n[--show or bare --show-as: anonymous, commented-out preview]")
                 .help_heading("Configuration")
                 .value_name("NAME")
+                .num_args(0..=1)
                 .require_equals(true),
         )
         .arg(

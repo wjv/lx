@@ -210,11 +210,23 @@ impl Options {
                     );
                 }
 
-                if let Some(name) = clap_matches.get_one::<String>("show-as") {
+                // Was `--show-as`/`--show` given at all?  With
+                // `num_args(0..=1)`, get_one returns None both when
+                // the flag is absent *and* when it's present without
+                // a value, so we have to check the value source
+                // separately.
+                let show_present = clap_matches
+                    .value_source("show-as")
+                    .is_some_and(|s| s == clap::parser::ValueSource::CommandLine);
+                if show_present {
+                    let raw_name = clap_matches.get_one::<String>("show-as").cloned();
+                    // Empty-string value (`--show-as=`) is treated
+                    // as no name: keep-calm-and-carry-on rather than
+                    // erroring on an obvious typo.
+                    let name = raw_name.filter(|s| !s.is_empty());
                     let settings = Self::extract_cli_settings(&clap_matches);
                     return OptionsResult::ShowAs(
-                        name.clone(),
-                        None, // inherits — set by main.rs from active personality
+                        name, None, // inherits — set by main.rs from active personality
                         settings,
                     );
                 }
@@ -560,8 +572,11 @@ pub enum OptionsResult {
 
     /// The user wants to preview CLI flags as a personality on stdout.
     /// Contains: (name, inherits, settings as TOML key/value pairs).
+    /// `name` is `None` when `--show` or bare `--show-as` was used
+    /// (anonymous preview); the emitter renders the snippet
+    /// fully commented out under `[personality.UNNAMED]`.
     ShowAs(
-        String,
+        Option<String>,
         Option<String>,
         std::collections::HashMap<String, toml::Value>,
     ),

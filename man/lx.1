@@ -1050,11 +1050,18 @@ with a
 .Pa .bak
 suffix.
 Exits after saving without listing files.
-.It Fl -show-as Ns = Ns Ar NAME
+.It Fl -show-as Ns Op = Ns Ar NAME , Fl -show
 Print the same TOML snippet that
 .Fl -save-as
 would write, but to standard output instead of a file.
 Useful for previewing or piping into a config file manually.
+When invoked without a name
+.Pq Fl -show No or bare Fl -show-as ,
+emits
+.Sy [personality.UNNAMED]
+with every line commented out — so an accidental redirect into
+a TOML file produces a file that parses as empty rather than
+live-but-broken config.
 .El
 .Pp
 The

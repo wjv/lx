@@ -82,6 +82,13 @@ All notable changes to lx are documented here. lx is forked from
   `conf.d/`.  Useful for previewing what `--save-as` would produce,
   piping into a config file manually, or inspecting the effective
   flag delta of an invocation.
+- **`--show` and bare `--show-as` for anonymous preview.**  Drops
+  the requirement to invent a name just to preview an
+  invocation's TOML.  `--show` is a visible alias for
+  `--show-as` with no value; both emit `[personality.UNNAMED]`
+  with every line commented out, so an accidental `> file.toml`
+  doesn't write live-but-broken config.  `--show-as=NAME` is
+  unchanged.
 - **`-@` is now a count flag.**  `-@` (count 1) shows only the
   `@` indicator on the permissions field; `-@@` (count 2) keeps
   the existing behaviour of listing each attribute and size.

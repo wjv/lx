@@ -1333,3 +1333,48 @@ fn show_as_at_count_emits_xattr_indicator() {
         .success()
         .stdout(predicate::str::contains("xattr-indicator = true"));
 }
+
+/// `--show` and bare `--show-as` (no value) emit an anonymous
+/// preview: every line commented, header is
+/// `# [personality.UNNAMED]`.  The two spellings produce
+/// byte-identical output.
+#[test]
+fn show_anonymous_emits_fully_commented_unnamed_preview() {
+    let show_out = lx_no_colour()
+        .args(["-l", "--show"])
+        .output()
+        .expect("--show failed");
+    let show_as_out = lx_no_colour()
+        .args(["-l", "--show-as"])
+        .output()
+        .expect("bare --show-as failed");
+    let show_as_empty_out = lx_no_colour()
+        .args(["-l", "--show-as="])
+        .output()
+        .expect("--show-as= (empty) failed");
+
+    assert!(show_out.status.success());
+    assert!(show_as_out.status.success());
+    assert!(show_as_empty_out.status.success());
+
+    // All three are equivalent: same bytes on stdout.
+    assert_eq!(show_out.stdout, show_as_out.stdout);
+    assert_eq!(show_out.stdout, show_as_empty_out.stdout);
+
+    let stdout = String::from_utf8_lossy(&show_out.stdout);
+    assert!(
+        stdout.contains("# [personality.UNNAMED]"),
+        "anonymous preview should contain commented UNNAMED header"
+    );
+    // Every non-blank line is a comment — accidental redirect to
+    // a TOML file produces something that parses as empty.
+    for line in stdout.lines() {
+        if line.is_empty() {
+            continue;
+        }
+        assert!(
+            line.starts_with('#'),
+            "every non-blank line should be a comment, but got: {line:?}"
+        );
+    }
+}

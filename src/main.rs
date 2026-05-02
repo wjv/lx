@@ -407,7 +407,7 @@ fn try_main() -> Result<i32, LxError> {
                 _ => std::collections::HashMap::new(),
             };
             let inherits = active_personality.as_deref();
-            config::show_personality_as(name, inherits, &cli_settings);
+            config::show_personality_as(name.as_deref(), inherits, &cli_settings);
         }
 
         OptionsResult::DumpClass(ref name) => {

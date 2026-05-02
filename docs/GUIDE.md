@@ -855,6 +855,14 @@ To preview the same TOML snippet without writing a file, use `--show-as=NAME` in
 lx -l --total --sort=size --reverse --show-as=du
 ```
 
+If you just want to *see* what `--save-as` would emit and don't yet have a name in mind, use `--show` (or bare `--show-as`):
+
+```sh
+lx -l --total --sort=size --reverse --show
+```
+
+This emits `[personality.UNNAMED]` with every line commented out — so an accidental `> file.toml` doesn't write live-but-broken config. Once you've decided on a name, swap `--show` for `--show-as=NAME` (to preview) or `--save-as=NAME` (to write).
+
 ### `LX_PERSONALITY`
 
 You can set a session-level default via the `LX_PERSONALITY`
