@@ -2091,7 +2091,7 @@ dependencies = [
 
 [[package]]
 name = "lx-ls"
-version = "0.10.0-feat.issue36"
+version = "0.10.0-pre.34"
 dependencies = [
  "assert_cmd",
  "chrono",
