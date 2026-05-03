@@ -228,12 +228,13 @@ completions — run `just -l` to see the recipes.
   configuration, themes, VCS, daily usage, shell completions.
 - **[`docs/UPGRADING.md`](docs/UPGRADING.md)** — breaking changes per
   release, with migration notes and justifications.
-- **`man lx`** — command reference (installed alongside the binary;
-  mdoc source in [`man/lx.1`](man/lx.1)).
-- **`man lxconfig.toml`** — configuration file reference (mdoc source
-  in [`man/lxconfig.toml.5`](man/lxconfig.toml.5)).
-- **[`CHANGELOG.md`](CHANGELOG.md)** — release notes.
+- **`man lx`** — command reference (installed alongside the binary; mdoc
+  source in [`man/lx.1`](man/lx.1)).
+- **`man lxconfig.toml`** — configuration file reference (mdoc source in
+  [`man/lxconfig.toml.5`](man/lxconfig.toml.5)).
 - **`lx --help`** — online flag reference.
+- **[`CHANGELOG.md`](CHANGELOG.md)** — release notes.
+- **[`ROADMAP.md`](ROADMAP.MD)** — future directions.
 
 
 ## Known limitations
