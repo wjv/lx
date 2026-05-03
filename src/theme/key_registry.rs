@@ -386,7 +386,7 @@ mod tests {
         for def in THEME_KEY_REGISTRY.iter() {
             assert!(seen.insert(def.name), "duplicate key name: {}", def.name);
             for alias in def.aliases {
-                assert!(seen.insert(alias), "duplicate alias: {}", alias);
+                assert!(seen.insert(alias), "duplicate alias: {alias}");
             }
         }
     }

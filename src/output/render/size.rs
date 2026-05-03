@@ -127,7 +127,7 @@ pub mod test {
         assert_eq!(
             expected,
             directory.render(&theme(), SizeFormat::JustBytes, &NumericLocale::english())
-        )
+        );
     }
 
     #[test]
@@ -145,7 +145,7 @@ pub mod test {
                 SizeFormat::DecimalBytes,
                 &NumericLocale::english()
             )
-        )
+        );
     }
 
     #[test]
@@ -159,7 +159,7 @@ pub mod test {
         assert_eq!(
             expected,
             directory.render(&theme(), SizeFormat::BinaryBytes, &NumericLocale::english())
-        )
+        );
     }
 
     #[test]
@@ -173,7 +173,7 @@ pub mod test {
         assert_eq!(
             expected,
             directory.render(&theme(), SizeFormat::JustBytes, &NumericLocale::english())
-        )
+        );
     }
 
     #[test]
@@ -198,6 +198,6 @@ pub mod test {
         assert_eq!(
             expected,
             directory.render(&t, SizeFormat::JustBytes, &NumericLocale::english())
-        )
+        );
     }
 }

@@ -595,7 +595,7 @@ pub mod test {
         F: Fn(&MatchedFlags) -> T,
     {
         let args: Vec<OsString> = std::iter::once(OsString::from("lx"))
-            .chain(inputs.iter().map(|s| OsString::from(s)))
+            .chain(inputs.iter().map(OsString::from))
             .collect();
         let cmd = crate::options::parser::build_command();
         let clap_matches = cmd

@@ -189,7 +189,7 @@ pub mod test {
             Fixed(11).paint("-"),
         ]);
 
-        assert_eq!(expected, bits.render(&theme(), false).into())
+        assert_eq!(expected, bits.render(&theme(), false).into());
     }
 
     #[test]
@@ -221,7 +221,7 @@ pub mod test {
             Fixed(109).paint("x"),
         ]);
 
-        assert_eq!(expected, bits.render(&theme(), true).into())
+        assert_eq!(expected, bits.render(&theme(), true).into());
     }
 
     #[test]
@@ -253,7 +253,7 @@ pub mod test {
             Fixed(111).paint("t"),
         ]);
 
-        assert_eq!(expected, bits.render(&theme(), true).into())
+        assert_eq!(expected, bits.render(&theme(), true).into());
     }
 
     #[test]
@@ -285,6 +285,6 @@ pub mod test {
             Fixed(111).paint("T"),
         ]);
 
-        assert_eq!(expected, bits.render(&theme(), true).into())
+        assert_eq!(expected, bits.render(&theme(), true).into());
     }
 }
