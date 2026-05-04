@@ -513,13 +513,24 @@ impl MatchedFlags {
 /// `[+git +jj]` follows the same `[bracket]` typographic convention
 /// used elsewhere in lx's CLI surface (see `--help` annotations) for
 /// structured machine-readable suffixes.  `+` marks a feature as
-/// compiled-in; absent features are simply omitted.
+/// compiled-in; absent features are simply omitted.  An additional
+/// ` [nightly]` suffix is appended (after the feature flags) when
+/// `build.rs` sees `LX_NIGHTLY=1` at compile time, distinguishing
+/// nightly binaries from local or release builds of the same source.
 const VERSION: &str = if cfg!(feature = "jj") {
-    concat!(env!("CARGO_PKG_VERSION"), " [+git +jj]")
+    concat!(
+        env!("CARGO_PKG_VERSION"),
+        " [+git +jj]",
+        env!("LX_NIGHTLY_MARKER")
+    )
 } else if cfg!(feature = "git") {
-    concat!(env!("CARGO_PKG_VERSION"), " [+git]")
+    concat!(
+        env!("CARGO_PKG_VERSION"),
+        " [+git]",
+        env!("LX_NIGHTLY_MARKER")
+    )
 } else {
-    env!("CARGO_PKG_VERSION")
+    concat!(env!("CARGO_PKG_VERSION"), env!("LX_NIGHTLY_MARKER"))
 };
 
 /// Build the Clap `Command` that defines all lx flags.

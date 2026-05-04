@@ -15,6 +15,11 @@ on:
         description: "Commit, tag, or branch to check out and build."
         required: true
         type: string
+      nightly:
+        description: "Build as nightly (sets LX_NIGHTLY=1; --version reports [nightly])."
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   build:
@@ -50,10 +55,14 @@ jobs:
 
       - name: Build (cross)
         if: matrix.cross
+        env:
+          LX_NIGHTLY: ${{ inputs.nightly && '1' || '' }}
         run: cross build --release --features jj --target ${{ matrix.target }}
 
       - name: Build (native)
         if: ${{ !matrix.cross }}
+        env:
+          LX_NIGHTLY: ${{ inputs.nightly && '1' || '' }}
         run: cargo build --release --features jj --target ${{ matrix.target }}
 
       - name: Rename binary with target triple

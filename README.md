@@ -207,6 +207,16 @@ jj support.
 
 Put both man pages in your man path, or view with `man <file>`.
 
+### Nightly builds
+
+Pre-release binaries are published to a single rolling [nightly
+release](https://github.com/wjv/lx/releases/tag/nightly) — only if
+anything new has landed. The same four platforms are supported as in
+a tagged release, all with jj support. The `--version` flag reports
+`[nightly]` so you can identify these builds.
+
+No installer integration: download the binary directly.
+
 ### Build from source
 
 `lx` requires Rust 1.94 or later.
@@ -234,7 +244,7 @@ completions — run `just -l` to see the recipes.
   [`man/lxconfig.toml.5`](man/lxconfig.toml.5)).
 - **`lx --help`** — online flag reference.
 - **[`CHANGELOG.md`](CHANGELOG.md)** — release notes.
-- **[`ROADMAP.md`](ROADMAP.MD)** — future directions.
+- **[`ROADMAP.md`](ROADMAP.md)** — future directions.
 
 
 ## Known limitations
