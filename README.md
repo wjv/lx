@@ -205,6 +205,16 @@ page](https://github.com/wjv/lx/releases) for macOS (Intel and Apple
 Silicon) and Linux (x86_64 and aarch64).  All release binaries include
 jj support.
 
+After download, make the binary executable.  On macOS, also strip the
+Gatekeeper quarantine attribute that browsers add to downloaded files:
+
+```sh
+chmod +x lx-aarch64-apple-darwin
+xattr -d com.apple.quarantine lx-aarch64-apple-darwin   # macOS only
+```
+
+Homebrew and `cargo install` users don't need either step.
+
 Put both man pages in your man path, or view with `man <file>`.
 
 ### Nightly builds
@@ -215,7 +225,9 @@ anything new has landed. The same four platforms are supported as in
 a tagged release, all with jj support. The `--version` flag reports
 `[nightly]` so you can identify these builds.
 
-No installer integration: download the binary directly.
+No installer integration: download the binary directly, make it
+executable and (on macOS) strip the quarantine attribute as described
+above.
 
 ### Build from source
 
