@@ -20,6 +20,16 @@ Editorial conventions:
   stay on the bullets at release time as historical context.
 -->
 
+## [Unreleased] — 0.11.0
+
+### Added
+
+- **Nightly builds** at the rolling [`nightly` release
+  tag](https://github.com/wjv/lx/releases/tag/nightly).  One build
+  per day, only when something new has landed.  Nightly binaries
+  report `[nightly]` in `--version` to distinguish them from
+  release or local builds.  (pre.1)
+
 ## [0.10.0] — 2026-05-03
 
 0.10 was conceived as a **consolidation release** — cleanup,
