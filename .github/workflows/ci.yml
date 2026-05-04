@@ -65,34 +65,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo check --no-default-features
 
-  # Release dress rehearsal — mirrors the release workflow's build matrix.
-  # Only runs on release branches.
+  # Release dress rehearsal — exercises the same build matrix the
+  # release workflow uses, by calling the shared build-binaries.yml
+  # workflow.  Only runs on release branches.
   release-build:
     if: startsWith(github.ref, 'refs/heads/rel/')
-    strategy:
-      matrix:
-        include:
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-22.04
-          - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
-            cross: true
-          - target: x86_64-apple-darwin
-            os: macos-latest
-          - target: aarch64-apple-darwin
-            os: macos-latest
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-      - name: Install cross
-        if: matrix.cross
-        uses: taiki-e/install-action@cross
-      - name: Build (cross)
-        if: matrix.cross
-        run: cross build --release --features jj --target ${{ matrix.target }}
-      - name: Build (native)
-        if: ${{ !matrix.cross }}
-        run: cargo build --release --features jj --target ${{ matrix.target }}
+    uses: ./.github/workflows/build-binaries.yml
+    with:
+      ref: ${{ github.ref }}

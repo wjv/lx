@@ -1,0 +1,84 @@
+name: Build binaries
+
+# Reusable workflow that produces release-shaped artifacts: four
+# platform binaries (linux x86_64/aarch64, macos x86_64/aarch64, all
+# built with --features jj) and the two man pages.
+#
+# Consumed by release.yml on tagged releases, by ci.yml's
+# release-build dress-rehearsal job, and (from PR #2 onwards) by
+# nightly.yml.
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Commit, tag, or branch to check out and build."
+        required: true
+        type: string
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-22.04
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Install cross
+        if: matrix.cross
+        uses: taiki-e/install-action@cross
+
+      - name: Build (cross)
+        if: matrix.cross
+        run: cross build --release --features jj --target ${{ matrix.target }}
+
+      - name: Build (native)
+        if: ${{ !matrix.cross }}
+        run: cargo build --release --features jj --target ${{ matrix.target }}
+
+      - name: Rename binary with target triple
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/lx dist/lx-${{ matrix.target }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: lx-${{ matrix.target }}
+          path: dist/lx-${{ matrix.target }}
+
+  man-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Stage man pages at workspace root
+        run: cp man/lx.1 man/lxconfig.toml.5 ./
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: man-pages
+          path: |
+            lx.1
+            lxconfig.toml.5

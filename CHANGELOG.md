@@ -3,6 +3,23 @@
 All notable changes to lx are documented here. lx is forked from
 [exa](https://github.com/ogham/exa) v0.10.1.
 
+<!--
+Editorial conventions:
+
+- Each release section opens with a short preamble and a
+  `**Highlights:**` bulleted block; per-category detail follows
+  under `### Added`, `### Changed`, etc.  The release CI extracts
+  the Highlights block (preamble + bullets, up to but not including
+  the first `### ` heading) and uses it as the GitHub Release body
+  — so every release needs the Highlights block, or the release
+  will fail to publish.
+
+- Within a release-in-progress, bullets carry a `(pre.N)` suffix
+  matching the version bump that introduced them, so users on
+  nightly builds can grep changes between any two builds.  Tags
+  stay on the bullets at release time as historical context.
+-->
+
 ## [0.10.0] — 2026-05-03
 
 0.10 was conceived as a **consolidation release** — cleanup,
