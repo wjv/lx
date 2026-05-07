@@ -30,6 +30,17 @@ Editorial conventions:
   report `[nightly]` in `--version` to distinguish them from
   release or local builds.  (pre.1)
 
+### Security
+
+- Bumped `jj-lib` from 0.40 to 0.41, which pulls in a newer
+  `gitoxide` family.  Addresses six open advisories in
+  `gix`/`gix-fs`/`gix-pack`/`gix-submodule` involving malicious
+  git repositories (submodule path traversal, symlink escapes,
+  crafted pack DoS, command-execution bypass via `.gitmodules`).
+  Affects only the `jj`-feature-enabled binary; the threat model
+  requires the user to list files in an attacker-controlled
+  repo.  (pre.2)
+
 ## [0.10.0] — 2026-05-03
 
 0.10 was conceived as a **consolidation release** — cleanup,
