@@ -41,6 +41,36 @@ Editorial conventions:
   requires the user to list files in an attacker-controlled
   repo.  (pre.2)
 
+## [0.10.1] — 2026-05-07
+
+0.10.1 is a security maintenance release.  No new features, no
+behaviour changes.  Bumps `jj-lib` from 0.40 to 0.41 to pick up
+patches in the `gitoxide` family for several open advisories.
+
+**Highlights:**
+
+- **Security fix.**  `jj-lib` 0.41 transitively pulls in patched
+  `gix`, `gix-fs`, `gix-pack`, and `gix-submodule` versions,
+  closing six dependabot advisories around malicious git
+  repositories (submodule path traversal, symlink escapes,
+  crafted pack DoS, command-execution bypass via `.gitmodules`).
+  Affects only `--features jj` binaries — Homebrew and prebuilt
+  releases include jj support, so users on those install paths
+  should upgrade.  Threat model requires listing files inside an
+  attacker-controlled git repository, so impact is bounded, but
+  high-severity advisories warrant patching.
+
+### Security
+
+- Bump `jj-lib` from 0.40 to 0.41.  Addresses
+  [GHSA-f89h-2fjh-2r9q](https://github.com/advisories/GHSA-f89h-2fjh-2r9q),
+  [GHSA-fr8x-3vfx-f45h](https://github.com/advisories/GHSA-fr8x-3vfx-f45h),
+  [GHSA-pg4w-g64p-qwhj](https://github.com/advisories/GHSA-pg4w-g64p-qwhj),
+  [GHSA-x494-mj8g-cj27](https://github.com/advisories/GHSA-x494-mj8g-cj27),
+  [GHSA-f26g-jm89-4g65](https://github.com/advisories/GHSA-f26g-jm89-4g65),
+  and
+  [GHSA-p3hw-mv63-rf9w](https://github.com/advisories/GHSA-p3hw-mv63-rf9w).
+
 ## [0.10.0] — 2026-05-03
 
 0.10 was conceived as a **consolidation release** — cleanup,
