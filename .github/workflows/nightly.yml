@@ -8,10 +8,13 @@ name: Nightly
 
 on:
   schedule:
-    # Daily at ~01:00 UTC (≈ 02:00 CET / 03:00 CEST; GitHub cron uses
+    # Daily at 01:17 UTC (≈ 02:17 CET / 03:17 CEST; GitHub cron uses
     # UTC without DST adjustment, so the local time drifts by an hour
-    # twice a year — fine for "some time around 3am").
-    - cron: "0 1 * * *"
+    # twice a year — fine for "some time around 3am").  The :17
+    # offset deliberately dodges GitHub's top-of-hour scheduler
+    # stampede, which on free runners can delay top-of-hour cron jobs
+    # by 3+ hours.
+    - cron: "17 1 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -48,6 +51,9 @@ jobs:
           echo "Trunk version OK: $VERSION"
 
       - name: Decide whether to build
+        # SHA-based comparison: any commit on main triggers a
+        # rebuild, including docs/CI commits that don't change the
+        # binary.  Intentional simplicity (see ci.md §3.2).
         id: decide
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
