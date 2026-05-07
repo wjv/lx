@@ -138,9 +138,16 @@ jobs:
             gh release delete nightly --cleanup-tag --yes
           fi
 
+          # --target takes a SHA (not the branch name `main`) so the
+          # release's `targetCommitish` records the actual commit
+          # built.  The check job compares this against HEAD on the
+          # next run; passing `main` would store the literal string
+          # "main", breaking the comparison and rebuilding every
+          # night.
+          HEAD_SHA=$(git rev-parse HEAD)
           gh release create nightly \
             --prerelease \
-            --target main \
+            --target "$HEAD_SHA" \
             --title "Nightly build" \
             --notes-file release-notes.md \
             lx-* lx.1 lxconfig.toml.5
