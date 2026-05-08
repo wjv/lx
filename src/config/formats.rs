@@ -6,7 +6,32 @@ use std::collections::HashMap;
 use super::error::ConfigError;
 use super::store::config;
 
+/// Hidden aliases for compiled-in format names.
+///
+/// These map old format names (carried in pre-0.11 configs and
+/// muscle-memory `--format=...` invocations) to the canonical names
+/// that replace them.  They resolve to the same column list as their
+/// canonical name and are accepted on the CLI and in config, but they
+/// are not advertised in `--help` or enumerated by `show_format_all`.
+///
+/// `--upgrade-config` rewrites these to the canonical names so that
+/// new config files don't carry the deprecated spellings forward.
+const HIDDEN_ALIASES: &[(&str, &str)] = &[
+    // 0.11 tier redesign: `long2` and `long3` became aliases.
+    ("long2", "long"),
+    ("long3", "full"),
+];
+
+/// Returns true if `name` is a hidden alias for a canonical format.
+fn is_hidden_alias(name: &str) -> bool {
+    HIDDEN_ALIASES.iter().any(|&(alias, _)| alias == name)
+}
+
 /// The compiled-in format definitions as column name strings.
+///
+/// Returns canonical names only; hidden aliases (see
+/// `HIDDEN_ALIASES`) are added by `resolve_formats` so that they
+/// resolve to the same column list as their canonical name.
 fn compiled_formats() -> HashMap<String, Vec<String>> {
     HashMap::from([
         (
@@ -16,21 +41,11 @@ fn compiled_formats() -> HashMap<String, Vec<String>> {
                 "size".into(),
                 "user".into(),
                 "modified".into(),
-            ],
-        ),
-        (
-            "long2".into(),
-            vec![
-                "permissions".into(),
-                "size".into(),
-                "user".into(),
-                "group".into(),
-                "modified".into(),
                 "vcs".into(),
             ],
         ),
         (
-            "long3".into(),
+            "full".into(),
             vec![
                 "permissions".into(),
                 "links".into(),
@@ -48,12 +63,24 @@ fn compiled_formats() -> HashMap<String, Vec<String>> {
     ])
 }
 
-/// Resolve all format definitions: compiled-in + config overrides.
+/// Resolve all format definitions: compiled-in canonical names,
+/// hidden aliases pointing at the same column lists, and config
+/// overrides (which take precedence over both).
+///
 /// Returns a map of format name → list of column name strings.
 pub fn resolve_formats() -> HashMap<String, Vec<String>> {
     let mut formats = compiled_formats();
 
-    // Config overrides.
+    // Hidden aliases: each alias resolves to the same column list as
+    // its canonical target.  Inserted here (not in `compiled_formats`)
+    // so the alias mapping has one point of truth.
+    for &(alias, canonical) in HIDDEN_ALIASES {
+        if let Some(columns) = formats.get(canonical) {
+            formats.insert(alias.into(), columns.clone());
+        }
+    }
+
+    // Config overrides (canonical or alias name — user wins either way).
     if let Some(cfg) = config() {
         for (name, columns) in &cfg.format {
             formats.insert(name.clone(), columns.clone());
@@ -95,9 +122,13 @@ pub fn show_format(name: &str) -> Result<(), ConfigError> {
 }
 
 /// Print all format definitions as copy-pasteable TOML.
+///
+/// Hidden aliases are skipped — they resolve to the same column list
+/// as their canonical name, so listing both would produce a
+/// confusing duplicate entry.
 pub fn show_format_all() {
     let formats = resolve_formats();
-    let mut names: Vec<_> = formats.keys().collect();
+    let mut names: Vec<_> = formats.keys().filter(|n| !is_hidden_alias(n)).collect();
     names.sort();
 
     println!("[format]");

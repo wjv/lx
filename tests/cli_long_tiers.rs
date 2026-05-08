@@ -1,4 +1,18 @@
-//! Tests for compounding -l detail tiers.
+//! Tests for the compounding -l detail tiers.
+//!
+//! Post-0.11 semantics (the tier redesign; see "Upgrading to 0.11"
+//! in `docs/UPGRADING.md` for context):
+//!
+//! - `-l`/`-ll`/`-lll` route through compiled-in personalities
+//!   `l`/`ll`/`lll`.  `lx -ll`, `lx -p ll`, and the `ll` argv[0]
+//!   symlink all activate `[personality.ll]` — one mechanism, three
+//!   invocation routes.
+//! - **Tier 1 columns**: perms, size, user, modified, **vcs**.
+//! - **Tier 2 columns**: same as tier 1.  Differs presentationally:
+//!   header row, ISO-style timestamps, count footer.  No new data.
+//! - **Tier 3 columns**: full forensic view (perms, links, size,
+//!   blocks, user, group, modified, changed, created, accessed, vcs).
+//!   Header + ISO timestamps.
 
 mod support;
 
@@ -8,7 +22,7 @@ use support::lx_no_colour;
 // ── Tier 1: -l (base long view) ──────────────────────────────────
 
 #[test]
-fn tier1_has_permissions_size_user_modified() {
+fn tier1_lists_the_file() {
     lx_no_colour()
         .args(["-l", "Cargo.toml"])
         .assert()
@@ -23,7 +37,7 @@ fn tier1_no_group_column() {
         .args(["-l", "Cargo.toml"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("staff").not());
+        .stdout(predicate::str::contains(support::current_group()).not());
 }
 
 #[test]
@@ -35,28 +49,102 @@ fn tier1_no_header() {
         .stdout(predicate::str::contains("Permissions").not());
 }
 
-// ── Tier 2: -ll (+ group, VCS status) ────────────────────────────
+#[test]
+fn tier1_has_vcs_column_when_in_repo() {
+    // The 0.11 redesign promotes `vcs` to the tier-1 column set —
+    // it's the column that genuinely differentiates `lx` from `ls`.
+    // We use `-h` to surface column headers; the VCS-column header
+    // is "Git" or "JJ" depending on the active backend.  Either is
+    // acceptable.
+    let output = lx_no_colour()
+        .args(["-l", "-h", "Cargo.toml"])
+        .output()
+        .expect("failed to run");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("Git") || stdout.contains("JJ"),
+        "expected VCS column header (Git or JJ) in tier-1 output: {stdout}"
+    );
+}
+
+// ── Tier 2: -ll (polish on top of tier 1) ───────────────────────
 
 #[test]
-fn tier2_has_group() {
+fn tier2_no_group_column() {
+    // Tier 2 has the SAME columns as tier 1.  Group does not appear
+    // in `-ll` output unless explicitly added with `-g` or by an
+    // overridden personality.
     lx_no_colour()
         .args(["-ll", "Cargo.toml"])
         .assert()
         .success()
-        .stdout(predicate::str::contains(support::current_group()));
+        .stdout(predicate::str::contains(support::current_group()).not());
 }
 
 #[test]
-fn tier2_no_header() {
-    // Tier 2 still doesn't have the header row.
+fn tier2_has_header() {
+    // Tier 2's `[personality.ll]` declares `header = true`, so the
+    // header row appears without an explicit `-h`.
     lx_no_colour()
         .args(["-ll", "Cargo.toml"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Permissions").not());
+        .stdout(predicate::str::contains("Permissions"));
 }
 
-// ── Tier 3: -lll (+ header, all timestamps, links, blocks) ──────
+#[test]
+fn tier2_has_long_iso_timestamp() {
+    // `[personality.ll]` declares `time-style = "long-iso"`, so the
+    // modified column renders as `YYYY-MM-DD HH:MM`.
+    lx_no_colour()
+        .args(["-ll", "Cargo.toml"])
+        .assert()
+        .success()
+        .stdout(predicate::str::is_match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}").unwrap());
+}
+
+#[test]
+fn tier1_and_tier2_have_same_column_set() {
+    // The tier redesign's load-bearing simplification: tier 2 adds
+    // *presentation polish* on top of tier 1, not new data.  The
+    // visible column-name set should match between the two.
+    //
+    // We compare by extracting which column-header strings appear in
+    // each output (using -h on tier 1 to surface its headers, since
+    // tier 2 always shows them via personality polish).
+    let column_names = [
+        "Permissions",
+        "Size",
+        "User",
+        "Date Modified",
+        "Group",
+        "Links",
+        "Blocks",
+        "Date Changed",
+        "Date Created",
+        "Date Accessed",
+    ];
+    let columns_in = |args: &[&str]| -> std::collections::BTreeSet<String> {
+        let output = lx_no_colour()
+            .args(args)
+            .output()
+            .expect("failed to run lx");
+        let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+        column_names
+            .iter()
+            .filter(|name| stdout.contains(*name))
+            .map(|s| (*s).to_string())
+            .collect()
+    };
+    let t1 = columns_in(&["-l", "-h", "Cargo.toml"]);
+    let t2 = columns_in(&["-ll", "Cargo.toml"]);
+    assert_eq!(
+        t1, t2,
+        "tier 1 and tier 2 should have identical column sets"
+    );
+}
+
+// ── Tier 3: -lll (full forensic view) ───────────────────────────
 
 #[test]
 fn tier3_has_header() {
@@ -65,6 +153,18 @@ fn tier3_has_header() {
         .assert()
         .success()
         .stdout(predicate::str::contains("Permissions"));
+}
+
+#[test]
+fn tier3_has_group_column() {
+    // Tier 3 keeps `group` in its forensic column set — the column
+    // earns its width here, where the tier's purpose is "show me
+    // everything".
+    lx_no_colour()
+        .args(["-lll", "Cargo.toml"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(support::current_group()));
 }
 
 #[test]
@@ -97,6 +197,28 @@ fn tier3_has_all_timestamp_headers() {
         .stdout(predicate::str::contains("Date Created"));
 }
 
+// ── Tier-flag / personality / argv[0] convergence (0.11 redesign) ─
+
+#[test]
+fn tier_flag_and_p_flag_produce_identical_output() {
+    // The load-bearing invariant of the 0.11 tier redesign:
+    // `lx -ll <path>` and `lx -p ll <path>` must produce
+    // byte-identical output.  Both activate `[personality.ll]`.
+    let via_tier = lx_no_colour()
+        .args(["-ll", "Cargo.toml"])
+        .output()
+        .expect("failed to run -ll");
+    let via_p = lx_no_colour()
+        .args(["-p", "ll", "Cargo.toml"])
+        .output()
+        .expect("failed to run -p ll");
+    assert_eq!(
+        String::from_utf8_lossy(&via_tier.stdout),
+        String::from_utf8_lossy(&via_p.stdout),
+        "lx -ll and lx -p ll must produce identical output"
+    );
+}
+
 // ── Overrides on top of tiers ────────────────────────────────────
 
 #[test]
@@ -120,11 +242,13 @@ fn tier3_with_no_time() {
 }
 
 #[test]
-fn tier2_plus_header_flag() {
-    // -ll -h should show header even though tier 2 doesn't include it.
+fn tier2_no_header_flag_suppresses() {
+    // Tier 2 declares `header = true` via its personality, but
+    // `--no-header` should still suppress it (CLI flags override
+    // personality settings).
     lx_no_colour()
-        .args(["-ll", "-h", "Cargo.toml"])
+        .args(["-ll", "--no-header", "Cargo.toml"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Permissions"));
+        .stdout(predicate::str::contains("Permissions").not());
 }

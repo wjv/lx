@@ -731,6 +731,30 @@ total-size = true
 ```
 
 
+### Reserved personality names
+
+A handful of personality names are reserved by `lx`'s compiled-in
+defaults — you can override them in your config (your definition
+wins, see "Inheritance" above), but they have meaning even
+without your override.  Currently reserved:
+
+- **`default`, `lx`** — the implicit base personalities.  `default`
+  holds settings shared across everything; `lx` is what runs when
+  the binary is invoked as itself.
+- **`l`, `ll`, `lll`** — bound 1:1 to the long-view tier flags
+  (`-l`, `-ll`, `-lll`).  Three invocation routes — the tier flag,
+  `-p l`/`-p ll`/`-p lll`, and the corresponding argv[0] symlink —
+  all converge on the same personality, so customising
+  `[personality.ll]` in your config affects all three at once.
+- **`la`, `tree`, `ls`** — convenience personalities for "long all",
+  "tree view", and "POSIX-`ls`-shaped".
+
+Future releases may add more reservations (digit-named
+personalities `0`–`9` are earmarked for hotkey bindings).  Names
+not in this list are entirely yours: `[personality.work]`,
+`[personality.dev]`, `[personality.dotfiles]`, anything goes.
+
+
 ### The built-in personalities
 
 `lx` ships with a set of compiled-in personalities that are usable
@@ -738,7 +762,7 @@ out of the box without any config file.  They form an inheritance
 tree rooted at `default`:
 
 ```text
-default ──┬──→ lx ──┬──→ ll ──→ la
+default ──┬──→ lx ──┬──→ l  ──→ ll ──→ la
           │         └──→ lll
           └──→ tree
 
@@ -786,15 +810,34 @@ but applies no further customisations:
 inherits = "default"
 ```
 
-#### `ll`
+#### `l` *(the `-l` tier)*
 
-A long listing, equivalent to `lx -l` with VCS status and
-`--group-dirs=first`:
+The base long listing — same as `lx -l`, `lx -p l`, or invocation via
+the `l` argv[0] symlink (though a one-character symlink is risky in
+practice, so we don't ship one):
+
+```toml
+[personality.l]
+inherits = "lx"
+format = "long"
+```
+
+The `long` format carries `permissions`, `size`, `user`, `modified`,
+and `vcs` — the column that genuinely differentiates `lx` from `ls`.
+
+#### `ll` *(the `-ll` tier)*
+
+The polished long listing — same column set as `l`, with presentation
+polish layered on: a header row, ISO-style timestamps, an item-count
+footer, and directories grouped before files.  `lx -ll`, `lx -p ll`,
+and the `ll` argv[0] symlink all activate this personality.
 
 ```toml
 [personality.ll]
-inherits = "lx"
-format = "long2"
+inherits = "l"
+header = true
+time-style = "long-iso"
+count = true
 group-dirs = "first"
 ```
 
@@ -808,19 +851,21 @@ inherits = "ll"
 all = true
 ```
 
-#### `lll`
+#### `lll` *(the `-lll` tier)*
 
-The expanded long listing with header, all timestamps, hard link count,
-and block count:
+The full forensic long listing — every metadata column, all four
+timestamps, header row, ISO-style timestamps:
 
 ```toml
 [personality.lll]
 inherits = "lx"
-format = "long3"
-group-dirs = "first"
+format = "full"
 header = true
 time-style = "long-iso"
 ```
+
+The `full` format adds `links`, `blocks`, `group`, `changed`,
+`created`, and `accessed` to `long`'s columns.
 
 #### `tree`
 
@@ -830,7 +875,7 @@ Recursive tree view with directories first:
 [personality.tree]
 inherits = "default"
 tree = true
-format = "long2"
+format = "long"
 group-dirs = "first"
 ```
 
@@ -935,26 +980,41 @@ If a named format is used in multiple personalities, all of those personalities 
 
 ### The built-in formats
 
-Three formats are built-in and thus available even without a configuration file: `long`, `long2` and `long3`. Their definitions are as follows:
+Two formats are built-in and thus available even without a
+configuration file: `long` and `full`.  Their definitions are as
+follows:
 
 
 ```toml
 [format]
-long    = ["permissions", "size", "user", "modified"]
-long2   = ["permissions", "size", "user", "group", "modified", "vcs"]
-long3   = ["permissions", "links", "size", "blocks",
-           "user", "group", "modified", "changed", "created", "accessed", "vcs"]
+long = ["permissions", "size", "user", "modified", "vcs"]
+full = ["permissions", "links", "size", "blocks",
+        "user", "group", "modified", "changed", "created", "accessed", "vcs"]
 ```
 
-These three long formats are actually a bit special: They are used when you use `lx`'s compounding `-l` / `--long` flags:
+These map to the long-view tier flags via the personalities
+described above:
 
 ```sh
-lx -l               # equivalent to `lx --format=long`
-lx -ll              # equivalent to `lx --format=long2`
-lx -lll             # equivalent to `lx --format=long3`
+lx -l    # → personality `l`,   format = "long"
+lx -ll   # → personality `ll`,  format = "long" (via inheritance from `l`)
+lx -lll  # → personality `lll`, format = "full"
 ```
 
-You can redefine the three built-in formats in your own config. Changing the definition of `long`, `long2` or `long3` is perhaps the quickest way to get started with customising `lx` — a small change that makes a big difference!
+The differences between `-l` and `-ll` are in the `[personality.ll]`
+polish (header, ISO timestamps, count footer, dirs-first), not in
+the column list — both share the `long` format.
+
+> **Older configs:** pre-0.11 configs used the names `long2` and
+  `long3` for what are now `long` (with `vcs` joining the column
+  set) and `full`.  Both old names continue to work as hidden
+  aliases for backwards compatibility, and `lx --upgrade-config`
+  rewrites them to the canonical names.
+
+You can redefine the built-in formats in your own config — changing
+the definition of `long` or `full` is one of the quickest ways to
+get started with customising `lx`, a small change that makes a big
+difference.
 
 ### Conditional overrides
 

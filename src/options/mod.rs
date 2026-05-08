@@ -129,11 +129,16 @@ impl Options {
                         .value_source(flags::FORMAT)
                         .is_some_and(|src| src == clap::parser::ValueSource::CommandLine);
                     let implicit_format = if long_count > 0 && !has_columns && !has_format {
+                        // Mirrors the tier→personality mapping in
+                        // `main.rs` (`find_tier_arg`): `-l`/`-ll`
+                        // both resolve to format `long` (via the
+                        // `l` and `ll` personalities, the latter
+                        // inheriting from the former), `-lll` to
+                        // format `full`.
                         Some(
                             match long_count {
-                                1 => "long",
-                                2 => "long2",
-                                _ => "long3",
+                                1 | 2 => "long",
+                                _ => "full",
                             }
                             .to_string(),
                         )

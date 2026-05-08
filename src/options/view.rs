@@ -265,12 +265,14 @@ fn deduce_columns(matches: &MatchedFlags, long_count: u8) -> Vec<Column> {
         return columns;
     }
 
-    // -l tier: compiled-in format.
-    let tier_name = match long_count {
-        0 | 1 => "long",
-        2 => "long2",
-        _ => "long3",
-    };
+    // -l tier fallback.  The personality system normally provides a
+    // `format = ...` flag for tier invocations (since `-l`/`-ll`/`-lll`
+    // dispatch to the `l`/`ll`/`lll` personalities, which carry format
+    // settings through inheritance), so step 2 above usually fires
+    // first.  This branch only runs when a user-overridden personality
+    // doesn't supply a format — choose by tier so the view degrades
+    // sensibly: `long` for `-l`/`-ll`, `full` for `-lll`+.
+    let tier_name = if long_count >= 3 { "full" } else { "long" };
     let mut columns = format_columns(tier_name).expect("compiled-in format always exists");
 
     apply_modifiers(matches, &mut columns);
@@ -707,13 +709,35 @@ mod test {
         }
 
         #[test]
-        fn tier2_has_vcs_and_group() {
-            let cols: Vec<Column> = parse_for_test(&[], |mf| deduce_columns(mf, 2))
+        fn tier1_has_vcs() {
+            // Tier 1 (`-l`) gained the VCS column in the 0.11 tier
+            // redesign — it's the column that genuinely
+            // differentiates `lx` from `ls` and reads as empty
+            // (one space) outside repos.
+            let cols: Vec<Column> = parse_for_test(&[], |mf| deduce_columns(mf, 1))
                 .into_iter()
                 .next()
                 .unwrap();
             assert!(cols.contains(&Column::VcsStatus));
-            assert!(cols.contains(&Column::Group));
+        }
+
+        #[test]
+        fn tier2_matches_tier1_columns() {
+            // Post-0.11 tier redesign: tier 2 (`-ll`) shares the
+            // tier 1 column set.  The difference between tiers is
+            // presentation polish (header, long-iso timestamps,
+            // count footer), applied via the `ll` personality.
+            // This unit test bypasses the personality system, so it
+            // verifies the bare fallback: same columns as tier 1.
+            let cols1: Vec<Column> = parse_for_test(&[], |mf| deduce_columns(mf, 1))
+                .into_iter()
+                .next()
+                .unwrap();
+            let cols2: Vec<Column> = parse_for_test(&[], |mf| deduce_columns(mf, 2))
+                .into_iter()
+                .next()
+                .unwrap();
+            assert_eq!(cols1, cols2);
         }
 
         #[test]
@@ -848,7 +872,10 @@ mod test {
         #[cfg(unix)]
         #[test]
         fn gid_adds_column_after_group() {
-            let cols: Vec<Column> = parse_for_test(&["-ll", "--gid"], |mf| deduce_columns(mf, 2))
+            // Tier 3 (`-lll`) is the natural test bed: `group` is
+            // part of the forensic column set.  Tier 2 dropped
+            // `group` in the 0.11 redesign.
+            let cols: Vec<Column> = parse_for_test(&["-lll", "--gid"], |mf| deduce_columns(mf, 3))
                 .into_iter()
                 .next()
                 .unwrap();
@@ -863,9 +890,11 @@ mod test {
         #[test]
         fn uid_and_gid_compose() {
             // Adding both alongside user/group gives all four columns,
-            // in canonical order: user, uid, group, gid.
+            // in canonical order: user, uid, group, gid.  Tier 3
+            // (`-lll`) carries the forensic column set including
+            // `group` — tier 2 no longer does, post-0.11.
             let cols: Vec<Column> =
-                parse_for_test(&["-ll", "--uid", "--gid"], |mf| deduce_columns(mf, 2))
+                parse_for_test(&["-lll", "--uid", "--gid"], |mf| deduce_columns(mf, 3))
                     .into_iter()
                     .next()
                     .unwrap();

@@ -246,19 +246,31 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
             inherits: Some("default".into()),
             ..Default::default()
         }),
-        "ll" => Some(PersonalityDef {
-            description: Some("Two-tier long view; directories grouped first".into()),
+        "l" => Some(PersonalityDef {
+            description: Some("Long view (the `-l` tier)".into()),
             inherits: Some("lx".into()),
-            format: Some("long2".into()),
-            settings: HashMap::from([("group-dirs".into(), Str("first".into()))]),
+            format: Some("long".into()),
+            ..Default::default()
+        }),
+        "ll" => Some(PersonalityDef {
+            description: Some(
+                "Long view with header, ISO timestamps, item count, dirs first (the `-ll` tier)"
+                    .into(),
+            ),
+            inherits: Some("l".into()),
+            settings: HashMap::from([
+                ("header".into(), Boolean(true)),
+                ("time-style".into(), Str("long-iso".into())),
+                ("count".into(), Boolean(true)),
+                ("group-dirs".into(), Str("first".into())),
+            ]),
             ..Default::default()
         }),
         "lll" => Some(PersonalityDef {
-            description: Some("Three-tier long view with header and ISO timestamps".into()),
+            description: Some("Full forensic long view (the `-lll` tier)".into()),
             inherits: Some("lx".into()),
-            format: Some("long3".into()),
+            format: Some("full".into()),
             settings: HashMap::from([
-                ("group-dirs".into(), Str("first".into())),
                 ("header".into(), Boolean(true)),
                 ("time-style".into(), Str("long-iso".into())),
             ]),
@@ -273,7 +285,7 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
         "tree" => Some(PersonalityDef {
             description: Some("Long-view tree; directories grouped first".into()),
             inherits: Some("default".into()),
-            format: Some("long2".into()),
+            format: Some("long".into()),
             settings: HashMap::from([
                 ("tree".into(), Boolean(true)),
                 ("group-dirs".into(), Str("first".into())),
@@ -318,7 +330,7 @@ fn format_toml_kv(key: &str, value: &toml::Value) -> String {
 }
 
 /// Names of all compiled-in personalities.
-const COMPILED_PERSONALITIES: &[&str] = &["default", "lx", "ll", "lll", "la", "tree", "ls"];
+const COMPILED_PERSONALITIES: &[&str] = &["default", "lx", "l", "ll", "lll", "la", "tree", "ls"];
 
 /// True iff `name` is a compiled-in personality.  A user-defined
 /// personality with the same name shadows the compiled-in one but

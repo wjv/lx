@@ -1,4 +1,5 @@
 # Upgrading between lx releases
+<!-- vim: set fo+=at fo-=w tw=72 cc=73 :-->
 
 lx is still in its 0.x series, so the CLI surface is explicitly
 allowed to change between minor versions.  This document lists the
@@ -10,9 +11,173 @@ Each section is written assuming you're coming from the immediately
 preceding release.  If you're jumping multiple versions, read them
 in order.
 
+- [Upgrading to 0.11](#upgrading-to-011)
 - [Upgrading to 0.10](#upgrading-to-010)
 - [Upgrading to 0.9](#upgrading-to-09)
 - [Upgrading to 0.8](#upgrading-to-08)
+
+
+## Upgrading to 0.11
+
+0.11's headline change is a **redesign of how the long-view tier
+flags (`-l`, `-ll`, `-lll`) work internally**.  Behaviour you'll
+notice:
+
+- `-l` now shows a `vcs` column — empty outside repos, useful inside
+  them.
+- `-ll` no longer adds the `group` column.  Instead it adds polish
+  on top of `-l`: a column header row, ISO-style timestamps
+  (`YYYY-MM-DD HH:MM`), an item-count footer, and directories
+  grouped before files.  Same column set as `-l`; the differences
+  are presentation and row ordering.
+- `-lll` keeps its forensic column set (links, blocks, group, all
+  four timestamps) and presentation polish unchanged.
+
+For all three long-view tiers, the behaviour of the flag, personality
+and argv[0] simlink are now **identical**. For example, `lx -ll`
+produces *identical output* to `lx -p ll` and the `ll` argv[0] symlink
+— three invocation routes converging on one mechanism.  Pre-0.11 these
+three could disagree subtly.
+
+**If you have an existing config file**, run `lx --upgrade-config`
+to bump the schema (0.6 → 0.7) and rewrite legacy format names.
+Your custom personalities and overrides are preserved verbatim;
+the migration only touches things that need to change.
+
+
+### Format renames: `long2` → `long`, `long3` → `full`
+
+The compiled-in formats have been simplified to two: `long` (the
+rich column set used by `-l` and `-ll` alike) and `full` (the
+forensic set used by `-lll`).  The old `long2` and `long3` names
+continue to work as hidden aliases — `--format=long2` and
+`format = "long2"` still load — but `--upgrade-config` rewrites
+them to the canonical names.
+
+| Pre-0.11    | 0.11+    | Columns                                                                            |
+|-------------|----------|------------------------------------------------------------------------------------|
+| `long`      | `long`   | perms, size, user, modified, **vcs** *(new)*                                       |
+| `long2`     | (alias)  | resolves to `long`                                                                 |
+| `long3`     | `full`   | perms, links, size, blocks, user, group, modified, changed, created, accessed, vcs |
+
+`long2` was the old compiled-in tier-2 column list (with `group`).
+That column set is gone from the compiled-in defaults; if you want
+group in `-ll`, see the HPC-style override below.
+
+
+### Tier flags route through personalities
+
+Pre-0.11, `-l`/`-ll`/`-lll` selected formats directly and applied
+ad-hoc flag state on top.  Post-0.11, each tier flag activates a
+compiled-in personality:
+
+| Tier flag | Personality | Inherits | Format | Polish settings              |
+|-----------|-------------|----------|--------|------------------------------|
+| `-l`      | `l`         | `lx`     | `long` | —                            |
+| `-ll`     | `ll`        | `l`      | (long via inheritance) | `header`, `time-style = "long-iso"`, `count`, `group-dirs = "first"` |
+| `-lll`    | `lll`       | `lx`     | `full` | `header`, `time-style = "long-iso"` |
+
+Personality precedence is now: `-p NAME` (highest) →
+`-l`/`-ll`/`-lll` → argv[0] symlink → `$LX_PERSONALITY` → default.
+Typing the tier flag is more explicit than running via a symlink,
+so the tier flag wins over argv[0] when both are present.
+
+The reserved compiled-in personality names are now: `lx`, `l`,
+`ll`, `lll`, `la`, `tree`, `ls`, `default` — see the new "Reserved
+personality names" section in the user guide for the full list and
+the rationale.
+
+
+### Migration patterns for custom `[personality.ll]` blocks
+
+If your `~/.lxconfig.toml` has a `[personality.ll]` block, it
+shadows the new compiled-in `ll`.  Three common situations:
+
+#### "I want my old `-ll` behaviour preserved exactly"
+
+Do nothing.  Your `[personality.ll]` block continues to work as
+before.  If it referenced `format = "long2"`, `--upgrade-config`
+rewrites it to `format = "long"` (which has the same effective
+columns as `long2`'s alias resolution).
+
+You won't see the new `-ll` polish (header, ISO timestamps, count
+footer) unless you opt in — see below.
+
+#### "I want the new `-ll` polish, but keep my customisations"
+
+This case is subtler than it looks: a user `[personality.ll]`
+block *entirely shadows* the compiled-in `ll`, so simply leaving
+your old block in place won't pick up the new polish flags
+automatically.  Inheritance flows from the parent named in
+`inherits = "..."`, **not from a builtin of the same name as your
+override.**
+
+You need to *re-declare* the polish flags explicitly in your
+config so they apply to your `ll`:
+
+```toml
+# Before (pre-0.11):
+[personality.ll]
+inherits = "lx"
+format = "long2"
+group-dirs = "first"
+
+# After (0.11+):
+[personality.ll]
+inherits = "l"           # was "lx"; pulls format = "long" from `l`
+header = true            # polish flags must be declared here —
+time-style = "long-iso"  # they don't inherit from the shadowed
+count = true             # compiled-in `ll`.
+group-dirs = "first"     # ↑ ditto.
+```
+
+If you skip a polish flag, `lx --show-config` will surface it
+explicitly: under your `▸ ll` chain link you'll see an "in the
+builtin but shadowed by user configuration" sub-block listing the
+missing keys.  Use that diagnostic to confirm your override is
+complete.
+
+#### "I'm on a multi-user / HPC server and I want `group` in `-ll`"
+
+The compiled-in `-ll` no longer carries `group`.  Restore it
+explicitly via your `[personality.ll]`:
+
+```toml
+[personality.ll]
+inherits = "l"
+columns = [
+    "permissions", "size", "user", "group", "modified", "vcs",
+]
+header = true
+time-style = "long-iso"
+count = true
+group-dirs = "first"
+```
+
+Setting `columns` overrides the format inherited from `l`.  The
+polish flags (header, long-iso, count) are listed explicitly here
+because they don't inherit through `columns =`.
+
+
+### Config schema bump to 0.7
+
+`version = "0.6"` → `version = "0.7"`.  All 0.6 config files load
+without error in 0.11; the bump is just to mark the format-rename
+migration that `--upgrade-config` performs.  Configs going back to
+0.3 are still supported.
+
+
+### `--show-config` source string changed
+
+When `-l`/`-ll`/`-lll` is on the command line, `--show-config`'s
+"Format" section now reports the source as `personality` (because
+the tier flag activates the corresponding personality, which sets
+the format) rather than `implicit, selected by -l` (the pre-0.11
+phrasing for when the tier flag set the format directly).
+
+If you scripted against the old wording, update accordingly.  The
+new wording is consistent with how the user guide describes the
+mechanism.
 
 
 ## Upgrading to 0.10

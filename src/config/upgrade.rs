@@ -111,6 +111,22 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
             );
         }
 
+        // Rewrite `format = "long2"` → `"long"` and `format = "long3"`
+        // → `"full"` (the 0.11 tier redesign rename).  Both old names
+        // still work as hidden aliases, but new configs should use the
+        // canonical names.
+        let (rewritten, rewrites) = rewrite_long_format_names(&updated);
+        updated = rewritten;
+        if rewrites > 0 {
+            eprintln!(
+                "Note: rewrote {rewrites} `format = \"long2\"`/`\"long3\"` line{} \
+                 to the canonical names (`\"long\"`/`\"full\"`).  Old \
+                 names still load as hidden aliases.  See \
+                 `docs/UPGRADING.md`.",
+                if rewrites == 1 { "" } else { "s" },
+            );
+        }
+
         fs::write(path, &updated).with_path(path)?;
 
         eprintln!("Original config saved to {}", backup.display());
@@ -249,6 +265,64 @@ fn rewrite_colour_scale_to_gradient(contents: &str) -> (String, usize) {
                 if let Some(v) = new_value {
                     out.push_str(indent);
                     out.push_str("gradient = \"");
+                    out.push_str(v);
+                    out.push('"');
+                    if !comment.is_empty() {
+                        out.push(' ');
+                        out.push_str(comment);
+                    }
+                    out.push_str(newline);
+                    count += 1;
+                    continue;
+                }
+            }
+        }
+        out.push_str(line);
+    }
+    (out, count)
+}
+
+/// Rewrite `format = "long2"` → `format = "long"` and
+/// `format = "long3"` → `format = "full"` (the 0.11 tier redesign).
+///
+/// Operates as a per-line text rewrite — `format = "..."` only ever
+/// appears inside `[personality.NAME]` or `[[personality.NAME.when]]`
+/// blocks, so we don't need to track section context.  Whitespace,
+/// comments, and surrounding lines are preserved.
+///
+/// Returns `(rewritten_content, rewrite_count)`.
+fn rewrite_long_format_names(contents: &str) -> (String, usize) {
+    let mut out = String::with_capacity(contents.len());
+    let mut count = 0;
+    for line in contents.split_inclusive('\n') {
+        let (body, newline) = match line.strip_suffix('\n') {
+            Some(b) => (b, "\n"),
+            None => (line, ""),
+        };
+        let trimmed = body.trim_start();
+        let indent_len = body.len() - trimmed.len();
+        let indent = &body[..indent_len];
+
+        if let Some(rest) = trimmed.strip_prefix("format") {
+            // Must be followed by whitespace + `=`.
+            let after = rest.trim_start();
+            if let Some(value_part) = after.strip_prefix('=') {
+                let value_part = value_part.trim_start();
+                let (val_with_quotes, comment) = match value_part.find('#') {
+                    Some(i) => (value_part[..i].trim_end(), &value_part[i..]),
+                    None => (value_part.trim_end(), ""),
+                };
+                let stripped = val_with_quotes
+                    .trim_start_matches(['"', '\''])
+                    .trim_end_matches(['"', '\'']);
+                let new_value = match stripped {
+                    "long2" => Some("long"),
+                    "long3" => Some("full"),
+                    _ => None,
+                };
+                if let Some(v) = new_value {
+                    out.push_str(indent);
+                    out.push_str("format = \"");
                     out.push_str(v);
                     out.push('"');
                     if !comment.is_empty() {

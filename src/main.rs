@@ -195,8 +195,13 @@ fn try_main() -> Result<i32, LxError> {
     // Tracks how the personality was chosen (for --show-config).
     let mut personality_source = "default";
     if !upgrading {
-        // Personality resolution: -p → argv[0] → $LX_PERSONALITY → "lx".
+        // Personality resolution: -p → -l/-ll/-lll → argv[0] →
+        // $LX_PERSONALITY → "lx".  The tier flag dispatches to its
+        // matching compiled-in personality (`l`/`ll`/`lll`), since
+        // 0.11 unified tier flags and personalities into one
+        // mechanism with three invocation routes.
         let explicit_personality = find_personality_arg(&cli_args);
+        let tier_personality = find_tier_arg(&cli_args);
         let from_env = env::var("LX_PERSONALITY").ok().filter(|s| !s.is_empty());
         // Error on unknown name when the user asked explicitly (-p or env var).
         let explicit = explicit_personality.is_some() || from_env.is_some();
@@ -205,6 +210,10 @@ fn try_main() -> Result<i32, LxError> {
             personality_source = "-p";
             debug!("-p dispatch: {name}");
             Some(name)
+        } else if let Some(name) = tier_personality {
+            personality_source = "-l/-ll/-lll";
+            debug!("tier-flag dispatch: {name}");
+            Some(name.to_string())
         } else if let Some(bin_name) = env::args().next().and_then(|argv0| {
             let name = std::path::Path::new(&argv0)
                 .file_name()?
@@ -905,6 +914,39 @@ impl Lx {
                 Ok(())
             }
         }
+    }
+}
+
+/// Scan raw args for occurrences of `-l`/`--long` before Clap parsing.
+///
+/// Returns the personality name corresponding to the tier:
+/// 1 → `"l"`, 2 → `"ll"`, 3+ → `"lll"`.  Returns `None` if no
+/// `-l`/`--long` is present.
+///
+/// Used to dispatch tier flags through the personality system at
+/// startup, so that `lx -ll` is equivalent to `lx -p ll`.  The tier
+/// flag continues to count via Clap during parsing — this scan is
+/// only for personality activation.
+fn find_tier_arg(args: &[OsString]) -> Option<&'static str> {
+    let mut count: u32 = 0;
+    for arg in args {
+        let s = arg.to_string_lossy();
+        if s == "--long" {
+            count += 1;
+        } else if let Some(rest) = s.strip_prefix('-')
+            && !rest.is_empty()
+            && !rest.starts_with('-')
+        {
+            // Short-flag cluster like `-l`, `-ll`, `-la`, `-lah`, …
+            // Each `l` in the cluster is one `--long`.
+            count += rest.matches('l').count() as u32;
+        }
+    }
+    match count {
+        0 => None,
+        1 => Some("l"),
+        2 => Some("ll"),
+        _ => Some("lll"),
     }
 }
 

@@ -432,11 +432,14 @@ fn show_format(s: &Styles, personality_name: &str, implicit_format: Option<&str>
     let (fmt_name, source) = match p.and_then(|p| p.format.as_deref()) {
         Some(name) => (name, "personality".to_string()),
         None => match implicit_format {
+            // The `implicit_format` value is set by options/mod.rs
+            // via the same tier→format mapping main.rs uses for
+            // personality dispatch: `-l`/`-ll` → `long`, `-lll` → `full`.
+            // Annotate which tier flag selected it.
             Some(name) => {
                 let flag = match name {
-                    "long" => "-l",
-                    "long2" => "-ll",
-                    "long3" => "-lll",
+                    "long" => "-l/-ll",
+                    "full" => "-lll",
                     _ => "-l",
                 };
                 (name, format!("implicit, selected by {flag}"))
@@ -591,7 +594,11 @@ fn show_classes(s: &Styles, cfg: Option<&super::schema::Config>) {
 
 fn show_formats(s: &Styles, cfg: Option<&super::schema::Config>) {
     let formats = super::formats::resolve_formats();
-    let compiled = ["long", "long2", "long3"];
+    // Canonical compiled-in formats only.  `long2`/`long3` are
+    // hidden aliases (they resolve to the same column lists as
+    // `long` and `full` respectively); listing them would produce
+    // confusing duplicates in the catalogue.
+    let compiled = ["long", "full"];
 
     let mut names: Vec<String> = compiled.iter().map(|s| (*s).to_string()).collect();
     if let Some(cfg) = cfg {

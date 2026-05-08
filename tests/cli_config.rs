@@ -283,9 +283,11 @@ fn inherit_from_compiled_in() {
     cmd.args(["-pmyll", "Cargo.toml"])
         .assert()
         .success()
-        // ll gives long2 format (includes group) + header from child
+        // myll inherits ll's long-iso timestamps; child adds header
+        // (which would have been on by default for ll anyway).  We
+        // verify both: header keyword and ISO-style timestamp.
         .stdout(predicate::str::contains("Permissions"))
-        .stdout(predicate::str::contains(support::current_group()));
+        .stdout(predicate::str::is_match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}").unwrap());
 }
 
 #[test]
@@ -363,12 +365,16 @@ fn config_unknown_setting_warns() {
 
 #[test]
 fn personality_ll() {
+    // Post-0.11: `ll` is the polished long view (header, ISO
+    // timestamps, count footer).  Same columns as `l`; the
+    // distinguishing features are presentational.  We verify the
+    // ISO-style timestamp here (yyyy-mm-dd hh:mm), which `ll`
+    // forces via `time-style = "long-iso"`.
     lx_no_colour()
         .args(["-pll", "Cargo.toml"])
         .assert()
         .success()
-        // ll includes group column
-        .stdout(predicate::str::contains(support::current_group()));
+        .stdout(predicate::str::is_match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}").unwrap());
 }
 
 #[test]
@@ -411,12 +417,14 @@ fn personality_cli_override() {
 
 #[test]
 fn personality_long_flag() {
-    // --personality=ll should work same as -pll
+    // --personality=ll should work same as -pll.  Same `ll`
+    // polish: ISO-style timestamps surfaced via `time-style =
+    // "long-iso"`.
     lx_no_colour()
         .args(["--personality=ll", "Cargo.toml"])
         .assert()
         .success()
-        .stdout(predicate::str::contains(support::current_group()));
+        .stdout(predicate::str::is_match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}").unwrap());
 }
 
 // ── argv[0] dispatch ─────────────────────────────────────────────
@@ -435,11 +443,19 @@ fn argv0_ll_dispatch() {
         .expect("failed to run symlink");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    // ll personality includes group
-    let group = support::current_group();
+    // Post-0.11: argv[0]=ll activates [personality.ll], which sets
+    // header=true.  We verify that proving argv[0] dispatch reached
+    // `ll` rather than (say) plain `lx`.
     assert!(
-        stdout.contains(&group),
-        "argv[0]=ll should show group column ({group}), got: {stdout}"
+        stdout.contains("Permissions"),
+        "argv[0]=ll should show the header row (proof the personality activated), \
+         got: {stdout}"
+    );
+    // ... and uses long-iso timestamps.
+    let iso = predicate::str::is_match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}").unwrap();
+    assert!(
+        iso.eval(stdout.as_ref()),
+        "argv[0]=ll should use long-iso timestamps, got: {stdout}"
     );
 }
 
@@ -479,7 +495,7 @@ fn init_config_creates_file() {
     // The generated file should be valid TOML (all commented out = empty)
     let contents = fs::read_to_string(&config_path).unwrap();
     assert!(contents.contains("## lx configuration file"));
-    assert!(contents.contains("version = \"0.6\""));
+    assert!(contents.contains("version = \"0.7\""));
     assert!(contents.contains("[personality.default]"));
     assert!(contents.contains("[personality.lx]"));
     assert!(contents.contains("inherits"));
@@ -588,13 +604,19 @@ fn dump_class_unknown() {
 
 #[test]
 fn dump_format_all() {
+    // Post-0.11: compiled-in canonical formats are `long` and `full`.
+    // `long2` and `long3` are hidden aliases (resolve to the same
+    // column lists) and are deliberately *not* enumerated in the
+    // catalogue — listing them would produce confusing duplicates.
     lx_no_colour()
         .arg("--dump-format")
         .assert()
         .success()
         .stdout(predicate::str::contains("[format]"))
         .stdout(predicate::str::contains("long = ["))
-        .stdout(predicate::str::contains("long3 = ["));
+        .stdout(predicate::str::contains("full = ["))
+        .stdout(predicate::str::contains("long2 = [").not())
+        .stdout(predicate::str::contains("long3 = [").not());
 }
 
 #[test]
@@ -635,13 +657,17 @@ fn dump_personality_all() {
 
 #[test]
 fn dump_personality_single() {
+    // Post-0.11 tier redesign: `ll` inherits from `l` (the new
+    // `-l` tier personality), not directly from `lx`.  It carries
+    // polish flags (header, ISO timestamps, count footer); its
+    // format comes via inheritance from `l`.
     lx_no_colour()
         .arg("--dump-personality=ll")
         .assert()
         .success()
         .stdout(predicate::str::contains("[personality.ll]"))
-        .stdout(predicate::str::contains("inherits = \"lx\""))
-        .stdout(predicate::str::contains("format = \"long2\""));
+        .stdout(predicate::str::contains("inherits = \"l\""))
+        .stdout(predicate::str::contains("header = true"));
 }
 
 #[test]
@@ -778,28 +804,34 @@ fn dump_personality_valid_toml() {
 // fully-formed substrings.
 
 #[test]
-fn show_config_implicit_format_long_with_l() {
-    // No personality declares a format, but `-l` is on the
-    // command line — surface the implicit `long` tier in its
-    // own top-level Format section.
+fn show_config_format_via_l_personality() {
+    // Post-0.11: `-l` activates the compiled-in `l` personality
+    // (`-l` ↔ `-p l` ↔ `l` argv[0] symlink, three routes one
+    // mechanism).  The `l` personality declares `format = "long"`,
+    // so `--show-config` reports the source as "personality" — not
+    // as the old "implicit, selected by -l" string, which only
+    // applied when no personality declared a format.
     lx_no_colour()
         .args(["-l", "--show-config"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Format:"))
-        .stdout(predicate::str::contains("implicit, selected by -l"))
+        .stdout(predicate::str::contains("personality"))
         .stdout(predicate::str::is_match(r"long\b").unwrap());
 }
 
 #[test]
-fn show_config_implicit_format_long3_with_lll() {
+fn show_config_format_via_lll_personality() {
+    // `-lll` activates the compiled-in `lll` personality, which
+    // declares `format = "full"` (the renamed forensic column set;
+    // pre-0.11 this was `long3`).
     lx_no_colour()
         .args(["-lll", "--show-config"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Format:"))
-        .stdout(predicate::str::contains("implicit, selected by -lll"))
-        .stdout(predicate::str::contains("long3"));
+        .stdout(predicate::str::contains("personality"))
+        .stdout(predicate::str::contains("full"));
 }
 
 #[test]
@@ -1293,13 +1325,18 @@ fn no_time_still_works_as_bulk_clear() {
 
 #[test]
 fn show_as_emits_personality_section_to_stdout() {
+    // Post-0.11: `-l` activates the `l` personality (one mechanism,
+    // three invocation routes), so a `--show-as` capture inherits
+    // from `l` rather than from `lx`.  The user's explicit
+    // `--header` and `--group-dirs=first` flags are captured as the
+    // saved personality's own settings.
     lx_no_colour()
         .args(["-l", "--header", "--group-dirs=first", "--show-as=preview"])
         .assert()
         .success()
         .stdout(
             predicate::str::contains("[personality.preview]")
-                .and(predicate::str::contains("inherits = \"lx\""))
+                .and(predicate::str::contains("inherits = \"l\""))
                 .and(predicate::str::contains("header = true"))
                 .and(predicate::str::contains("group-dirs = \"first\"")),
         );

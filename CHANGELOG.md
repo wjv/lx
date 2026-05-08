@@ -30,6 +30,52 @@ Editorial conventions:
   report `[nightly]` in `--version` to distinguish them from
   release or local builds.  (pre.1)
 
+- **Long-view tiers re-engineered as personalities.** Closes
+  wjv/lx#39.  `-l`/`-ll`/`-lll` now route through compiled-in
+  personalities `l`/`ll`/`lll` rather than picking formats
+  directly.  `lx -ll`, `lx -p ll`, and the `ll` argv[0] symlink
+  all activate the same `[personality.ll]` block — three
+  invocation routes converging on one mechanism.  See
+  `docs/UPGRADING.md` for the migration story.  (pre.4)
+
+### Changed
+
+- **Tier-1 (`-l`) gains the `vcs` column.**  The column that
+  genuinely differentiates `lx` from `ls`, default-on at the
+  lightest tier.  Empty outside repos, useful inside.  (pre.4)
+
+- **Tier-2 (`-ll`) is now polish, not new data.**  Same column
+  set as `-l`.  Differs presentationally: header row, ISO-style
+  timestamps, item-count footer, directories grouped first.
+  Pre-0.11's tier-2 `group` column moves to tier-3 (`-lll`).
+  (pre.4)
+
+- **Compiled-in formats simplified to two**: `long` (the
+  rich column set used by `-l`/`-ll`) and `full` (the forensic
+  set used by `-lll`).  Pre-0.11 names `long2` and `long3`
+  continue to load as hidden aliases; `--upgrade-config`
+  rewrites them to the canonical names.  Config schema bumped
+  to 0.7 to mark the migration.  (pre.4)
+
+- **Personality dispatch precedence** now includes the tier
+  flag between `-p` and argv[0]: `-p NAME` →
+  `-l`/`-ll`/`-lll` → argv[0] symlink → `$LX_PERSONALITY` →
+  default.  Typing the tier flag is more explicit than running
+  via a symlink, so the tier flag wins over argv[0] when both
+  are present.  (pre.4)
+
+### Internal
+
+- **Compiled-in format definitions deduplicated.**  `view.rs`'s
+  `format_columns` and `format_names` previously carried their
+  own copy of the `long`/`long2`/`long3` column lists; both now
+  delegate to `crate::config::resolve_formats()`, which was
+  already the canonical source for user-defined formats and
+  `--show-format`/`--dump-format` output.  ~50 lines of
+  duplication removed; the tier-redesign data-definition pass
+  became a single-file edit in `formats.rs` rather than two
+  files in lockstep.  (pre.3)
+
 ### Security
 
 - Bumped `jj-lib` from 0.40 to 0.41, which pulls in a newer

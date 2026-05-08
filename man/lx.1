@@ -31,11 +31,24 @@ Display one entry per line.
 Display extended file metadata as a table.
 Repeat for more detail:
 .Fl l
-(basic),
+(basic: perms, size, user, modified, VCS),
 .Fl ll
-(+ group, VCS),
+(adds presentation polish on the same data: header row, ISO-style
+timestamps, item-count footer, directories grouped first),
 .Fl lll
-(+ header, all timestamps, links, blocks).
+(forensic view: links, blocks, group, all four timestamps).
+.Pp
+Each tier is bound to a compiled-in personality
+.Po
+.Sy l Ns
+,
+.Sy ll
+and
+.Sy lll
+.Pc .
+See
+.Sx PERSONALITIES
+below.
 .It Fl G , Fl -grid
 Display entries as a grid (default).
 .It Fl x , Fl -across
@@ -78,6 +91,17 @@ or
 .Cm never .
 Alias:
 .Fl -color .
+.It Fl p , Fl -personality Ns = Ns Ar NAME
+Activate a named personality (a structured bundle of flags and
+settings).
+See
+.Sx PERSONALITIES
+below.
+.It Fl -theme Ns = Ns Ar NAME
+Select a named theme.
+See
+.Xr lxconfig.toml 5
+for theme definitions and the full theme-key vocabulary.
 .It Fl -gradient Ns Op = Ns Ar COLUMNS
 Per-column gradient on/off.
 .Ar COLUMNS
@@ -151,8 +175,6 @@ is
 .Cm auto ,
 or
 .Cm never .
-.It Fl -theme Ns = Ns Ar NAME
-Select a named theme from the config file.
 .El
 .Ss Filtering options
 .Bl -tag -width Ds
@@ -470,6 +492,19 @@ Flags with a short form also accept
 .Fl -no-z
 for
 .Fl -no-size ) .
+.Pp
+The
+.Sy VCS
+column \(em present in
+.Fl l
+by default \(em is also independently controllable via
+.Fl -vcs-status
+and configurable via the
+.Fl -vcs
+backend selector.
+See
+.Sx VCS INTEGRATION
+below.
 .Bl -tag -width Ds
 .It Fl i , Fl -inode
 Add the inode column to the long listing.
@@ -760,10 +795,21 @@ are accepted as aliases for
 .It Fl -format Ns = Ns Ar NAME
 Select a named column format.
 Compiled-in formats:
-.Cm long ,
-.Cm long2 ,
-.Cm long3 .
+.Cm long
+.Pq tier-1 column set; same columns as Fl ll
+and
+.Cm full
+.Pq tier-3 forensic column set .
 Additional formats may be defined in the config file.
+Pre-0.11 names
+.Cm long2
+and
+.Cm long3
+continue to load as hidden aliases for
+.Cm long
+and
+.Cm full
+respectively.
 Implies long view.
 .El
 .Pp
@@ -798,7 +844,9 @@ is invoked under (via an
 .Sy argv[0]
 symlink), by the
 .Fl p Ns / Ns Fl -personality
-flag, by the
+flag, by a long-view tier flag
+.Pq Fl l , Fl ll , Fl lll ,
+by the
 .Ev LX_PERSONALITY
 environment variable, or by the compiled-in default when bare
 .Nm
@@ -806,7 +854,16 @@ is run.
 .Pp
 Resolution precedence (highest to lowest):
 .Fl p
-flag,
+flag, long-view tier flag
+.Po
+.Fl ll
+activates
+.Cm ll ,
+.Fl lll
+activates
+.Cm lll ,
+etc.
+.Pc ,
 .Sy argv[0]
 symlink name,
 .Ev LX_PERSONALITY ,
@@ -842,23 +899,49 @@ Compiled-in personalities:
 the default, used when
 .Nm
 is invoked as itself.
+.It Cm l
+the
+.Fl l
+tier: basic long view (perms, size, user, modified, VCS).
 .It Cm ll
-long view equivalent to
-.Sy lx -l ,
-with VCS status and directories grouped first.
+the
+.Fl ll
+tier: same column set as
+.Cm l ,
+with header, ISO-style timestamps, item-count footer, and
+directories grouped first.
 .It Cm la
 like
 .Cm ll ,
 plus hidden files.
 .It Cm lll
-tier-3 long view with header, all timestamps, and extra metadata
-columns.
+the
+.Fl lll
+tier: full forensic long view (links, blocks, group, all four
+timestamps, with header and ISO timestamps).
 .It Cm tree
 recursive tree view with directories first.
 .It Cm ls
 tries to mimic POSIX
 .Xr ls 1 .
 .El
+.Pp
+The
+.Cm l ,
+.Cm ll ,
+and
+.Cm lll
+names are reserved by the compiled-in tier-flag dispatch:
+.Sy lx -ll ,
+.Sy lx -p ll ,
+and the
+.Sy ll
+.Pq Em argv[0]
+symlink all activate the same
+.Bq personality.ll
+block (one mechanism, three invocation routes).
+Override these blocks in your config to customise all three at
+once.
 .Pp
 Additional personalities may be defined in the config file.
 Every CLI flag has a corresponding config key, so a personality

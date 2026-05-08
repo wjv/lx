@@ -17,15 +17,21 @@ use super::settings::settings_to_args;
 // ── Config schema versioning ────────────────────────────────────
 
 /// The current config schema version.
-pub const CONFIG_VERSION: &str = "0.6";
+pub const CONFIG_VERSION: &str = "0.7";
 
-/// Accepted config versions.  0.3, 0.4, and 0.5 are forward-compatible
-/// subsets of 0.6: any config file from these versions loads fine in
-/// the current parser.  0.6 adds glob and array support to `[[when]]`
-/// env conditions — both purely additive.  The only ever-removed
-/// setting is `time = "..."` (gone in 0.5), which triggers a warning
-/// and is ignored if found in 0.3/0.4 files.
-pub(super) const ACCEPTED_VERSIONS: &[&str] = &["0.3", "0.4", "0.5", "0.6"];
+/// Accepted config versions.  0.3 through 0.7 are mutually
+/// forward-compatible at the parser level: every accepted-version
+/// config file loads in the current parser without error.  Schema
+/// changes between versions have all been additive (new optional
+/// keys, new value vocabulary), and the one ever-removed setting
+/// (`time = "..."` in 0.5) is ignored with a warning if seen in older
+/// files.
+///
+/// 0.7 marks the 0.11 tier redesign: `format = "long2"` and
+/// `format = "long3"` continue to load (as hidden aliases for
+/// `"long"` and `"full"`), and `--upgrade-config` rewrites them to
+/// the canonical names.
+pub(super) const ACCEPTED_VERSIONS: &[&str] = &["0.3", "0.4", "0.5", "0.6", "0.7"];
 
 // ── Top-level config ────────────────────────────────────────────
 

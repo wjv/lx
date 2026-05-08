@@ -82,9 +82,25 @@ fn format_long() {
 }
 
 #[test]
-fn format_long2_has_group() {
+fn format_long2_resolves_as_alias() {
+    // Post-0.11: `long2` is a hidden alias for `long`.  It should
+    // continue to load (not error), and its columns should match
+    // `long` (no group, no extra timestamps — just the four-column
+    // long set plus VCS).  We verify the alias's no-error behaviour
+    // and that group is *not* in its column set.
     lx_no_colour()
         .args(["-l", "--format=long2", "Cargo.toml"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(support::current_group()).not());
+}
+
+#[test]
+fn format_full_has_group() {
+    // Post-0.11: the forensic column set previously named `long3`
+    // is now `full`, and still carries `group`.
+    lx_no_colour()
+        .args(["-l", "--format=full", "Cargo.toml"])
         .assert()
         .success()
         .stdout(predicate::str::contains(support::current_group()));
@@ -198,13 +214,16 @@ fn explicit_columns_with_add_inserts_canonically() {
 
 #[test]
 fn no_duplicate_when_already_present() {
-    // -llg: group is already in long2, should not duplicate.
+    // -lllg: group is already in the forensic set (`-lll`'s `full`
+    // format), so adding `-g` explicitly should not duplicate it.
+    // Pre-0.11 this test exercised `-llg` because `-ll` then carried
+    // `group`; post-0.11 the redesign moved `group` to the forensic
+    // tier, so `-lll` is now the natural test bed.
     let output = lx_no_colour()
-        .args(["-ll", "-g", "-h", "Cargo.toml"])
+        .args(["-lll", "-g", "-h", "Cargo.toml"])
         .output()
         .expect("failed to run");
     let stdout = String::from_utf8_lossy(&output.stdout);
-    // Count occurrences of "Group" in header — should be exactly 1.
     let count = stdout.matches("Group").count();
     assert_eq!(count, 1, "Group should appear once, got {count}: {stdout}");
 }

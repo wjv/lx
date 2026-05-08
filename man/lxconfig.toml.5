@@ -146,28 +146,37 @@ Each key is a format name; its value is either a TOML array or a
 comma-separated string of column names:
 .Bd -literal -offset indent
 [format]
-long  = ["permissions", "size", "user", "modified"]
-long2 = ["permissions", "size", "user", "group", "modified", "vcs"]
-long3 = ["permissions", "links", "size", "blocks", "user", "group",
-         "modified", "changed", "created", "accessed", "vcs"]
+long = ["permissions", "size", "user", "modified", "vcs"]
+full = ["permissions", "links", "size", "blocks", "user", "group",
+        "modified", "changed", "created", "accessed", "vcs"]
 compact = "permissions,size,modified"
 .Ed
 .Pp
-Three compiled-in formats correspond to the
+Two compiled-in formats correspond to the
 .Fl l
 tier system:
 .Bl -tag -width "Tier 3: -lll" -offset indent -compact
-.It Sy Tier 1: -l
+.It Sy Tiers 1 and 2: -l, -ll
 .Sy long
-\(em permissions, size, user, modified
-.It Sy Tier 2: -ll
-.Sy long2
-\(em permissions, size, user, group, modified, vcs
+\(em permissions, size, user, modified, vcs.
+.Pq The Fl l Pq Cm long Ns -tier and Fl ll No tiers share columns; Fl ll No adds presentation polish.
 .It Sy Tier 3: -lll
-.Sy long3
+.Sy full
 \(em permissions, links, size, blocks, user, group, modified,
-changed, created, accessed, vcs
+changed, created, accessed, vcs.
 .El
+.Pp
+Pre-0.11 names
+.Sy long2
+and
+.Sy long3
+continue to load as hidden aliases for
+.Sy long
+and
+.Sy full
+respectively;
+.Sy lx --upgrade-config
+rewrites them to the canonical names.
 .Pp
 Defining a format with a compiled-in name in the config file
 overrides the built-in.
@@ -214,8 +223,10 @@ or via an
 symlink.
 .Bd -literal -offset indent
 [personality.ll]
-inherits = "lx"
-format = "long2"
+inherits = "l"
+header = true
+time-style = "long-iso"
+count = true
 group-dirs = "first"
 .Ed
 .Ss Structural fields
@@ -449,8 +460,8 @@ Cycle detection prevents infinite loops.
 .Pp
 A common pattern is to define a shared base personality:
 .Bd -literal -offset indent
-default ---+---> lx ---+---> ll ---+---> lt
-           |           |           \e---> la
+default ---+---> lx ---+---> l ---> ll ---+---> lt
+           |           |                  \e---> la
            |           \e---> lll
            \e---> tree
 
@@ -468,9 +479,15 @@ icons = "never"
 [personality.lx]
 inherits = "default"
 
-[personality.ll]
+[personality.l]
 inherits = "lx"
-format = "long2"
+format = "long"
+
+[personality.ll]
+inherits = "l"
+header = true
+time-style = "long-iso"
+count = true
 group-dirs = "first"
 
 [personality.lt]
@@ -485,11 +502,14 @@ across = true
 In this example,
 .Cm lt
 inherits
-.Sy group-dirs = \(dqfirst\(dq
+.Sy group-dirs = \(dqfirst\(dq ,
+.Sy header = true ,
+.Sy count = true ,
 and
-.Sy format = \(dqlong2\(dq
+.Sy time-style = \(dqlong-iso\(dq
 from
-.Cm ll ,
+.Cm ll
+.Pq plus Sy format = \(dqlong\(dq No via Cm ll No 's own inheritance from Cm l ,
 which in turn inherits
 .Sy colour = \(dqauto\(dq
 and the other defaults from
