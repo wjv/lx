@@ -79,7 +79,7 @@ pub use self::styles::{
 
 pub use self::classes::{all_class_names, resolve_classes, show_class, show_class_all};
 
-pub use self::formats::{show_format, show_format_all};
+pub use self::formats::{resolve_formats, show_format, show_format_all};
 
 pub use self::init::{init_config_path, write_init_config};
 

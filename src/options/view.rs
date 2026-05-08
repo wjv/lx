@@ -208,74 +208,28 @@ impl TableOptions {
     }
 }
 
-/// Look up a format by name: config-defined first, then compiled-in.
+/// Look up a format by name and translate its column-name list to
+/// the renderer's `Column` enum values.
+///
+/// Single source of truth is `crate::config::formats::resolve_formats`,
+/// which merges compiled-in and user-defined formats (with user-defined
+/// taking precedence on name collision).  Translation goes through
+/// `Column::from_name`, which returns `None` for column names not
+/// supported on the current platform — those are silently dropped.
 fn format_columns(name: &str) -> Option<Vec<Column>> {
-    // Check config-defined formats first.
-    if let Some(cfg) = crate::config::config()
-        && let Some(columns) = cfg.format.get(name)
-    {
-        let cols: Vec<Column> = columns
-            .iter()
-            .filter_map(|s| Column::from_name(s))
-            .collect();
-        if !cols.is_empty() {
-            return Some(cols);
-        }
-    }
-
-    // Compiled-in formats.
-    let cols = match name {
-        "long" => vec![
-            Column::Permissions,
-            Column::FileSize,
-            #[cfg(unix)]
-            Column::User,
-            Column::Timestamp(TimeType::Modified),
-        ],
-        "long2" => vec![
-            Column::Permissions,
-            Column::FileSize,
-            #[cfg(unix)]
-            Column::User,
-            #[cfg(unix)]
-            Column::Group,
-            Column::Timestamp(TimeType::Modified),
-            Column::VcsStatus,
-        ],
-        "long3" => vec![
-            Column::Permissions,
-            #[cfg(unix)]
-            Column::HardLinks,
-            Column::FileSize,
-            #[cfg(unix)]
-            Column::Blocks,
-            #[cfg(unix)]
-            Column::User,
-            #[cfg(unix)]
-            Column::Group,
-            Column::Timestamp(TimeType::Modified),
-            Column::Timestamp(TimeType::Changed),
-            Column::Timestamp(TimeType::Created),
-            Column::Timestamp(TimeType::Accessed),
-            Column::VcsStatus,
-        ],
-        _ => return None,
-    };
-    Some(cols)
+    let formats = crate::config::resolve_formats();
+    let columns = formats.get(name)?;
+    let cols: Vec<Column> = columns
+        .iter()
+        .filter_map(|s| Column::from_name(s))
+        .collect();
+    (!cols.is_empty()).then_some(cols)
 }
 
 /// All available format names: config-defined + compiled-in.
 pub fn format_names() -> Vec<String> {
-    let mut names: Vec<String> = vec!["long".into(), "long2".into(), "long3".into()];
-
-    if let Some(cfg) = crate::config::config() {
-        for name in cfg.format.keys() {
-            if !names.iter().any(|n| n == name) {
-                names.push(name.clone());
-            }
-        }
-    }
-
+    let mut names: Vec<String> = crate::config::resolve_formats().into_keys().collect();
+    names.sort();
     names
 }
 
