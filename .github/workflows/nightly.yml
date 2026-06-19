@@ -33,7 +33,7 @@ jobs:
       should_build: ${{ steps.decide.outputs.should_build }}
       prev_sha: ${{ steps.decide.outputs.prev_sha }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Validate trunk version
         # Nightly only ever runs on main.  During release branching
@@ -84,7 +84,7 @@ jobs:
     needs: [check, build]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/download-artifact@v8
         with:
