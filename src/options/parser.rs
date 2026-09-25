@@ -1574,7 +1574,8 @@ pub fn build_command() -> Command {
         )
         .arg(
             // `--show-as=NAME` emits a personality TOML snippet for
-            // the current invocation.  `--show` (visible alias) and
+            // the current invocation.  `--show` (alias, listed by
+            // hand in the help text so it gets its own line) and
             // bare `--show-as` (no value, or `--show-as=` with an
             // empty string) skip the naming step and emit
             // `[personality.UNNAMED]` with every line commented out
@@ -1584,8 +1585,8 @@ pub fn build_command() -> Command {
             // value when the user types `lx --show foo.txt`.
             Arg::new("show-as")
                 .long("show-as")
-                .visible_alias("show")
-                .help("Print CLI flags as a personality TOML snippet to stdout\n[--show or bare --show-as: anonymous, commented-out preview]")
+                .alias("show")
+                .help("Print CLI flags as a personality TOML snippet to stdout\n[--show or bare --show-as: anonymous, commented-out preview]\n[aliases: --show]")
                 .help_heading("Configuration")
                 .value_name("NAME")
                 .num_args(0..=1)
