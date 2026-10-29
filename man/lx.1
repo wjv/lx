@@ -1139,6 +1139,10 @@ If the target file already exists, the previous file is backed up
 with a
 .Pa .bak
 suffix.
+The saved personality replaces any existing definition of
+.Ar NAME
+entirely, including one in the main config file; nothing, not even
+its description, is carried over.
 Exits after saving without listing files.
 .It Fl -show-as Ns Op = Ns Ar NAME , Fl -show
 Print the same TOML snippet that
@@ -1152,6 +1156,19 @@ emits
 with every line commented out — so an accidental redirect into
 a TOML file produces a file that parses as empty rather than
 live-but-broken config.
+.It Fl -description Ns = Ns Ar TEXT
+Add a
+.Sy description
+line to the personality written by
+.Fl -save-as
+or printed by
+.Fl -show-as .
+The description is shown by
+.Fl -show-config Ns = Ns Cm available .
+Only valid together with one of those two flags.
+An empty
+.Ar TEXT
+adds no description.
 .El
 .Pp
 The

@@ -143,15 +143,18 @@ across = true
 ## for argv[0] dispatch.
 
 # [personality.lt]
+# description = "Like `ll`, newest first"
 # inherits = "ll"
 # sort = "age"
 
 # [personality.recent]
+# description = "Long view, most recently modified first"
 # format = "long"
 # sort = "modified"
 # reverse = true
 
 # [personality.du]
+# description = "Disk-usage tree: directories only, biggest first, two levels deep"
 # columns = ["size"]
 # only-dirs = true
 # tree = true

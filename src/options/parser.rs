@@ -1,6 +1,6 @@
 use clap::builder::PossibleValue;
 use clap::builder::styling;
-use clap::{Arg, ArgAction, Command};
+use clap::{Arg, ArgAction, ArgGroup, Command};
 
 use super::flags;
 
@@ -1591,6 +1591,23 @@ pub fn build_command() -> Command {
                 .value_name("NAME")
                 .num_args(0..=1)
                 .require_equals(true),
+        )
+        // Groups the two capture flags so `--description` can
+        // require either one.  `multiple(true)` keeps today's
+        // behaviour when both are given (`--save-as` wins).
+        .group(
+            ArgGroup::new("personality-capture")
+                .args(["save-as", "show-as"])
+                .multiple(true),
+        )
+        .arg(
+            Arg::new("description")
+                .long("description")
+                .help("Add a description to the --save-as/--show-as personality")
+                .help_heading("Configuration")
+                .value_name("TEXT")
+                .require_equals(true)
+                .requires("personality-capture"),
         )
         .arg(
             Arg::new("init-config")

@@ -1415,3 +1415,98 @@ fn show_anonymous_emits_fully_commented_unnamed_preview() {
         );
     }
 }
+
+// ── --description ──────────────────────────────────────────────
+
+/// The description goes straight after the section header, before
+/// `inherits`, matching how hand-written personalities are laid out.
+#[test]
+fn show_as_description_follows_header() {
+    let out = lx_no_colour()
+        .args(["-l", "--show-as=preview", "--description=Long and tidy"])
+        .output()
+        .expect("--show-as --description failed");
+    assert!(out.status.success());
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let lines: Vec<&str> = stdout.lines().collect();
+    let header = lines
+        .iter()
+        .position(|l| *l == "[personality.preview]")
+        .expect("header line");
+    assert_eq!(lines[header + 1], "description = \"Long and tidy\"");
+    assert_eq!(lines[header + 2], "inherits = \"l\"");
+}
+
+/// Quotes, backslashes and control characters are escaped, and the
+/// saved file loads back with the description intact.
+#[test]
+fn save_as_description_round_trips_through_escaping() {
+    let dir = tempdir().expect("tempdir");
+    let home = dir.path();
+    let conf_d = home.join(".config/lx/conf.d");
+    fs::create_dir_all(&conf_d).unwrap();
+    let description = "Biggest \"first\", C:\\ paths,\ttabbed";
+
+    lx_no_colour()
+        .env("HOME", home)
+        .env_remove("XDG_CONFIG_HOME")
+        .args(["-l", "--save-as=tricky"])
+        .arg(format!("--description={description}"))
+        .assert()
+        .success();
+
+    let saved = fs::read_to_string(conf_d.join("tricky.toml")).expect("saved file");
+    assert!(
+        saved.contains(r#"description = "Biggest \"first\", C:\\ paths,\ttabbed""#),
+        "got: {saved}"
+    );
+
+    // Point lx at a config in the same home so conf.d/ is picked up,
+    // then check the description survives the parse.
+    let config = home.join(".lxconfig.toml");
+    fs::write(&config, "version = \"0.7\"\n").unwrap();
+    lx_no_colour()
+        .env("HOME", home)
+        .env("LX_CONFIG", &config)
+        .env_remove("XDG_CONFIG_HOME")
+        .args(["--dump-personality=tricky"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            r#"description = "Biggest \"first\", C:\\ paths,\ttabbed""#,
+        ));
+}
+
+/// In the anonymous preview the description is commented out like
+/// every other line.
+#[test]
+fn show_anonymous_comments_out_description() {
+    lx_no_colour()
+        .args(["-l", "--show", "--description=dotdirs"])
+        .assert()
+        .success()
+        .stdout(
+            predicate::str::contains("# description = \"dotdirs\"")
+                .and(predicate::str::contains("\ndescription").not()),
+        );
+}
+
+/// `--description=` (empty) writes no description line at all.
+#[test]
+fn empty_description_is_omitted() {
+    lx_no_colour()
+        .args(["-l", "--show-as=preview", "--description="])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("description").not());
+}
+
+/// `--description` only makes sense when capturing a personality.
+#[test]
+fn description_requires_save_as_or_show_as() {
+    lx_no_colour()
+        .args(["-l", "--description=orphan"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("--save-as"));
+}

@@ -607,7 +607,9 @@ reverse = true
 
 The optional `description` is a one-line summary that `--show-config`
 surfaces in its catalogue and that `--dump-personality` emits.  Skip
-it if you don't care; it's purely informational.
+it if you don't care; it's purely informational, and not inherited.
+(`--description` sets it when saving a personality from the command
+line; see "Creating personalities from the command line" below.)
 
 If I were to run `lx` with this personality, it would be the same as if
 I executed:
@@ -921,6 +923,14 @@ lx -l --total --sort=size --reverse --show
 ```
 
 This emits `[personality.UNNAMED]` with every line commented out — so an accidental `> file.toml` doesn't write live-but-broken config. Once you've decided on a name, swap `--show` for `--show-as=NAME` (to preview) or `--save-as=NAME` (to write).
+
+To say what a personality is for, add `--description`:
+
+```sh
+lx -l --total --sort=size --reverse --save-as=du --description="Biggest things first"
+```
+
+This adds a `description = "..."` line to the saved personality, which `lx --show-config=available` shows next to its name. `--description` only works together with `--save-as` or `--show-as`.
 
 ### `LX_PERSONALITY`
 

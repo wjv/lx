@@ -308,10 +308,37 @@ fn compiled_personality(name: &str) -> Option<PersonalityDef> {
 
 // ── --dump-personality output ───────────────────────────────────
 
+/// Quote `s` as a single-line TOML basic string, escaping as needed.
+///
+/// Hand-rolled rather than using `toml::Value`'s `Display`, which
+/// may pick a multi-line string: that would break the commented-out
+/// `--show` preview, where only the first line gets the `# ` prefix.
+fn toml_string(s: &str) -> String {
+    use std::fmt::Write;
+
+    let mut out = String::with_capacity(s.len() + 2);
+    out.push('"');
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if c.is_control() => {
+                let _ = write!(out, "\\u{:04X}", u32::from(c));
+            }
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}
+
 /// Format a single TOML key = value pair.
 fn format_toml_kv(key: &str, value: &toml::Value) -> String {
     match value {
-        toml::Value::String(s) => format!("{key} = \"{s}\""),
+        toml::Value::String(s) => format!("{key} = {}", toml_string(s)),
         toml::Value::Boolean(b) => format!("{key} = {b}"),
         toml::Value::Integer(i) => format!("{key} = {i}"),
         toml::Value::Float(f) => format!("{key} = {f}"),
@@ -319,7 +346,7 @@ fn format_toml_kv(key: &str, value: &toml::Value) -> String {
             let items: Vec<String> = arr
                 .iter()
                 .map(|v| match v {
-                    toml::Value::String(s) => format!("\"{s}\""),
+                    toml::Value::String(s) => toml_string(s),
                     other => other.to_string(),
                 })
                 .collect();
@@ -387,13 +414,13 @@ fn format_personality_toml(name: &str) -> Option<String> {
     let mut lines = vec![format!("[personality.{name}]")];
 
     if let Some(ref description) = def.description {
-        lines.push(format!("description = \"{description}\""));
+        lines.push(format!("description = {}", toml_string(description)));
     }
     if let Some(ref inherits) = def.inherits {
-        lines.push(format!("inherits = \"{inherits}\""));
+        lines.push(format!("inherits = {}", toml_string(inherits)));
     }
     if let Some(ref format) = def.format {
-        lines.push(format!("format = \"{format}\""));
+        lines.push(format!("format = {}", toml_string(format)));
     }
     if let Some(ref columns) = def.columns {
         let entries: Vec<String> = columns
@@ -484,6 +511,7 @@ pub fn dump_personality_all() {
 fn build_personality_toml(
     name: Option<&str>,
     inherits: Option<&str>,
+    description: Option<&str>,
     settings: &HashMap<String, toml::Value>,
     flag_name: &str,
 ) -> String {
@@ -505,8 +533,14 @@ fn build_personality_toml(
     lines.push(String::new());
     lines.push(format!("{prefix}[personality.{resolved_name}]"));
 
+    if let Some(description) = description {
+        lines.push(format!(
+            "{prefix}description = {}",
+            toml_string(description)
+        ));
+    }
     if let Some(parent) = inherits {
-        lines.push(format!("{prefix}inherits = \"{parent}\""));
+        lines.push(format!("{prefix}inherits = {}", toml_string(parent)));
     }
 
     let mut keys: Vec<_> = settings.keys().collect();
@@ -527,20 +561,21 @@ fn build_personality_toml(
 pub fn show_personality_as(
     name: Option<&str>,
     inherits: Option<&str>,
+    description: Option<&str>,
     settings: &HashMap<String, toml::Value>,
 ) {
     print!(
         "{}",
-        build_personality_toml(name, inherits, settings, "show-as")
+        build_personality_toml(name, inherits, description, settings, "show-as")
     );
 }
 
 /// Save a personality definition to `conf.d/NAME.toml`.
 ///
 /// Builds a TOML `[personality.NAME]` section from the given settings
-/// (the CLI flag delta), with an optional `inherits` directive.
-/// Creates the `conf.d/` directory if it doesn't exist.  Backs up
-/// any existing file to `NAME.toml.bak`.
+/// (the CLI flag delta), with optional `description` and `inherits`
+/// lines.  Creates the `conf.d/` directory if it doesn't exist.
+/// Backs up any existing file to `NAME.toml.bak`.
 ///
 /// # Errors
 ///
@@ -550,9 +585,11 @@ pub fn show_personality_as(
 pub fn save_personality_as(
     name: &str,
     inherits: Option<&str>,
+    description: Option<&str>,
     settings: &HashMap<String, toml::Value>,
 ) -> Result<(), ConfigError> {
-    let toml_content = build_personality_toml(Some(name), inherits, settings, "save-as");
+    let toml_content =
+        build_personality_toml(Some(name), inherits, description, settings, "save-as");
 
     // Find or create the conf.d/ directory.
     let conf_dir = find_drop_in_dir(find_config_path().as_deref()).unwrap_or_else(|| {

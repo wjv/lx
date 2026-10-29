@@ -53,6 +53,11 @@ the minimum Rust version for building from source.
   invocation routes converging on one mechanism.  See
   `docs/UPGRADING.md` for the migration story.  (pre.4)
 
+- **`--description=TEXT`** adds a `description` line to the
+  personality written by `--save-as` or printed by `--show-as`,
+  so command-line-captured personalities can document themselves
+  in `--show-config=available`.  (pre.8)
+
 ### Changed
 
 - **Minimum supported Rust version raised from 1.94 to
@@ -89,6 +94,13 @@ the minimum Rust version for building from source.
   default.  Typing the tier flag is more explicit than running
   via a symlink, so the tier flag wins over argv[0] when both
   are present.  (pre.4)
+
+### Fixed
+
+- **TOML output escapes strings.**  `--save-as`, `--show-as` and
+  `--dump-personality` wrote string values verbatim, so a value
+  containing `"` or `\` produced a file lx couldn't read back.
+  (pre.8)
 
 ### Internal
 

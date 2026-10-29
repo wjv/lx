@@ -206,13 +206,20 @@ impl Options {
                     return OptionsResult::DumpStyle(name);
                 }
 
+                // `--description=` (empty) is treated as no description,
+                // like `--show-as=`.
+                let description = clap_matches
+                    .get_one::<String>("description")
+                    .filter(|s| !s.is_empty())
+                    .cloned();
+
                 if let Some(name) = clap_matches.get_one::<String>("save-as") {
-                    let settings = Self::extract_cli_settings(&clap_matches);
-                    return OptionsResult::SaveAs(
-                        name.clone(),
-                        None, // inherits — set by main.rs from active personality
-                        settings,
-                    );
+                    return OptionsResult::SaveAs {
+                        name: name.clone(),
+                        inherits: None,
+                        description,
+                        settings: Self::extract_cli_settings(&clap_matches),
+                    };
                 }
 
                 // Was `--show-as`/`--show` given at all?  With
@@ -229,11 +236,12 @@ impl Options {
                     // as no name: keep-calm-and-carry-on rather than
                     // erroring on an obvious typo.
                     let name = raw_name.filter(|s| !s.is_empty());
-                    let settings = Self::extract_cli_settings(&clap_matches);
-                    return OptionsResult::ShowAs(
-                        name, None, // inherits — set by main.rs from active personality
-                        settings,
-                    );
+                    return OptionsResult::ShowAs {
+                        name,
+                        inherits: None,
+                        description,
+                        settings: Self::extract_cli_settings(&clap_matches),
+                    };
                 }
 
                 if clap_matches.get_flag("init-config") {
@@ -568,23 +576,24 @@ pub enum OptionsResult {
     UpgradeConfig,
 
     /// The user wants to save CLI flags as a personality.
-    /// Contains: (name, inherits, settings as TOML key/value pairs).
-    SaveAs(
-        String,
-        Option<String>,
-        std::collections::HashMap<String, toml::Value>,
-    ),
+    /// `inherits` is filled in by main.rs from the active personality.
+    SaveAs {
+        name: String,
+        inherits: Option<String>,
+        description: Option<String>,
+        settings: std::collections::HashMap<String, toml::Value>,
+    },
 
     /// The user wants to preview CLI flags as a personality on stdout.
-    /// Contains: (name, inherits, settings as TOML key/value pairs).
     /// `name` is `None` when `--show` or bare `--show-as` was used
     /// (anonymous preview); the emitter renders the snippet
     /// fully commented out under `[personality.UNNAMED]`.
-    ShowAs(
-        Option<String>,
-        Option<String>,
-        std::collections::HashMap<String, toml::Value>,
-    ),
+    ShowAs {
+        name: Option<String>,
+        inherits: Option<String>,
+        description: Option<String>,
+        settings: std::collections::HashMap<String, toml::Value>,
+    },
 }
 
 #[cfg(test)]

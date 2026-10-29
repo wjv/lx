@@ -399,24 +399,37 @@ fn try_main() -> Result<i32, LxError> {
             );
         }
 
-        OptionsResult::SaveAs(ref name, _, _) => {
+        OptionsResult::SaveAs {
+            ref name,
+            ref description,
+            ..
+        } => {
             // Parse just the CLI args (without personality layer) to
             // extract only what the user typed on this command line.
             let cli_settings = match Options::parse(&cli_args, &LiveVars) {
-                OptionsResult::SaveAs(_, _, settings) => settings,
+                OptionsResult::SaveAs { settings, .. } => settings,
                 _ => std::collections::HashMap::new(),
             };
             let inherits = active_personality.as_deref();
-            config::save_personality_as(name, inherits, &cli_settings)?;
+            config::save_personality_as(name, inherits, description.as_deref(), &cli_settings)?;
         }
 
-        OptionsResult::ShowAs(ref name, _, _) => {
+        OptionsResult::ShowAs {
+            ref name,
+            ref description,
+            ..
+        } => {
             let cli_settings = match Options::parse(&cli_args, &LiveVars) {
-                OptionsResult::ShowAs(_, _, settings) => settings,
+                OptionsResult::ShowAs { settings, .. } => settings,
                 _ => std::collections::HashMap::new(),
             };
             let inherits = active_personality.as_deref();
-            config::show_personality_as(name.as_deref(), inherits, &cli_settings);
+            config::show_personality_as(
+                name.as_deref(),
+                inherits,
+                description.as_deref(),
+                &cli_settings,
+            );
         }
 
         OptionsResult::DumpClass(ref name) => {
