@@ -44,6 +44,9 @@ to bump the schema (0.6 → 0.7) and rewrite legacy format names.
 Your custom personalities and overrides are preserved verbatim;
 the migration only touches things that need to change.
 
+**If you build lx from source**, you now need Rust 1.97.1 or later
+(previously 1.94).  See [below](#building-from-source-needs-rust-1971).
+
 
 ### Format renames: `long2` → `long`, `long3` → `full`
 
@@ -178,6 +181,25 @@ phrasing for when the tier flag set the format directly).
 If you scripted against the old wording, update accordingly.  The
 new wording is consistent with how the user guide describes the
 mechanism.
+
+
+### Building from source needs Rust 1.97.1
+
+The minimum supported Rust version rises from 1.94 to 1.97.1.  This
+only affects building from source, with `cargo install lx-ls` or
+from a git checkout; the prebuilt release binaries and Homebrew
+are unaffected.  With an older toolchain, Cargo refuses to build
+and names the required version.
+
+**What to do:** run `rustup update`, or stay on 0.10.x until you
+can.
+
+**Why:** lx's jj support uses `jj-lib`, which raised its own
+minimum to 1.97.1 in 0.46.  lx reads repositories written by the
+`jj` you have installed, so falling behind current `jj-lib`
+releases risks misreading repos written by newer `jj`.  The
+minimum applies to every build, with or without the `jj` feature,
+because Cargo has one minimum per crate.
 
 
 ## Upgrading to 0.10

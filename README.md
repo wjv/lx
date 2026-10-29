@@ -3,7 +3,7 @@
 
 [![CI](https://github.com/wjv/lx/actions/workflows/ci.yml/badge.svg)](https://github.com/wjv/lx/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/lx-ls.svg)](https://crates.io/crates/lx-ls)
-[![MSRV](https://img.shields.io/badge/MSRV-1.94-blue.svg)](rust-toolchain.toml)
+[![MSRV](https://img.shields.io/badge/MSRV-1.97.1-blue.svg)](Cargo.toml)
 [![Licence](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENCE)
 
 **`lx`** is a modern file lister for Unix — a replacement for the standard
@@ -231,7 +231,7 @@ above.
 
 ### Build from source
 
-`lx` requires Rust 1.94 or later.
+`lx` requires Rust 1.97.1 or later.
 
 ```sh
 git clone https://github.com/wjv/lx

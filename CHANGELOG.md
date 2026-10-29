@@ -22,6 +22,21 @@ Editorial conventions:
 
 ## [Unreleased] — 0.11.0
 
+0.11 re-engineers the long-view tiers as personalities, and raises
+the minimum Rust version for building from source.
+
+**Highlights:**
+
+- **Minimum supported Rust version is now 1.97.1** (was 1.94).
+  Only affects building from source (`cargo install lx-ls`);
+  prebuilt binaries and Homebrew are unaffected.  Required by
+  `jj-lib` 0.46.  (pre.7)
+- **Long-view tiers re-engineered as personalities**: `-l`,
+  `-ll` and `-lll` are now ordinary personalities you can
+  inspect and override.  See `docs/UPGRADING.md`.  (pre.4)
+- **Nightly builds** at the rolling `nightly` release tag.
+  (pre.1)
+
 ### Added
 
 - **Nightly builds** at the rolling [`nightly` release
@@ -39,6 +54,17 @@ Editorial conventions:
   `docs/UPGRADING.md` for the migration story.  (pre.4)
 
 ### Changed
+
+- **Minimum supported Rust version raised from 1.94 to
+  1.97.1**, as required by `jj-lib` 0.46.  The bump applies to
+  every build from source, with or without the `jj` feature.
+  (pre.7)
+
+- **Dependencies updated across the board**, including
+  `jj-lib` 0.41 → 0.46 (matching current `jj` releases),
+  `git2` 0.20 → 0.21 and `phf` 0.13 → 0.14.  `git2` 0.21 drops
+  the `url`/`idna` dependency chain, so the dependency tree is
+  smaller.  (pre.7)
 
 - **Tier-1 (`-l`) gains the `vcs` column.**  The column that
   genuinely differentiates `lx` from `ls`, default-on at the
@@ -86,6 +112,15 @@ Editorial conventions:
   Affects only the `jj`-feature-enabled binary; the threat model
   requires the user to list files in an attacker-controlled
   repo.  (pre.2)
+
+- The dependency update resolves three RustSec advisories:
+  [RUSTSEC-2026-0204](https://rustsec.org/advisories/RUSTSEC-2026-0204)
+  (`crossbeam-epoch`, via `rayon`), and
+  [RUSTSEC-2026-0183](https://rustsec.org/advisories/RUSTSEC-2026-0183)
+  and
+  [RUSTSEC-2026-0184](https://rustsec.org/advisories/RUSTSEC-2026-0184)
+  (`git2`).  None of the affected APIs are called by `lx`.
+  (pre.7)
 
 ## [0.10.1] — 2026-05-07
 

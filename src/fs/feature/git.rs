@@ -131,7 +131,7 @@ impl GitRepo {
     /// The temporary `Processing` enum variant is used after the `git2`
     /// repository is moved out, but before the results have been moved in!
     /// See <https://stackoverflow.com/q/45985827/3484614>
-    fn search(&self, index: &Path, prefix_lookup: bool) -> f::Git {
+    fn search(&self, index: &Path, prefix_lookup: bool) -> f::VcsFileStatus {
         use std::mem::replace;
 
         let mut contents = self.contents.lock().unwrap();
@@ -255,7 +255,7 @@ impl Git {
     /// Get either the file or directory status for the given path.
     /// “Prefix lookup” means that it should report an aggregate status of all
     /// paths starting with the given prefix (in other words, a directory).
-    fn status(&self, index: &Path, prefix_lookup: bool) -> f::Git {
+    fn status(&self, index: &Path, prefix_lookup: bool) -> f::VcsFileStatus {
         if prefix_lookup {
             self.dir_status(index)
         } else {
@@ -266,7 +266,7 @@ impl Git {
     /// Get the user-facing status of a file.
     /// We check the statuses directly applying to a file, and for the ignored
     /// status we check if any of its parents directories is ignored by git.
-    fn file_status(&self, file: &Path) -> f::Git {
+    fn file_status(&self, file: &Path) -> f::VcsFileStatus {
         let path = reorient(file);
 
         let s = self
@@ -283,7 +283,7 @@ impl Git {
 
         let staged = index_status(s);
         let unstaged = working_tree_status(s);
-        f::Git { staged, unstaged }
+        f::VcsFileStatus { staged, unstaged }
     }
 
     /// Get the combined, user-facing status of a directory.
@@ -291,7 +291,7 @@ impl Git {
     /// modified if any file under it has the status modified), except for
     /// ignored status which applies to files under (for example, a directory
     /// is considered ignored if one of its parent directories is ignored).
-    fn dir_status(&self, dir: &Path) -> f::Git {
+    fn dir_status(&self, dir: &Path) -> f::VcsFileStatus {
         let path = reorient(dir);
 
         let s = self
@@ -308,7 +308,7 @@ impl Git {
 
         let staged = index_status(s);
         let unstaged = working_tree_status(s);
-        f::Git { staged, unstaged }
+        f::VcsFileStatus { staged, unstaged }
     }
 }
 
@@ -342,28 +342,28 @@ fn reorient(path: &Path) -> PathBuf {
 }
 
 /// The character to display if the file has been modified, but not staged.
-fn working_tree_status(status: git2::Status) -> f::GitStatus {
+fn working_tree_status(status: git2::Status) -> f::VcsStatus {
     match status {
-        s if s.contains(git2::Status::WT_NEW) => f::GitStatus::New,
-        s if s.contains(git2::Status::WT_MODIFIED) => f::GitStatus::Modified,
-        s if s.contains(git2::Status::WT_DELETED) => f::GitStatus::Deleted,
-        s if s.contains(git2::Status::WT_RENAMED) => f::GitStatus::Renamed,
-        s if s.contains(git2::Status::WT_TYPECHANGE) => f::GitStatus::TypeChange,
-        s if s.contains(git2::Status::IGNORED) => f::GitStatus::Ignored,
-        s if s.contains(git2::Status::CONFLICTED) => f::GitStatus::Conflicted,
-        _ => f::GitStatus::NotModified,
+        s if s.contains(git2::Status::WT_NEW) => f::VcsStatus::New,
+        s if s.contains(git2::Status::WT_MODIFIED) => f::VcsStatus::Modified,
+        s if s.contains(git2::Status::WT_DELETED) => f::VcsStatus::Deleted,
+        s if s.contains(git2::Status::WT_RENAMED) => f::VcsStatus::Renamed,
+        s if s.contains(git2::Status::WT_TYPECHANGE) => f::VcsStatus::TypeChange,
+        s if s.contains(git2::Status::IGNORED) => f::VcsStatus::Ignored,
+        s if s.contains(git2::Status::CONFLICTED) => f::VcsStatus::Conflicted,
+        _ => f::VcsStatus::NotModified,
     }
 }
 
 /// The character to display if the file has been modified and the change
 /// has been staged.
-fn index_status(status: git2::Status) -> f::GitStatus {
+fn index_status(status: git2::Status) -> f::VcsStatus {
     match status {
-        s if s.contains(git2::Status::INDEX_NEW) => f::GitStatus::New,
-        s if s.contains(git2::Status::INDEX_MODIFIED) => f::GitStatus::Modified,
-        s if s.contains(git2::Status::INDEX_DELETED) => f::GitStatus::Deleted,
-        s if s.contains(git2::Status::INDEX_RENAMED) => f::GitStatus::Renamed,
-        s if s.contains(git2::Status::INDEX_TYPECHANGE) => f::GitStatus::TypeChange,
-        _ => f::GitStatus::NotModified,
+        s if s.contains(git2::Status::INDEX_NEW) => f::VcsStatus::New,
+        s if s.contains(git2::Status::INDEX_MODIFIED) => f::VcsStatus::Modified,
+        s if s.contains(git2::Status::INDEX_DELETED) => f::VcsStatus::Deleted,
+        s if s.contains(git2::Status::INDEX_RENAMED) => f::VcsStatus::Renamed,
+        s if s.contains(git2::Status::INDEX_TYPECHANGE) => f::VcsStatus::TypeChange,
+        _ => f::VcsStatus::NotModified,
     }
 }

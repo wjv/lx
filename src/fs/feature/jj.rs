@@ -17,10 +17,13 @@ use log::*;
 use crate::fs::fields as f;
 
 use jj_lib::config::StackedConfig;
+use jj_lib::default_backend_factories::{
+    default_backend_factories, default_working_copy_factories,
+};
 use jj_lib::matchers::EverythingMatcher;
 use jj_lib::repo::Repo;
 use jj_lib::settings::UserSettings;
-use jj_lib::workspace::{self, Workspace};
+use jj_lib::workspace::Workspace;
 
 /// A cache of per-file jj status, built using the jj-lib crate.
 pub struct JjCache {
@@ -67,7 +70,9 @@ impl JjCache {
 
         // Set up minimal jj configuration.
         let config = StackedConfig::with_defaults();
-        let settings = match UserSettings::from_config(config) {
+        // The home directory only expands `~` in path-valued config,
+        // and we load none, so there's nothing to pass.
+        let settings = match UserSettings::from_config_and_home_dir(config, None) {
             Ok(s) => s,
             Err(e) => {
                 debug!("jj: failed to create settings: {e}");
@@ -75,8 +80,8 @@ impl JjCache {
             }
         };
 
-        let store_factories = jj_lib::repo::StoreFactories::default();
-        let wc_factories = workspace::default_working_copy_factories();
+        let store_factories = default_backend_factories();
+        let wc_factories = default_working_copy_factories();
 
         // Walk up the directory tree to find the workspace root.
         let mut search_dir = probe_dir.as_path();

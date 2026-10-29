@@ -238,11 +238,6 @@ impl Default for VcsFileStatus {
     }
 }
 
-// Convenience aliases so existing `f::Git` / `f::GitStatus` references
-// continue to compile during the migration.
-pub type Git = VcsFileStatus;
-pub type GitStatus = VcsStatus;
-
 /// BSD/macOS file flags from `st_flags` (see `chflags(1)`).
 ///
 /// On platforms without `st_flags`, the flags value is always 0.
