@@ -95,6 +95,12 @@ the minimum Rust version for building from source.
   via a symlink, so the tier flag wins over argv[0] when both
   are present.  (pre.4)
 
+- **`--show-config` names the file each personality comes from**,
+  in both the inheritance chain and the `available` catalogue,
+  instead of just `config`.  When a `conf.d/` file redefines a
+  personality from an earlier file, it also says which definition
+  it replaced, since definitions are never merged.  (pre.10)
+
 ### Fixed
 
 - **TOML output escapes strings.**  `--save-as`, `--show-as` and

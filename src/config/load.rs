@@ -163,10 +163,12 @@ pub(super) fn try_load_config() -> Result<Option<Config>, ConfigError> {
             });
         }
 
-        let cfg: Config = toml::from_str(&contents).map_err(|source| ConfigError::Parse {
+        let mut cfg: Config = toml::from_str(&contents).map_err(|source| ConfigError::Parse {
             path: path.clone(),
             source,
         })?;
+        let names = cfg.personality.keys().cloned().collect();
+        cfg.record_personality_sources(path, names);
 
         // Warn if when blocks are used but version is still 0.3.
         if version == "0.3" {
@@ -189,6 +191,8 @@ pub(super) fn try_load_config() -> Result<Option<Config>, ConfigError> {
         if !fragments.is_empty() {
             let config = config.get_or_insert_with(Config::default);
             for (path, fragment) in fragments {
+                let names = fragment.personality.keys().cloned().collect();
+                config.record_personality_sources(&path, names);
                 config.drop_in_paths.push(path);
                 config.merge(fragment);
             }

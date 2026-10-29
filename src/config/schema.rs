@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::env;
 use std::ffi::OsString;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
@@ -64,9 +64,26 @@ pub struct Config {
     /// Paths of loaded drop-in fragments (for `--show-config`).
     #[serde(skip)]
     pub drop_in_paths: Vec<PathBuf>,
+
+    /// For each personality name, every file that defines it, in load
+    /// order (for `--show-config`).  The last file's definition is the
+    /// one in effect; `merge` replaces entries wholesale, so earlier
+    /// files' definitions were replaced, not merged.
+    #[serde(skip)]
+    pub personality_files: HashMap<String, Vec<PathBuf>>,
 }
 
 impl Config {
+    /// Record `path` as a source of each of `names`.
+    pub(super) fn record_personality_sources(&mut self, path: &Path, names: Vec<String>) {
+        for name in names {
+            self.personality_files
+                .entry(name)
+                .or_default()
+                .push(path.to_path_buf());
+        }
+    }
+
     /// Merge a drop-in fragment into this config.  Each named entry
     /// in the fragment overrides the same-named entry in `self`.
     pub(super) fn merge(&mut self, other: Config) {

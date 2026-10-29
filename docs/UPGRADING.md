@@ -170,13 +170,19 @@ migration that `--upgrade-config` performs.  Configs going back to
 0.3 are still supported.
 
 
-### `--show-config` source string changed
+### `--show-config` source strings changed
 
 When `-l`/`-ll`/`-lll` is on the command line, `--show-config`'s
 "Format" section now reports the source as `personality` (because
 the tier flag activates the corresponding personality, which sets
 the format) rather than `implicit, selected by -l` (the pre-0.11
 phrasing for when the tier flag set the format directly).
+
+Personalities defined in config now show the file they come from,
+such as `(~/.config/lx/conf.d/local.toml)`, instead of `(config)`.
+`(config, overrides builtin)` becomes `(FILE, overrides builtin)`,
+and a personality that replaces an earlier definition adds
+`replaces FILE`.
 
 If you scripted against the old wording, update accordingly.  The
 new wording is consistent with how the user guide describes the

@@ -62,6 +62,61 @@ fn dropin_theme_is_loaded() {
         .stdout(predicate::str::contains("test-theme"));
 }
 
+/// `--show-config=available` names the file each personality comes
+/// from, not just "config".
+#[test]
+fn show_config_names_personality_source_file() {
+    let (dir, mut cmd) = config_with_dropins(
+        "",
+        &[(
+            "mine.toml",
+            r#"
+            [personality.mine]
+            long = true
+        "#,
+        )],
+    );
+    let expected = dir.path().join("lx/conf.d/mine.toml");
+
+    cmd.args(["--show-config=available"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(format!(
+            "mine ({})",
+            expected.display()
+        )));
+}
+
+/// A drop-in that redefines a personality from the main config
+/// replaces it wholesale, and `--show-config` says so.
+#[test]
+fn show_config_reports_replaced_personality_definition() {
+    let (dir, mut cmd) = config_with_dropins(
+        r#"
+        [personality.mine]
+        header = true
+        "#,
+        &[(
+            "mine.toml",
+            r#"
+            [personality.mine]
+            long = true
+        "#,
+        )],
+    );
+    let main = dir.path().join("lx/config.toml");
+    let dropin = dir.path().join("lx/conf.d/mine.toml");
+
+    cmd.args(["--show-config=available"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(format!(
+            "mine ({}, replaces {})",
+            dropin.display(),
+            main.display()
+        )));
+}
+
 #[test]
 fn dropin_files_loaded_alphabetically() {
     // Two drop-ins both define the same class; the later one (b.toml)

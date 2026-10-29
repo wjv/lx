@@ -19,32 +19,17 @@ use super::store::config;
 pub struct ChainLink {
     /// Personality name at this level.
     pub name: String,
-    /// Where the definition came from.
-    pub source: PersonalitySource,
     /// The personality definition declared at *this* level (before
     /// merging with parents/children).  Lets diagnostic surfaces
     /// show each link's direct contributions — its own
     /// `format`/`columns`/`settings`, plus the `[[when]]` blocks.
     pub def: PersonalityDef,
-    /// When `source == ConfigOverridesBuiltin`, the compiled-in
-    /// definition that the user's config shadows.  Used by
-    /// `--show-config` to surface the silent-shadowing case (keys
+    /// When config redefines a compiled-in personality, the
+    /// compiled-in definition that the user's config shadows.  Used
+    /// by `--show-config` to surface the silent-shadowing case (keys
     /// and `[[when]]` blocks present in the builtin but absent
-    /// from the override).  `None` for `Builtin` and pure
-    /// `Config` links.
+    /// from the override).  `None` otherwise.
     pub shadowed_builtin: Option<PersonalityDef>,
-}
-
-/// Where a personality definition comes from.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PersonalitySource {
-    /// Compiled into the lx binary.
-    Builtin,
-    /// Defined in the user's config file (or drop-in).
-    Config,
-    /// Config-defined, but a compiled-in personality of the same
-    /// name also exists.
-    ConfigOverridesBuiltin,
 }
 
 /// The resolved personality plus metadata about the resolution
@@ -112,20 +97,13 @@ pub fn resolve_personality_full(name: &str) -> Result<Option<ResolvedPersonality
         .iter()
         .map(|(pname, def)| {
             let in_config = cfg.is_some_and(|c| c.personality.contains_key(pname));
-            let in_builtin = compiled_personality(pname).is_some();
-            let source = match (in_config, in_builtin) {
-                (true, true) => PersonalitySource::ConfigOverridesBuiltin,
-                (true, false) => PersonalitySource::Config,
-                _ => PersonalitySource::Builtin,
-            };
-            let shadowed_builtin = if source == PersonalitySource::ConfigOverridesBuiltin {
+            let shadowed_builtin = if in_config {
                 compiled_personality(pname)
             } else {
                 None
             };
             ChainLink {
                 name: pname.clone(),
-                source,
                 def: def.clone(),
                 shadowed_builtin,
             }

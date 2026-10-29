@@ -1712,7 +1712,7 @@ Personality: la
         all = true
     ▸ ll (builtin)
       format: long2
-    ▸ default (config, overrides builtin)
+    ▸ default (~/.lxconfig.toml, overrides builtin)
       settings:
         classify = "never"
         theme = "exa"
@@ -1741,8 +1741,15 @@ The **inheritance** list shows the chain from the requested
 personality down to its root ancestor (each link prefixed with
 `▸`).  For each link, you see:
 
-- **source**: `builtin`, `config`, or `config, overrides builtin`
-  if a config-defined personality shadows a compiled-in one.
+- **source**: `builtin`, or the config file that defines the
+  personality (your home directory shown as `~`).  After the file:
+  - `replaces FILE` if an earlier file defined the same
+    personality.  Definitions aren't merged: a `conf.d/` file
+    replaces a same-named personality from the main config, or
+    from an earlier `conf.d/` file, entirely.
+  - `overrides builtin` if it shadows a compiled-in personality.
+
+  The `--show-config=available` catalogue uses the same labels.
 - **`format`**, **`columns`**, **`settings`**: what the link
   declares directly in `[personality.NAME]`.
 - **`[[when]] #N`**: each conditional override block, with its
@@ -1751,7 +1758,7 @@ personality down to its root ancestor (each link prefixed with
   Unmatched blocks render entirely dimmed, so the eye reads them
   as "noted, not in effect".
 - **`in the builtin but shadowed by user configuration:`** — only
-  appears for `config, overrides builtin` links.  Lists the
+  appears for `overrides builtin` links.  Lists the
   settings and `[[when]]` blocks that the compiled-in version
   declares but your override doesn't preserve.  This is where
   you'd notice, for example, that the compiled-in

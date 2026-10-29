@@ -8,7 +8,7 @@ use nu_ansi_term::{Color, Style};
 
 use super::classes::resolve_classes;
 use super::load::find_config_path;
-use super::personality::{PersonalitySource, resolve_personality_full};
+use super::personality::resolve_personality_full;
 use super::schema::CONFIG_VERSION;
 use super::store::config;
 use super::styles::resolve_style;
@@ -42,6 +42,38 @@ impl Styles {
             dimmed: Style::new().dimmed(),
         }
     }
+}
+
+/// `path` for display, with the home directory shortened to `~`.
+fn display_path(path: &std::path::Path) -> String {
+    if let Some(home) = super::load::home_dir()
+        && let Ok(rest) = path.strip_prefix(&home)
+    {
+        return format!("~/{}", rest.display());
+    }
+    path.display().to_string()
+}
+
+/// Where personality `name` comes from: the file defining it, any
+/// earlier files whose definitions it replaced, and whether it
+/// overrides a compiled-in personality.  Just "builtin" when no
+/// config file defines it.
+fn personality_source_label(name: &str) -> String {
+    let builtin = super::personality::is_compiled_personality(name);
+    let files = config().and_then(|c| c.personality_files.get(name));
+    let Some((current, replaced)) = files.and_then(|f| f.split_last()) else {
+        return if builtin { "builtin" } else { "?" }.to_string();
+    };
+
+    let mut parts = vec![display_path(current)];
+    if !replaced.is_empty() {
+        let replaced: Vec<String> = replaced.iter().map(|p| display_path(p)).collect();
+        parts.push(format!("replaces {}", replaced.join(", ")));
+    }
+    if builtin {
+        parts.push("overrides builtin".to_string());
+    }
+    parts.join(", ")
 }
 
 /// Display the active configuration to stdout.
@@ -84,7 +116,7 @@ pub fn show_config(
     // Available half: catalogue of every defined personality,
     // format, theme, style, and class.
     if matches!(mode, Available | Full) {
-        show_available_personalities(&s, cfg);
+        show_available_personalities(&s);
         show_formats(&s, cfg);
         show_available_themes(&s, cfg);
         show_available_styles(&s, cfg);
@@ -169,11 +201,7 @@ fn show_personality(
     if !resolved.chain.is_empty() {
         println!("  {}", s.label.paint("inheritance:"));
         for link in &resolved.chain {
-            let source_str = match link.source {
-                PersonalitySource::Builtin => "builtin",
-                PersonalitySource::Config => "config",
-                PersonalitySource::ConfigOverridesBuiltin => "config, overrides builtin",
-            };
+            let source_str = personality_source_label(&link.name);
 
             println!(
                 "    {} {}",
@@ -652,8 +680,8 @@ fn show_formats(s: &Styles, cfg: Option<&super::schema::Config>) {
 
 // ── Available catalogue: personalities ─────────────────────────
 
-fn show_available_personalities(s: &Styles, cfg: Option<&super::schema::Config>) {
-    use super::personality::{is_compiled_personality, personality_description};
+fn show_available_personalities(s: &Styles) {
+    use super::personality::personality_description;
 
     let names = super::personality::all_personality_names();
     println!(
@@ -662,14 +690,7 @@ fn show_available_personalities(s: &Styles, cfg: Option<&super::schema::Config>)
         s.value.paint(names.len().to_string())
     );
     for name in &names {
-        let in_config = cfg.is_some_and(|c| c.personality.contains_key(name));
-        let in_builtin = is_compiled_personality(name);
-        let source = match (in_config, in_builtin) {
-            (true, true) => "config, overrides builtin",
-            (true, false) => "config",
-            (false, true) => "builtin",
-            (false, false) => "?",
-        };
+        let source = personality_source_label(name);
         let desc = personality_description(name);
         match desc.as_deref() {
             Some(d) if !d.is_empty() => println!(
