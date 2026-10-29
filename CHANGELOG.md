@@ -28,6 +28,11 @@ features.
 
 ### Fixed
 
+- **`--show-config` honours colour settings.**  It used to emit
+  colour codes unconditionally; it now follows `--colour`,
+  `NO_COLOR` and whether stdout is a terminal, like a listing.
+  Closes wjv/lx#48.
+
 - **`-p` inside a flag cluster is honoured.**  `lx -ap tree` listed
   with the default personality instead of `tree`, without an error,
   because the personality was looked for by scanning the arguments

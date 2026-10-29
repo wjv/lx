@@ -872,6 +872,45 @@ fn show_config_available_omits_active() {
         .stdout(predicate::str::contains("Theme:").not());
 }
 
+// ── --show-config colour (wjv/lx#48) ────────────────────────────
+
+/// Under test, stdout is a pipe, so the default (`auto`) is plain.
+#[test]
+fn show_config_plain_when_piped() {
+    lx().arg("--show-config")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\x1b[").not());
+}
+
+#[test]
+fn show_config_respects_colour_never() {
+    lx().args(["--show-config", "--colour=never"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\x1b[").not());
+}
+
+#[test]
+fn show_config_respects_no_color() {
+    lx().env("NO_COLOR", "1")
+        .args(["--show-config", "--colour=auto"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\x1b[").not());
+}
+
+/// `--colour=always` still forces colour, even into a pipe and
+/// even with `NO_COLOR` set (the explicit flag wins, as for listings).
+#[test]
+fn show_config_colour_always_forces_colour() {
+    lx().env("NO_COLOR", "1")
+        .args(["--show-config", "--colour=always"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\x1b["));
+}
+
 // ── --dump-theme ─────────────────────────────────────────────────
 
 #[test]

@@ -140,9 +140,20 @@ impl Options {
                     } else {
                         None
                     };
+                    // Same rules as a listing: `--colour`, then
+                    // `NO_COLOR`, then whether stdout is a terminal.
+                    let flags = MatchedFlags::new(clap_matches.clone());
+                    let colour = match crate::theme::UseColours::deduce(&flags, vars) {
+                        crate::theme::UseColours::Always => true,
+                        crate::theme::UseColours::Never => false,
+                        crate::theme::UseColours::Automatic => {
+                            std::io::IsTerminal::is_terminal(&std::io::stdout())
+                        }
+                    };
                     return OptionsResult::ShowConfig {
                         mode,
                         implicit_format,
+                        colour,
                     };
                 }
 
@@ -538,6 +549,9 @@ pub enum OptionsResult {
     ShowConfig {
         mode: ShowConfigMode,
         implicit_format: Option<String>,
+        /// Whether to colour the output, already resolved from
+        /// `--colour`, `NO_COLOR` and whether stdout is a terminal.
+        colour: bool,
     },
 
     /// The user wants to see class definitions as TOML.
