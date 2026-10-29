@@ -696,7 +696,7 @@ mod test {
         #[test]
         fn no_time_suppresses_all() {
             let ts = timestamps(&["--no-time"], 3);
-            assert!(ts.is_empty());
+            assert_eq!(ts, Vec::<Column>::new());
         }
 
         #[test]
