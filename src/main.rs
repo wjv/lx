@@ -387,6 +387,7 @@ fn try_main() -> Result<i32, LxError> {
         OptionsResult::ShowConfig {
             mode,
             ref implicit_format,
+            colour,
         } => {
             let name = active_personality.as_deref().unwrap_or("lx");
             let cli_theme = find_theme_arg(&cli_args);
@@ -396,6 +397,7 @@ fn try_main() -> Result<i32, LxError> {
                 personality_source,
                 cli_theme.as_deref(),
                 implicit_format.as_deref(),
+                colour,
             );
         }
 

@@ -24,7 +24,16 @@ struct Styles {
 }
 
 impl Styles {
-    fn new() -> Self {
+    fn new(colour: bool) -> Self {
+        if !colour {
+            return Self {
+                heading: Style::default(),
+                label: Style::default(),
+                name: Style::default(),
+                value: Style::default(),
+                dimmed: Style::default(),
+            };
+        }
         Self {
             heading: Style::new().bold().fg(Color::Yellow),
             label: Style::new().bold(),
@@ -45,10 +54,11 @@ pub fn show_config(
     activated_by: &str,
     cli_theme_override: Option<&str>,
     implicit_format: Option<&str>,
+    colour: bool,
 ) {
     use crate::options::ShowConfigMode::{Active, Available, Full};
 
-    let s = Styles::new();
+    let s = Styles::new(colour);
     let config_path = find_config_path();
     let cfg = config();
 

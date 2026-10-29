@@ -102,6 +102,11 @@ the minimum Rust version for building from source.
   containing `"` or `\` produced a file lx couldn't read back.
   (pre.8)
 
+- **`--show-config` honours colour settings.**  It used to emit
+  colour codes unconditionally; it now follows `--colour`,
+  `NO_COLOR` and whether stdout is a terminal, like a listing.
+  Closes wjv/lx#48.  (pre.9)
+
 ### Internal
 
 - **Compiled-in format definitions deduplicated.**  `view.rs`'s
