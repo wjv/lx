@@ -28,6 +28,12 @@ features.
 
 ### Fixed
 
+- **`--save-as` refuses to save a personality over itself.**  Saving
+  the active personality under its own name (`lx -p du -r
+  --save-as=du`) wrote `inherits = "du"` into `du` itself, an
+  inheritance cycle that broke every later `-p du` until the file
+  was fixed by hand.  It's now an error, and nothing is written.
+
 - **`--show-config` honours colour settings.**  It used to emit
   colour codes unconditionally; it now follows `--colour`,
   `NO_COLOR` and whether stdout is a terminal, like a listing.

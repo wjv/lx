@@ -76,7 +76,8 @@ impl LxError {
             | Self::Config(
                 ConfigError::InheritanceCycle { .. }
                 | ConfigError::MissingParent { .. }
-                | ConfigError::NotFound { .. },
+                | ConfigError::NotFound { .. }
+                | ConfigError::SelfInheritance { .. },
             ) => exits::OPTIONS_ERROR,
             _ => exits::RUNTIME_ERROR,
         }

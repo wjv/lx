@@ -1428,3 +1428,28 @@ fn personality_flag_inside_a_cluster_is_honoured() {
         .success()
         .stdout(predicate::str::contains("tree"));
 }
+
+/// Saving the active personality over itself would write
+/// `inherits = "NAME"` into `[personality.NAME]`, a cycle that breaks
+/// every later run.  It's refused, and nothing is written.
+#[test]
+fn save_as_refuses_to_inherit_from_itself() {
+    let dir = tempdir().expect("tempdir");
+    let home = dir.path();
+    let conf_d = home.join(".config/lx/conf.d");
+    fs::create_dir_all(&conf_d).unwrap();
+
+    lx_no_colour()
+        .env("HOME", home)
+        .env_remove("XDG_CONFIG_HOME")
+        .args(["-p", "ll", "-a", "--save-as=ll"])
+        .assert()
+        .failure()
+        .code(3)
+        .stderr(predicate::str::contains("would inherit from itself"));
+
+    assert!(
+        !conf_d.join("ll.toml").exists(),
+        "nothing should be written"
+    );
+}

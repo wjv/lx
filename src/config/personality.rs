@@ -532,14 +532,22 @@ pub fn show_personality_as(
 ///
 /// # Errors
 ///
-/// Returns `ConfigError::Io` if the `conf.d/` directory cannot be
-/// created, the existing file cannot be backed up, or the new file
-/// cannot be written.
+/// Returns `ConfigError::SelfInheritance` if `name` is the personality
+/// it would inherit from (saving the active personality over itself
+/// would write an inheritance cycle).  Returns `ConfigError::Io` if
+/// the `conf.d/` directory cannot be created, the existing file
+/// cannot be backed up, or the new file cannot be written.
 pub fn save_personality_as(
     name: &str,
     inherits: Option<&str>,
     settings: &HashMap<String, toml::Value>,
 ) -> Result<(), ConfigError> {
+    if inherits == Some(name) {
+        return Err(ConfigError::SelfInheritance {
+            name: name.to_string(),
+        });
+    }
+
     let toml_content = build_personality_toml(Some(name), inherits, settings, "save-as");
 
     // Find or create the conf.d/ directory.

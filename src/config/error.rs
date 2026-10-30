@@ -48,6 +48,15 @@ pub enum ConfigError {
     #[error("personality '{child}' inherits from '{parent}', which does not exist")]
     MissingParent { child: String, parent: String },
 
+    /// `--save-as` targeting the active personality:
+    /// the saved definition would inherit from itself.
+    #[error(
+        "can't save personality '{name}' while it's the active personality: \
+         it would inherit from itself; select a different personality, or \
+         edit its definition by hand"
+    )]
+    SelfInheritance { name: String },
+
     /// `--upgrade-config` on a config that is already current.
     #[error("{path} is already at version {CONFIG_VERSION}; no upgrade needed")]
     AlreadyCurrent { path: PathBuf },
