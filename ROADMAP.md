@@ -8,13 +8,17 @@ For shipped work, see [`CHANGELOG.md`](CHANGELOG.md).
 
 ## 0.11 release cycle — long view tier flags and hotkeys
 
-This release cycle will see the reimplementation of the long view tier
-flags (`-l`/`-ll`/`-lll`) in terms of *personalities* rather than
-*formats*; you will be able to define your own long-view tiers as
-`[personality.NAME]` for maximum power and flexibility.
+### Long-view tiers as personalities
+
+The long view tier flags (`-l`/`-ll`/`-lll`) are reimplemented in
+terms of *personalities* rather than *formats*; you can define your own
+long-view tiers as `[personality.NAME]` for maximum power and
+flexibility. (Already in the nightly builds.)
 
 > Formats as a user-facing configuration element will be de-emphasised
 (though retained for power users).
+
+### Hotkeys
 
 A new "hotkey" system will allow for ad hoc personality capture to be
 replayed by using flags `-0` through `-9`. An example of intended usage:
@@ -22,14 +26,20 @@ replayed by using flags `-0` through `-9`. An example of intended usage:
 ```sh
 lx -ladD .*                 # show (only) dirs starting in '.'
 
-# Hmm, I'm doing this a lot. Capture a hotkey:
+# Hmm, I'm doing this a lot. Set a hotkey:
 
-lx -ladD --save-hotkey=0    # save hotkey '0'
+lx -ladD --set-hotkey=0     # set hotkey '0'
 
 # Now I can just do:
 
 lx -0 .*
 ```
+
+Hotkeys are temporary: they last for your login session, and never
+touch your config file. If a hotkey turns out to be worth keeping,
+save it as a personality with `lx -0 --save-as=NAME`.
+
+### An include filter, and cleaner glob patterns
 
 A new flag (provisionally `-N`/`--include`) will do the opposite of
 `-I`/`--ignore`: show *only* the files that match a glob. Unlike
@@ -37,7 +47,7 @@ positional arguments, which your shell expands, its patterns can be
 saved in a personality or hotkey:
 
 ```sh
-lx -laD -N '.*' --save-hotkey=0   # dot-directories only
+lx -laD -N '.*' --set-hotkey=0    # dot-directories only
 lx -0                             # here, or anywhere: lx -0 ~/src
 ```
 
@@ -46,6 +56,14 @@ be cleaned up and made consistent with shell globs. `*` will no longer
 match dotfiles, and `|` as a pattern separator will give way to
 repeating the flag and to `{a,b}` alternatives. Existing configs will be
 migrated by `--upgrade-config`.
+
+### Friendlier configuration inspection (may slip to a later release)
+
+`--show-config` will lead with the settings actually in effect, and
+show where each one came from: which personality, which `[[when]]`
+block, which file. New `--list-personalities`, `--list-themes` and
+friends will give a quick overview of what's defined, with
+descriptions. And `--help` will become shorter and easier to scan.
 
 ## 0.12 release cycle — icons
 
