@@ -123,6 +123,12 @@ the minimum Rust version for building from source.
     long-view tier: `lx -Ilocal` (ignore `local`) behaved like
     `lx -ll -I local`.
 
+- **`--save-as` refuses to save a personality over itself.**
+  `lx -p ll -a --save-as=ll` wrote `inherits = "ll"` into
+  `[personality.ll]`, an inheritance cycle that made every later
+  `lx -ll` fail.  It's now an error, and nothing is written.  This
+  affected 0.10 too.  (pre.12)
+
 ### Internal
 
 - **Compiled-in format definitions deduplicated.**  `view.rs`'s
