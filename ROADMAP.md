@@ -31,10 +31,21 @@ lx -ladD --save-hotkey=0    # save hotkey '0'
 lx -0 .*
 ```
 
-A new flag (provisionally: `-N`) will enable the capture of positional
-arguments as glob patterns, analogous to the existing `-I` and `-P`.
-This will enable more flexible personalities, and should be especially
-useful when using hotkeys.
+A new flag (provisionally `-N`/`--include`) will do the opposite of
+`-I`/`--ignore`: show *only* the files that match a glob. Unlike
+positional arguments, which your shell expands, its patterns can be
+saved in a personality or hotkey:
+
+```sh
+lx -laD -N '.*' --save-hotkey=0   # dot-directories only
+lx -0                             # here, or anywhere: lx -0 ~/src
+```
+
+As part of this, the glob patterns accepted by `-I`, `-P` and `-N` will
+be cleaned up and made consistent with shell globs. `*` will no longer
+match dotfiles, and `|` as a pattern separator will give way to
+repeating the flag and to `{a,b}` alternatives. Existing configs will be
+migrated by `--upgrade-config`.
 
 ## 0.12 release cycle — icons
 
