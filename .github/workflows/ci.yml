@@ -24,6 +24,8 @@ jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
+      # Let every platform finish, so one failure doesn't hide others.
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
         rust: [stable]
@@ -36,9 +38,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
-      - run: cargo test --workspace
+      # --no-fail-fast: run every test binary, and report all failures.
+      - run: cargo test --workspace --no-fail-fast
       # Also test with jj feature enabled
-      - run: cargo test --workspace --features jj
+      - run: cargo test --workspace --features jj --no-fail-fast
 
   clippy:
     runs-on: ubuntu-latest

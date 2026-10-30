@@ -87,12 +87,13 @@ fn format_long2_resolves_as_alias() {
     // continue to load (not error), and its columns should match
     // `long` (no group, no extra timestamps — just the four-column
     // long set plus VCS).  We verify the alias's no-error behaviour
-    // and that group is *not* in its column set.
+    // and that group is *not* in its column set.  (Checked via the
+    // header: the group's name can also appear as the user's.)
     lx_no_colour()
-        .args(["-l", "--format=long2", "Cargo.toml"])
+        .args(["-l", "--header", "--format=long2", "Cargo.toml"])
         .assert()
         .success()
-        .stdout(predicate::str::contains(support::current_group()).not());
+        .stdout(predicate::str::contains("Group").not());
 }
 
 #[test]
@@ -100,10 +101,10 @@ fn format_full_has_group() {
     // Post-0.11: the forensic column set previously named `long3`
     // is now `full`, and still carries `group`.
     lx_no_colour()
-        .args(["-l", "--format=full", "Cargo.toml"])
+        .args(["-l", "--header", "--format=full", "Cargo.toml"])
         .assert()
         .success()
-        .stdout(predicate::str::contains(support::current_group()));
+        .stdout(predicate::str::contains("Group"));
 }
 
 #[test]

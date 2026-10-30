@@ -32,12 +32,13 @@ fn tier1_lists_the_file() {
 
 #[test]
 fn tier1_no_group_column() {
-    // Tier 1 should not show the group unless -g is given.
+    // Tier 1 should not show the group unless -g is given.  Checked
+    // via the header, since a group often shares the user's name.
     lx_no_colour()
-        .args(["-l", "Cargo.toml"])
+        .args(["-l", "--header", "Cargo.toml"])
         .assert()
         .success()
-        .stdout(predicate::str::contains(support::current_group()).not());
+        .stdout(predicate::str::contains("Group").not());
 }
 
 #[test]
@@ -75,10 +76,10 @@ fn tier2_no_group_column() {
     // in `-ll` output unless explicitly added with `-g` or by an
     // overridden personality.
     lx_no_colour()
-        .args(["-ll", "Cargo.toml"])
+        .args(["-ll", "--header", "Cargo.toml"])
         .assert()
         .success()
-        .stdout(predicate::str::contains(support::current_group()).not());
+        .stdout(predicate::str::contains("Group").not());
 }
 
 #[test]
@@ -161,10 +162,10 @@ fn tier3_has_group_column() {
     // earns its width here, where the tier's purpose is "show me
     // everything".
     lx_no_colour()
-        .args(["-lll", "Cargo.toml"])
+        .args(["-lll", "--header", "Cargo.toml"])
         .assert()
         .success()
-        .stdout(predicate::str::contains(support::current_group()));
+        .stdout(predicate::str::contains("Group"));
 }
 
 #[test]
@@ -225,10 +226,10 @@ fn tier_flag_and_p_flag_produce_identical_output() {
 fn tier1_plus_group_flag() {
     // -l -g should show group even at tier 1.
     lx_no_colour()
-        .args(["-l", "-g", "Cargo.toml"])
+        .args(["-l", "-g", "--header", "Cargo.toml"])
         .assert()
         .success()
-        .stdout(predicate::str::contains(support::current_group()));
+        .stdout(predicate::str::contains("Group"));
 }
 
 #[test]
