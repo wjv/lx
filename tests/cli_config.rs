@@ -1373,6 +1373,24 @@ fn show_as_at_count_emits_xattr_indicator() {
         .stdout(predicate::str::contains("xattr-indicator = true"));
 }
 
+/// Integer settings are captured as integers.  They used to panic: the
+/// flags are parsed as `usize`, but were read back as `i64`.
+#[test]
+fn show_as_captures_integer_settings() {
+    for (flag, line) in [
+        ("--level=2", "level = 2"),
+        ("--width=61", "width = 61"),
+        ("--grid-rows=3", "grid-rows = 3"),
+        ("--icon-spacing=2", "icon-spacing = 2"),
+    ] {
+        lx_no_colour()
+            .args([flag, "--show-as=preview"])
+            .assert()
+            .success()
+            .stdout(predicate::str::contains(line));
+    }
+}
+
 /// `--show` and bare `--show-as` (no value) emit an anonymous
 /// preview: every line commented, header is
 /// `# [personality.UNNAMED]`.  The two spellings produce

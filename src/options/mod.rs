@@ -317,15 +317,19 @@ fn collect_flag_values(
                     continue;
                 }
             }
+            // Integer flags are parsed as `usize`; `get_one` with the
+            // wrong type panics, so ask with `try_get_one`.
             SettingKind::Int => {
-                if let Some(v) = matches.get_one::<i64>(clap_id) {
-                    toml::Value::Integer(*v)
-                } else if let Some(v) = matches.get_one::<String>(clap_id) {
-                    if let Ok(n) = v.parse::<i64>() {
-                        toml::Value::Integer(n)
-                    } else {
-                        continue;
-                    }
+                if let Ok(Some(&v)) = matches.try_get_one::<usize>(clap_id)
+                    && let Ok(n) = i64::try_from(v)
+                {
+                    toml::Value::Integer(n)
+                } else if let Ok(Some(&v)) = matches.try_get_one::<i64>(clap_id) {
+                    toml::Value::Integer(v)
+                } else if let Ok(Some(v)) = matches.try_get_one::<String>(clap_id)
+                    && let Ok(n) = v.parse::<i64>()
+                {
+                    toml::Value::Integer(n)
                 } else {
                     continue;
                 }

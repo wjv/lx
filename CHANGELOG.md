@@ -28,6 +28,11 @@ features.
 
 ### Fixed
 
+- **Capturing integer settings no longer panics.**  `--save-as` and
+  `--show-as` crashed when the command line included `--level`,
+  `--width`, `--grid-rows` or `--icon-spacing` (`lx -T -L 2
+  --save-as=t`).
+
 - **`--save-as` refuses to save a personality over itself.**  Saving
   the active personality under its own name (`lx -p du -r
   --save-as=du`) wrote `inherits = "du"` into `du` itself, an
