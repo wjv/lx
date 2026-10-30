@@ -252,3 +252,25 @@ fn tier2_no_header_flag_suppresses() {
         .success()
         .stdout(predicate::str::contains("Permissions").not());
 }
+
+#[test]
+fn letter_l_in_a_flag_value_is_not_a_tier_flag() {
+    // `-Ilocal` is `-I` with the glob `local`.  Its two `l`s used
+    // to be counted as `-ll`, activating the tier-2 personality.
+    lx_no_colour()
+        .args(["-Ilocal", "--show-config"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Personality: lx"));
+}
+
+#[test]
+fn personality_flag_inside_a_cluster_is_honoured() {
+    // `-ap tree` is `-a` plus `-p tree`.  The personality used to be
+    // ignored because `-p` wasn't at the start of the argument.
+    lx_no_colour()
+        .args(["-ap", "tree", "--show-config"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Personality: tree"));
+}

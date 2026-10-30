@@ -200,8 +200,12 @@ fn try_main() -> Result<i32, LxError> {
         // matching compiled-in personality (`l`/`ll`/`lll`), since
         // 0.11 unified tier flags and personalities into one
         // mechanism with three invocation routes.
-        let explicit_personality = find_personality_arg(&cli_args);
-        let tier_personality = find_tier_arg(&cli_args);
+        let cli_matches = pre_parse(&cli_args);
+        let explicit_personality = cli_matches
+            .as_ref()
+            .and_then(|m| m.get_one::<String>(options::flags::PERSONALITY))
+            .cloned();
+        let tier_personality = cli_matches.as_ref().and_then(tier_personality);
         let from_env = env::var("LX_PERSONALITY").ok().filter(|s| !s.is_empty());
         // Error on unknown name when the user asked explicitly (-p or env var).
         let explicit = explicit_personality.is_some() || from_env.is_some();
@@ -932,61 +936,35 @@ impl Lx {
     }
 }
 
-/// Scan raw args for occurrences of `-l`/`--long` before Clap parsing.
+/// Parse just the command-line arguments (without any personality
+/// layer), so personality dispatch can see which selector flags the
+/// user typed.
 ///
-/// Returns the personality name corresponding to the tier:
-/// 1 → `"l"`, 2 → `"ll"`, 3+ → `"lll"`.  Returns `None` if no
-/// `-l`/`--long` is present.
+/// Uses Clap rather than scanning strings by hand, because only Clap
+/// knows which short flags take values: `-Ilocal` is `-I` with the
+/// glob `local`, not two `-l`s.  Returns `None` if the arguments
+/// don't parse (or ask for help/version); the full parse later
+/// reports the same error.
+fn pre_parse(args: &[OsString]) -> Option<clap::ArgMatches> {
+    let with_binary_name = std::iter::once(OsString::from("lx")).chain(args.iter().cloned());
+    options::parser::build_command()
+        .try_get_matches_from(with_binary_name)
+        .ok()
+}
+
+/// The tier personality selected by `-l`/`--long` on the command
+/// line: 1 → `"l"`, 2 → `"ll"`, 3+ → `"lll"`, or `None` without it.
 ///
-/// Used to dispatch tier flags through the personality system at
-/// startup, so that `lx -ll` is equivalent to `lx -p ll`.  The tier
-/// flag continues to count via Clap during parsing — this scan is
-/// only for personality activation.
-fn find_tier_arg(args: &[OsString]) -> Option<&'static str> {
-    let mut count: u32 = 0;
-    for arg in args {
-        let s = arg.to_string_lossy();
-        if s == "--long" {
-            count += 1;
-        } else if let Some(rest) = s.strip_prefix('-')
-            && !rest.is_empty()
-            && !rest.starts_with('-')
-        {
-            // Short-flag cluster like `-l`, `-ll`, `-la`, `-lah`, …
-            // Each `l` in the cluster is one `--long`.
-            count += rest.matches('l').count() as u32;
-        }
-    }
-    match count {
+/// Dispatches tier flags through the personality system at startup,
+/// so that `lx -ll` is equivalent to `lx -p ll`.  The flag still
+/// counts during the full parse; this is only for activation.
+fn tier_personality(matches: &clap::ArgMatches) -> Option<&'static str> {
+    match matches.get_count(options::flags::LONG) {
         0 => None,
         1 => Some("l"),
         2 => Some("ll"),
         _ => Some("lll"),
     }
-}
-
-/// Scan raw args for --personality=NAME or -p NAME before Clap parsing.
-fn find_personality_arg(args: &[OsString]) -> Option<String> {
-    let mut iter = args.iter();
-    while let Some(arg) = iter.next() {
-        let s = arg.to_string_lossy();
-        if let Some(name) = s.strip_prefix("--personality=") {
-            return Some(name.to_string());
-        }
-        if (s == "--personality" || s == "-p")
-            && let Some(next) = iter.next()
-        {
-            return Some(next.to_string_lossy().to_string());
-        }
-        // Handle -pNAME (short flag with attached value)
-        if let Some(name) = s.strip_prefix("-p")
-            && !name.is_empty()
-            && !name.starts_with('-')
-        {
-            return Some(name.to_string());
-        }
-    }
-    None
 }
 
 /// Scan raw args for --theme=NAME or --theme NAME.  Used by

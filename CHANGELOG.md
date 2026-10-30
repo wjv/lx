@@ -113,6 +113,16 @@ the minimum Rust version for building from source.
   `NO_COLOR` and whether stdout is a terminal, like a listing.
   Closes wjv/lx#48.  (pre.9)
 
+- **Personality selection reads flag clusters correctly.**  Tier
+  and `-p` detection now use the real argument parser instead of
+  scanning the arguments by hand.  (pre.11)  This fixes two bugs:
+  - `-p` inside a cluster was ignored: `lx -ap tree` listed with
+    the default personality instead of `tree`, without an error.
+    This affected 0.10 too.
+  - Since pre.4, a letter `l` in a flag's value selected a
+    long-view tier: `lx -Ilocal` (ignore `local`) behaved like
+    `lx -ll -I local`.
+
 ### Internal
 
 - **Compiled-in format definitions deduplicated.**  `view.rs`'s
