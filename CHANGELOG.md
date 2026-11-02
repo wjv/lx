@@ -3,7 +3,7 @@
 All notable changes to lx are documented here. lx is forked from
 [exa](https://github.com/ogham/exa) v0.10.1.
 
-## [Unreleased] — 0.10.2
+## [0.10.2] — 2026-11-02
 
 0.10.2 is a bugfix and security maintenance release.  No new
 features.
