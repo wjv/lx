@@ -1,5 +1,11 @@
 # cargo-deny configuration — https://embarkstudios.github.io/cargo-deny/
 
+[graph]
+# Check every feature, so the optional jj backend's dependencies
+# (jj-lib and the gitoxide crates) are scanned too, not only the
+# default build's.
+all-features = true
+
 [advisories]
 # Advisory IDs to ignore (e.g. if a fix isn't available yet).
 ignore = []
