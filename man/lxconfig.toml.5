@@ -119,6 +119,16 @@ to run:
 lx --upgrade-config
 .Ed
 .Pp
+A config file with a
+.Em newer
+version, written for a later
+.Nm lx ,
+is refused too, with a message saying so; it needs a newer
+.Nm lx ,
+and
+.Sy --upgrade-config
+leaves it untouched.
+.Pp
 This command migrates the config from any older version
 (0.1 through 0.5) to the current format and saves
 the original as

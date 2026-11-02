@@ -3,6 +3,26 @@
 All notable changes to lx are documented here. lx is forked from
 [exa](https://github.com/ogham/exa) v0.10.1.
 
+## [Unreleased] — 0.10.2
+
+0.10.2 is a bugfix release.  No new features.
+
+**Highlights:**
+
+- **A config file from a newer lx no longer gets wrecked.**  0.10
+  told you to "upgrade" a newer config to its own, older format, and
+  doing so rebuilt the file from scratch.  It now says the config is
+  newer than it understands, and leaves it alone.
+
+### Fixed
+
+- **A config file from a newer lx gets a clear error.**  0.10 called
+  any config version it didn't know "old" and suggested
+  `--upgrade-config`, which would then rebuild the newer file from
+  scratch, losing comments, themes, styles and classes (the original
+  was kept as a `.bak`).  Now lx says the config is newer than it
+  understands, and `--upgrade-config` refuses to touch it.
+
 ## [0.10.1] — 2026-05-07
 
 0.10.1 is a security maintenance release.  No new features, no

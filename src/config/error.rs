@@ -32,6 +32,14 @@ pub enum ConfigError {
     )]
     NeedsUpgrade { path: PathBuf, version: String },
 
+    /// The config file was written for a later lx than this one.
+    #[error(
+        "config file {path} uses version {version}, which is newer than \
+         this lx understands (up to {CONFIG_VERSION}).\n\
+         Use a newer lx, or point LX_CONFIG at a config for this version."
+    )]
+    TooNew { path: PathBuf, version: String },
+
     /// Personality inheritance forms a cycle.
     #[error("personality inheritance cycle: {chain}")]
     InheritanceCycle { chain: String },

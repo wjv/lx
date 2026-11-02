@@ -18,7 +18,7 @@ use serde::Deserialize;
 
 use super::error::{ConfigError, IoResultExt};
 use super::load::{detect_config_version, inject_auto_select_blocks};
-use super::schema::CONFIG_VERSION;
+use super::schema::{CONFIG_VERSION, is_newer_version};
 
 /// Upgrade an older config file to the current format.
 pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
@@ -27,6 +27,17 @@ pub fn upgrade_config(path: &PathBuf) -> Result<(), ConfigError> {
 
     if version == CONFIG_VERSION {
         return Err(ConfigError::AlreadyCurrent { path: path.clone() });
+    }
+
+    // A config from a later lx can't be upgraded, only downgraded,
+    // which this doesn't do.  Refuse before touching anything: the
+    // legacy rebuild below would rewrite it, losing whatever it
+    // doesn't understand.
+    if is_newer_version(version) {
+        return Err(ConfigError::TooNew {
+            path: path.clone(),
+            version: version.to_string(),
+        });
     }
 
     // Warn about settings removed in 0.5.

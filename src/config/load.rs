@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 use log::*;
 
 use super::error::{ConfigError, IoResultExt};
-use super::schema::{ACCEPTED_VERSIONS, Config};
+use super::schema::{ACCEPTED_VERSIONS, Config, is_newer_version};
 
 /// Search for a config file and return its path, or `None`.
 pub fn find_config_path() -> Option<PathBuf> {
@@ -156,6 +156,12 @@ pub(super) fn try_load_config() -> Result<Option<Config>, ConfigError> {
         let contents = fs::read_to_string(path).with_path(path)?;
 
         let version = detect_config_version(&contents);
+        if is_newer_version(version) {
+            return Err(ConfigError::TooNew {
+                path: path.clone(),
+                version: version.to_string(),
+            });
+        }
         if !ACCEPTED_VERSIONS.contains(&version) {
             return Err(ConfigError::NeedsUpgrade {
                 path: path.clone(),

@@ -27,6 +27,21 @@ pub const CONFIG_VERSION: &str = "0.6";
 /// and is ignored if found in 0.3/0.4 files.
 pub(super) const ACCEPTED_VERSIONS: &[&str] = &["0.3", "0.4", "0.5", "0.6"];
 
+/// Whether config `version` is newer than this lx's own schema, so
+/// written for a later release.  Such a config can't be "upgraded";
+/// it needs a newer lx.  Versions that aren't `MAJOR.MINOR` numbers
+/// count as not newer.
+pub(super) fn is_newer_version(version: &str) -> bool {
+    fn parse(v: &str) -> Option<(u32, u32)> {
+        let (major, minor) = v.split_once('.')?;
+        Some((major.parse().ok()?, minor.parse().ok()?))
+    }
+    match (parse(version), parse(CONFIG_VERSION)) {
+        (Some(theirs), Some(ours)) => theirs > ours,
+        _ => false,
+    }
+}
+
 // ── Top-level config ────────────────────────────────────────────
 
 /// Top-level config file structure.
@@ -406,5 +421,37 @@ impl<'de> Deserialize<'de> for StringOrList {
         }
 
         deserializer.deserialize_any(Visitor)
+    }
+}
+
+#[cfg(test)]
+mod version_test {
+    use super::is_newer_version;
+
+    #[test]
+    fn older_and_current_versions_are_not_newer() {
+        for v in ["0.1", "0.3", "0.6", super::CONFIG_VERSION] {
+            assert!(!is_newer_version(v), "{v}");
+        }
+    }
+
+    #[test]
+    fn later_versions_are_newer() {
+        for v in ["0.8", "0.10", "1.0"] {
+            assert!(is_newer_version(v), "{v}");
+        }
+    }
+
+    /// Minor versions compare as numbers, not strings: 0.10 > 0.7.
+    #[test]
+    fn minor_versions_compare_numerically() {
+        assert!(is_newer_version("0.10"));
+    }
+
+    #[test]
+    fn malformed_versions_are_not_newer() {
+        for v in ["", "abc", "0", "0.x", "1.2.3"] {
+            assert!(!is_newer_version(v), "{v}");
+        }
     }
 }
