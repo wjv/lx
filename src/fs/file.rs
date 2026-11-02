@@ -254,7 +254,7 @@ impl<'dir> File<'dir> {
                 let branch = repo
                     .head()
                     .ok()
-                    .and_then(|h| h.shorthand().map(String::from));
+                    .and_then(|h| h.shorthand().ok().map(String::from));
                 return (clean, branch);
             }
         }

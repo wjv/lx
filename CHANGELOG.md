@@ -5,7 +5,8 @@ All notable changes to lx are documented here. lx is forked from
 
 ## [Unreleased] — 0.10.2
 
-0.10.2 is a bugfix release.  No new features.
+0.10.2 is a bugfix and security maintenance release.  No new
+features.
 
 **Highlights:**
 
@@ -13,6 +14,21 @@ All notable changes to lx are documented here. lx is forked from
   told you to "upgrade" a newer config to its own, older format, and
   doing so rebuilt the file from scratch.  It now says the config is
   newer than it understands, and leaves it alone.
+- **Dependency updates for four security advisories**, including
+  `git2` 0.20 to 0.21.
+
+### Security
+
+- Bump `git2` from 0.20 to 0.21, for two soundness advisories in
+  APIs lx doesn't use:
+  [RUSTSEC-2026-0183](https://rustsec.org/advisories/RUSTSEC-2026-0183)
+  and
+  [RUSTSEC-2026-0184](https://rustsec.org/advisories/RUSTSEC-2026-0184).
+- Update the locked dependencies, including `crossbeam-epoch`
+  ([RUSTSEC-2026-0204](https://rustsec.org/advisories/RUSTSEC-2026-0204))
+  and `libz-sys`
+  ([RUSTSEC-2026-0418](https://rustsec.org/advisories/RUSTSEC-2026-0418)).
+  The minimum Rust version stays 1.94.
 
 ### Fixed
 
