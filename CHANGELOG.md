@@ -10,10 +10,6 @@ features.
 
 **Highlights:**
 
-- **A config file from a newer lx no longer gets wrecked.**  0.10
-  told you to "upgrade" a newer config to its own, older format, and
-  doing so rebuilt the file from scratch.  It now says the config is
-  newer than it understands, and leaves it alone.
 - **Dependency updates for four security advisories**, including
   `git2` 0.20 to 0.21.
 
@@ -31,6 +27,11 @@ features.
   The minimum Rust version stays 1.94.
 
 ### Fixed
+
+- **`-p` inside a flag cluster is honoured.**  `lx -ap tree` listed
+  with the default personality instead of `tree`, without an error,
+  because the personality was looked for by scanning the arguments
+  by hand.  lx now uses the real argument parser for this.
 
 - **A config file from a newer lx gets a clear error.**  0.10 called
   any config version it didn't know "old" and suggested

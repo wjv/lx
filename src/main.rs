@@ -196,7 +196,8 @@ fn try_main() -> Result<i32, LxError> {
     let mut personality_source = "default";
     if !upgrading {
         // Personality resolution: -p → argv[0] → $LX_PERSONALITY → "lx".
-        let explicit_personality = find_personality_arg(&cli_args);
+        let explicit_personality = pre_parse(&cli_args)
+            .and_then(|m| m.get_one::<String>(options::flags::PERSONALITY).cloned());
         let from_env = env::var("LX_PERSONALITY").ok().filter(|s| !s.is_empty());
         // Error on unknown name when the user asked explicitly (-p or env var).
         let explicit = explicit_personality.is_some() || from_env.is_some();
@@ -908,28 +909,18 @@ impl Lx {
     }
 }
 
-/// Scan raw args for --personality=NAME or -p NAME before Clap parsing.
-fn find_personality_arg(args: &[OsString]) -> Option<String> {
-    let mut iter = args.iter();
-    while let Some(arg) = iter.next() {
-        let s = arg.to_string_lossy();
-        if let Some(name) = s.strip_prefix("--personality=") {
-            return Some(name.to_string());
-        }
-        if (s == "--personality" || s == "-p")
-            && let Some(next) = iter.next()
-        {
-            return Some(next.to_string_lossy().to_string());
-        }
-        // Handle -pNAME (short flag with attached value)
-        if let Some(name) = s.strip_prefix("-p")
-            && !name.is_empty()
-            && !name.starts_with('-')
-        {
-            return Some(name.to_string());
-        }
-    }
-    None
+/// Parse just the command-line arguments (without any personality
+/// layer), so personality dispatch can see whether `-p` was given.
+///
+/// Uses Clap rather than scanning strings by hand, because only Clap
+/// understands short-flag clusters: `-ap tree` is `-a` plus
+/// `-p tree`.  Returns `None` if the arguments don't parse (or ask
+/// for help/version); the full parse later reports the same error.
+fn pre_parse(args: &[OsString]) -> Option<clap::ArgMatches> {
+    let with_binary_name = std::iter::once(OsString::from("lx")).chain(args.iter().cloned());
+    options::parser::build_command()
+        .try_get_matches_from(with_binary_name)
+        .ok()
 }
 
 /// Scan raw args for --theme=NAME or --theme NAME.  Used by

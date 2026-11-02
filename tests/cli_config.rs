@@ -1378,3 +1378,14 @@ fn show_anonymous_emits_fully_commented_unnamed_preview() {
         );
     }
 }
+
+#[test]
+fn personality_flag_inside_a_cluster_is_honoured() {
+    // `-ap tree` is `-a` plus `-p tree`.  The personality used to be
+    // ignored because `-p` wasn't at the start of the argument.
+    lx_no_colour()
+        .args(["-ap", "tree", "--show-config"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("tree"));
+}
