@@ -429,7 +429,10 @@ fn argv0_ll_dispatch() {
     let link_path = dir.path().join("ll");
     unix_fs::symlink(&lx_path, &link_path).unwrap();
 
+    // Isolated from the user's config, as `support::lx()` is.
     let output = StdCommand::new(&link_path)
+        .env("LX_CONFIG", "/nonexistent")
+        .env("HOME", "/nonexistent")
         .args(["--colour=never", "Cargo.toml"])
         .output()
         .expect("failed to run symlink");
@@ -451,7 +454,10 @@ fn argv0_unknown_falls_back() {
     let link_path = dir.path().join("unknown_name");
     unix_fs::symlink(&lx_path, &link_path).unwrap();
 
+    // Isolated from the user's config, as `support::lx()` is.
     let output = StdCommand::new(&link_path)
+        .env("LX_CONFIG", "/nonexistent")
+        .env("HOME", "/nonexistent")
         .args(["--colour=never", "Cargo.toml"])
         .output()
         .expect("failed to run symlink");
