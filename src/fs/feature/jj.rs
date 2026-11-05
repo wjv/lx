@@ -23,7 +23,7 @@ use jj_lib::default_backend_factories::{
 use jj_lib::matchers::EverythingMatcher;
 use jj_lib::repo::Repo;
 use jj_lib::settings::UserSettings;
-use jj_lib::workspace::Workspace;
+use jj_lib::workspace::{DefaultWorkspaceLoaderFactory, WorkspaceLoaderFactory};
 
 /// A cache of per-file jj status, built using the jj-lib crate.
 pub struct JjCache {
@@ -86,10 +86,13 @@ impl JjCache {
         // Walk up the directory tree to find the workspace root.
         let mut search_dir = probe_dir.as_path();
         let ws = loop {
-            match Workspace::load(&settings, search_dir, &store_factories, &wc_factories) {
+            let loaded = DefaultWorkspaceLoaderFactory
+                .create(search_dir)
+                .and_then(|loader| loader.load(&settings, &store_factories, &wc_factories));
+            match loaded {
                 Ok(ws) => break ws,
                 Err(e) => {
-                    debug!("jj: Workspace::load({}) failed: {e}", search_dir.display());
+                    debug!("jj: no workspace at {}: {e}", search_dir.display());
                     if let Some(parent) = search_dir.parent() {
                         search_dir = parent;
                     } else {
@@ -110,7 +113,9 @@ impl JjCache {
             .expect("failed to create tokio runtime");
 
         // Load the repo (async).
-        let repo = match rt.block_on(ws.repo_loader().load_at_head()) {
+        // The workspace name only labels a reconciliation of divergent
+        // operations, should loading need one.
+        let repo = match rt.block_on(ws.repo_loader().load_at_head(Some(ws.workspace_name()))) {
             Ok(repo) => repo,
             Err(e) => {
                 warn!("jj: failed to load repo: {e}");
@@ -157,7 +162,7 @@ impl JjCache {
         let mut statuses = HashMap::new();
         let matcher = EverythingMatcher;
 
-        let mut stream = parent_tree.diff_stream(&wc_tree, &matcher);
+        let mut stream = parent_tree.diff(&wc_tree, &matcher);
 
         rt.block_on(async {
             while let Some(entry) = stream.next().await {
@@ -184,13 +189,14 @@ impl JjCache {
             }
         });
 
-        // Collect tracked files from the working copy tree.
+        // Collect tracked files from the working copy tree (async).
         let mut tracked = std::collections::HashSet::new();
-        for entry in wc_tree.entries() {
-            let (path, _value) = entry;
-            let abs_path = workdir.join(path.as_internal_file_string());
-            tracked.insert(abs_path);
-        }
+        let mut entries = wc_tree.entries();
+        rt.block_on(async {
+            while let Some((path, _value)) = entries.next().await {
+                tracked.insert(workdir.join(path.as_internal_file_string()));
+            }
+        });
 
         // Open the underlying git repo for gitignore queries.
         // git2 handles all ignore layers: core.excludesFile,

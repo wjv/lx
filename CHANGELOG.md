@@ -161,6 +161,13 @@ the minimum Rust version for building from source.
   (`git2`).  None of the affected APIs are called by `lx`.
   (pre.7)
 
+- Bumped `jj-lib` from 0.46 to 0.47, which moves `gix` from 0.88 to
+  0.90 and fixes
+  [GHSA-q54r-jf2p-rfr2](https://github.com/advisories/GHSA-q54r-jf2p-rfr2):
+  an untrusted `.git/config` could switch off gitoxide's `.git` path
+  protections.  Affects only the `jj`-feature-enabled binary.
+  (pre.21)
+
 ## [0.10.1] — 2026-05-07
 
 0.10.1 is a security maintenance release.  No new features, no
